@@ -22,7 +22,7 @@ const deleteAgentProviderSchema = z
   })
   .strict();
 
-import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../../agents/error-formatting';
 export function registerProviderOps(httpServer: {
   registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
 }) {

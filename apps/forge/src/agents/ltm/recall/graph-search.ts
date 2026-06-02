@@ -1,6 +1,6 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agent-runner-error-formatting';
+import { errorMsg } from '../../error-formatting';
 import type { GraphSearchOptions, GraphSearchResult } from './types';
 
 export type GraphSearchDeps = {

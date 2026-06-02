@@ -49,4 +49,4 @@ export function createInternalChatUnread(db: Database) {
 
   return { getUnreadSummary };
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';

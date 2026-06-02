@@ -1,5 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
 
 type RuntimeStoredMessagePart = {

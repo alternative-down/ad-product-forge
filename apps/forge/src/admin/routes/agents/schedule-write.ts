@@ -4,7 +4,7 @@
  */
 
 import type { ForgeHttpServerAdapter } from '../../../http/server';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';

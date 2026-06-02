@@ -4,7 +4,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { removeUndefined, safeJsonParse, buildRequestError } from './helpers';
 import { getProviderConfig } from './provider-config';
 import type { createSystemIntegrationStore } from '../system-integrations/store';

@@ -178,4 +178,4 @@ export function createInternalChatConversations(db: Database) {
 
   return { ensureDirectConversation, archiveConversationByAccount };
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';

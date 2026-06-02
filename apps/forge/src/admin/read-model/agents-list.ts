@@ -41,7 +41,7 @@ import {
   forgeDebug,
 } from '@forge-runtime/core';
 import { type AgentExecutionState } from './agents-types';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 

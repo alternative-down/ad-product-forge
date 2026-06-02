@@ -2,7 +2,7 @@
  * Milestones Ops — listMilestones, createMilestone, updateMilestone, deleteMilestone
  */
 import type { OpsContext } from './context';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 export function createMilestonesOps(ctx: OpsContext) {
   async function listMilestones(

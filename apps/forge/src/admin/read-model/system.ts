@@ -11,7 +11,7 @@ import { createSystemSettingsStore } from '../../system-settings/store';
 import type { SystemSettingsValue } from '../../system-settings/store';
 import { forgeCapabilityIds } from '../../capabilities/catalog';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { agents } from '../../database/schema';
 
 import type { Database } from '../../database/schema';

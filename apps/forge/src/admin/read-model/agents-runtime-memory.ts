@@ -23,7 +23,7 @@ import {
   readOperationalMemoryState,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { formatWorkingMemoryValue, isTextPart } from './helpers';

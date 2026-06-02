@@ -11,7 +11,7 @@
  */
 
 import { chromium } from 'playwright';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
 

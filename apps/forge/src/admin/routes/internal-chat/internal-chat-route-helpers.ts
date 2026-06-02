@@ -4,7 +4,7 @@
  */
 
 import type { HttpHandler, HttpRequest } from '../../../http/server';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';

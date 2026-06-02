@@ -5,7 +5,7 @@ import { agentExecutionSteps } from '../../database/schema';
 import { getFinanceOverview } from './finance-overview';
 import { getRecurringPayables } from './payables-overview';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import type { Database } from '../../database/index';
 
 export interface FinanceReadModel {

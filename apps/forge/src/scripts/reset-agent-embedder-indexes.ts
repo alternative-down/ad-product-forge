@@ -20,7 +20,7 @@ async function main() {
     await resetAgentIndexes(input.workspaceBasePath, agentId);
   }
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
   forgeDebug({

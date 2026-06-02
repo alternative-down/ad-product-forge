@@ -1,4 +1,4 @@
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 export type LtmSearchResult = {

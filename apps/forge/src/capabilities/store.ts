@@ -1,5 +1,5 @@
 import { createId } from '../utils/id';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';

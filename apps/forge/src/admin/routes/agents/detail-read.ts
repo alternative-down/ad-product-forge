@@ -7,7 +7,7 @@
  */
 
 import { eq, desc, inArray } from 'drizzle-orm';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 import { forgeDebug } from '../debug';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 

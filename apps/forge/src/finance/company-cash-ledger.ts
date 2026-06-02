@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, lte, sql } from 'drizzle-orm';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { createId } from '../utils/id';
 
 import { forgeDebug } from '@forge-runtime/core';

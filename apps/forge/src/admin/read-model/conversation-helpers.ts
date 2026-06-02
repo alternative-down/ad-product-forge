@@ -1,7 +1,7 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../../utils/libsql-helpers';
 import path from 'node:path';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { createClient } from '@libsql/client';
 import {
   buildThreadToolInvocationParts,

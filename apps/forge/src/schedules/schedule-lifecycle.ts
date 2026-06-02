@@ -5,7 +5,7 @@
  * Manages the node-schedule `jobs: Map<string, Job>` registry.
  * Pure lifecycle: scheduleJob / cancel / list — no business logic.
  */
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import {
   gracefulShutdown,
   scheduleJob,

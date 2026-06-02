@@ -9,7 +9,7 @@ import {
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
-import { errorMsg } from '../agent-runner-error-formatting';
+import { errorMsg } from '../error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;

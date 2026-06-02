@@ -1,7 +1,7 @@
 import type { Message } from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import type { CommunicationFile } from '@forge-runtime/core';
 import type { DiscordSendableChannel, DiscordOutboundFile } from '../discord-types';
 

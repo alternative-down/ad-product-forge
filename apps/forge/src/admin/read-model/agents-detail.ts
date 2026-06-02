@@ -7,7 +7,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { desc, eq, inArray } from 'drizzle-orm';
 import {
   agentExecutionContracts,

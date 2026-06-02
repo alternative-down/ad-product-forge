@@ -24,7 +24,7 @@
  */
 import { withTimeout } from '../utils/async';
 import { extractRunnerControlDirective } from './agent-runner-control-directives';
-import { formatAbsentExecutionError, errorMsg } from './agent-runner-error-formatting';
+import { formatAbsentExecutionError, errorMsg } from './error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
 import type {} from /*unused*/ '../database/schema';

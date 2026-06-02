@@ -1,4 +1,4 @@
-import { errorMsg } from '../agent-runner-error-formatting';
+import { errorMsg } from '../error-formatting';
 import { type ConversationStore, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { createAgentLongTermMemoryStore } from '../ltm/store';

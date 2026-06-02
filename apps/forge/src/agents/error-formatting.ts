@@ -1,5 +1,5 @@
 /**
- * agent-runner-error-formatting.ts
+ * error-formatting.ts
  *
  * Extracts error-serialization utilities from agent-runner-helpers.ts.
  *

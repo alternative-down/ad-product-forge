@@ -14,7 +14,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { encryptSecret, decryptSecret } from '../../encryption/crypto';
 import { createId } from '../../utils/id';
 import { NewAgentProvider, agentProviders } from '../../database/schema';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { githubAppCredentialsSchema } from '../types';
 import { normalizeGitHubAppCredentials } from '../helpers';
 import type { OpsContext } from './context';

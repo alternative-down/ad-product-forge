@@ -1,5 +1,5 @@
 import { eq, desc } from 'drizzle-orm';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';

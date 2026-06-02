@@ -251,6 +251,6 @@ async function initAgentRegistry() {
     process.exit(1);
   }
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 initAgentRegistry();

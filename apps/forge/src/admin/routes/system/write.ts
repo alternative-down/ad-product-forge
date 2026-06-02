@@ -43,7 +43,7 @@ interface SystemWriteRoutesInput {
   registry: ReturnType<typeof getInternalAgentRegistry>;
   loadAgent: typeof loadAgent;
 }
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 
 export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   const {

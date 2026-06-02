@@ -1,5 +1,5 @@
 import { createId } from '../utils/id';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 

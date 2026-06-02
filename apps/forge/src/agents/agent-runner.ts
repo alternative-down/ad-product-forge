@@ -24,7 +24,7 @@ import {
   errorMsg,
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
-} from './agent-runner-error-formatting';
+} from './error-formatting';
 import {
   buildStepSystemPrompt,
   extractRunnerControlDirective,

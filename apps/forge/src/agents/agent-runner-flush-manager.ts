@@ -5,7 +5,7 @@
  * Manages flush settings, run-event deduplication, and run-last-messages count.
  */
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 

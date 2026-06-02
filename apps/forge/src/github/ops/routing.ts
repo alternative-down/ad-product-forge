@@ -3,7 +3,7 @@
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';

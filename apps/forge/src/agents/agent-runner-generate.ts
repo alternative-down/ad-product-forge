@@ -45,7 +45,7 @@ import {
   buildIterationFeedback,
 } from './agent-runner-feedback';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 
 import { FIFTEEN_MINUTES_MS } from './time-constants';
 

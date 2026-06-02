@@ -4,7 +4,7 @@
  */
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 const SCOPE = 'github-ops-labels';
 

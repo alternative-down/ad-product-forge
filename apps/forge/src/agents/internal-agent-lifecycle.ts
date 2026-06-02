@@ -1,4 +1,4 @@
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 

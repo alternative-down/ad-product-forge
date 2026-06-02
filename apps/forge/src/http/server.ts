@@ -60,7 +60,7 @@ function buildCorsHeaders(
     'access-control-allow-headers': CORS_ALLOWED_HEADERS,
   };
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 export type CreateForgeHttpServerConfig = {
   port: number;
