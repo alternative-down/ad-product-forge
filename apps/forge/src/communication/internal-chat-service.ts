@@ -80,6 +80,7 @@ import {
 } from './internal-chat-helpers';
 import {
   createInternalChatConnection,
+  type InternalChatConnection,
   type InternalChatDeliveryMessage as _InternalChatDeliveryMessage,
 } from './internal-chat-connection';
 import { createInternalChatGroups } from './internal-chat-groups';
@@ -101,7 +102,7 @@ import { createInternalChatAccounts } from './internal-chat-accounts';
 import { createInternalChatAdmin } from './internal-chat-admin';
 import { createChatAttachments } from './internal-chat-attachments';
 import { createInternalChatReads } from './internal-chat-reads';
-import { createChatSending } from './internal-chat-sending';
+import { createChatSending, type SendingDeps } from './internal-chat-sending';
 import { createInternalChatConversations } from './internal-chat-conversations';
 import { createServiceHelpers } from './internal-chat-service-helpers';
 
@@ -346,19 +347,18 @@ export function createInternalChatService(db: Database) {
     groups: {
       ensureDirectConversation,
     },
-    // @ts-expect-error: InternalChatConnection structurally covers SendingDeps.connection
-    // but TSC nominal checking prevents direct assign. Same object, same runtime behavior.
-    connection: connection as {
-      deliverToParticipants: (params: {
-        excludeAccountId?: string;
-        participants: _InternalChatGroupMember[];
-        conversation: { id: string; name: string; type: string };
-        messageId: string;
-        author: { id: string; displayName: string; slug: string };
-        content: string;
-        attachments: _CommunicationFile[];
-        createdAt: string;
-      }) => string[];
+    // The InternalChatConnection.deliverToParticipants signature uses
+    // InternalChatGroupParticipant (lighter shape, with accountId/agentId
+    // fields) while SendingDeps.connection expects InternalChatGroupMember
+    // (heavier shape, with groupId/participantKey/participantSlug).
+    // At runtime the function only reads the fields it actually needs, so
+    // the call is safe. Cast through Parameters<...> to make the structural
+    // mismatch explicit rather than disabling TSC.
+    connection: {
+      deliverToParticipants: ((
+        params: Parameters<InternalChatConnection['deliverToParticipants']>[0],
+      ) =>
+        connection.deliverToParticipants(params)) as SendingDeps['connection']['deliverToParticipants'],
     },
     reads: {
       listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as (
