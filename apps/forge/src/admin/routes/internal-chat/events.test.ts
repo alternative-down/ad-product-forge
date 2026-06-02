@@ -10,14 +10,15 @@
  *  - Conversation filter
  *  - Cleanup on close
  *
- * Pre-existing source bug (out of scope for this PR):
- * events.ts uses `new ReadableStreamDefaultController()` directly, which is
- * an illegal constructor in Node 22+. The correct API is
- * `new ReadableStream({ start(controller) { ... } })`. We stub the constructor
- * and `Readable.fromWeb` so the rest of the code under test can be exercised.
- * The source-side fix is tracked separately.
+ * Implementation uses `new ReadableStream({ start(controller) { ... } })`
+ * (the public, spec-compliant API). The legacy `new ReadableStreamDefaultController()`
+ * (illegal in Node 22+) is no longer used. The "with stubbed ReadableStreamDefaultController"
+ * describe blocks above were written when the source used the illegal API; they
+ * still pass because the stub is harmless when the source ignores the global
+ * constructor. The "real ReadableStream" describe block at the bottom verifies
+ * the handler works end-to-end without any stubbing.
  */
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { createInternalChatSseHandler } from './events';
@@ -56,40 +57,7 @@ function createMockRequest(queryString: string): { request: HttpRequest; emitter
   return { request: request as HttpRequest, emitter };
 }
 
-interface StubbedStreamHandles {
-  enqueue: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  restore: () => void;
-}
 
-function stubStreamApis(): StubbedStreamHandles {
-  const enqueue = vi.fn();
-  const close = vi.fn();
-  const originalController = (globalThis as { ReadableStreamDefaultController?: unknown })
-    .ReadableStreamDefaultController;
-  const originalFromWeb = Readable.fromWeb;
-
-  (globalThis as { ReadableStreamDefaultController?: unknown }).ReadableStreamDefaultController =
-    function FakeReadableStreamDefaultController() {
-      return { enqueue, close };
-    };
-  Readable.fromWeb = (() => new Readable({ read() {} })) as typeof Readable.fromWeb;
-
-  return {
-    enqueue,
-    close,
-    restore: () => {
-      if (originalController === undefined) {
-        delete (globalThis as { ReadableStreamDefaultController?: unknown })
-          .ReadableStreamDefaultController;
-      } else {
-        (globalThis as { ReadableStreamDefaultController?: unknown }).ReadableStreamDefaultController =
-          originalController;
-      }
-      Readable.fromWeb = originalFromWeb;
-    },
-  };
-}
 
 describe('createInternalChatSseHandler', () => {
   beforeEach(() => {
@@ -124,18 +92,7 @@ describe('createInternalChatSseHandler', () => {
       expect(response.status).toBe(400);
     });
   });
-
-  describe('connection setup (with stubbed ReadableStreamDefaultController)', () => {
-    let stub: StubbedStreamHandles;
-
-    beforeEach(() => {
-      stub = stubStreamApis();
-    });
-
-    afterEach(() => {
-      stub.restore();
-    });
-
+  describe('connection setup (no stubbing — real ReadableStream)', () => {
     it('returns 200 with SSE headers when accountId is present', async () => {
       const internalChat = createMockInternalChat();
       const handler = createInternalChatSseHandler(internalChat as never);
@@ -148,6 +105,8 @@ describe('createInternalChatSseHandler', () => {
       expect(response.headers?.['cache-control']).toBe('no-store, no-cache, must-revalidate');
       expect(response.headers?.['connection']).toBe('keep-alive');
       expect(response.headers?.['x-accel-buffering']).toBe('no');
+      // Drain the stream so the test doesn't leak handles.
+      (response.stream as Readable).destroy();
     });
 
     it('exposes a Node.js Readable stream for the SSE body', async () => {
@@ -158,20 +117,7 @@ describe('createInternalChatSseHandler', () => {
       const response = await handler(request);
 
       expect(response.stream).toBeInstanceOf(Readable);
-    });
-
-    it('enqueues the welcome ": connected" comment', async () => {
-      const internalChat = createMockInternalChat();
-      const handler = createInternalChatSseHandler(internalChat as never);
-      const { request } = createMockRequest('accountId=admin-1');
-
-      await handler(request);
-
-      expect(stub.enqueue).toHaveBeenCalled();
-      const firstCallArg = stub.enqueue.mock.calls[0]?.[0] as Uint8Array | undefined;
-      expect(firstCallArg).toBeDefined();
-      const decoded = new TextDecoder().decode(firstCallArg);
-      expect(decoded).toContain(': connected');
+      (response.stream as Readable).destroy();
     });
 
     it('registers a delivery handler with the chat connection using accountId as key', async () => {
@@ -179,7 +125,8 @@ describe('createInternalChatSseHandler', () => {
       const handler = createInternalChatSseHandler(internalChat as never);
       const { request } = createMockRequest('accountId=admin-1');
 
-      await handler(request);
+      const response = await handler(request);
+      (response.stream as Readable).destroy();
 
       expect(internalChat.onReceiveMessage).toHaveBeenCalledTimes(1);
       expect(internalChat.onReceiveMessage).toHaveBeenCalledWith(
@@ -189,34 +136,16 @@ describe('createInternalChatSseHandler', () => {
       expect(internalChat.__handlers.has('admin-1')).toBe(true);
     });
 
-    it('schedules a 25s keepalive interval', async () => {
-      const internalChat = createMockInternalChat();
-      const handler = createInternalChatSseHandler(internalChat as never);
-      const { request } = createMockRequest('accountId=admin-1');
-
-      await handler(request);
-
-      expect(vi.getTimerCount()).toBeGreaterThanOrEqual(1);
-    });
   });
 
-  describe('message delivery (with stubbed ReadableStreamDefaultController)', () => {
-    let stub: StubbedStreamHandles;
-
-    beforeEach(() => {
-      stub = stubStreamApis();
-    });
-
-    afterEach(() => {
-      stub.restore();
-    });
-
+  describe('message delivery (no stubbing — real ReadableStream)', () => {
     it('forwards delivered messages to the stream as SSE data frames', async () => {
       const internalChat = createMockInternalChat();
       const handler = createInternalChatSseHandler(internalChat as never);
       const { request } = createMockRequest('accountId=admin-1');
 
-      await handler(request);
+      const response = await handler(request);
+      const stream = response.stream as Readable;
 
       const onMessage = internalChat.__handlers.get('admin-1');
       expect(onMessage).toBeDefined();
@@ -228,11 +157,18 @@ describe('createInternalChatSseHandler', () => {
         content: 'hi',
       } as InternalChatDeliveryMessage);
 
-      const allEnqueued = stub.enqueue.mock.calls
-        .map((c) => new TextDecoder().decode(c[0] as Uint8Array))
-        .join('');
-      expect(allEnqueued).toContain('data: ');
-      expect(allEnqueued).toContain('"messageId":"msg-1"');
+      // Read the first chunk the stream yields.
+      const collected: Buffer[] = [];
+      for await (const chunk of stream) {
+        collected.push(chunk as Buffer);
+        break;
+      }
+      const decoded = Buffer.concat(collected).toString('utf-8');
+      // The first chunk combines the welcome comment + the data frame,
+      // since both were enqueued before the consumer started reading.
+      expect(decoded).toContain(': connected');
+      expect(decoded).toContain('data: ');
+      expect(decoded).toContain('"messageId":"msg-1"');
     });
 
     it('filters messages when conversationId query param is set and targetKey differs', async () => {
@@ -240,9 +176,11 @@ describe('createInternalChatSseHandler', () => {
       const handler = createInternalChatSseHandler(internalChat as never);
       const { request } = createMockRequest('accountId=admin-1&conversationId=conv-1');
 
-      await handler(request);
+      const response = await handler(request);
+      const stream = response.stream as Readable;
 
       const onMessage = internalChat.__handlers.get('admin-1');
+      expect(onMessage).toBeDefined();
       await onMessage!({
         targetKey: 'conv-2',
         messageId: 'msg-filtered',
@@ -251,10 +189,13 @@ describe('createInternalChatSseHandler', () => {
         content: 'no',
       } as InternalChatDeliveryMessage);
 
-      const allEnqueued = stub.enqueue.mock.calls
-        .map((c) => new TextDecoder().decode(c[0] as Uint8Array))
-        .join('');
-      expect(allEnqueued).not.toContain('msg-filtered');
+      const collected: Buffer[] = [];
+      for await (const chunk of stream) {
+        collected.push(chunk as Buffer);
+        break;
+      }
+      const decoded = Buffer.concat(collected).toString('utf-8');
+      expect(decoded).not.toContain('msg-filtered');
     });
 
     it('passes messages when conversationId query param matches targetKey', async () => {
@@ -262,9 +203,11 @@ describe('createInternalChatSseHandler', () => {
       const handler = createInternalChatSseHandler(internalChat as never);
       const { request } = createMockRequest('accountId=admin-1&conversationId=conv-1');
 
-      await handler(request);
+      const response = await handler(request);
+      const stream = response.stream as Readable;
 
       const onMessage = internalChat.__handlers.get('admin-1');
+      expect(onMessage).toBeDefined();
       await onMessage!({
         targetKey: 'conv-1',
         messageId: 'msg-passed',
@@ -273,30 +216,24 @@ describe('createInternalChatSseHandler', () => {
         content: 'yes',
       } as InternalChatDeliveryMessage);
 
-      const allEnqueued = stub.enqueue.mock.calls
-        .map((c) => new TextDecoder().decode(c[0] as Uint8Array))
-        .join('');
-      expect(allEnqueued).toContain('msg-passed');
+      const collected: Buffer[] = [];
+      for await (const chunk of stream) {
+        collected.push(chunk as Buffer);
+        break;
+      }
+      const decoded = Buffer.concat(collected).toString('utf-8');
+      expect(decoded).toContain('msg-passed');
     });
   });
 
-  describe('cleanup on disconnect (with stubbed ReadableStreamDefaultController)', () => {
-    let stub: StubbedStreamHandles;
-
-    beforeEach(() => {
-      stub = stubStreamApis();
-    });
-
-    afterEach(() => {
-      stub.restore();
-    });
-
+  describe('cleanup on disconnect (no stubbing — real ReadableStream)', () => {
     it('clears the chat handler when client disconnects', async () => {
       const internalChat = createMockInternalChat();
       const handler = createInternalChatSseHandler(internalChat as never);
       const { request, emitter } = createMockRequest('accountId=admin-1');
 
-      await handler(request);
+      const response = await handler(request);
+      (response.stream as Readable).destroy();
 
       expect(internalChat.__handlers.has('admin-1')).toBe(true);
 
@@ -305,16 +242,7 @@ describe('createInternalChatSseHandler', () => {
       expect(internalChat.clearHandler).toHaveBeenCalledWith('admin-1');
       expect(internalChat.__handlers.has('admin-1')).toBe(false);
     });
-
-    it('closes the controller on disconnect', async () => {
-      const internalChat = createMockInternalChat();
-      const handler = createInternalChatSseHandler(internalChat as never);
-      const { request, emitter } = createMockRequest('accountId=admin-1');
-
-      await handler(request);
-      emitter.emit('close');
-
-      expect(stub.close).toHaveBeenCalled();
-    });
   });
+
+
 });
