@@ -10,7 +10,7 @@ import {
   validateScheduleShape,
   assertFutureScheduledDate,
   toToolOutput,
-} from './schedule-helpers';
+} from './notifications/wake-content';
 import {
   normalizeScheduleUpdate,
   buildScheduleUpdateInput,
@@ -23,7 +23,7 @@ import { createScheduleSchema,
   updateScheduleSchema,
 } from './tools/schemas';
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from './lifecycle/heartbeat';
-import { createScheduleNotifications } from './notifications';
+import { createScheduleNotifications } from './notifications/notifications';
 
 export type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 

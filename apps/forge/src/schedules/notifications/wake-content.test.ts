@@ -7,7 +7,7 @@ import {
   createWakeContent,
   createHeartbeatWakeInstruction,
   toToolOutput,
-} from './schedule-helpers';
+} from './wake-content';
 
 describe('parseScheduleDate', () => {
   test('parses valid ISO date string', () => {
