@@ -90,11 +90,15 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       throw error;
     }
 
-    // Schema gap: credentials matches union member at runtime,
-    // but ProviderCredentialsMap value type creates static mismatch.
-    // @ts-expect-error: intentional - credentials matches union, not full map value
+    // Schema gap: credentials is parsed from JSON at runtime and matches
+    // the per-provider shape validated by Zod above, but the static union
+    // type ProviderCredentialsMap[keyof ProviderCredentialsMap] is wider
+    // than any single value can express. Cast to the per-key value type so
+    // the assignment type-checks against the precise indexed slot.
     providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] =
-      credentials as unknown;
+      credentials as ProviderCredentialsMap[typeof providerConfig.providerType extends keyof ProviderCredentialsMap
+        ? typeof providerConfig.providerType
+        : never];
   }
 
   const [primaryProfile, omProfile, companySettings, role, capabilitySet] = await Promise.all([

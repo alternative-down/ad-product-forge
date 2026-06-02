@@ -390,8 +390,15 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
-  dispose() {
+  dispose(): Promise<void> {
+    // The underlying SqliteWorkspaceRetrieval.dispose() is synchronous
+    // (closes the db handle). Wrap in Promise.resolve so the
+    // InternalAgentRuntime contract (dispose?(): Promise<void>) is
+    // satisfied without forcing the method to be marked async (which
+    // would trip @typescript-eslint/require-await since there is no
+    // await expression inside the body).
     this.retrievalWorkspace.dispose();
+    return Promise.resolve();
   }
 
   async initialize() {

@@ -144,20 +144,25 @@ export function createGitHubAppManager(config: {
     buildManifestEvents,
     buildManifestPermissions,
     createAppName: (payload: unknown) => {
-      // @ts-expect-error adapting unknown to typed input
-      return createAppName(payload) as unknown as string;
+      // @ts-expect-error — the dep type is a 1-arg adapter but createAppName
+      // takes 2 args (agentName, agentId). The actual call site (apps.ts:64)
+      // casts through (a, b) => string. Refactoring the dep type to a
+      // proper 2-arg signature is tracked as a follow-up (#5340-category-C).
+      return createAppName(payload as never) as string;
     },
-    createGitHubInstallWakeContent: (payload: unknown) => {
-      // @ts-expect-error adapting unknown to typed input
-      return createGitHubInstallWakeContent(payload) as unknown as unknown;
-    },
-    createGitHubWebhookWakeContent: (payload: unknown) => {
-      // @ts-expect-error adapting unknown to typed input
-      return createGitHubWebhookWakeContent(payload) as unknown as unknown;
-    },
+    createGitHubInstallWakeContent: (payload: unknown) =>
+      createGitHubInstallWakeContent(
+        payload as Parameters<typeof createGitHubInstallWakeContent>[0],
+      ) as unknown,
+    createGitHubWebhookWakeContent: (payload: unknown) =>
+      createGitHubWebhookWakeContent(
+        payload as Parameters<typeof createGitHubWebhookWakeContent>[0],
+      ) as unknown,
     isGitHubSelfEvent: (payload: unknown) => {
-      // @ts-expect-error adapting unknown payload to specific function signature
-      return isGitHubSelfEvent(payload) as unknown as boolean;
+      // @ts-expect-error — same shape mismatch as createAppName:
+      // isGitHubSelfEvent(sender, credentials) is a 2-arg function but the
+      // dep adapter contract is (payload) => boolean. See #5340-category-C.
+      return isGitHubSelfEvent(payload as never) as boolean;
     },
     isRecord,
     summarizeGitHubEvent: (payload: unknown) =>

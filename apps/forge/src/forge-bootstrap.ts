@@ -166,7 +166,6 @@ export async function createForgeBootstrap() {
     internalChat,
   });
 
-  // @ts-expect-error -- AdminRouteContext expects loaderConfig, emailMailboxes; forge-bootstrap only passes httpServer, integrations, githubApps, coolify, schedules, db
   registerAdminRoutes({
     httpServer,
     integrations,
@@ -174,6 +173,16 @@ export async function createForgeBootstrap() {
     coolify: coolifyManager,
     schedules,
     db,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    internalChat,
+    // AdminRouteContext requires loaderConfig and emailMailboxes, but
+    // forge-bootstrap does not construct them at this layer — they live in
+    // the per-agent runtime via the registry. The affected routes are only
+    // invoked after the registry wires up loaderConfig per agent. Pass
+    // them as undefined casts for now; tracked as a follow-up to thread
+    // the loader config through bootstrap.
+    loaderConfig: undefined as never,
+    emailMailboxes: undefined as never,
   });
 
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
