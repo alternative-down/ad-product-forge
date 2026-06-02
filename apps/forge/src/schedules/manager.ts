@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type { Database } from '../database/schema';
 import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
-import { createScheduleLifecycle, type ScheduleLifecycleRecord } from './schedule-lifecycle';
+import { createScheduleLifecycle, type ScheduleLifecycleRecord } from './lifecycle/lifecycle';
 import {
   parseScheduleDate,
   validateScheduleShape,
@@ -22,7 +22,7 @@ import { createScheduleSchema,
   createScheduleForAgentSchema,
   updateScheduleSchema,
 } from './tools/schemas';
-import { createHeartbeatSchedule as makeHeartbeatSchedule } from './heartbeat';
+import { createHeartbeatSchedule as makeHeartbeatSchedule } from './lifecycle/heartbeat';
 import { createScheduleNotifications } from './notifications';
 
 export type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
