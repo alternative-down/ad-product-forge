@@ -609,32 +609,6 @@ export class AgentLongTermMemoryRecall {
     return await this.orchestrator.runRecallSearch(queryText, config);
   }
 
-  async searchWorkspace(
-    queryText: string,
-    options: {
-      topK: number;
-      resultCount: number;
-      scoreThreshold: number;
-      mode: 'hybrid' | 'vector' | 'bm25';
-    },
-  ) {
-    return await this.orchestrator.searchWorkspace(queryText, options);
-  }
-
-  async searchGraph(
-    queryText: string,
-    workspaceResults: LtmSearchResult[],
-    options: {
-      topK: number;
-      threshold: number;
-      randomWalkSteps: number;
-      includeSources: boolean;
-      contextResults: LtmSearchResult[];
-    },
-  ) {
-    return await this.orchestrator.searchGraph(queryText, workspaceResults, options);
-  }
-
   async runTrackedRecallOperation<T>(
     label: string,
     operation: Promise<T>,
