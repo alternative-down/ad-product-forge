@@ -14,6 +14,20 @@ import { RecallPersistence, createRecallPersistence } from './recall/persistence
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
+/** Input shape for LTM recall step. Concrete type matching buildRecallStepFromIteration output. */
+export interface RecallStepInput {
+  text: string;
+  toolCalls: Array<{ toolName: string; args: Record<string, unknown> }>;
+  toolResults: Array<{ toolName: string; result: unknown }>;
+}
+
+export interface RecallFromStepInput {
+  step: RecallStepInput;
+  steps: RecallStepInput[];
+  threadId: string | null;
+  resourceId?: string;
+}
+
 import type {
   LongTermMemoryRecallHistory,
   LongTermMemoryRecallSnapshot,
@@ -211,7 +225,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistMissRecall(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     recentFingerprints: string[],
   ): Promise<void> {
     await this.persistRecallSnapshotWithInput(input, {
@@ -224,7 +238,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistHitRecall(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     queryText: string,
     recallConfig: RecallConfig,
     indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number },
@@ -244,12 +258,7 @@ export class AgentLongTermMemoryRecall {
   }
 
 
-  async recallFromStep(input: {
-    step: unknown;
-    steps: unknown[];
-    threadId: string | null;
-    resourceId?: string;
-  }) {
+  async recallFromStep(input: RecallFromStepInput) {
     const recallStartedAt = Date.now();
 
     try {
@@ -856,7 +865,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistRecallSnapshotWithInput(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     deps: {
       queryText?: string;
       recallConfig?: LtmSnapshotDeps['recallConfig'];

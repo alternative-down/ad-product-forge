@@ -203,7 +203,7 @@ describe('AgentLongTermMemoryRecall', () => {
     });
 
     const result = await recall.recallFromStep({
-      step: {},
+      step: { text: '', toolCalls: [], toolResults: [] },
       steps: [],
       threadId: 'thread-1',
       resourceId: 'resource-1',
@@ -328,6 +328,8 @@ describe('AgentLongTermMemoryRecall', () => {
     const result = await recall.recallFromStep({
       step: {
         text: 'current step',
+        toolCalls: [],
+        toolResults: [],
       },
       steps: [],
       threadId: 'thread-1',
@@ -421,8 +423,8 @@ it('skips recall when a prior operation is still in flight', async () => {
   });
 
   const [firstResult, secondResult] = await Promise.all([
-    recall.recallFromStep({ step: { text: 'hello' }, steps: [], threadId: null }),
-    recall.recallFromStep({ step: { text: 'world' }, steps: [], threadId: null }),
+    recall.recallFromStep({ step: { text: 'hello', toolCalls: [], toolResults: [] }, steps: [], threadId: null }),
+    recall.recallFromStep({ step: { text: 'world', toolCalls: [], toolResults: [] }, steps: [], threadId: null }),
   ]);
 
   // Second call should be skipped immediately (pending operation in flight)
@@ -531,7 +533,7 @@ it('returns null when workspace search yields no results and graph does not hit'
   });
 
   const result = await recall.recallFromStep({
-    step: { text: 'test query' },
+    step: { text: 'test query', toolCalls: [], toolResults: [] },
     steps: [],
     threadId: null,
   });
@@ -651,7 +653,7 @@ it('returns recall text on successful workspace and graph hit', async () => {
   });
 
   const result = await recall.recallFromStep({
-    step: { text: 'what is the finance overview?' },
+    step: { text: 'what is the finance overview?', toolCalls: [], toolResults: [] },
     steps: [],
     threadId: 'thread-hit',
   });
