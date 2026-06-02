@@ -12,6 +12,7 @@ import { countFiles } from './count-files';
 export interface RecallPersistenceDeps {
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   conversationStore: ConversationStore;
+  agentWorkspacePath: string;
   agentMemoryPath: string;
   lastInitAt: string | null;
 }
@@ -19,12 +20,14 @@ export interface RecallPersistenceDeps {
 export class RecallPersistence {
   private readonly persistenceStore: RecallPersistenceDeps['persistenceStore'];
   private readonly conversationStore: ConversationStore;
+  private readonly agentWorkspacePath: string;
   private readonly agentMemoryPath: string;
   private lastInitAt: string | null;
 
   constructor(deps: RecallPersistenceDeps) {
     this.persistenceStore = deps.persistenceStore;
     this.conversationStore = deps.conversationStore;
+    this.agentWorkspacePath = deps.agentWorkspacePath;
     this.agentMemoryPath = deps.agentMemoryPath;
     this.lastInitAt = deps.lastInitAt;
   }
@@ -43,7 +46,7 @@ export class RecallPersistence {
     checkpointFileCount: number;
   }> {
     const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
-      countFiles(this.agentMemoryPath, 'memory'),
+      countFiles(this.agentWorkspacePath, '.'),
       countFiles(this.agentMemoryPath, 'memory'),
       countFiles(this.agentMemoryPath, 'checkpoints'),
     ]);

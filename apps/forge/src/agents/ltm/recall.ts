@@ -205,6 +205,7 @@ export class AgentLongTermMemoryRecall {
     this.persistence = createRecallPersistence({
       persistenceStore: this.persistenceStore,
       conversationStore: this.conversationStore,
+      agentWorkspacePath: this.agentWorkspacePath,
       agentMemoryPath: this.agentMemoryPath,
       lastInitAt: this.lastInitAt,
     });
