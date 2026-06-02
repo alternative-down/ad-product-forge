@@ -6,7 +6,7 @@ import {
   updateChatGroupName,
   syncChatGroupMembers,
   generateGroupId,
-} from './internal-chat-group-helpers';
+} from './internal-chat-groups-helpers';
 
 import {
   buildGroupRow,
@@ -361,7 +361,7 @@ export function createInternalChatGroups(
     // ── Resolve members ────────────────────────────────────────────────────────
     let desiredMembers: Map<
       string,
-      import('./internal-chat-group-helpers').ResolvedGroupMember
+      import('./internal-chat-groups-helpers').ResolvedGroupMember
     > | null = null;
     if (input.members) {
       desiredMembers = await resolveChatGroupMembers(db, input.members, actorAccount);

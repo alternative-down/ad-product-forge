@@ -2,7 +2,7 @@
  * Test dependency shape for internal chat listing modules.
  * Aliased from InternalChatConversationListingDeps for backward compatibility.
  */
-import type { InternalChatConversationListingDeps } from './internal-chat-conversation-listing';
+import type { InternalChatConversationListingDeps } from './internal-chat-conversations-listing';
 export type ConversationListingDeps = InternalChatConversationListingDeps;
 
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
@@ -17,7 +17,7 @@ import {
 } from '../database/schema';
 import type { Database } from '../database/client';
 import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
-import { createInternalChatConversationListing } from './internal-chat-conversation-listing';
+import { createInternalChatConversationListing } from './internal-chat-conversations-listing';
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {

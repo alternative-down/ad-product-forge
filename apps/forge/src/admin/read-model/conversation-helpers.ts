@@ -15,9 +15,9 @@ import {
 } from '@forge-runtime/core';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import type { InternalChatService } from '../../communication/internal-chat-service';
-import type { ConversationListingOutput } from '../../communication/internal-chat-conversation-listing';
+import type { ConversationListingOutput } from '../../communication/internal-chat-conversations-listing';
 
-// Mirror of MessageListItem (internal to internal-chat-conversation-listing, not exported)
+// Mirror of MessageListItem (internal to internal-chat-conversations-listing, not exported)
 interface LocalMessageListItem {
   messageId: string;
   provider: string;

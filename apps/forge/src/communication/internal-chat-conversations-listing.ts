@@ -1,5 +1,5 @@
 /**
- * internal-chat-conversation-listing.ts
+ * internal-chat-conversations-listing.ts
  *
  * Lists conversations for an agent or external account, with recent message
  * previews and participant names. Extracted from communication/internal-chat-listing.ts
