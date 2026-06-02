@@ -3,7 +3,7 @@ import {
   buildScheduleUpdateInput,
   buildScheduleRollbackInput,
   type ExistingScheduleFields,
-} from './schedule-normalize-helpers';
+} from './normalize';
 
 describe('buildScheduleUpdateInput', () => {
   it('uses parsed name and description when provided', () => {

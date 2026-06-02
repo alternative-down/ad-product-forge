@@ -3,11 +3,11 @@ import {
   isScheduleEditor,
   requireScheduleEditor,
   requireScheduleDeleter,
-} from './schedule-impl-helpers';
+} from './auth';
 import {
   createScheduleSchema,
   createScheduleForAgentSchema,
-} from './tools/schemas';
+} from '../tools/schemas';
 
 const makeSchedule = (overrides: any = {}): any =>
   ({

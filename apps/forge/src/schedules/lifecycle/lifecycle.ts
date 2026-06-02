@@ -14,7 +14,7 @@ import {
   type RecurrenceSpecDateRange,
 } from 'node-schedule';
 import type { Database } from '../../database/schema';
-import { createAgentScheduleStore } from '../store';
+import { createAgentScheduleStore } from '../manager/store';
 import { forgeDebug } from '@forge-runtime/core';
 
 /** Minimal shape of a schedule record as used by lifecycle operations. */
