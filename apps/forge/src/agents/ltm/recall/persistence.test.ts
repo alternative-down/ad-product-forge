@@ -37,6 +37,7 @@ function createMockDeps(opts: {
       readRecallState: vi.fn().mockResolvedValue({ history: opts.history ?? null }),
     },
     conversationStore: {} as never,
+    agentWorkspacePath: '/tmp/agent-ws',
     agentMemoryPath: '/tmp/agent-mem',
     lastInitAt: '2026-01-01T00:00:00Z',
   };
@@ -90,11 +91,12 @@ describe('RecallPersistence', () => {
   });
 
   describe('getIndexStats', () => {
-    it('counts files in memory, memory, and checkpoints (current implementation counts memory twice)', async () => {
+    it('counts workspace files under agentWorkspacePath, memory files under agentMemoryPath/memory, and checkpoints under agentMemoryPath/checkpoints', async () => {
       (countFiles as ReturnType<typeof vi.fn>).mockImplementation(
         async (root: string, rel: string) => {
-          if (rel === 'memory') return 10;
-          if (rel === 'checkpoints') return 5;
+          if (root === '/tmp/agent-ws' && rel === '.') return 7;
+          if (root === '/tmp/agent-mem' && rel === 'memory') return 10;
+          if (root === '/tmp/agent-mem' && rel === 'checkpoints') return 5;
           return 0;
         },
       );
@@ -103,11 +105,14 @@ describe('RecallPersistence', () => {
 
       const stats = await persistence.getIndexStats();
 
-      // Two countFiles calls for 'memory' (current source) + one for 'checkpoints'
+      // One countFiles call per source: workspace root, memory, checkpoints
       expect(countFiles).toHaveBeenCalledTimes(3);
+      expect(countFiles).toHaveBeenCalledWith('/tmp/agent-ws', '.');
+      expect(countFiles).toHaveBeenCalledWith('/tmp/agent-mem', 'memory');
+      expect(countFiles).toHaveBeenCalledWith('/tmp/agent-mem', 'checkpoints');
+      expect(stats.workspaceFileCount).toBe(7);
       expect(stats.memoryFileCount).toBe(10);
       expect(stats.checkpointFileCount).toBe(5);
-      expect(stats.workspaceFileCount).toBe(10);
     });
 
     it('returns zeros when countFiles yields zero for every path', async () => {
