@@ -10,6 +10,7 @@ import {
 } from './schema-agents.js';
 
 import {
+  llmModelPrices,
   llmProfiles
 } from './schema-llm.js';
 
@@ -22,3 +23,5 @@ export const llmProfilesRelations = relations(llmProfiles, ({ many }) => ({
   }),
 }));
 
+
+export const llmModelPricesRelations = relations(llmModelPrices, () => ({}));
