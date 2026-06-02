@@ -225,6 +225,7 @@ export async function createInternalAgentRuntime<
       typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: (longTermMemory as any)?.onCheckpointAdvanced,
     runtimeActions: [...platform.workspaceActions, ...toolsToRuntimeActions(allAgentTools)],
+    workingMemoryStore: undefined as never,
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   } satisfies CreateRuntimeAgentSessionOptions);
