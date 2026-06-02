@@ -21,7 +21,7 @@ import { requireScheduleEditor, requireScheduleDeleter } from './schedule-impl-h
 import { createScheduleSchema,
   createScheduleForAgentSchema,
   updateScheduleSchema,
-} from './schemas';
+} from './tools/schemas';
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from './heartbeat';
 import { createScheduleNotifications } from './notifications';
 

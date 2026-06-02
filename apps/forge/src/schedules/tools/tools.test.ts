@@ -28,14 +28,14 @@ vi.mock('@forge-runtime/core', () => ({
 // ---------------------------------------------------------------------------
 // Mock capability catalog
 // ---------------------------------------------------------------------------
-vi.mock('../capabilities/catalog', () => ({
+vi.mock('../../capabilities/catalog', () => ({
   hasToolPermission: mockHasToolPermission,
 }));
 
 // ---------------------------------------------------------------------------
 // Mock schedule manager factory
 // ---------------------------------------------------------------------------
-vi.mock('./manager', () => ({
+vi.mock('../manager', () => ({
   createAgentScheduleManager: vi.fn(() => ({
     listSchedules: vi.fn().mockResolvedValue([]),
     listTasks: vi.fn().mockResolvedValue([]),

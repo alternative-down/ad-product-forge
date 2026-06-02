@@ -7,7 +7,7 @@ import {
 import {
   createScheduleSchema,
   createScheduleForAgentSchema,
-} from './schemas';
+} from './tools/schemas';
 
 const makeSchedule = (overrides: any = {}): any =>
   ({
