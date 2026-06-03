@@ -7,7 +7,7 @@ import { readOperationalMemoryState } from '@forge-runtime/core';
 import { buildLtmRecallSnapshot } from '../../agent-ltm-snapshot';
 import type { LtmSnapshotDeps } from '../../agent-ltm-snapshot';
 import type { ConversationStore } from '@forge-runtime/core';
-import type { LtmSearchResult } from '../../agent-ltm-helpers';
+import type { LtmSearchResult } from '../helpers';
 import type { RecallConfig } from './types';
 import { countFiles } from './count-files';
 

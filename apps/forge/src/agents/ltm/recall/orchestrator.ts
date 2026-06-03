@@ -1,6 +1,6 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
-import type { LtmSearchResult } from '../../agent-ltm-helpers';
+import type { LtmSearchResult } from '../helpers';
 import type { RecallConfig } from './types';
 import { runGraphSearch } from './graph-search';
 import { runWorkspaceSearch } from './workspace-search';

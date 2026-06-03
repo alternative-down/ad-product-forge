@@ -60,7 +60,7 @@ import {
   LtmSnapshot,
   createMemoryAgentInstructions,
   getUsageFromGenerateResult,
-} from './agent-ltm-generate-helpers';
+} from './ltm/generate-helpers';
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }

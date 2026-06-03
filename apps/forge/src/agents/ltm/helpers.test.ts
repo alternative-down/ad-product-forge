@@ -1,5 +1,5 @@
 /**
- * Unit tests for agents/agent-ltm-helpers.ts.
+ * Unit tests for ltm/helpers.ts.
  * Pure utilities for LTM recall serialization and XML escaping.
  * Zero prior coverage.
  */
@@ -15,7 +15,7 @@ import {
   escapeXml,
   buildRecallSystemMessage,
   type LtmSearchResult,
-} from './agent-ltm-helpers';
+} from './helpers';
 
 // ─── safeSerializeRecallSteps ────────────────────────────────────────────────
 
