@@ -70,10 +70,10 @@ export class RefreshableRetrievalWorkspace implements HybridRetrievalEngine {
 
   async search(query: string, options: { topK?: number } = {}): Promise<RetrievedDocument[]> {
     if (this.hybridEngine) {
-      return this.hybridEngine.search(query, options);
+      return await this.hybridEngine.search(query, options);
     }
 
-    return this.keywordIndex.search(query, options);
+    return await this.keywordIndex.search(query, options);
   }
 
   listDocuments() {

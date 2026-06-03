@@ -47,7 +47,7 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
   }
 
   async list(): Promise<LongTermMemoryDocument[]> {
-    return this.store.list();
+    return await this.store.list();
   }
 
   async recall(request: LongTermMemoryRecallRequest) {

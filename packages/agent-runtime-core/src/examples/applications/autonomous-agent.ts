@@ -73,7 +73,7 @@ export function createAutonomousAgentApplication(options: AutonomousAgentApplica
         await host.runtime.dispatch(input);
       }
 
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
     stop() {
       scheduler.dispose();

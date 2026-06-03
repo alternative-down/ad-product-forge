@@ -62,7 +62,7 @@ export function createWorkspaceAgentApplication(options: WorkspaceAgentApplicati
       env?: Record<string, string>;
       timeoutMs?: number;
     }) {
-      return options.workspace.execute(request);
+      return await options.workspace.execute(request);
     },
     async loadSkillNotes() {
       if (options.skills == null && options.skillBasePath == null) {
@@ -87,7 +87,7 @@ export function createWorkspaceAgentApplication(options: WorkspaceAgentApplicati
       return skills;
     },
     async run(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
   };
 }

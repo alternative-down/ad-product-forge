@@ -158,7 +158,7 @@ export class OperationalMemoryConversationMemory {
           '[OperationalMemoryConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.',
           error,
         );
-        return this.loadState();
+        return await this.loadState();
       }
 
       state = await this.loadState();
@@ -215,7 +215,7 @@ export class OperationalMemoryConversationMemory {
   }
 
   async getState(): Promise<OperationalMemoryConversationState> {
-    return this.loadState();
+    return await this.loadState();
   }
 
   private async consolidateOneOverflowBatch(

@@ -59,7 +59,7 @@ async function listFiles(root: string): Promise<string[]> {
       const currentPath = path.join(root, entry.name);
 
       if (entry.isDirectory()) {
-        return listFiles(currentPath);
+        return await listFiles(currentPath);
       }
 
       if (!entry.isFile()) {

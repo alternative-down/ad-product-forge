@@ -33,7 +33,7 @@ export class ConfiguredTextToSpeechGateway implements TextToSpeechGateway {
   }
 
   async synthesize(request: TextToSpeechRequest): Promise<TextToSpeechResponse> {
-    return this.base.synthesize({
+    return await this.base.synthesize({
       ...request,
       voiceId: request.voiceId ?? this.voiceId,
       headers: {
@@ -62,7 +62,7 @@ export class ConfiguredStreamingTextToSpeechGateway implements StreamingTextToSp
   }
 
   async synthesizeStream(request: TextToSpeechRequest): Promise<StreamingTextToSpeechResponse> {
-    return this.base.synthesizeStream({
+    return await this.base.synthesizeStream({
       ...request,
       voiceId: request.voiceId ?? this.voiceId,
       headers: {
@@ -97,7 +97,7 @@ export class ConfiguredRealtimeTextToSpeechGateway implements RealtimeTextToSpee
       onAudioChunk?(event: RealtimeSpeechSynthesisAudioEvent): Promise<void> | void;
     } = {},
   ): Promise<RealtimeTextToSpeechSession> {
-    return this.base.createSession({
+    return await this.base.createSession({
       ...options,
       voiceId: options.voiceId ?? this.voiceId,
       headers: {
@@ -126,7 +126,7 @@ export class ConfiguredSpeechToTextGateway implements SpeechToTextGateway {
   }
 
   async transcribe(request: SpeechToTextRequest): Promise<SpeechToTextResponse> {
-    return this.base.transcribe({
+    return await this.base.transcribe({
       ...request,
       language: request.language ?? this.language,
       headers: {
@@ -161,7 +161,7 @@ export class ConfiguredRealtimeSpeechToTextGateway implements RealtimeSpeechToTe
       onTranscription?(event: RealtimeTranscriptionEvent): Promise<void> | void;
     } = {},
   ): Promise<RealtimeSpeechToTextSession> {
-    return this.base.createSession({
+    return await this.base.createSession({
       ...options,
       language: options.language ?? this.language,
       headers: {

@@ -16,7 +16,7 @@ export class TimeoutStepModelAdapter implements StepModelAdapter {
   }
 
   async generateStep(request: StepModelRequest) {
-    return withTimeout(
+    return await withTimeout(
       this.model.generateStep(request),
       this.timeoutMs,
       `Step model timed out after ${this.timeoutMs}ms`,
