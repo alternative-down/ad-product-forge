@@ -1,27 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+  WorkspaceSkillsConfigSchema,
+  type WorkspaceFilesystemConfig,
+  type WorkspaceSandboxConfig,
+  type WorkspaceSkillsConfig,
+} from '../schema-config';
 
-// Test the Zod schemas defined in the schema.ts file
-const _WorkspaceFilesystemConfigSchema = z.object({
-  basePath: z.string(),
-  allowedPaths: z.array(z.string()).optional(),
-});
+// Tests the REAL production Zod schemas in schema-config.ts (not local copies).
+// Before fix: schemas were _-prefixed and not exported; this test re-declared them
+// locally with the same shape, so 15/15 tests passed for the wrong reason.
+// After fix: schemas are exported and imported here — these tests now exercise
+// the actual runtime validation behavior of the production schemas.
 
-const _WorkspaceSandboxConfigSchema = z.object({
-  workingDirectory: z.string(),
-});
-
-const _WorkspaceSkillsConfigSchema = z.array(z.string());
-
-describe('WorkspaceFilesystemConfigSchema', () => {
+describe('WorkspaceFilesystemConfigSchema (production)', () => {
   it('should validate a valid workspace filesystem config', () => {
     const config = { basePath: '/app/workspaces/agent1' };
-    expect(() => _WorkspaceFilesystemConfigSchema.parse(config)).not.toThrow();
+    expect(() => WorkspaceFilesystemConfigSchema.parse(config)).not.toThrow();
   });
 
   it('should accept valid config with result', () => {
     const config = { basePath: '/app/workspaces/agent1' };
-    const parsed = _WorkspaceFilesystemConfigSchema.parse(config);
+    const parsed = WorkspaceFilesystemConfigSchema.parse(config);
     expect(parsed.basePath).toBe('/app/workspaces/agent1');
   });
 
@@ -30,81 +31,78 @@ describe('WorkspaceFilesystemConfigSchema', () => {
       basePath: '/app/workspaces/agent1',
       allowedPaths: ['/app/shared', '../shared-tools'],
     };
-    const parsed = _WorkspaceFilesystemConfigSchema.parse(config);
+    const parsed = WorkspaceFilesystemConfigSchema.parse(config);
     expect(parsed.allowedPaths).toEqual(['/app/shared', '../shared-tools']);
   });
 
   it('should reject config without basePath', () => {
     const config = {};
-    expect(() => _WorkspaceFilesystemConfigSchema.parse(config)).toThrow();
+    expect(() => WorkspaceFilesystemConfigSchema.parse(config)).toThrow();
   });
 
   it('should reject config with empty basePath', () => {
+    // Empty string is still a string, so it's valid for z.string().
     const config = { basePath: '' };
-    // Empty string is still a string, so it's valid
-    expect(() => _WorkspaceFilesystemConfigSchema.parse(config)).not.toThrow();
+    expect(() => WorkspaceFilesystemConfigSchema.parse(config)).not.toThrow();
   });
 
   it('should reject config with extra fields', () => {
+    // With default z.object (passthrough: false / strict by default in zod v3),
+    // extra fields are stripped.
     const config = { basePath: '/app', extra: 'not allowed' };
-    // With passthrough: false (default), extra fields would be stripped
-    // This test ensures strict validation
-    expect(_WorkspaceFilesystemConfigSchema.parse(config)).toEqual({ basePath: '/app' });
+    expect(WorkspaceFilesystemConfigSchema.parse(config)).toEqual({ basePath: '/app' });
   });
 });
 
-describe('WorkspaceSandboxConfigSchema', () => {
+describe('WorkspaceSandboxConfigSchema (production)', () => {
   it('should validate a valid sandbox config', () => {
     const config = { workingDirectory: '/app/workspaces/sandbox' };
-    expect(() => _WorkspaceSandboxConfigSchema.parse(config)).not.toThrow();
+    expect(() => WorkspaceSandboxConfigSchema.parse(config)).not.toThrow();
   });
 
   it('should accept valid config with result', () => {
     const config = { workingDirectory: '/app/sandbox' };
-    const parsed = _WorkspaceSandboxConfigSchema.parse(config);
+    const parsed = WorkspaceSandboxConfigSchema.parse(config);
     expect(parsed.workingDirectory).toBe('/app/sandbox');
   });
 
   it('should reject config without workingDirectory', () => {
     const config = {};
-    expect(() => _WorkspaceSandboxConfigSchema.parse(config)).toThrow();
+    expect(() => WorkspaceSandboxConfigSchema.parse(config)).toThrow();
   });
 });
 
-describe('WorkspaceSkillsConfigSchema', () => {
+describe('WorkspaceSkillsConfigSchema (production)', () => {
   it('should validate a valid skills config with multiple skills', () => {
     const config = ['github-api', 'coolify-api', 'custom-skill'];
-    expect(() => _WorkspaceSkillsConfigSchema.parse(config)).not.toThrow();
+    expect(() => WorkspaceSkillsConfigSchema.parse(config)).not.toThrow();
   });
 
   it('should validate an empty skills array', () => {
     const config: string[] = [];
-    expect(() => _WorkspaceSkillsConfigSchema.parse(config)).not.toThrow();
+    expect(() => WorkspaceSkillsConfigSchema.parse(config)).not.toThrow();
   });
 
   it('should validate a single skill', () => {
     const config = ['github-api'];
-    const parsed = _WorkspaceSkillsConfigSchema.parse(config);
+    const parsed = WorkspaceSkillsConfigSchema.parse(config);
     expect(parsed).toEqual(['github-api']);
   });
 
   it('should reject non-array input', () => {
     const config = 'github-api';
-    expect(() => _WorkspaceSkillsConfigSchema.parse(config)).toThrow();
+    expect(() => WorkspaceSkillsConfigSchema.parse(config)).toThrow();
   });
 
   it('should reject array with non-string elements', () => {
     const config = ['github-api', 123, true];
-    expect(() => _WorkspaceSkillsConfigSchema.parse(config)).toThrow();
+    expect(() => WorkspaceSkillsConfigSchema.parse(config)).toThrow();
   });
 });
 
-describe('Schema type inference', () => {
-  it('should infer correct types from Zod schemas', () => {
-    type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
-    type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
-    type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
-
+describe('Schema type inference (production)', () => {
+  it('should infer correct types from production Zod schemas', () => {
+    // Use the exported types directly (the same types used by production code).
     const fsConfig: WorkspaceFilesystemConfig = { basePath: '/test', allowedPaths: ['/shared'] };
     const sandboxConfig: WorkspaceSandboxConfig = { workingDirectory: '/test' };
     const skillsConfig: WorkspaceSkillsConfig = ['skill1'];
