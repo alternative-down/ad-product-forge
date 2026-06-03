@@ -11,6 +11,7 @@ import {
 } from '@forge-runtime/core';
 import { errorMsg } from '../error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
+import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
@@ -34,7 +35,6 @@ import type {
   createAgentLongTermMemoryStore,
 } from './store';
 import type { LtmSnapshotDeps } from '../agent-ltm-snapshot';
-import { withTimeout } from '../../utils/async';
 
 import { buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
 import {
@@ -127,10 +127,9 @@ export class AgentLongTermMemoryRecall {
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
-  private pendingRecallOperationCount = 0;
-  private lingeringRecallOperationSince: number | null = null;
   private readonly orchestrator: RecallOrchestrator;
   private readonly persistence: RecallPersistence;
+  private readonly inFlightTracker: InFlightRecallTracker;
   private readonly _trackedRecallOperation: <T>(
     label: string,
     operation: Promise<T>,
@@ -190,7 +189,8 @@ export class AgentLongTermMemoryRecall {
       });
     }
 
-    this._trackedRecallOperation = this.runTrackedRecallOperation.bind(this);
+    this.inFlightTracker = createInFlightRecallTracker({ agentId: this.agentId });
+    this._trackedRecallOperation = this.inFlightTracker.runTrackedRecallOperation.bind(this.inFlightTracker);
 
     const orchestratorDeps: RecallOrchestratorDeps = {
       retrievalWorkspace: this.retrievalWorkspace,
@@ -213,26 +213,8 @@ export class AgentLongTermMemoryRecall {
   }
   // ─── recallFromStep sub-methods ─────────────────────────────────────────
 
-  private isRecallInFlight(): boolean {
-    return this.pendingRecallOperationCount > 0;
-  }
-
-  private logInFlightSkip(threadId: string | null): void {
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall skipped because a prior recall operation is still in flight',
-      context: {
-        agentId: this.agentId,
-        threadId,
-        pendingRecallOperationCount: this.pendingRecallOperationCount,
-        lingeringRecallOperationSince:
-          this.lingeringRecallOperationSince !== undefined
-            ? new Date(this.lingeringRecallOperationSince!).toISOString()
-            : null,
-      },
-    });
-  }
+  // isRecallInFlight() and logInFlightSkip() are delegated to this.inFlightTracker.
+  // See: apps/forge/src/agents/ltm/recall/in-flight-tracker.ts (#5352)
 
   private async persistMissRecall(
     input: RecallFromStepInput,
@@ -272,8 +254,8 @@ export class AgentLongTermMemoryRecall {
     const recallStartedAt = Date.now();
 
     try {
-      if (this.isRecallInFlight()) {
-        this.logInFlightSkip(input.threadId);
+      if (this.inFlightTracker.isRecallInFlight()) {
+        this.inFlightTracker.logInFlightSkip(input.threadId);
         return null;
       }
 
@@ -418,7 +400,7 @@ export class AgentLongTermMemoryRecall {
         stamp: currentStamp,
       },
     });
-    await this.runTrackedRecallOperation(
+    await this.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
       this.initTimeoutMs,
@@ -469,7 +451,7 @@ export class AgentLongTermMemoryRecall {
         nextStamp: currentStamp,
       },
     });
-    await this.runTrackedRecallOperation(
+    await this.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
       this.initTimeoutMs,
@@ -618,58 +600,17 @@ export class AgentLongTermMemoryRecall {
     return await this.orchestrator.runRecallSearch(queryText, config);
   }
 
+  /**
+   * @deprecated Delegate to this.inFlightTracker.runTrackedRecallOperation.
+   * Kept for backward compat with the public API; will be removed in a future major refactor.
+   */
   async runTrackedRecallOperation<T>(
     label: string,
     operation: Promise<T>,
     timeoutMs: number,
     timeoutMessage: string,
-  ) {
-    return await this._runTrackedRecallOperation(label, operation, timeoutMs, timeoutMessage);
-  }
-
-  private async _runTrackedRecallOperation<T>(
-    label: string,
-    operation: Promise<T>,
-    timeoutMs: number,
-    timeoutMessage: string,
-  ) {
-    this.pendingRecallOperationCount += 1;
-    let settled = false;
-    const trackedOperation = operation.finally(() => {
-      settled = true;
-      this.pendingRecallOperationCount = Math.max(0, this.pendingRecallOperationCount - 1);
-
-      if (this.pendingRecallOperationCount === 0) {
-        this.lingeringRecallOperationSince = null;
-      }
-    });
-
-    try {
-      return await withTimeout(trackedOperation, timeoutMs, timeoutMessage);
-    } catch (error) {
-      if (!settled && this.lingeringRecallOperationSince === null) {
-        this.lingeringRecallOperationSince = Date.now();
-      }
-
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall operation failed or timed out',
-        context: {
-          agentId: this.agentId,
-          label,
-          timeoutMs,
-          settled,
-          pendingRecallOperationCount: this.pendingRecallOperationCount,
-          lingeringRecallOperationSince:
-            this.lingeringRecallOperationSince !== undefined
-              ? new Date(this.lingeringRecallOperationSince!).toISOString()
-              : null,
-          error: errorMsg(error),
-        },
-      });
-      throw error;
-    }
+  ): Promise<T> {
+    return await this.inFlightTracker.runTrackedRecallOperation(label, operation, timeoutMs, timeoutMessage);
   }
 
   private async getWorkspaceIndexState() {
