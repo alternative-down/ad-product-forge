@@ -13,6 +13,7 @@ import { errorMsg } from '../error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
 import { createIndexManager, IndexManager } from './recall/index-manager';
+import { createDebugSearch, DebugSearch } from './recall/debug-search';
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
@@ -129,6 +130,7 @@ export class AgentLongTermMemoryRecall {
   private readonly persistence: RecallPersistence;
   private readonly inFlightTracker: InFlightRecallTracker;
   private readonly indexManager: IndexManager;
+  private readonly debugSearchInstance: DebugSearch;
   private readonly _trackedRecallOperation: <T>(
     label: string,
     operation: Promise<T>,
@@ -216,6 +218,12 @@ export class AgentLongTermMemoryRecall {
       persistenceStore: this.persistenceStore,
       inFlightTracker: this.inFlightTracker,
       initTimeoutMs: this.initTimeoutMs,
+    });
+    this.debugSearchInstance = createDebugSearch({
+      indexState: this.indexManager,
+      orchestrator: this.orchestrator,
+      workspaceEmbedder: this.workspaceEmbedder,
+      queryVectorIndex: this.queryVectorIndex.bind(this),
     });
   }
   // ─── recallFromStep sub-methods ─────────────────────────────────────────
@@ -406,122 +414,13 @@ export class AgentLongTermMemoryRecall {
     await this.indexManager.refreshIndex();
   }
 
+  /**
+   * @deprecated Delegate to this.debugSearchInstance.search.
+   * Kept for backward compat with the public API; will be removed in a future major refactor.
+   */
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
-    const indexState = await this.getWorkspaceIndexState();
-    const query = input.query.trim();
-    const recallConfig = await this.resolveRecallConfig();
-
-    if (!query) {
-      return {
-        query: '',
-        topK: recallConfig.documentCount,
-        searchMode: recallConfig.searchMode,
-        graphTopK: recallConfig.documentCount,
-        graphThreshold: recallConfig.scoreThreshold,
-        graphScore: null,
-        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-        lastInitAt: this.indexManager.getLastInitAt(),
-        workspaceCanBm25: true,
-        workspaceCanVector: true,
-        workspaceCanHybrid: true,
-        availableIndexes: indexState.availableIndexes as string[],
-        activeIndexName: 'forge_runtime_memory_recall',
-        activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
-        queryEmbedding: [],
-        queryEmbeddingDimension: 0,
-        workspaceFormattedContext: '',
-        workspaceResults: [],
-        vectorResults: [],
-        graphHit: false,
-        graphQuery: '',
-        graphDimension: 0,
-        graphIncludeSources: recallConfig.graphIncludeSources,
-        graphContext: '',
-        graphRelevantContextRaw: null,
-        graphSourcesCount: 0,
-        graphSourcesJson: null,
-        graphRawJson: null,
-        graphError: null,
-        injectedSystemMessage: null,
-      } satisfies AgentLongTermMemoryRecallDebugSearchResult;
-    }
-
-    const recallSearch = await this.runRecallSearch(query, recallConfig);
-    const queryEmbedding = await embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, query);
-    const {
-      formatted: workspaceFormattedContext,
-      results,
-      rawWorkspaceResults,
-      graph: graphSearch,
-      effectiveGraphTopK: _effectiveGraphTopK,
-      effectiveGraphThreshold: _effectiveGraphThreshold,
-    } = recallSearch;
-    const vectorResults = await this.queryVectorIndex(queryEmbedding, recallConfig.documentCount);
-    const highestScore = rawWorkspaceResults.reduce((currentMax, result) => {
-      const score = typeof result.score === 'number' ? result.score : 0;
-      return Math.max(currentMax, score);
-    }, 0);
-
-    return {
-      query,
-      topK: recallConfig.documentCount,
-      searchMode: recallConfig.searchMode,
-      graphTopK: recallConfig.documentCount,
-      graphThreshold: recallConfig.scoreThreshold,
-      graphScore: graphSearch.score,
-      graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-      lastInitAt: this.indexManager.getLastInitAt(),
-      workspaceCanBm25: true,
-      workspaceCanVector: true,
-      workspaceCanHybrid: true,
-      availableIndexes: indexState.availableIndexes as string[],
-      activeIndexName: 'forge_runtime_memory_recall',
-      activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
-      queryEmbedding,
-      queryEmbeddingDimension: queryEmbedding.length,
-      workspaceFormattedContext,
-      workspaceResults: rawWorkspaceResults.map((result) => ({
-        id: result.id,
-        content: result.content,
-        score: typeof result.score === 'number' ? result.score : null,
-        relativePercent:
-          typeof result.score === 'number' && highestScore > 0
-            ? (result.score / highestScore) * 100
-            : null,
-      })),
-      vectorResults: vectorResults.map(
-        (result: {
-          id: string;
-          score: number;
-          metadata?: Record<string, unknown>;
-          text: string;
-        }) => ({
-          id: result.id,
-          score: result.score,
-          metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
-          document: result.text,
-        }),
-      ),
-      graphHit: graphSearch.hit,
-      graphQuery: graphSearch.queryText,
-      graphDimension: graphSearch.dimension,
-      graphIncludeSources: graphSearch.includeSources,
-      graphContext: graphSearch.context,
-      graphRelevantContextRaw: graphSearch.relevantContextRaw,
-      graphSourcesCount: graphSearch.sourcesCount,
-      graphSourcesJson: graphSearch.sourcesJson,
-      graphRawJson: graphSearch.rawJson,
-      graphError: graphSearch.error,
-      injectedSystemMessage: buildRecallSystemMessage({
-        graphHit: graphSearch.hit,
-        graphScore: graphSearch.score,
-        graphContext: graphSearch.context,
-        query,
-        results,
-      }),
-    } satisfies AgentLongTermMemoryRecallDebugSearchResult;
+    return await this.debugSearchInstance.search(input);
   }
-
   /**
    * @deprecated Delegate to this.indexManager.readCurrentIndexStamp.
    */
