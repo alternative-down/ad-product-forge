@@ -28,7 +28,7 @@ export async function adjustAgentContractBudget(
     ),
   });
 
-  if (activeContract === undefined) {
+  if (activeContract === null || activeContract === undefined) {
     forgeDebug({
       scope: 'adjust-agent-contract-budget',
       level: 'warn',
