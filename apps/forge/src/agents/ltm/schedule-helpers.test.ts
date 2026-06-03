@@ -6,7 +6,7 @@ import {
   scheduleLtmRun,
   clearLtmTimer,
   applyLtmStateToSnapshot,
-} from './agent-ltm-schedule-helpers';
+} from './schedule-helpers';
 
 describe('readLtmState', () => {
   it('delegates to persistenceStore.readState', async () => {

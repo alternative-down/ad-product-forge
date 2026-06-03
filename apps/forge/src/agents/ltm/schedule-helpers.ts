@@ -1,4 +1,4 @@
-import type { LongTermMemoryState } from './ltm/store';
+import type { LongTermMemoryState } from './store';
 
 /**
  * Reads the current LTM state from the persistence store.
