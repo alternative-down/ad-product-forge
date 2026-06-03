@@ -354,12 +354,7 @@ export class OperationalMemoryConversationMemory {
   }
 }
 
-function estimateMessageUnits(message: ConversationMessage) {
-  const text = getMessageBudgetText(message);
-
-  if (text) {
-  }
-
+function estimateMessageUnits(_message: ConversationMessage) {
   return 1;
 }
 
@@ -374,7 +369,7 @@ function getMessageText(message: ConversationMessage) {
     .join('\n');
 }
 
-function getMessageBudgetText(message: ConversationMessage) {
+function _getMessageBudgetText(message: ConversationMessage) {
   return [
     getMessageText(message),
     ...getToolInvocationBudgetTexts(message),

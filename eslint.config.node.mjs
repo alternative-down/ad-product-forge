@@ -188,10 +188,29 @@ export default defineConfig([
     },
   },
 
+  // ── Bench files ────────────────────────────────────────────────────────────
+  {
+    files: ['**/*.bench.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.jest },
+    },
+    rules: {
+      // Bench files use patterns similar to test files (as any, etc.)
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-function-type': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
   // ── Source files ────────────────────────────────────────────────────────────
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx', '**/dist/**/*.js'],
+    ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.bench.ts', '**/dist/**/*.js'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,
