@@ -202,19 +202,24 @@ export async function createRuntimeAgentSession(
     },
     // eslint-disable-next-line @typescript-eslint/require-await
     async getMemory() {
+      const store = input.workingMemoryStore;
       return {
         async getWorkingMemory(value) {
+          if (!store) {
+            return null;
+          }
           return (
-            (
-              await input.workingMemoryStore!.read({
-                threadId: value.threadId,
-                resourceId: value.resourceId,
-              })
-            )?.workingMemory ?? null
+            (await store.read({
+              threadId: value.threadId,
+              resourceId: value.resourceId,
+            }))?.workingMemory ?? null
           );
         },
         async updateWorkingMemory(value) {
-          await input.workingMemoryStore!.write(value);
+          if (!store) {
+            return;
+          }
+          await store.write(value);
         },
       };
     },

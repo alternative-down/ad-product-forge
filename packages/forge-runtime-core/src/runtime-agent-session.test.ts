@@ -878,6 +878,55 @@ describe('createRuntimeAgentSession', () => {
       await session.dispose();
     }
   });
+
+  it('returns no-op memory when workingMemoryStore is not provided (issue #5368)', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const model = new MockLanguageModelV3({
+      doGenerate: async () => ({
+        finishReason: 'stop' as const,
+        text: 'unused',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        response: { id: 'unused', modelId: 'mock' },
+        warnings: [],
+      }),
+    });
+
+    // workingMemoryStore is intentionally omitted. The field has been optional
+    // since #5329, but pre-fix runtime-agent-session.ts used a non-null
+    // assertion in getMemory(). The fix (issue #5368) makes getMemory()
+    // return a no-op object when no store is wired up.
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      // workingMemoryStore omitted on purpose
+    });
+
+    try {
+      const memory = await session.getMemory();
+      const readResult = await memory.getWorkingMemory({
+        threadId: 'thread-1',
+        resourceId: 'resource-1',
+      });
+      expect(readResult).toBeNull();
+
+      await expect(
+        memory.updateWorkingMemory({
+          threadId: 'thread-1',
+          resourceId: 'resource-1',
+          workingMemory: '{"version":1}',
+          updatedAt: '2026-06-03T00:00:00.000Z',
+        }),
+      ).resolves.toBeUndefined();
+    } finally {
+      await session.dispose();
+    }
+  });
 });
 
 function createInMemoryWorkingMemoryStore(): RuntimeWorkingMemoryStore {
