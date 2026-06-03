@@ -16,6 +16,7 @@ export class InMemorySpeechSynthesisRecorder implements SpeechSynthesisRecorder 
   private readonly events: SpeechSynthesisEvent[] = [];
 
   async record(event: SpeechSynthesisEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

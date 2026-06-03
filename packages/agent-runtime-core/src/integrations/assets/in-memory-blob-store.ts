@@ -4,14 +4,16 @@ export class InMemoryBlobStore implements BlobStore {
   private readonly records = new Map<string, BlobRecord>();
 
   async write(record: BlobRecord): Promise<void> {
+    await Promise.resolve();
     this.records.set(record.id, record);
   }
 
   async read(blobId: string): Promise<BlobRecord | null> {
-    return this.records.get(blobId) ?? null;
+    return await this.records.get(blobId) ?? null;
   }
 
   async list(): Promise<BlobRecord[]> {
+    await Promise.resolve();
     return Array.from(this.records.values()).sort((left, right) =>
       left.createdAt.localeCompare(right.createdAt),
     );

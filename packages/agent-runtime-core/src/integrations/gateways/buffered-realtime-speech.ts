@@ -30,6 +30,7 @@ export class BufferedRealtimeSpeechToTextGateway implements RealtimeSpeechToText
       }): Promise<void> | void;
     } = {},
   ): Promise<RealtimeSpeechToTextSession> {
+    await Promise.resolve();
     return new BufferedRealtimeSpeechToTextSession({
       stt: this.stt,
       language: options.language,
@@ -69,6 +70,7 @@ class BufferedRealtimeSpeechToTextSession implements RealtimeSpeechToTextSession
   }
 
   async pushAudio(chunk: AudioChunk): Promise<void> {
+    await Promise.resolve();
     if (this.closed) {
       throw new Error('Cannot push audio after the realtime speech session is closed');
     }

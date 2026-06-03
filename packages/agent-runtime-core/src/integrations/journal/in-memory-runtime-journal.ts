@@ -10,16 +10,19 @@ export class InMemoryRuntimeJournal implements RuntimeJournal {
   private readonly state = new Map<string, RuntimeJournalState>();
 
   async appendInput(runtimeId: string, input: RuntimeInput): Promise<void> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
     runtimeState.inputs.push(input);
   }
 
   async appendStep(runtimeId: string, step: StepRecord): Promise<void> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
     runtimeState.steps.push(step);
   }
 
   async readSnapshot(runtimeId: string): Promise<RuntimeJournalSnapshot> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
 
     return {

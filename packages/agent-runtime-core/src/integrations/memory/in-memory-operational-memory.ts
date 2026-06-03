@@ -29,6 +29,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
   }
 
   async append(entry: OperationalMemoryRawEntry): Promise<void> {
+    await Promise.resolve();
     this.rawEntries.push(entry);
   }
 
@@ -62,6 +63,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
   }
 
   async getSnapshot(): Promise<OperationalMemorySnapshot> {
+    await Promise.resolve();
     const recentRaw: OperationalMemoryRawEntry[] = [];
     const overflowRaw: OperationalMemoryRawEntry[] = [];
     let reservedUnits = 0;

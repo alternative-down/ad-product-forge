@@ -72,6 +72,7 @@ const vtuber = createVtuberApplication({
   tts: new MiniMaxTextToSpeechGateway({ apiKey }),
   vision: {
     async analyze() {
+      await Promise.resolve();
       return {
         text: 'A code editor and terminal are visible on screen.',
       };
@@ -117,12 +118,14 @@ const browserResearch = createBrowserResearchApplication({
   },
   browser: {
     async createSession() {
+      await Promise.resolve();
       return {
         id: 'browser-session',
         async navigate() {},
         async click() {},
         async type() {},
         async snapshot() {
+          await Promise.resolve();
           return {
             url: 'https://example.com',
             title: 'Example Domain',
@@ -130,6 +133,7 @@ const browserResearch = createBrowserResearchApplication({
           };
         },
         async screenshot() {
+          await Promise.resolve();
           return {
             mimeType: 'image/png',
             bytes: new Uint8Array([1, 2, 3]),

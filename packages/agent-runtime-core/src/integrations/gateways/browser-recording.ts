@@ -22,6 +22,7 @@ export class InMemoryBrowserSessionRecorder implements BrowserSessionRecorder {
   private readonly events: BrowserSessionEvent[] = [];
 
   async record(event: BrowserSessionEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

@@ -22,6 +22,7 @@ export class InMemoryWorkspaceCommandRecorder implements WorkspaceCommandRecorde
   private readonly events: WorkspaceCommandEvent[] = [];
 
   async record(event: WorkspaceCommandEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

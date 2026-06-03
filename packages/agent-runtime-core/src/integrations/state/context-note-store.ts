@@ -22,16 +22,19 @@ export class InMemoryContextNoteStore implements ContextNoteStore {
   private readonly state = new Map<string, RuntimeNotesState>();
 
   async set(runtimeId: string, note: ContextNote): Promise<void> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
     runtimeState.notes.set(note.id, note);
   }
 
   async remove(runtimeId: string, noteId: string): Promise<void> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
     runtimeState.notes.delete(noteId);
   }
 
   async list(runtimeId: string): Promise<StepContextEntry[]> {
+    await Promise.resolve();
     const runtimeState = this.getOrCreateState(runtimeId);
 
     return Array.from(runtimeState.notes.values(), (note) =>

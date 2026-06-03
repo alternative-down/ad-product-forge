@@ -4,14 +4,17 @@ export class InMemoryStoryEventStore implements StoryEventStore {
   private readonly events: StoryEvent[] = [];
 
   async append(event: StoryEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 
   async readRecent(limit = 10): Promise<StoryEvent[]> {
+    await Promise.resolve();
     return this.events.slice(-limit);
   }
 
   async list(): Promise<StoryEvent[]> {
+    await Promise.resolve();
     return [...this.events];
   }
 }
