@@ -32,7 +32,7 @@ function makeChain(returnValue: unknown = undefined) {
   // Special: where returns a chain that resolves the promise
   chain._resolveWhere = (val: unknown) => {
     const whereChain: Record<string, any> = {};
-    const chainMethods = ['limit', 'orderBy'];
+    const chainMethods = ['limit', 'orderBy', 'all'];
     chainMethods.forEach((m) => {
       whereChain[m] = vi.fn().mockReturnValue(whereChain);
     });
@@ -163,7 +163,7 @@ describe('createWebhookStore', () => {
       expect(result).toBeNull();
     });
 
-    it('logs and returns null on DB error', async () => {
+    it('logs and throws on DB error', async () => {
       const { forgeDebug } = await import('@forge-runtime/core');
       const qb = makeChain();
       qb.from.mockReturnValueOnce(qb);
@@ -173,8 +173,7 @@ describe('createWebhookStore', () => {
       db.select.mockReturnValueOnce(qb);
 
       const store = createWebhookStore(db as any);
-      const result = await store.getRoute('route-1');
-      expect(result).toBeNull();
+      await expect(store.getRoute('route-1')).rejects.toThrow('Read failed');
       expect(forgeDebug).toHaveBeenCalledWith(
         expect.objectContaining({
           scope: 'webhooks-store',
@@ -208,7 +207,7 @@ describe('createWebhookStore', () => {
       expect(result).toHaveLength(0);
     });
 
-    it('logs and returns empty array on DB error', async () => {
+    it('logs and throws on DB error', async () => {
       const { forgeDebug } = await import('@forge-runtime/core');
       const qb = makeChain();
       qb.from.mockReturnValueOnce(qb);
@@ -218,8 +217,7 @@ describe('createWebhookStore', () => {
       db.select.mockReturnValueOnce(qb);
 
       const store = createWebhookStore(db as any);
-      const result = await store.listRoutesByAgent('agent-1');
-      expect(result).toHaveLength(0);
+      await expect(store.listRoutesByAgent('agent-1')).rejects.toThrow('DB read error');
       expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({ scope: 'webhooks-store' }));
     });
   });

@@ -61,7 +61,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'getRoute DB read failed: ' + errorMsg(err),
       });
-      return null;
+      throw err;
     }
   }
 
@@ -79,7 +79,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'listRoutesByAgent DB read failed: ' + errorMsg(err),
       });
-      return [];
+      throw err;
     }
   }
 
@@ -214,7 +214,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'listEventsByAgent DB read failed: ' + errorMsg(err),
       });
-      return [];
+      throw err;
     }
   }
 
