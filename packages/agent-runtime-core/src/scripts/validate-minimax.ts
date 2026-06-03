@@ -8,7 +8,7 @@ import { createMiniMaxTextModelAdapter } from '../integrations/providers/minimax
 
 const apiKey = process.env.MINIMAX_API_KEY;
 
-if (!apiKey) {
+if (apiKey == null) {
   throw new Error('MINIMAX_API_KEY is required');
 }
 
@@ -35,7 +35,7 @@ await runtime.dispatch({
 const textResult = await runtime.run({ maxSteps: 1 });
 const step = textResult.steps[0];
 
-if (!step) {
+if (step == null) {
   throw new Error('MiniMax text validation produced no step');
 }
 
@@ -62,7 +62,7 @@ const imageResult = await imageGateway.generate({
 });
 const firstImage = imageResult.images[0];
 
-if (!firstImage) {
+if (firstImage == null) {
   throw new Error('MiniMax image validation produced no images');
 }
 

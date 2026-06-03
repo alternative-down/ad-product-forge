@@ -17,7 +17,7 @@ export class InMemoryRelationshipStore implements RelationshipStore {
         return false;
       }
 
-      if (input.kind && record.kind !== input.kind) {
+      if (input.kind != null && record.kind !== input.kind) {
         return false;
       }
 

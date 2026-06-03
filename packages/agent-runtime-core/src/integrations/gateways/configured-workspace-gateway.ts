@@ -38,7 +38,7 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
       ...(requestEnv ?? {}),
     };
     // Override HOME to point to the workspace root, preventing access to host home
-    if (this.workspaceRoot) {
+    if (this.workspaceRoot != null) {
       env.HOME = this.workspaceRoot;
     }
     return env;

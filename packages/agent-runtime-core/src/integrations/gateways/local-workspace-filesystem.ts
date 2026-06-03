@@ -95,7 +95,7 @@ export class LocalWorkspaceFilesystem {
     const realPath = await resolveExistingRealPath(checkPath);
 
     if (
-      realPath &&
+      realPath != null &&
       this.contained &&
       !isWithinAnyRoot(realPath, [this.root, ...this.allowedPaths])
     ) {

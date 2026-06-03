@@ -120,7 +120,7 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
     return documents.flatMap((document, index) => {
       const vector = response.vectors[index];
 
-      if (!vector) {
+      if (vector == null) {
         return [];
       }
 

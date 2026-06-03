@@ -46,7 +46,7 @@ export type RuntimeHost = {
 };
 
 export function createRuntimeHost(options: RuntimeHostOptions): RuntimeHost {
-  const runtimeOptions: AgentRuntimeOptions = options.modelMiddlewares?.length
+  const runtimeOptions: AgentRuntimeOptions = options.modelMiddlewares != null && options.modelMiddlewares.length > 0
     ? {
         ...options.runtime,
         model: applyStepModelMiddlewares(options.runtime.model, options.modelMiddlewares),
@@ -56,7 +56,7 @@ export function createRuntimeHost(options: RuntimeHostOptions): RuntimeHost {
   const journal = options.journal ?? new InMemoryRuntimeJournal();
   const notes = options.notes ?? new InMemoryContextNoteStore();
   const scheduler =
-    options.schedulerInstance ?? (options.scheduler ? new InMemoryRuntimeScheduler() : null);
+    options.schedulerInstance ?? (options.scheduler != null ? new InMemoryRuntimeScheduler() : null);
   const snapshotStore = options.snapshotStore ?? null;
   const eventStream =
     options.eventStream === true || options.messageStream === true

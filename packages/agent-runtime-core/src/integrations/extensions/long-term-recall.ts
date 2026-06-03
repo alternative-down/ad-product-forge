@@ -30,7 +30,7 @@ export function createLongTermRecallPlugin(options: LongTermRecallPluginOptions)
         steps: context.steps,
       });
 
-      if (!query) {
+      if (query == null) {
         return [];
       }
 

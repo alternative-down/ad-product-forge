@@ -397,7 +397,7 @@ function parseActionResults(entry: StepContextEntry) {
 }
 
 function parseConversationToolHistory(entry: StepContextEntry) {
-  if (!entry.data || typeof entry.data !== 'object') {
+  if (entry.data == null || typeof entry.data !== 'object') {
     return {
       toolInvocations: [] as Array<{ toolName: string; args: Record<string, unknown> }>,
       toolResults: [] as Array<{ toolName: string; result: unknown }>,
@@ -506,7 +506,7 @@ async function forwardAiSdkStreamEvents(input: {
 }) {
   try {
     for await (const part of input.fullStream) {
-      if (part.type === 'text-delta' && part.text?.length) {
+      if (part.type === 'text-delta' && part.text != null && part.text.length > 0) {
         input.events.publish({
           type: 'segment-delta',
           segment: {
@@ -517,7 +517,7 @@ async function forwardAiSdkStreamEvents(input: {
         continue;
       }
 
-      if (part.type === 'reasoning-delta' && part.text?.length) {
+      if (part.type === 'reasoning-delta' && part.text != null && part.text.length > 0) {
         input.events.publish({
           type: 'segment-delta',
           segment: {
@@ -528,7 +528,7 @@ async function forwardAiSdkStreamEvents(input: {
         continue;
       }
 
-      if (part.type === 'tool-call' && part.toolName) {
+      if (part.type === 'tool-call' && part.toolName != null) {
         input.events.publish({
           type: 'action-request',
           actionRequest: {
@@ -547,7 +547,7 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
   const segments: StepContentSegment[] = [];
 
   for (const part of content) {
-    if (part.type === 'text' && part.text?.trim()) {
+    if (part.type === 'text' && part.text != null && part.text.trim().length > 0) {
       segments.push({
         kind: 'message',
         text: part.text.trim(),
@@ -555,7 +555,7 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
       continue;
     }
 
-    if (part.type === 'reasoning' && part.text?.trim()) {
+    if (part.type === 'reasoning' && part.text != null && part.text.trim().length > 0) {
       segments.push({
         kind: 'reasoning',
         text: part.text.trim(),

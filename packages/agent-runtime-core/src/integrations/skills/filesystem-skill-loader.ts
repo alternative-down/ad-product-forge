@@ -66,7 +66,7 @@ async function findSkillFiles(basePath: string): Promise<string[]> {
 async function readSkillDefinition(skillFilePath: string): Promise<SkillDefinition | null> {
   const raw = await readFile(skillFilePath, 'utf8').catch(() => null);
 
-  if (!raw) {
+  if (raw == null) {
     return null;
   }
 
@@ -88,7 +88,7 @@ async function readSkillDefinition(skillFilePath: string): Promise<SkillDefiniti
   const skillDirectory = skillFilePath.slice(0, skillFilePath.length - '/SKILL.md'.length);
   const skillId = skillDirectory.split('/').filter(Boolean).at(-1);
 
-  if (!skillId) {
+  if (skillId == null) {
     return null;
   }
 

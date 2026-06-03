@@ -58,7 +58,7 @@ export class RuntimeStreamingVoiceSession {
     const completion = (async () => {
       try {
         for await (const event of this.messageStream) {
-          if (this.runtimeId && event.runtimeId !== this.runtimeId) {
+          if (this.runtimeId != null && event.runtimeId !== this.runtimeId) {
             continue;
           }
 

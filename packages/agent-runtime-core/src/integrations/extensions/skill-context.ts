@@ -20,7 +20,7 @@ export function createSkillContextPlugin(options: SkillContextPluginOptions): Ru
           })
         : buildDefaultSkillQuery(context.pendingInputs);
 
-      if (!query) {
+      if (query == null) {
         return [];
       }
 

@@ -38,7 +38,7 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
     });
     const vector = embedding.vectors[0];
 
-    if (!vector) {
+    if (vector == null) {
       throw new Error(`Embedder returned no vector for long-term memory document ${document.id}`);
     }
 
@@ -100,7 +100,7 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
     return documents.flatMap((document, index) => {
       const vector = embedding.vectors[index];
 
-      if (!vector) {
+      if (vector == null) {
         return [];
       }
 

@@ -34,7 +34,7 @@ export function createInMemoryRecallPlugin(options: InMemoryRecallPluginOptions)
         steps: context.steps,
       });
 
-      if (!query) {
+      if (query == null) {
         return [];
       }
 

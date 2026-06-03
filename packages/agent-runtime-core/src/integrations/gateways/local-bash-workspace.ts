@@ -26,7 +26,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   private readonly backgroundProcesses = new Map<string, BackgroundProcessState>();
 
   constructor(options: LocalBashWorkspaceGatewayOptions = {}) {
-    this.root = options.root ? path.resolve(options.root) : undefined;
+    this.root = options.root != null ? path.resolve(options.root) : undefined;
     this.pathAliases = (options.pathAliases ?? []).map((alias) => path.resolve(alias));
     this.shellPath = options.shellPath ?? '/bin/bash';
     this.env = options.env ?? {};
@@ -87,7 +87,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       };
     }
 
-    if (request.wait && processState.exitCode === null) {
+    if (request.wait === true && processState.exitCode === null) {
       await processState.completion;
     }
 
@@ -175,7 +175,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       exitCode: null,
       completion: Promise.resolve(),
     };
-    const timeout = input.timeoutMs
+    const timeout = input.timeoutMs != null
       ? setTimeout(() => {
           this.killChild(child);
         }, input.timeoutMs)
@@ -240,7 +240,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   }
 
   private resolveCwd(cwd: string | undefined) {
-    if (!cwd) {
+    if (cwd == null) {
       return this.root ?? process.cwd();
     }
 
@@ -254,7 +254,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       }
     }
 
-    if (!this.root) {
+    if (this.root == null) {
       return resolvedCwd;
     }
 

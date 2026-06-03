@@ -20,7 +20,7 @@ export function createOperationalMemoryConversationPlugin(
         options.selectThreadId?.(context.pendingInputs) ??
         selectLatestConversationThreadId(context.pendingInputs);
 
-      if (!threadId) {
+      if (threadId == null) {
         return [];
       }
 
@@ -42,7 +42,7 @@ export function createOperationalMemoryConversationPlugin(
       });
     },
     async onAfterStep() {
-      if (options.consolidateAfterStep) {
+      if (options.consolidateAfterStep === true) {
         await options.memory.stabilize();
         return;
       }

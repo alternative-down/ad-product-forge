@@ -12,8 +12,8 @@ export async function createMcpActionDefinitions(
   const tools = await session.listTools();
 
   return tools.map((tool) => ({
-    name: options.namePrefix ? `${options.namePrefix}${tool.name}` : tool.name,
-    description: tool.description?.trim() || `Call MCP tool ${tool.name}.`,
+    name: options.namePrefix != null ? `${options.namePrefix}${tool.name}` : tool.name,
+    description: tool.description != null && tool.description.trim().length > 0 ? tool.description : `Call MCP tool ${tool.name}.`,
     inputSchema: toRuntimeActionInputSchema(tool.inputSchema),
     async execute(input) {
       return session.callTool(tool.name, input);

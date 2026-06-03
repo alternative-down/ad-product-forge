@@ -21,7 +21,7 @@ export class FilesystemOperationalMemoryConversationStateStore implements Operat
     const filePath = this.getFilePath(threadId);
     const content = await readFile(filePath, 'utf8').catch(() => null);
 
-    if (!content) {
+    if (content == null) {
       return null;
     }
 

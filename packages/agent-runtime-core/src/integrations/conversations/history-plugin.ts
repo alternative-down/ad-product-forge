@@ -24,7 +24,7 @@ export function createConversationHistoryPlugin(
         options.selectThreadId?.(context.pendingInputs) ??
         selectLatestConversationThreadId(context.pendingInputs);
 
-      if (!threadId) {
+      if (threadId == null) {
         return [];
       }
 

@@ -20,13 +20,13 @@ export function mcpJsonSchemaToZod(schema: McpJsonSchema | undefined): z.ZodType
     return z.unknown().refine((value) => value === schema.const);
   }
 
-  if (schema.enum?.length) {
+  if ((schema.enum?.length ?? 0) > 0) {
     return z.unknown().refine((value) => {
       return schema.enum!.some((candidate) => candidate === value);
     });
   }
 
-  const typeValues = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
+  const typeValues = Array.isArray(schema.type) ? schema.type : schema.type != null ? [schema.type] : [];
 
   if (typeValues.length > 1) {
     return z.union(
