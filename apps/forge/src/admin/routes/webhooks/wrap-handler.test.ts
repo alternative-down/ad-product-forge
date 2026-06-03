@@ -63,7 +63,7 @@ describe('wrapAdminRoute', () => {
     const wrapped = wrapAdminRoute(ROUTE_PATH, async () => {
       throw new ZodError([
         { code: 'invalid_type', expected: 'string', received: 'undefined', path: ['agentId'], message: 'Required' },
-      ]);
+      ] as never);
     });
     const result = await wrapped(REQUEST);
     expect(result.status).toBe(400);
