@@ -1,9 +1,15 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 
-import type { WebhookRoute } from '../database/schema';
+import {
+  buildEventHeaders,
+  buildNotificationContent,
+  extractIdempotencyKey,
+  extractRouteId,
+  parseWebhookPayload,
+  verifyWebhookSignature,
+} from './handler-helpers';
 
 type CreateEventResult =
   | { kind: 'created'; eventId: string }
@@ -29,13 +35,14 @@ type NotifyAgent = (input: {
   timestamp: number;
 }) => void;
 
+import type { WebhookRoute } from '../database/schema';
+
 export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyAgent }) {
   async function handleWebhook(request: HttpRequest): Promise<HttpResponse> {
-    const match = request.path.match(/^\/webhooks\/([^/]+)$/);
-    if (!match) {
+    const routeId = extractRouteId(request.path);
+    if (routeId === null) {
       return { status: 404, body: 'Route not found' };
     }
-    const routeId = match[1];
 
     const route = await input.store.getRoute(routeId);
     if (route == null) {
@@ -57,33 +64,23 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
         });
         return { status: 401, body: 'Missing signature' };
       }
-      const rawBody = request.bodyText;
-      const expected = 'sha256=' + createHash('sha256').update(rawBody).digest('hex');
-      const received = typeof signatureHeader === 'string' ? signatureHeader : signatureHeader[0];
-      try {
-        const a = Buffer.from(expected);
-        const b = Buffer.from(received);
-        if (a.length !== b.length || !timingSafeEqual(a, b)) {
-          return { status: 401, body: 'Invalid signature' };
-        }
-      } catch (err) {
+      if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
         forgeDebug({
-        scope: 'webhooks-handler',
-        level: 'error',
-        message: 'verifyGitHubWebhookSignature failed: ' + errorMsg(err),
+          scope: 'webhooks-handler',
+          level: 'warn',
+          message: 'Invalid signature',
+          context: { routeId },
         });
         return { status: 401, body: 'Invalid signature' };
       }
     }
 
-    let payload: Record<string, unknown>;
-    try {
-      payload = JSON.parse(request.bodyText);
-    } catch (err) {
+    const parsed = parseWebhookPayload(request.bodyText);
+    if (!parsed.ok) {
       forgeDebug({
         scope: 'webhooks-handler',
         level: 'error',
-        message: 'parseWebhookPayload failed: ' + errorMsg(err),
+        message: 'parseWebhookPayload failed: ' + errorMsg(new Error('invalid JSON')),
       });
       return { status: 400, body: 'Invalid JSON payload' };
     }
@@ -91,18 +88,9 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     const result = await input.store.createEvent({
       routeId,
       agentId: route.agentId,
-      payload,
-      headers: {
-        'content-type': request.headers['content-type'] ?? '',
-        'user-agent': request.headers['user-agent'] ?? '',
-        'x-forwarded-for': Array.isArray(request.headers['x-forwarded-for'])
-          ? request.headers['x-forwarded-for'][0]
-          : (request.headers['x-forwarded-for'] ?? ''),
-      } as Record<string, string>,
-      idempotencyKey:
-        typeof request.headers['x-idempotency-key'] === 'string'
-          ? request.headers['x-idempotency-key']
-          : undefined,
+      payload: parsed.payload,
+      headers: buildEventHeaders(request),
+      idempotencyKey: extractIdempotencyKey(request),
     });
 
     // AC-5: duplicate request is NOT an error — return 200 with deduplicated flag.
@@ -121,14 +109,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       };
     }
 
-    input.notifyAgent({
-      agentId: route.agentId,
-      content: `[Webhook] Event received on route "${route.name}" (${routeId}). Event ID: ${result.eventId}`,
-      groupKey: `webhook:${result.eventId}`,
-      type: 'webhook',
-      idempotencyKey: `webhook:${result.eventId}`,
-      timestamp: Date.now(),
-    });
+    input.notifyAgent(buildNotificationContent(route, result.eventId, routeId, Date.now()));
 
     return { status: 202, body: JSON.stringify({ eventId: result.eventId }) };
   }
