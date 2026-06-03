@@ -13,7 +13,7 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 vi.mock('../utils/id', () => ({
-  createId: vi.fn().mockReturnValue('mock-webhook-id-12345'),
+  createId: vi.fn().mockReturnValue('a1b2c3d4-e5f6-7890-abcd-ef1234567890'),
 }));
 
 vi.mock('../../database/schema', () => ({
@@ -82,17 +82,18 @@ describe('createWebhookStore', () => {
         agentId: 'agent-1',
         name: 'Test Webhook',
         secret: 'my-secret-xyz',
-        isActive: true,
+        isActive: 1,
       });
     });
 
     it('uses createId for the routeId', async () => {
+      const { createId } = await import('../utils/id');
       const store = createWebhookStore(db as any);
       const result = await store.createRoute({ agentId: 'agent-1', name: 'Test' });
-      // createId generates routeId — verify result has valid UUID
-      expect(result.routeId).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
+      // createId is called to generate routeId
+      expect(createId).toHaveBeenCalled();
+      // createId's return value is the routeId
+      expect(result.routeId).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
     });
 
     it('defaults secret to null when not provided', async () => {
@@ -260,7 +261,7 @@ describe('createWebhookStore', () => {
       });
       expect(result).toEqual({
         kind: 'created',
-        eventId: 'mock-webhook-id-12345',
+        eventId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       });
     });
 
@@ -275,7 +276,7 @@ describe('createWebhookStore', () => {
       });
       expect(result).toEqual({
         kind: 'created',
-        eventId: 'mock-webhook-id-12345',
+        eventId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       });
     });
 
@@ -310,7 +311,7 @@ describe('createWebhookStore', () => {
       // (so the production code can chain), and returning() returns a thenable.
       const thenable = (val: unknown) => ({ then: (cb: (v: unknown) => void) => cb(val) });
       const insertChain = makeChain();
-      insertChain.returning.mockReturnValue(thenable([{ eventId: 'mock-webhook-id-12345' }]));
+      insertChain.returning.mockReturnValue(thenable([{ eventId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' }]));
       db.insert.mockImplementationOnce(() => insertChain);
 
       const store = createWebhookStore(db as any);
@@ -319,7 +320,7 @@ describe('createWebhookStore', () => {
         idempotencyKey: 'idem-key-1',
       });
 
-      expect(result).toEqual({ kind: 'created', eventId: 'mock-webhook-id-12345' });
+      expect(result).toEqual({ kind: 'created', eventId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' });
     });
 
     it('returns kind: duplicate with existing eventId on conflict (T1: replay - second call)', async () => {
