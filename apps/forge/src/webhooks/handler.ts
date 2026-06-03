@@ -67,11 +67,11 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
           return { status: 401, body: 'Invalid signature' };
         }
       } catch (err) {
-      forgeDebug({
+        forgeDebug({
         scope: 'webhooks-handler',
         level: 'error',
         message: 'verifyGitHubWebhookSignature failed: ' + errorMsg(err),
-      });
+        });
         return { status: 401, body: 'Invalid signature' };
       }
     }

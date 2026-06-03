@@ -5,7 +5,7 @@
  *   POST /admin/agent-provider/upsert  (upsertAgentProviderSchema)
  *   POST /admin/agent-provider/delete (deleteAgentProviderSchema)
  *
- * Schema source: admin/routes/schemas.ts (canonical)
+ * Schema source: admin/schemas.ts (canonical)
  *
  * NOTE: Cannot test via registerAdminRoutes — the '../routes' import path
  * resolves to a non-existent absolute path in this test environment.
