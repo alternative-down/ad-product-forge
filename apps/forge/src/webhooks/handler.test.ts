@@ -110,7 +110,7 @@ describe('createWebhookHandler', () => {
         secret: 'my-secret',
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'event-1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -134,7 +134,7 @@ describe('createWebhookHandler', () => {
         secret: 'my-secret',
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'event-1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -154,7 +154,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'event-1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -222,7 +222,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'event-456' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-456' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -239,7 +239,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -257,7 +257,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -289,7 +289,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -311,7 +311,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -329,7 +329,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -352,7 +352,7 @@ describe('createWebhookHandler', () => {
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ eventId: 'e1' });
+      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
       mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
@@ -369,6 +369,59 @@ describe('createWebhookHandler', () => {
           headers: expect.objectContaining({ 'x-forwarded-for': '1.2.3.4' }),
         }),
       );
+    });
+
+    it('returns 200 with deduplicated:true on idempotent replay (T1, T7: AC-1 + AC-5)', async () => {
+      mockStore.getRoute.mockResolvedValue({
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+      });
+      mockStore.createEvent.mockResolvedValue({ kind: 'duplicate', eventId: 'event-1' });
+      mockNotify.mockReturnValue(undefined);
+
+      const handler = makeHandler();
+      const result = await handler.handleWebhook(makeReq());
+      expect(result.status).toBe(200);
+      expect(JSON.parse(result.body as string)).toEqual({
+        eventId: 'event-1',
+        deduplicated: true,
+      });
+    });
+
+    it('does NOT call notifyAgent on idempotent replay (skip duplicate notification)', async () => {
+      mockStore.getRoute.mockResolvedValue({
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+      });
+      mockStore.createEvent.mockResolvedValue({ kind: 'duplicate', eventId: 'event-1' });
+      mockNotify.mockReturnValue(undefined);
+
+      const handler = makeHandler();
+      await handler.handleWebhook(makeReq());
+      expect(mockNotify).not.toHaveBeenCalled();
+    });
+
+    it('returns 202 on first call (created) and 200 on replay (duplicate) — full T1 flow', async () => {
+      mockStore.getRoute.mockResolvedValue({
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+      });
+      mockStore.createEvent
+        .mockResolvedValueOnce({ kind: 'created', eventId: 'event-1' })
+        .mockResolvedValueOnce({ kind: 'duplicate', eventId: 'event-1' });
+      mockNotify.mockReturnValue(undefined);
+
+      const handler = makeHandler();
+      const first = await handler.handleWebhook(makeReq());
+      const second = await handler.handleWebhook(makeReq());
+
+      expect(first.status).toBe(202);
+      expect(JSON.parse(first.body as string)).toEqual({ eventId: 'event-1' });
+      expect(second.status).toBe(200);
+      expect(JSON.parse(second.body as string)).toEqual({
+        eventId: 'event-1',
+        deduplicated: true,
+      });
+
+      // Notify called exactly once (only on the first call).
+      expect(mockNotify).toHaveBeenCalledTimes(1);
     });
   });
 });
