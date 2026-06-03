@@ -42,6 +42,8 @@ export function forgeDebug(
 
     if (_context && typeof _context === 'object') {
       context = { ...(_context as LogContext), ...extra };
+    } else if (opts.data !== undefined) {
+      context = opts.data as LogContext;
     } else if (Object.keys(extra).length > 0) {
       context = extra;
     }
