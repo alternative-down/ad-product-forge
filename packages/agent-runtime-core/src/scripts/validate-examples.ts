@@ -19,7 +19,7 @@ import { MiniMaxTextToSpeechGateway } from '../integrations/providers/minimax-sp
 
 const apiKey = process.env.MINIMAX_API_KEY;
 
-if (!apiKey) {
+if (apiKey == null) {
   throw new Error('MINIMAX_API_KEY is required');
 }
 

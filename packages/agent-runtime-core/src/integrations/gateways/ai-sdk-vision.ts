@@ -22,7 +22,7 @@ export class AiSdkVisionGateway implements VisionGateway {
   async analyze(request: VisionRequest): Promise<VisionResponse> {
     const content = [];
 
-    if (request.prompt?.trim()) {
+    if (request.prompt != null && request.prompt.trim().length > 0) {
       content.push({
         type: 'text' as const,
         text: request.prompt.trim(),

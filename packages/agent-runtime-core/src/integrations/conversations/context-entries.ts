@@ -41,7 +41,7 @@ export function createConversationMessageContextEntry(
 }
 
 function buildConversationMessageTitle(message: ConversationMessage) {
-  if (message.authorId) {
+  if (message.authorId != null) {
     return `${message.role} message from ${message.authorId}`;
   }
 

@@ -14,7 +14,7 @@ export class FilesystemDocumentSource implements RetrievalDocumentSource {
 
   constructor(options: FilesystemDocumentSourceOptions) {
     this.roots = options.roots;
-    this.includeExtensions = options.includeExtensions?.length
+    this.includeExtensions = options.includeExtensions != null && options.includeExtensions.length > 0
       ? new Set(options.includeExtensions.map((value) => value.toLowerCase()))
       : null;
   }
@@ -32,7 +32,7 @@ export class FilesystemDocumentSource implements RetrievalDocumentSource {
 
         const text = await readFile(filePath, 'utf8').catch(() => null);
 
-        if (!text?.trim()) {
+        if (text == null || text.trim().length === 0) {
           return null;
         }
 

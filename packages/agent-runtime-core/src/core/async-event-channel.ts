@@ -52,7 +52,7 @@ export class AsyncEventChannel<TEvent> implements AsyncIterable<TEvent> {
 
         resolve(event);
       };
-      const timeout = options.timeoutMs
+      const timeout = options.timeoutMs != null
         ? setTimeout(() => {
             this.waiters.delete(waiter);
             resolve(null);

@@ -23,9 +23,9 @@ export function createConversationRuntimeObserver(
       const payload = latestConversationInput?.payload;
 
       const threadId =
-        payload && isConversationRuntimeInputPayload(payload) ? payload.threadId : options.threadId;
+        payload != null && isConversationRuntimeInputPayload(payload) ? payload.threadId : options.threadId;
 
-      if (!threadId) {
+      if (threadId == null) {
         return;
       }
 

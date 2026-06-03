@@ -65,7 +65,7 @@ export function createWorkspaceAgentApplication(options: WorkspaceAgentApplicati
       return options.workspace.execute(request);
     },
     async loadSkillNotes() {
-      if (!options.skills && !options.skillBasePath) {
+      if (options.skills == null && options.skillBasePath == null) {
         return [];
       }
 

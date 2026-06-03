@@ -72,7 +72,7 @@ export class RuntimeVoiceSession {
   }
 
   private async handleMessageEvent(event: RuntimeMessageEvent) {
-    if (this.runtimeId && event.runtimeId !== this.runtimeId) {
+    if (this.runtimeId != null && event.runtimeId !== this.runtimeId) {
       return;
     }
 

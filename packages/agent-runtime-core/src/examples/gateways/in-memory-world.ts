@@ -9,8 +9,8 @@ export class InMemoryWorldGateway implements WorldGateway {
   }
 
   async readRecentEvents(input: { actorId?: string; limit?: number }): Promise<WorldEvent[]> {
-    const filtered = input.actorId
-      ? this.events.filter((event) => event.actorId === input.actorId || !event.actorId)
+    const filtered = input.actorId != null
+      ? this.events.filter((event) => event.actorId === input.actorId || event.actorId == null)
       : this.events;
     const limit = input.limit ?? 10;
 

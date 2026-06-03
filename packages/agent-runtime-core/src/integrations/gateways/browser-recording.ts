@@ -26,7 +26,7 @@ export class InMemoryBrowserSessionRecorder implements BrowserSessionRecorder {
   }
 
   list(sessionId?: string) {
-    return sessionId
+    return sessionId != null
       ? this.events.filter((event) => event.sessionId === sessionId)
       : [...this.events];
   }

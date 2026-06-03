@@ -50,7 +50,7 @@ export class RuntimeRunController {
     const steps: StepRecord[] = [];
 
     while (steps.length < maxSteps) {
-      if (options.signal?.aborted) {
+      if (options.signal?.aborted === true) {
         return {
           steps,
           snapshot: this.runtime.getSnapshot(),

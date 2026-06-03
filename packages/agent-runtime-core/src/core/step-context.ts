@@ -31,7 +31,7 @@ export function createImageStepContextEntry(input: {
 }): StepContextEntry {
   const content: StepContextPart[] = [];
 
-  if (input.text) {
+  if (input.text != null) {
     content.push({
       type: 'text',
       text: input.text,
@@ -57,7 +57,7 @@ export function getStepContextParts(entry: StepContextEntry): StepContextPart[] 
     return entry.content;
   }
 
-  if (entry.text) {
+  if (entry.text != null) {
     return [
       {
         type: 'text',

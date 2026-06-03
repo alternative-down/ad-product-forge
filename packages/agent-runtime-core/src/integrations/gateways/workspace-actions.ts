@@ -48,7 +48,7 @@ const DEFAULT_TAIL_LINES = 100;
 const MAX_PATTERN_LENGTH = 1000;
 
 function normalizeOutputPaths(output: string, workspaceRoot?: string): string {
-  if (!workspaceRoot) return output;
+  if (workspaceRoot == null) return output;
 
   // Normalize workspace root (resolve ~ and ..)
   const normalizedRoot = path.resolve(workspaceRoot);
@@ -92,7 +92,7 @@ function truncateOutput(
   let result = output;
 
   // Apply tail first
-  if (tail && tail > 0) {
+  if (tail != null && tail > 0) {
     const lines = result.split('\n');
     if (lines.length > tail) {
       result = lines.slice(-tail).join('\n');
@@ -135,7 +135,7 @@ function formatWithLineNumbers(content: string, startLine: number = 1): string {
 function sliceContent(content: string, offset: number, limit?: number): string {
   const lines = content.split('\n');
   const startLine = Math.min(offset, lines.length);
-  const endLine = limit ? Math.min(offset + limit, lines.length) : lines.length;
+  const endLine = limit != null ? Math.min(offset + limit, lines.length) : lines.length;
   return lines.slice(startLine, endLine).join('\n');
 }
 
@@ -205,7 +205,7 @@ Use cwd instead of "cd ... &&". Examples:
       const request = executeCommandSchema.parse(input);
       const tailLines = request.tail ?? DEFAULT_TAIL_LINES;
 
-      if (request.background) {
+      if (request.background === true) {
         if (!gateway.startBackground) {
           throw new Error('Workspace gateway does not support background processes');
         }
@@ -213,7 +213,7 @@ Use cwd instead of "cd ... &&". Examples:
         const result = await gateway.startBackground({
           command: request.command,
           cwd: request.cwd,
-          timeoutMs: request.timeout ? request.timeout * 1000 : undefined,
+          timeoutMs: request.timeout != null ? request.timeout * 1000 : undefined,
         } satisfies WorkspaceBackgroundCommandRequest);
 
         return `Started background process with PID: ${result.pid}\nCommand: ${request.command}`;
@@ -222,7 +222,7 @@ Use cwd instead of "cd ... &&". Examples:
       const result = await gateway.execute({
         command: request.command,
         cwd: request.cwd,
-        timeoutMs: request.timeout ? request.timeout * 1000 : undefined,
+        timeoutMs: request.timeout != null ? request.timeout * 1000 : undefined,
       } satisfies WorkspaceCommandRequest);
 
       const combinedOutput = result.stdout + (result.stderr ? `\n${result.stderr}` : '');
@@ -366,7 +366,7 @@ Examples:
           let finalContent = strContent;
           if (
             (request.encoding === 'utf-8' || request.encoding === 'utf8' || !request.encoding) &&
-            (request.offset || request.limit)
+            request.offset != null || request.limit != null
           ) {
             finalContent = sliceContent(strContent, request.offset ?? 0, request.limit);
           }
@@ -652,7 +652,7 @@ Usage:
               if (regex.test(line)) {
                 totalMatches++;
 
-                if (request.maxCount && totalMatches >= request.maxCount) {
+                if (request.maxCount != null && totalMatches >= request.maxCount) {
                   if (request.contextLines > 0) {
                     const start = Math.max(0, i - request.contextLines);
                     const end = Math.min(lines.length, i + request.contextLines + 1);
@@ -746,13 +746,13 @@ async function listWorkspaceEntries(
     if (input.dirsOnly && !entry.isDirectory) return false;
 
     // Filter by extension
-    if (input.extension) {
+    if (input.extension != null) {
       const ext = entry.name.split('.').pop();
       if (ext !== input.extension) return false;
     }
 
     // Filter by pattern
-    if (input.pattern && !matchesPattern(entry.name, input.pattern)) return false;
+    if (input.pattern != null && !matchesPattern(entry.name, input.pattern)) return false;
 
     // Filter by exclude patterns
     for (const excludePattern of input.exclude) {

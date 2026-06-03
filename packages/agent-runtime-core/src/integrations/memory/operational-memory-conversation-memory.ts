@@ -455,7 +455,7 @@ function getMessageToolCallIds(message: ConversationMessage) {
       item !== null &&
       'toolCallId' in item &&
       typeof item.toolCallId === 'string' &&
-      item.toolCallId.trim()
+      (item.toolCallId?.trim()?.length ?? 0) > 0
     ) {
       toolCallIds.add(item.toolCallId);
     }
