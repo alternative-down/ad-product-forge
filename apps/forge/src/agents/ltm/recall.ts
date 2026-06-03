@@ -35,7 +35,7 @@ export interface RecallFromStepInput {
 
 import type { createAgentLongTermMemoryStore } from './store';
 
-import { buildRecallSystemMessage } from '../agent-ltm-helpers';
+import { buildRecallSystemMessage } from './helpers';
 import {
   partitionRecallResults,
   buildNextRecallHistory,

@@ -1,5 +1,5 @@
 import { buildRecallQueryFromStep as buildRecallQueryFromStepImpl } from './format-helpers';
-import type { LtmSearchResult } from '../../agent-ltm-helpers';
+import type { LtmSearchResult } from '../helpers';
 
 /**
  * Threshold ratio: when a single recall yields >= `RECALL_INJECTION_RAW_WINDOW_RATIO`

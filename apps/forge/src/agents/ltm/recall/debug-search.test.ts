@@ -7,7 +7,7 @@ vi.mock('@forge-runtime/core', () => ({
   embedTextWithWorkspaceEmbedder: mockEmbedTextWithWorkspaceEmbedder,
 }));
 
-vi.mock('../../agent-ltm-helpers', () => ({
+vi.mock('../helpers', () => ({
   buildRecallSystemMessage: mockBuildRecallSystemMessage,
 }));
 

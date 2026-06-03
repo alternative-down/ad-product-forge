@@ -4,7 +4,7 @@ import {
   safeSerializeGraphResult,
   escapeXml,
   buildRecallSystemMessage,
-} from './agent-ltm-helpers';
+} from './ltm/helpers';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),

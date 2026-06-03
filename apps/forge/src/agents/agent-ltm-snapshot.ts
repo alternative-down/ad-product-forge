@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { safeSerializeRecallSteps } from './agent-ltm-helpers';
+import { safeSerializeRecallSteps } from './ltm/helpers';
 import type { LongTermMemoryRecallHistory, LongTermMemoryRecallSnapshot } from './ltm/store';
 
 const RECALL_AUTO_INDEX_PATHS = ['memory', 'checkpoints'] as const;

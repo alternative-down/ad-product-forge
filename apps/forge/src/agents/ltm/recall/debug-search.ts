@@ -1,6 +1,6 @@
 import { embedTextWithWorkspaceEmbedder, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
-import { buildRecallSystemMessage } from '../../agent-ltm-helpers';
+import { buildRecallSystemMessage } from '../helpers';
 import type { AgentLongTermMemoryRecallDebugSearchInput, AgentLongTermMemoryRecallDebugSearchResult } from './types';
 import type { RecallOrchestrator } from './orchestrator';
 import type { VectorSearchResult } from './vector-search';

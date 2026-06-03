@@ -4,7 +4,7 @@ import {
   getUsageFromGenerateResult,
   LtmUsage,
   LtmSnapshot,
-} from './agent-ltm-generate-helpers';
+} from './generate-helpers';
 
 describe('agent-ltm-generate-helpers', () => {
   describe('createMemoryAgentInstructions', () => {
