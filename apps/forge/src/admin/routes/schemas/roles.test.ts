@@ -2,43 +2,16 @@
  * Unit tests for admin/routes/schemas/roles.ts.
  * Zod validation schemas for role management.
  * Zero prior coverage.
- *
- * NOTE: roles.ts has no named exports, so schemas are redefined here.
  */
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
-
-// ─── Inline schema definitions (mirrors roles.ts) ──────────────────────────
-
-const roleToolPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  toolId: z.string().min(1),
-});
-
-const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  workflowId: z.string().min(1),
-});
-
-const roleCapabilitySchema = z.object({
-  roleId: z.string().min(1),
-  capabilityId: z.string().min(1),
-});
-
-const createRoleSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-const updateRoleSchema = z.object({
-  roleId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-});
-
-const deleteRoleSchema = z.object({
-  roleId: z.string().min(1),
-});
+import {
+  createRoleSchema,
+  deleteRoleSchema,
+  roleCapabilitySchema,
+  roleToolPermissionSchema,
+  roleWorkflowPermissionSchema,
+  updateRoleSchema,
+} from './roles';
 
 // ─── roleToolPermissionSchema ─────────────────────────────────────────────
 
@@ -129,28 +102,24 @@ describe('createRoleSchema', () => {
 // ─── updateRoleSchema ─────────────────────────────────────────────────────
 
 describe('updateRoleSchema', () => {
-  it('parses with roleId only (all other fields optional)', () => {
-    const result = updateRoleSchema.parse({ roleId: 'role-1' });
-    expect(result.roleId).toBe('role-1');
+  it('parses roleId only', () => {
+    const result = updateRoleSchema.parse({ roleId: 'r' });
+    expect(result.roleId).toBe('r');
   });
 
-  it('parses with name update', () => {
-    const result = updateRoleSchema.parse({ roleId: 'r', name: 'New Name' });
-    expect(result.name).toBe('New Name');
-  });
-
-  it('parses with description update', () => {
-    const result = updateRoleSchema.parse({ roleId: 'r', description: 'Updated desc' });
-    expect(result.description).toBe('Updated desc');
-  });
-
-  it('accepts nullable description', () => {
-    const result = updateRoleSchema.parse({ roleId: 'r', description: null });
+  it('parses all fields', () => {
+    const result = updateRoleSchema.parse({
+      roleId: 'r',
+      name: 'NewName',
+      description: null,
+    });
+    expect(result.roleId).toBe('r');
+    expect(result.name).toBe('NewName');
     expect(result.description).toBeNull();
   });
 
   it('rejects missing roleId', () => {
-    expect(() => updateRoleSchema.parse({ name: 'n' })).toThrow();
+    expect(() => updateRoleSchema.parse({ name: 'x' })).toThrow();
   });
 
   it('rejects empty roleId', () => {

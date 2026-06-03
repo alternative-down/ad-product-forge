@@ -260,9 +260,10 @@ describe('discord-account — new coverage', () => {
   // ── dispose ──────────────────────────────────────────────────────────────
   describe('dispose', () => {
     it('removes listeners and destroys client', async () => {
+      const provider = createDiscordProvider({ token: 'test' });
       await wait();
-      // @ts-expect-error -- strictProvider possibly undefined (module-scoped let)
-      await (strictProvider as any).dispose();
+      // dispose is optional on CommunicationProvider; createDiscordProvider always defines it
+      await provider.dispose!();
       expect(getMockClient().removeAllListeners).toHaveBeenCalled();
       expect(getMockClient().destroy).toHaveBeenCalled();
     });
