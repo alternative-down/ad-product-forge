@@ -155,7 +155,7 @@ export function createWebhookStore(db: Database) {
           target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
           where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
         })
-        .returning({ eventId: webhookEvents.eventId })) as Array<{ eventId: string }>;
+        .returning({ eventId: webhookEvents.eventId })) as unknown as Array<{ eventId: string }>;
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -186,7 +186,7 @@ export function createWebhookStore(db: Database) {
         ),
       )
       .limit(1)
-      .all()) as Array<{ eventId: string }>;
+      .all()) as unknown as Array<{ eventId: string }>;
 
     if (existing.length === 0) {
       // Should not happen — INSERT OR IGNORE returned 0 but SELECT finds nothing.
