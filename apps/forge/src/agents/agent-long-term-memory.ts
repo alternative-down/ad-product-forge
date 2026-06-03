@@ -34,7 +34,7 @@ import {
   scheduleLtmRun,
   clearLtmTimer,
   applyLtmStateToSnapshot,
-} from './agent-ltm-schedule-helpers';
+} from './ltm/schedule-helpers';
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
