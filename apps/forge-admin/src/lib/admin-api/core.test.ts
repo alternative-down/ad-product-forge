@@ -157,7 +157,7 @@ describe('requestBlob', () => {
 
     const result = await requestBlob('/export/agents');
     expect(globalThis.fetch).toHaveBeenCalledOnce();
-    expect(result).toBeInstanceOf(Blob);
+    expect(result).toMatchObject({ size: 12, type: "text/plain" });
     const text = await result.text();
     expect(text).toBe('test-content');
   });
