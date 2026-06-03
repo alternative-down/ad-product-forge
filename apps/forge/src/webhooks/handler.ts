@@ -3,22 +3,22 @@ import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 
+import type { WebhookRoute } from '../database/schema';
+
+type CreateEventResult =
+  | { kind: 'created'; eventId: string }
+  | { kind: 'duplicate'; eventId: string };
+
 type Store = {
-  getRoute(routeId: string): Promise<{
-    routeId: string;
-    agentId: string;
-    name: string;
-    secret: string | null;
-    isActive: boolean;
-  } | null>;
+  getRoute(routeId: string): Promise<WebhookRoute | null>;
   createEvent(input: {
     routeId: string;
     agentId: string;
     payload: Record<string, unknown>;
     headers: Record<string, string>;
     idempotencyKey?: string;
-  }): Promise<{ eventId: string }>;
-} | any;
+  }): Promise<CreateEventResult>;
+};
 
 type NotifyAgent = (input: {
   agentId: string;
@@ -41,7 +41,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     if (route == null) {
       return { status: 404, body: 'Route not found' };
     }
-    if (route.isActive !== true) {
+    if (!route.isActive) {
       return { status: 404, body: 'Route inactive' };
     }
 
@@ -88,7 +88,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       return { status: 400, body: 'Invalid JSON payload' };
     }
 
-    const event = await input.store.createEvent({
+    const result = await input.store.createEvent({
       routeId,
       agentId: route.agentId,
       payload,
@@ -105,16 +105,32 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
           : undefined,
     });
 
+    // AC-5: duplicate request is NOT an error — return 200 with deduplicated flag.
+    // Notification is SKIPPED (design decision: avoid duplicate agent notifications;
+    // the first call already notified).
+    if (result.kind === 'duplicate') {
+      forgeDebug({
+        scope: 'webhooks-handler',
+        level: 'info',
+        message: 'Idempotent replay — skipping notification',
+        context: { routeId, eventId: result.eventId },
+      });
+      return {
+        status: 200,
+        body: JSON.stringify({ eventId: result.eventId, deduplicated: true }),
+      };
+    }
+
     input.notifyAgent({
       agentId: route.agentId,
-      content: `[Webhook] Event received on route "${route.name}" (${routeId}). Event ID: ${event.eventId}`,
-      groupKey: `webhook:${event.eventId}`,
+      content: `[Webhook] Event received on route "${route.name}" (${routeId}). Event ID: ${result.eventId}`,
+      groupKey: `webhook:${result.eventId}`,
       type: 'webhook',
-      idempotencyKey: `webhook:${event.eventId}`,
+      idempotencyKey: `webhook:${result.eventId}`,
       timestamp: Date.now(),
     });
 
-    return { status: 202, body: JSON.stringify({ eventId: event.eventId }) };
+    return { status: 202, body: JSON.stringify({ eventId: result.eventId }) };
   }
 
   return { handleWebhook };

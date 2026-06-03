@@ -1,10 +1,15 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
+
+export type CreateEventResult =
+  | { kind: 'created'; eventId: string }
+  | { kind: 'duplicate'; eventId: string };
+
 
 
 
@@ -100,7 +105,7 @@ export function createWebhookStore(db: Database) {
     payload: Record<string, unknown>;
     headers: Record<string, string>;
     idempotencyKey?: string;
-  }): Promise<WebhookEvent> {
+  }): Promise<CreateEventResult> {
     const now = Date.now();
     const event = {
 
@@ -116,8 +121,41 @@ export function createWebhookStore(db: Database) {
       receivedAt: now,
       processedAt: null,
     };
+
+    // AC-3: no idempotencyKey (or empty string) → no dedup, original behavior.
+    // (T4, T9: missing/empty key MUST behave as today.)
+    if (input.idempotencyKey == null || input.idempotencyKey === '') {
+      try {
+        await db.insert(webhookEvents).values(event as NewWebhookEvent);
+      } catch (err) {
+        forgeDebug({
+          scope: 'webhooks-store',
+          level: 'error',
+          message: 'createEvent DB write failed',
+          context: {
+            routeId: input.routeId,
+            agentId: input.agentId,
+            error: errorMsg(err),
+          },
+        });
+        throw err;
+      }
+      return { kind: 'created', eventId: event.eventId };
+    }
+
+    // AC-1, AC-2, AC-4: idempotencyKey present.
+    //   - AC-2: scoped per route (composite unique on (routeId, idempotencyKey))
+    //   - AC-4: atomic INSERT OR IGNORE → 10 parallel requests converge to 1 row
+    let insertedRows: Array<{ eventId: string }>;
     try {
-      await db.insert(webhookEvents).values(event as NewWebhookEvent);
+      insertedRows = (await db
+        .insert(webhookEvents)
+        .values(event as NewWebhookEvent)
+        .onConflictDoNothing({
+          target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
+          where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
+        })
+        .returning({ eventId: webhookEvents.eventId })) as Array<{ eventId: string }>;
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -131,7 +169,34 @@ export function createWebhookStore(db: Database) {
       });
       throw err;
     }
-    return event as WebhookEvent;
+
+    if (insertedRows.length > 0) {
+      return { kind: 'created', eventId: insertedRows[0].eventId };
+    }
+
+    // Conflict: another request inserted the same (routeId, idempotencyKey) first.
+    // Look up the existing event to return its eventId (AC-1: replay returns same eventId).
+    const existing = (await db
+      .select({ eventId: webhookEvents.eventId })
+      .from(webhookEvents)
+      .where(
+        and(
+          eq(webhookEvents.routeId, input.routeId),
+          eq(webhookEvents.idempotencyKey, input.idempotencyKey),
+        ),
+      )
+      .limit(1)
+      .all()) as Array<{ eventId: string }>;
+
+    if (existing.length === 0) {
+      // Should not happen — INSERT OR IGNORE returned 0 but SELECT finds nothing.
+      // Surface a clear error rather than returning a fabricated response.
+      throw new Error(
+        `Idempotency conflict but no existing event found for route=${input.routeId} key=${input.idempotencyKey}`,
+      );
+    }
+
+    return { kind: 'duplicate', eventId: existing[0].eventId };
   }
 
   async function listEventsByAgent(agentId: string, limit = 50): Promise<WebhookEvent[]> {
