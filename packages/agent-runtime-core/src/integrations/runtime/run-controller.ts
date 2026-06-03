@@ -1,5 +1,5 @@
 import type { AgentRuntime } from '../../core/runtime.js';
-import type { RuntimeSnapshot, StepExecutionResult, StepRecord } from '../../core/types.js';
+import type { RuntimeSnapshot, StepRecord } from '../../core/types.js';
 
 export type RuntimeRunLoopStopReason = 'idle' | 'max-steps' | 'aborted';
 
@@ -125,7 +125,7 @@ async function sleep(delayMs: number, signal?: AbortSignal) {
     return;
   }
 
-  await new Promise<void>((resolve, reject) => {
+  await new Promise<void>((resolve, _reject) => {
     const timeout = setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
       resolve();

@@ -12,60 +12,28 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
-import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
-import {
-  createRunnerMessageManager,
-  type RunnerMessageManagerState,
-} from './agent-runner-message-manager';
-
-import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
+import { createLoopManager } from './agent-runner-loop-manager';
+import { createRunnerMessageManager } from './agent-runner-message-manager';
 
 import {
   errorMsg,
   formatAbsentExecutionError,
-  extractAbsentErrorDetails,
 } from './error-formatting';
-import {
-  buildStepSystemPrompt,
-  extractRunnerControlDirective,
-  extractRunnerControlDirectiveFromIteration,
-} from './agent-runner-control-directives';
-import { delay } from '../utils/async';
-import {
-  buildRecallStepFromIteration,
-  buildIterationLoopSignature,
-  didIterationProduceVisibleAssistantText,
-} from './agent-runner-iteration-helpers';
-import { collectStepTextParts } from './agent-runner-control-directives';
-import { extractControlDirective } from './agent-runner-helpers';
+import { extractRunnerControlDirective } from './agent-runner-control-directives';
+
 import { withTimeout } from '../utils/async';
-import { createLoopDetector } from './agent-runner-loop-detector';
-import {
-  isStaleRun,
-  advanceRunEpoch,
-  advanceStepEpoch,
-  advanceGenerateToken,
-  resetBackoff,
-} from './agent-runner-state';
+
+import { advanceGenerateToken } from './agent-runner-state';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
   RUNNER_AWAIT_TIMEOUT_MS,
-  STARTING_RUN_TIMEOUT_MS,
 } from './agent-runner-generate';
-import {
-  createGenerateTimeoutGuard,
-  touchGenerateTimeout,
-  clearGenerateTimeout,
-  type GenerateTimeoutHandle,
-} from './agent-runner-generate-timeout';
-
-import { startGenerateAttempt, finishGenerateAttempt } from './agent-runner-attempt-lifecycle';
 
 import { createScheduler, type Scheduler, type SchedulerState } from './agent-runner-scheduler';
-import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
-import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+
+import { ONE_MINUTE_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 export function createAgentRunner(
@@ -105,7 +73,7 @@ export function createAgentRunner(
     runtimeId: runtime.id,
     setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
-  let timer: NodeJS.Timeout | null = null;
+  const timer: NodeJS.Timeout | null = null;
   let stopped = false;
   let startingRun = false;
   let startingRunStartedAt: number | null = null;
@@ -288,7 +256,7 @@ export function createAgentRunner(
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async function forceIdle(
-    options: {
+    _options: {
       preserveQueuedWork?: boolean;
     } = {},
   ) {
@@ -305,60 +273,6 @@ export function createAgentRunner(
     lastStepStartedAt = null;
     lastStepStage = null;
     scheduler.clearTimer();
-  }
-
-  async function runHealthcheck() {
-    if (stopped) return;
-    const _onStartingRunTimeout: () => void = () => {
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'warn',
-        runtimeId: runtime.id,
-        message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
-      });
-      void startNewRunEpoch();
-      startingRun = false;
-      startingRunStartedAt = null;
-      activeRunId = null;
-    };
-    await healthcheckRunHealthcheck({
-      runtimeId: runtime.id,
-      getExecutionState: (id) =>
-        withTimeout(
-          store.getExecutionState(id),
-          RUNNER_AWAIT_TIMEOUT_MS,
-          `Agent execution state lookup timed out for ${id}`,
-        ),
-      isLocallyIdle,
-      getPendingCount: () => messageManager.getPendingCount(),
-      getWakeSnapshot: () => ({
-        ...wakeQueue.getSnapshot(),
-        pending: wakeQueue.getSnapshot().pending ? 1 : 0,
-      }),
-      onRunnerIdle: () => wakeQueue.onRunnerIdle(),
-      beginRun: (opts) => beginRun(opts),
-      queueNextStep,
-      onStartingRunTimeout: _onStartingRunTimeout,
-      syncStarterState: (running, startedAt) => {
-        startingRun = running;
-        startingRunStartedAt = startedAt;
-      },
-      syncExecuting: (val) => {
-        executing = val;
-      },
-      syncTimer: (val) => {
-        timer = val;
-      },
-      isStaleRun,
-      notifyError: (error) =>
-        forgeDebug({
-          scope: 'agent-runner',
-          level: 'error',
-          runtimeId: runtime.id,
-          message: 'healthcheck failed',
-          context: { error: errorMsg(error) },
-        }),
-    });
   }
 
   async function beginRun(input: {
