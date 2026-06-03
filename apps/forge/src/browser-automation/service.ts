@@ -15,10 +15,7 @@ import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const _IDLE_BROWSER_CLEANUP_MS = 30 * 60 * 1_000; // 30 min
-const _MAX_CONCURRENT_PAGES = 2;
-const _MAX_PAGE_LIFETIME_MS = 5 * 60 * 1_000; // 5 min
+const DEFAULT_TIMEOUT_MS = 30_000; // 30 min // 5 min
 
 export interface BrowserPageSession {
   pageId: string;

@@ -23,17 +23,6 @@ export class ChatGroupNotFoundError extends Error {
     this.groupId = groupId;
   }
 }
-
-class _GroupMemberAlreadyExistsError extends Error {
-  readonly participantSlug: string;
-
-  constructor(participantSlug: string) {
-    super(`Group member already exists: ${participantSlug}`);
-    this.name = 'GroupMemberAlreadyExistsError';
-    this.participantSlug = participantSlug;
-  }
-}
-
 export class ChatGroupAlreadyExistsError extends Error {
   readonly conversationKey: string;
 
@@ -44,17 +33,6 @@ export class ChatGroupAlreadyExistsError extends Error {
   }
 }
 
-
-
-class _InternalChatParticipantNotFoundError extends Error {
-  readonly participantKey: string;
-
-  constructor(participantKey: string) {
-    super(`Internal chat participant not found: ${participantKey}`);
-    this.name = 'InternalChatParticipantNotFoundError';
-    this.participantKey = participantKey;
-  }
-}
 
 export class InternalChatAccountNotFoundError extends Error {
   readonly slug: string;

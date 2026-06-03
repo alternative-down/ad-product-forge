@@ -27,24 +27,6 @@ export const createAgentMcpServerSchema = z
     isActive: z.boolean().default(true),
   })
   .and(mcpServerFieldsSchema);
-
-const _updateAgentMcpServerSchema = z
-  .object({
-    agentId: z.string().min(1),
-    configId: z.string().min(1),
-    serverId: z.string().min(1),
-    name: z.string().trim().min(1),
-    description: z.string().trim().optional().default(''),
-    isActive: z.boolean().default(true),
-  })
-  .and(mcpServerFieldsSchema);
-
-const _deleteAgentMcpServerSchema = z.object({
-  agentId: z.string().min(1),
-  configId: z.string().min(1),
-  serverId: z.string().min(1),
-});
-
 export const upsertSystemMcpServerSchema = z
   .object({
     serverId: z.string().min(1).optional(),
@@ -57,24 +39,6 @@ export const upsertSystemMcpServerSchema = z
 export const deleteSystemMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
-
-const _assignAgentMcpServerSchema = z.object({
-  agentId: z.string().min(1),
-  serverId: z.string().min(1),
-  isActive: z.boolean().default(true),
-});
-
-const _setAgentMcpServerActiveSchema = z.object({
-  agentId: z.string().min(1),
-  configId: z.string().min(1),
-  isActive: z.boolean(),
-});
-
-const _detachAgentMcpServerSchema = z.object({
-  agentId: z.string().min(1),
-  configId: z.string().min(1),
-});
-
 // =============================================================================
 // AGENT SKILLS SCHEMAS
 // =============================================================================
