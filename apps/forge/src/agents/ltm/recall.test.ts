@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SqliteWorkspaceRetrieval, ConversationStore } from '@forge-runtime/core';
 import { createAgentLongTermMemoryRecall } from './recall';
+import { buildRecallQueryFromStep, shouldSkipRecallInjection } from './recall/query-helpers';
 
 // =============================================================================
 // Helper mocks
@@ -68,51 +69,35 @@ describe('createAgentLongTermMemoryRecall', () => {
 // Extended instance tests
 // =============================================================================
 
-describe('buildRecallQueryFromStep', () => {
-  let recall: any & {
-    buildRecallQueryFromStep(step: unknown): string;
-  };
-
-  beforeEach(() => {
-    const instance = createAgentLongTermMemoryRecall({
-      agentId: 'agent-1',
-      agentWorkspacePath: '/tmp/ws',
-      agentMemoryPath: '/tmp/mem',
-      mastraId: 'mastra-1',
-      conversationStore: makeMockConversationStore(),
-      persistenceStore: makeMockPersistenceStore(),
-    });
-    recall = instance as any;
-  });
-
+describe('buildRecallQueryFromStep (standalone)', () => {
   it('returns empty string for null', () => {
-    expect(recall.buildRecallQueryFromStep(null)).toBe('');
+    expect(buildRecallQueryFromStep(null)).toBe('');
   });
 
   it('returns empty string for undefined', () => {
-    expect(recall.buildRecallQueryFromStep(undefined)).toBe('');
+    expect(buildRecallQueryFromStep(undefined)).toBe('');
   });
 
   it('returns empty string for primitive string', () => {
-    expect(recall.buildRecallQueryFromStep('hello')).toBe('');
+    expect(buildRecallQueryFromStep('hello')).toBe('');
   });
 
   it('returns empty string for number', () => {
-    expect(recall.buildRecallQueryFromStep(42)).toBe('');
+    expect(buildRecallQueryFromStep(42)).toBe('');
   });
 
   it('extracts text from step record', () => {
-    const result = recall.buildRecallQueryFromStep({ text: 'hello world' });
+    const result = buildRecallQueryFromStep({ text: 'hello world' });
     expect(result).toContain('hello world');
   });
 
   it('extracts reasoningText from step record', () => {
-    const result = recall.buildRecallQueryFromStep({ reasoningText: 'analysis text' });
+    const result = buildRecallQueryFromStep({ reasoningText: 'analysis text' });
     expect(result).toContain('analysis text');
   });
 
   it('extracts toolCalls with args', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       toolCalls: [{ toolName: 'read_file', args: { path: '/tmp/file.txt' } }],
     });
     expect(result).toContain('read_file');
@@ -120,7 +105,7 @@ describe('buildRecallQueryFromStep', () => {
   });
 
   it('extracts toolCalls with input (alternative field)', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       toolCalls: [{ toolName: 'search', input: { query: 'test' } }],
     });
     expect(result).toContain('search');
@@ -128,7 +113,7 @@ describe('buildRecallQueryFromStep', () => {
   });
 
   it('extracts toolResults with result field', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       toolResults: [{ toolName: 'read_file', result: 'file contents here' }],
     });
     expect(result).toContain('read_file');
@@ -136,7 +121,7 @@ describe('buildRecallQueryFromStep', () => {
   });
 
   it('extracts toolResults with output (alternative field)', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       toolResults: [{ toolName: 'write', output: { success: true } }],
     });
     expect(result).toContain('write');
@@ -144,7 +129,7 @@ describe('buildRecallQueryFromStep', () => {
   });
 
   it('combines text, reasoningText, toolCalls, and toolResults', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       text: 'main text',
       reasoningText: 'reasoning',
       toolCalls: [{ toolName: 'tool1', args: { a: 1 } }],
@@ -157,7 +142,7 @@ describe('buildRecallQueryFromStep', () => {
   });
 
   it('filters out null tool call entries', () => {
-    const result = recall.buildRecallQueryFromStep({
+    const result = buildRecallQueryFromStep({
       toolCalls: [null, undefined],
     });
     // With only null/undefined entries, nothing is extractable
@@ -192,7 +177,7 @@ describe('shouldSkipRecallInjection', () => {
 
   it('returns false when rawWindowMessageCount is 0', () => {
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: true, sourcesCount: 5 },
         results: [],
         rawWindowMessageCount: 0,
@@ -202,7 +187,7 @@ describe('shouldSkipRecallInjection', () => {
 
   it('returns false when both graph and results are empty', () => {
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: false, sourcesCount: 0 },
         results: [],
         rawWindowMessageCount: 10,
@@ -212,7 +197,7 @@ describe('shouldSkipRecallInjection', () => {
 
   it('returns false when results are empty and sourcesCount is 0', () => {
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: true, sourcesCount: 0 },
         results: [],
         rawWindowMessageCount: 10,
@@ -223,9 +208,9 @@ describe('shouldSkipRecallInjection', () => {
   it('returns false when recall item count is below threshold', () => {
     // rawWindowMessageCount=10, limit=2, results=2 → 2 >= 2 → skips (returns true)
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: false, sourcesCount: 0 },
-        results: [{ id: 'a' }, { id: 'b' }],
+        results: [{ id: 'a' }, { id: 'b' }] as any,
         rawWindowMessageCount: 10,
       }),
     ).toBe(true);
@@ -235,7 +220,7 @@ describe('shouldSkipRecallInjection', () => {
     // rawWindowMessageCount=10, limit=2 (ratio=0.25)
     // graph.hit=true, sourcesCount=6 → recallItemCount=6 >= 2 → true
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: true, sourcesCount: 6 },
         results: [],
         rawWindowMessageCount: 10,
@@ -245,9 +230,9 @@ describe('shouldSkipRecallInjection', () => {
 
   it('returns true when results length exceeds threshold', () => {
     expect(
-      recall.shouldSkipRecallInjection({
+      shouldSkipRecallInjection({
         graph: { hit: false, sourcesCount: 0 },
-        results: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }],
+        results: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }] as any,
         rawWindowMessageCount: 10,
       }),
     ).toBe(true);

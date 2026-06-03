@@ -7,6 +7,8 @@ import { readOperationalMemoryState } from '@forge-runtime/core';
 import { buildLtmRecallSnapshot } from '../../agent-ltm-snapshot';
 import type { LtmSnapshotDeps } from '../../agent-ltm-snapshot';
 import type { ConversationStore } from '@forge-runtime/core';
+import type { LtmSearchResult } from '../../agent-ltm-helpers';
+import type { RecallConfig } from './types';
 import { countFiles } from './count-files';
 
 export interface RecallPersistenceDeps {
@@ -96,7 +98,50 @@ export class RecallPersistence {
     await this.persistRecallSnapshot(threadContext, snapshot, deps.history);
   }
 
-  async readRecallThreadState(
+  async persistMissRecall(
+    threadContext: { threadId: string | null; resourceId?: string },
+    input: { steps: unknown[]; step: unknown },
+    recentFingerprints: string[],
+  ): Promise<void> {
+    await this.persistRecallSnapshotWithInput(
+      { threadId: threadContext.threadId, resourceId: threadContext.resourceId, step: input.step, steps: input.steps },
+      {
+        history: {
+          recentFingerprints,
+          updatedAt: String(Date.now()),
+        },
+        status: 'miss',
+      },
+    );
+  }
+
+  async persistHitRecall(
+    threadContext: { threadId: string | null; resourceId?: string },
+    input: { steps: unknown[]; step: unknown },
+    payload: {
+      queryText: string;
+      recallConfig: RecallConfig;
+      indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number };
+      dedupedGraph: { hit: boolean; score?: number; context: string };
+      filteredResults: LtmSearchResult[];
+      history: LongTermMemoryRecallHistory;
+    },
+  ): Promise<void> {
+    await this.persistRecallSnapshotWithInput(
+      { threadId: threadContext.threadId, resourceId: threadContext.resourceId, step: input.step, steps: input.steps },
+      {
+        queryText: payload.queryText,
+        recallConfig: payload.recallConfig,
+        indexStats: payload.indexStats,
+        dedupedGraph: payload.dedupedGraph,
+        filteredResults: payload.filteredResults,
+        history: payload.history,
+        status: 'hit',
+      },
+    );
+  }
+
+    async readRecallThreadState(
     threadId: string | null,
     recentRawTokens: number,
   ): Promise<{
