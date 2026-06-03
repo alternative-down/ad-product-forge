@@ -6,10 +6,6 @@
  *   POST /admin/agent-provider/delete (deleteAgentProviderSchema)
  *
  * Schema source: admin/schemas.ts (canonical)
- *
- * NOTE: Cannot test via registerAdminRoutes — the '../routes' import path
- * resolves to a non-existent absolute path in this test environment.
- * Instead, we test the schemas directly (the critical validation layer).
  */
 
 import { describe, it, expect } from 'vitest';
