@@ -148,6 +148,8 @@ export class IndexManager {
     workspaceCanBm25: boolean;
     workspaceCanVector: boolean;
     workspaceCanHybrid: boolean;
+    availableIndexes: string[];
+    activeIndexStats: { dimension: number; count: number; metric: string } | null;
     [key: string]: unknown;
   }> {
     return {

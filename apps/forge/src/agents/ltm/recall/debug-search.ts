@@ -14,8 +14,8 @@ import type { VectorSearchResult } from './vector-search';
 export interface DebugSearchIndexStateProvider {
   getLastInitAt(): string | null;
   getWorkspaceIndexState(): Promise<{
-    availableIndexes?: unknown;
-    activeIndexStats?: unknown;
+    availableIndexes: string[];
+    activeIndexStats: { dimension: number; count: number; metric: string | null } | null;
     [key: string]: unknown;
   }>;
 }
@@ -63,9 +63,9 @@ export class DebugSearch {
         workspaceCanBm25: true,
         workspaceCanVector: true,
         workspaceCanHybrid: true,
-        availableIndexes: indexState.availableIndexes as string[],
+        availableIndexes: indexState.availableIndexes,
         activeIndexName: 'forge_runtime_memory_recall',
-        activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
+        activeIndexStats: indexState.activeIndexStats,
         queryEmbedding: [],
         queryEmbeddingDimension: 0,
         workspaceFormattedContext: '',
@@ -113,9 +113,9 @@ export class DebugSearch {
       workspaceCanBm25: true,
       workspaceCanVector: true,
       workspaceCanHybrid: true,
-      availableIndexes: indexState.availableIndexes as string[],
+      availableIndexes: indexState.availableIndexes,
       activeIndexName: 'forge_runtime_memory_recall',
-      activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
+      activeIndexStats: indexState.activeIndexStats,
       queryEmbedding,
       queryEmbeddingDimension: queryEmbedding.length,
       workspaceFormattedContext,
