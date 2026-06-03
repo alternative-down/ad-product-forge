@@ -6,12 +6,12 @@ import {
   agentConversationMessagesQuerySchema,
   roleToolPermissionSchema,
   roleWorkflowPermissionSchema,
-  createRoleSchema,
   topUpAgentContractSchema,
   hireAgentSchema,
   terminateAgentSchema,
   changeAgentRoleSchema,
 } from './schemas';
+import { createRoleSchema } from './routes/schemas/roles';
 
 describe('agentIdQuerySchema', () => {
   it('parses valid agentId', () => {
