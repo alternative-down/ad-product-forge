@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
-import { safeSerializeRecallSteps } from './ltm/helpers';
-import type { LongTermMemoryRecallHistory, LongTermMemoryRecallSnapshot } from './ltm/store';
+import { safeSerializeRecallSteps } from './helpers';
+import type { LongTermMemoryRecallHistory, LongTermMemoryRecallSnapshot } from './store';
 
 const RECALL_AUTO_INDEX_PATHS = ['memory', 'checkpoints'] as const;
 

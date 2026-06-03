@@ -39,7 +39,7 @@ import { buildRecallSystemMessage } from './helpers';
 import {
   partitionRecallResults,
   buildNextRecallHistory,
-} from '../agent-ltm-snapshot';
+} from './snapshot';
 import type { RecallConfig } from './recall/types';
 import {
   RecallOrchestrator,

@@ -1,5 +1,5 @@
 /**
- * Unit tests for agents/agent-ltm-snapshot.ts.
+ * Unit tests for ltm/snapshot.ts.
  * partitionRecallResults, buildNextRecallHistory, buildLtmRecallSnapshot.
  * Zero prior coverage.
  */
@@ -13,7 +13,7 @@ import {
   type BuildSnapshotOptions,
   // type LongTermMemoryRecallSnapshot,
   type PartitionRecallResultsInput,
-} from './agent-ltm-snapshot';
+} from './snapshot';
 
 // ─── partitionRecallResults ─────────────────────────────────────────────────
 
