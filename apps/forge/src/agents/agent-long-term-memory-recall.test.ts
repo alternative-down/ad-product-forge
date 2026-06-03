@@ -319,7 +319,7 @@ describe('AgentLongTermMemoryRecall', () => {
       effectiveGraphTopK: 1,
       effectiveGraphThreshold: 0.85,
     });
-    (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+    (vi.spyOn((recall as any).persistence, 'readRecallThreadState') as any).mockResolvedValue({
       recentFingerprints: [],
       windowSize: 1,
       rawWindowMessageCount: 8,
@@ -416,7 +416,7 @@ it('skips recall when a prior operation is still in flight', async () => {
     await new Promise((r) => setTimeout(r, 200));
     return { id: 'doc-1', text: 'content', score: 0.9 };
   });
-  (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+  (vi.spyOn((recall as any).persistence, 'readRecallThreadState') as any).mockResolvedValue({
     recentFingerprints: [],
     windowSize: 5,
     rawWindowMessageCount: 1,
@@ -526,7 +526,7 @@ it('returns null when workspace search yields no results and graph does not hit'
     effectiveGraphTopK: 3,
     effectiveGraphThreshold: 0.7,
   });
-  (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+  (vi.spyOn((recall as any).persistence, 'readRecallThreadState') as any).mockResolvedValue({
     recentFingerprints: [],
     windowSize: 5,
     rawWindowMessageCount: 1,
@@ -646,7 +646,7 @@ it('returns recall text on successful workspace and graph hit', async () => {
     effectiveGraphTopK: 3,
     effectiveGraphThreshold: 0.7,
   });
-  (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+  (vi.spyOn((recall as any).persistence, 'readRecallThreadState') as any).mockResolvedValue({
     recentFingerprints: [],
     windowSize: 5,
     rawWindowMessageCount: 8,
