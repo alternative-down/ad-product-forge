@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAgentEmailManager } from './migadu-manager';
+import { createAgentEmailManager, withTrailingSlash, buildMailboxLocalPart, createMailboxPassword, getLocalPart } from './migadu-manager';
 
 function mockResponse(body: unknown, status = 200) {
   return {
@@ -15,10 +15,6 @@ function mockResponse(body: unknown, status = 200) {
 // --- Helper function tests (inline copies) ---
 
 describe('withTrailingSlash', () => {
-  function withTrailingSlash(value: string) {
-    return value.endsWith('/') ? value : `${value}/`;
-  }
-
   it('adds trailing slash when missing', () => {
     expect(withTrailingSlash('https://api.migadu.com/v1')).toBe('https://api.migadu.com/v1/');
   });
@@ -34,14 +30,6 @@ describe('withTrailingSlash', () => {
 });
 
 describe('buildMailboxLocalPart', () => {
-  function buildMailboxLocalPart(agentId: string) {
-    const normalized = agentId
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    if (!normalized) throw new Error(`Cannot derive mailbox local part from agent id: ${agentId}`);
-    return normalized;
-  }
 
   it('normalizes uppercase to lowercase', () => {
     expect(buildMailboxLocalPart('ABC-DEF-GHI')).toBe('abc-def-ghi');
@@ -80,10 +68,6 @@ describe('buildMailboxLocalPart', () => {
 });
 
 describe('createMailboxPassword', () => {
-  function createMailboxPassword() {
-    const { randomBytes } = require('node:crypto') as typeof import('node:crypto');
-    return randomBytes(24).toString('base64url');
-  }
 
   it('returns a base64url string', () => {
     const password = createMailboxPassword();
@@ -102,11 +86,6 @@ describe('createMailboxPassword', () => {
 });
 
 describe('getLocalPart', () => {
-  function getLocalPart(address: string) {
-    const [localPart] = address.split('@');
-    if (!localPart) throw new Error(`Invalid mailbox address: ${address}`);
-    return localPart;
-  }
 
   it('extracts local part from valid address', () => {
     expect(getLocalPart('agent123@migadu.com')).toBe('agent123');

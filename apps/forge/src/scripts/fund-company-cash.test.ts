@@ -87,12 +87,4 @@ describe('fund-company-cash script', () => {
     });
   });
 
-  describe('getDatabase', () => {
-    it('returns a database instance', async () => {
-      const getDatabase = {};
-      const db = {};
-      // @ts-ignore
-      expect(getDatabase()).toBeDefined();
-    });
-  });
 });

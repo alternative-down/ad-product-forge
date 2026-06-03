@@ -315,11 +315,11 @@ export function createAgentEmailManager(config: {
   };
 }
 
-function withTrailingSlash(value: string) {
+export function withTrailingSlash(value: string) {
   return value.endsWith('/') ? value : `${value}/`;
 }
 
-function buildMailboxLocalPart(agentId: string) {
+export function buildMailboxLocalPart(agentId: string) {
   const normalized = agentId
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
@@ -337,11 +337,11 @@ function buildMailboxLocalPart(agentId: string) {
   return normalized;
 }
 
-function createMailboxPassword() {
+export function createMailboxPassword() {
   return crypto.randomBytes(24).toString('base64url');
 }
 
-function getLocalPart(address: string) {
+export function getLocalPart(address: string) {
   const [localPart] = address.split('@');
 
   if (!localPart) {

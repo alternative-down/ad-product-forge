@@ -3,56 +3,14 @@
  * Zod validation schemas for finance/payable management.
  * Zero prior coverage.
  *
- * NOTE: Only createPayableSchema is exported. Others redefined inline.
+ * NOTE: Tests previously redefined createInvestmentSchema, ledgerEntryActionSchema,
+ * and recurringPayableStatusSchema inline, but the test shapes did not match the
+ * production schemas in admin/routes/finance/write.ts. Those phantom tests
+ * have been removed — see PR for rationale. Real coverage is now via the
+ * production write.ts .parse() calls and unit tests there.
  */
 import { describe, expect, it } from 'vitest';
 import { createPayableSchema } from './finance';
-import { z } from 'zod';
-
-const ledgerEntryActionSchema = z.object({
-  entryId: z.string().min(1),
-  action: z.enum(['approve', 'cancel']),
-});
-
-const recurringPayableStatusSchema = z.object({
-  payableId: z.string().min(1),
-  isActive: z.boolean().nullable(),
-});
-
-const createInvestmentSchema = z.object({
-  amount: z.number().positive(),
-  description: z.string().min(1),
-});
-
-// ─── createInvestmentSchema ──────────────────────────────────────────────
-
-describe('createInvestmentSchema', () => {
-  it('parses valid input', () => {
-    expect(
-      createInvestmentSchema.parse({ amount: 1000.5, description: 'Equipment purchase' }),
-    ).toMatchObject({ amount: 1000.5, description: 'Equipment purchase' });
-  });
-
-  it('rejects zero amount', () => {
-    expect(() => createInvestmentSchema.parse({ amount: 0, description: 'x' })).toThrow();
-  });
-
-  it('rejects negative amount', () => {
-    expect(() => createInvestmentSchema.parse({ amount: -10, description: 'x' })).toThrow();
-  });
-
-  it('rejects missing description', () => {
-    expect(() => createInvestmentSchema.parse({ amount: 100 })).toThrow();
-  });
-
-  it('rejects empty description', () => {
-    expect(() => createInvestmentSchema.parse({ amount: 100, description: '' })).toThrow();
-  });
-
-  it('rejects missing amount', () => {
-    expect(() => createInvestmentSchema.parse({ description: 'x' })).toThrow();
-  });
-});
 
 // ─── createPayableSchema — agent_contract kind ───────────────────────────
 
@@ -175,78 +133,9 @@ describe('createPayableSchema — discriminated union edge cases', () => {
   });
 });
 
-// ─── ledgerEntryActionSchema ────────────────────────────────────────────
-
-describe('ledgerEntryActionSchema', () => {
-  it('parses approve action', () => {
-    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'approve' })).toMatchObject({
-      entryId: 'entry-1',
-      action: 'approve',
-    });
-  });
-
-  it('parses cancel action', () => {
-    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'cancel' })).toMatchObject({
-      entryId: 'entry-1',
-      action: 'cancel',
-    });
-  });
-
-  it('rejects missing entryId', () => {
-    expect(() => ledgerEntryActionSchema.parse({ action: 'approve' })).toThrow();
-  });
-
-  it('rejects empty entryId', () => {
-    expect(() => ledgerEntryActionSchema.parse({ entryId: '', action: 'approve' })).toThrow();
-  });
-
-  it('rejects missing action', () => {
-    expect(() => ledgerEntryActionSchema.parse({ entryId: 'e' })).toThrow();
-  });
-
-  it('rejects invalid action value', () => {
-    expect(() => ledgerEntryActionSchema.parse({ entryId: 'e', action: 'reject' })).toThrow();
-  });
-});
-
-// ─── recurringPayableStatusSchema ─────────────────────────────────────
-
-describe('recurringPayableStatusSchema', () => {
-  it('parses isActive true', () => {
-    expect(
-      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: true }),
-    ).toMatchObject({ payableId: 'pay-1', isActive: true });
-  });
-
-  it('parses isActive false', () => {
-    expect(
-      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: false }),
-    ).toMatchObject({ payableId: 'pay-1', isActive: false });
-  });
-
-  it('parses isActive null', () => {
-    expect(
-      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: null }),
-    ).toMatchObject({ payableId: 'pay-1', isActive: null });
-  });
-
-  it('rejects missing payableId', () => {
-    expect(() => recurringPayableStatusSchema.parse({ isActive: true })).toThrow();
-  });
-
-  it('rejects empty payableId', () => {
-    expect(() => recurringPayableStatusSchema.parse({ payableId: '', isActive: true })).toThrow();
-  });
-});
-
 // ─── safeParse (non-throwing) ─────────────────────────────────────────────
 
 describe('schema.safeParse', () => {
-  it('createInvestmentSchema safeParse returns success false for zero amount', () => {
-    const result = createInvestmentSchema.safeParse({ amount: 0, description: 'x' });
-    expect(result.success).toBe(false);
-  });
-
   it('createPayableSchema safeParse returns success true for valid agent_contract', () => {
     const result = createPayableSchema.safeParse({
       kind: 'agent_contract',
@@ -261,13 +150,4 @@ describe('schema.safeParse', () => {
     expect(result.success).toBe(false);
   });
 
-  it('ledgerEntryActionSchema safeParse returns success false for invalid action', () => {
-    const result = ledgerEntryActionSchema.safeParse({ entryId: 'e', action: 'pending' });
-    expect(result.success).toBe(false);
-  });
-
-  it('recurringPayableStatusSchema safeParse returns success true for valid input', () => {
-    const result = recurringPayableStatusSchema.safeParse({ payableId: 'p', isActive: true });
-    expect(result.success).toBe(true);
-  });
 });

@@ -4,29 +4,14 @@
  * Zero prior coverage.
  */
 import { describe, expect, it } from 'vitest';
-import { uploadSystemSkillsSchema, deleteSystemSkillSchema } from './skills';
-import { z } from 'zod';
-
-// Non-exported schemas — redefined inline (mirrors skills.ts)
-const uploadAgentSkillsSchema = z.object({
-  agentId: z.string().min(1),
-  archiveBase64: z.string().min(1),
-});
-
-const deleteAgentSkillSchema = z.object({
-  agentId: z.string().min(1),
-  skillName: z.string().min(1),
-});
-
-const installGlobalSkillForAgentSchema = z.object({
-  agentId: z.string().min(1),
-  skillName: z.string().min(1),
-});
-
-const publishAgentSkillToGlobalSchema = z.object({
-  agentId: z.string().min(1),
-  skillName: z.string().min(1),
-});
+import {
+  deleteAgentSkillSchema,
+  installGlobalSkillForAgentSchema,
+  publishAgentSkillToGlobalSchema,
+  uploadAgentSkillsSchema,
+  uploadSystemSkillsSchema,
+  deleteSystemSkillSchema,
+} from './skills';
 
 // ─── uploadAgentSkillsSchema ────────────────────────────────────────────
 
