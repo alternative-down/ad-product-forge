@@ -115,7 +115,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('route registration', () => {
     it('registers POST /admin/webhooks/route/create', () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/route/create');
@@ -125,7 +125,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('registers GET /admin/webhooks/routes', () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/routes');
@@ -135,7 +135,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('registers POST /admin/webhooks/route/deactivate', () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/route/deactivate');
@@ -145,7 +145,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('registers GET /admin/webhooks/events', () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/events');
@@ -155,7 +155,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('registers POST /admin/webhooks/event/mark-processed', () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find(
@@ -169,7 +169,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('POST /admin/webhooks/route/create', () => {
     it('creates a webhook route and returns 201 with routeId and secret', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
@@ -204,7 +204,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('passes createId() output into createHash to generate the secret', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
@@ -238,7 +238,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('GET /admin/webhooks/routes', () => {
     it('returns 400 when agentId is missing', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
@@ -260,7 +260,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('returns routes for a given agentId', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
@@ -291,7 +291,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('POST /admin/webhooks/route/deactivate', () => {
     it('deactivates a route and returns success', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate') as (
@@ -313,7 +313,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('GET /admin/webhooks/events', () => {
     it('returns 400 when agentId is missing', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
@@ -335,7 +335,7 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('returns events for a given agentId', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
@@ -366,7 +366,7 @@ describe('registerWebhookAdminRoutes', () => {
   describe('POST /admin/webhooks/event/mark-processed', () => {
     it('marks an event as processed and returns success', async () => {
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (
@@ -388,7 +388,7 @@ describe('registerWebhookAdminRoutes', () => {
     it('returns 500 when createRoute throws', async () => {
       store.createRoute.mockRejectedValueOnce(new Error('DB constraint violation'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
@@ -405,7 +405,7 @@ describe('registerWebhookAdminRoutes', () => {
       const { forgeDebug } = await vi.importMock('@forge-runtime/core');
       store.createRoute.mockRejectedValueOnce(new Error('boom'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
@@ -420,7 +420,7 @@ describe('registerWebhookAdminRoutes', () => {
     it('returns 500 when listRoutesByAgent throws', async () => {
       store.listRoutesByAgent.mockRejectedValueOnce(new Error('DB error'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
@@ -440,7 +440,7 @@ describe('registerWebhookAdminRoutes', () => {
     it('returns 500 when deactivateRoute throws', async () => {
       store.deactivateRoute.mockRejectedValueOnce(new Error('DB write error'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate') as (
@@ -456,7 +456,7 @@ describe('registerWebhookAdminRoutes', () => {
     it('returns 500 when listEventsByAgent throws', async () => {
       store.listEventsByAgent.mockRejectedValueOnce(new Error('DB error'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
@@ -476,7 +476,7 @@ describe('registerWebhookAdminRoutes', () => {
     it('returns 500 when markProcessed throws', async () => {
       store.markProcessed.mockRejectedValueOnce(new Error('DB error'));
       registerWebhookAdminRoutes(
-        httpServer,
+        httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (
