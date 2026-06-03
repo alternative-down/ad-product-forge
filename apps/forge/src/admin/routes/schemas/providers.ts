@@ -1,16 +1,4 @@
 import { z } from 'zod';
-
-const _upsertAgentProviderSchema = z.object({
-  agentId: z.string().min(1),
-  providerType: z.enum(['discord', 'email']),
-  credentials: z.record(z.string(), z.string()).optional(),
-});
-
-const _deleteAgentProviderSchema = z.object({
-  agentId: z.string().min(1),
-  providerType: z.enum(['discord', 'email']),
-});
-
 // =============================================================================
 // MCP SERVER SCHEMAS
 // =============================================================================

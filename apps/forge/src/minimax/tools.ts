@@ -16,9 +16,6 @@ const __MINIMAX_TOOL_IDS = [
   'minimax_image',
   'minimax_video',
 ] as const;
-
-type _MiniMaxToolId = (typeof __MINIMAX_TOOL_IDS)[number];
-
 const MINIMAX_OUTPUT_DIRECTORY = 'generated/minimax';
 
 function buildMiniMaxHint(errorCode: string | undefined, fallback: string) {
