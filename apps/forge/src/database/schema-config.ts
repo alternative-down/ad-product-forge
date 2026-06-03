@@ -7,20 +7,20 @@ import {
 import { z } from 'zod';
 import { InferModel } from 'drizzle-orm';
 
-const _WorkspaceFilesystemConfigSchema = z.object({
+export const WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
   allowedPaths: z.array(z.string()).optional(),
 });
 
-const _WorkspaceSandboxConfigSchema = z.object({
+export const WorkspaceSandboxConfigSchema = z.object({
   workingDirectory: z.string(),
 });
 
-const _WorkspaceSkillsConfigSchema = z.array(z.string());
+export const WorkspaceSkillsConfigSchema = z.array(z.string());
 
-export type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
-export type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
-export type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
+export type WorkspaceFilesystemConfig = z.infer<typeof WorkspaceFilesystemConfigSchema>;
+export type WorkspaceSandboxConfig = z.infer<typeof WorkspaceSandboxConfigSchema>;
+export type WorkspaceSkillsConfig = z.infer<typeof WorkspaceSkillsConfigSchema>;
 
 export const systemSettings = sqliteTable('system_settings', {
   id: text('id').primaryKey(),

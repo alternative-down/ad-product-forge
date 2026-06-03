@@ -1,6 +1,16 @@
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+  WorkspaceSkillsConfigSchema,
+} from './schema-config';
+import {
+  MigaduSystemIntegrationConfigSchema,
+  CoolifySystemIntegrationConfigSchema,
+  GitHubSystemIntegrationConfigSchema,
+  MinimaxSystemIntegrationConfigSchema,
+} from './schema-integrations';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-
 import {
   agents,
   agentRoles,
@@ -114,99 +124,82 @@ import type {
 } from './schema';
 
 describe('database schema', () => {
-  describe('workspace configs (Zod validation)', () => {
-    it('WorkspaceFilesystemConfig parses valid config', () => {
-      const valid = { root: '/data/workspace', maxDepth: 3 };
-      expect(() =>
-        z
-          .object({
-            root: z.string(),
-            maxDepth: z.number().int().positive(),
-          })
-          .parse(valid),
-      ).not.toThrow();
+  describe('workspace configs (Zod validation, production schemas)', () => {
+    // These tests exercise the production Zod schemas in schema-config.ts
+    // (not local copies). Inputs updated to match the production shape:
+    //   - WorkspaceFilesystemConfig: { basePath, allowedPaths? }
+    //   - WorkspaceSandboxConfig:    { workingDirectory }
+    //   - WorkspaceSkillsConfig:     string[] (array directly, no wrapping object)
+
+    it('WorkspaceFilesystemConfigSchema parses valid config', () => {
+      const valid = { basePath: '/data/workspace' };
+      expect(() => WorkspaceFilesystemConfigSchema.parse(valid)).not.toThrow();
     });
 
-    it('WorkspaceFilesystemConfig rejects missing root', () => {
-      const invalid = { maxDepth: 3 };
-      expect(() =>
-        z
-          .object({
-            root: z.string(),
-            maxDepth: z.number().int().positive(),
-          })
-          .parse(invalid),
-      ).toThrow();
+    it('WorkspaceFilesystemConfigSchema accepts optional allowedPaths', () => {
+      const valid = { basePath: '/data/workspace', allowedPaths: ['/shared', '/tools'] };
+      const parsed = WorkspaceFilesystemConfigSchema.parse(valid);
+      expect(parsed.allowedPaths).toEqual(['/shared', '/tools']);
     });
 
-    it('WorkspaceSandboxConfig parses valid config', () => {
-      const valid = { enabled: true, timeoutMs: 30000 };
-      expect(() =>
-        z
-          .object({
-            enabled: z.boolean(),
-            timeoutMs: z.number().int().positive(),
-          })
-          .parse(valid),
-      ).not.toThrow();
+    it('WorkspaceFilesystemConfigSchema rejects missing basePath', () => {
+      const invalid = {};
+      expect(() => WorkspaceFilesystemConfigSchema.parse(invalid)).toThrow();
     });
 
-    it('WorkspaceSkillsConfig parses valid config', () => {
-      const valid = { directories: ['./skills'] };
-      expect(() =>
-        z
-          .object({
-            directories: z.array(z.string()),
-            allowedTools: z.array(z.string()).optional(),
-          })
-          .parse(valid),
-      ).not.toThrow();
+    it('WorkspaceSandboxConfigSchema parses valid config', () => {
+      const valid = { workingDirectory: '/app/sandbox' };
+      expect(() => WorkspaceSandboxConfigSchema.parse(valid)).not.toThrow();
     });
 
-    it('WorkspaceSkillsConfig rejects empty directories', () => {
-      const invalid = { directories: [] };
-      expect(() =>
-        z
-          .object({
-            directories: z.array(z.string()).min(1),
-          })
-          .parse(invalid),
-      ).toThrow();
+    it('WorkspaceSandboxConfigSchema rejects missing workingDirectory', () => {
+      const invalid = {};
+      expect(() => WorkspaceSandboxConfigSchema.parse(invalid)).toThrow();
+    });
+
+    it('WorkspaceSkillsConfigSchema parses valid string array', () => {
+      const valid = ['github-api', 'coolify-api'];
+      expect(() => WorkspaceSkillsConfigSchema.parse(valid)).not.toThrow();
+    });
+
+    it('WorkspaceSkillsConfigSchema accepts empty array (no min(1) in production)', () => {
+      // Production schema is z.array(z.string()) — no min(1) constraint.
+      // Empty array is a valid skills config (no skills configured).
+      const valid: string[] = [];
+      expect(() => WorkspaceSkillsConfigSchema.parse(valid)).not.toThrow();
+    });
+
+    it('WorkspaceSkillsConfigSchema rejects non-array input', () => {
+      const invalid = 'not-an-array';
+      expect(() => WorkspaceSkillsConfigSchema.parse(invalid)).toThrow();
     });
   });
 
-  describe('integration configs (Zod validation)', () => {
-    const MigaduSchema = z.object({ apiUser: z.string().email(), apiKey: z.string().min(1) });
-    const CoolifySchema = z.object({
-      baseUrl: z.string().url(),
-      adminToken: z.string().min(1),
-      serverId: z.string().min(1),
-      destinationId: z.string().min(1),
-      applicationsBaseDomain: z.string().min(1).optional(),
-    });
-    const GitHubSchema = z.object({
-      organization: z.string().min(1),
-      appHomeUrl: z.string().url(),
-    });
-    const MinimaxSchema = z.object({ apiKey: z.string().min(1) });
+  describe('integration configs (Zod validation, production schemas)', () => {
+    // These tests exercise the production Zod schemas in schema-integrations.ts.
+    // Production shapes (imported at top of file):
+    //   - MigaduSystemIntegrationConfigSchema:    { apiUser, apiKey }
+    //   - CoolifySystemIntegrationConfigSchema:  { baseUrl, adminToken, serverId, destinationId, applicationsBaseDomain? }
+    //   - GitHubSystemIntegrationConfigSchema:   { organization, appHomeUrl }
+    //   - MinimaxSystemIntegrationConfigSchema:  { apiKey }
 
     it('MigaduSchema accepts valid config', () => {
       expect(() =>
-        MigaduSchema.parse({ apiUser: 'test@example.com', apiKey: 'key123' }),
+        MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'test@example.com', apiKey: 'key123' }),
       ).not.toThrow();
     });
 
     it('MigaduSchema rejects invalid apiUser', () => {
-      expect(() => MigaduSchema.parse({ apiUser: 'not-an-email', apiKey: 'key123' })).toThrow();
+      expect(() => MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'not-an-email', apiKey: 'key123' })).toThrow();
     });
 
     it('MigaduSchema rejects missing apiKey', () => {
-      expect(() => MigaduSchema.parse({ apiUser: 'test@example.com', apiKey: '' })).toThrow();
+      expect(() => MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'test@example.com', apiKey: '' })).toThrow();
     });
 
     it('CoolifySchema accepts valid config', () => {
       expect(() =>
-        CoolifySchema.parse({
+        CoolifySystemIntegrationConfigSchema.parse({
           baseUrl: 'https://coolify.example.com',
           adminToken: 'token',
           serverId: 'srv1',
@@ -217,7 +210,7 @@ describe('database schema', () => {
 
     it('CoolifySchema rejects invalid URL', () => {
       expect(() =>
-        CoolifySchema.parse({
+        CoolifySystemIntegrationConfigSchema.parse({
           baseUrl: 'not-a-url',
           adminToken: 'token',
           serverId: 'srv1',
@@ -228,7 +221,7 @@ describe('database schema', () => {
 
     it('CoolifySchema accepts optional applicationsBaseDomain', () => {
       expect(() =>
-        CoolifySchema.parse({
+        CoolifySystemIntegrationConfigSchema.parse({
           baseUrl: 'https://coolify.example.com',
           adminToken: 'token',
           serverId: 'srv1',
@@ -240,7 +233,7 @@ describe('database schema', () => {
 
     it('GitHubSchema accepts valid config', () => {
       expect(() =>
-        GitHubSchema.parse({
+        GitHubSystemIntegrationConfigSchema.parse({
           organization: 'my-org',
           appHomeUrl: 'https://github.com/apps/my-app',
         }),
@@ -249,7 +242,7 @@ describe('database schema', () => {
 
     it('GitHubSchema rejects empty organization', () => {
       expect(() =>
-        GitHubSchema.parse({
+        GitHubSystemIntegrationConfigSchema.parse({
           organization: '',
           appHomeUrl: 'https://github.com/apps/my-app',
         }),
@@ -258,7 +251,7 @@ describe('database schema', () => {
 
     it('GitHubSchema rejects invalid appHomeUrl', () => {
       expect(() =>
-        GitHubSchema.parse({
+        GitHubSystemIntegrationConfigSchema.parse({
           organization: 'my-org',
           appHomeUrl: 'not-a-url',
         }),
@@ -266,11 +259,11 @@ describe('database schema', () => {
     });
 
     it('MinimaxSchema accepts valid config', () => {
-      expect(() => MinimaxSchema.parse({ apiKey: 'minimax-api-key' })).not.toThrow();
+      expect(() => MinimaxSystemIntegrationConfigSchema.parse({ apiKey: 'minimax-api-key' })).not.toThrow();
     });
 
     it('MinimaxSchema rejects empty apiKey', () => {
-      expect(() => MinimaxSchema.parse({ apiKey: '' })).toThrow();
+      expect(() => MinimaxSystemIntegrationConfigSchema.parse({ apiKey: '' })).toThrow();
     });
   });
 

@@ -6,12 +6,12 @@ import {
 import { z } from 'zod';
 import { InferModel } from 'drizzle-orm';
 
-const _MigaduSystemIntegrationConfigSchema = z.object({
+export const MigaduSystemIntegrationConfigSchema = z.object({
   apiUser: z.string().email(),
   apiKey: z.string().min(1),
 });
 
-const _CoolifySystemIntegrationConfigSchema = z.object({
+export const CoolifySystemIntegrationConfigSchema = z.object({
   baseUrl: z.string().url(),
   adminToken: z.string().min(1),
   serverId: z.string().min(1),
@@ -19,19 +19,19 @@ const _CoolifySystemIntegrationConfigSchema = z.object({
   applicationsBaseDomain: z.string().min(1).optional(),
 });
 
-const _GitHubSystemIntegrationConfigSchema = z.object({
+export const GitHubSystemIntegrationConfigSchema = z.object({
   organization: z.string().min(1),
   appHomeUrl: z.string().url(),
 });
 
-const _MinimaxSystemIntegrationConfigSchema = z.object({
+export const MinimaxSystemIntegrationConfigSchema = z.object({
   apiKey: z.string().min(1),
 });
 
-export type MigaduSystemIntegrationConfig = z.infer<typeof _MigaduSystemIntegrationConfigSchema>;
-export type CoolifySystemIntegrationConfig = z.infer<typeof _CoolifySystemIntegrationConfigSchema>;
-export type GitHubSystemIntegrationConfig = z.infer<typeof _GitHubSystemIntegrationConfigSchema>;
-export type MinimaxSystemIntegrationConfig = z.infer<typeof _MinimaxSystemIntegrationConfigSchema>;
+export type MigaduSystemIntegrationConfig = z.infer<typeof MigaduSystemIntegrationConfigSchema>;
+export type CoolifySystemIntegrationConfig = z.infer<typeof CoolifySystemIntegrationConfigSchema>;
+export type GitHubSystemIntegrationConfig = z.infer<typeof GitHubSystemIntegrationConfigSchema>;
+export type MinimaxSystemIntegrationConfig = z.infer<typeof MinimaxSystemIntegrationConfigSchema>;
 export type SystemIntegrationConfigMap = {
   migadu: MigaduSystemIntegrationConfig;
   coolify: CoolifySystemIntegrationConfig;
