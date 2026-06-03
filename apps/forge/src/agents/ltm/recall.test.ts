@@ -334,7 +334,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
     }) as any;
-    expect((recall as { pendingRecallOperationCount: number }).pendingRecallOperationCount).toBe(0);
+    expect((recall as { inFlightTracker: { pendingCount: number } }).inFlightTracker.pendingCount).toBe(0);
   });
 
   it('has null lingeringRecallOperationSince at start', async () => {
@@ -347,7 +347,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       persistenceStore: makeMockPersistenceStore(),
     }) as any;
     expect(
-      (recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince,
+      (recall as { inFlightTracker: { lingeringSince: number | null } }).inFlightTracker.lingeringSince,
     ).toBeNull();
   });
 });
