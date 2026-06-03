@@ -156,16 +156,16 @@ export function createNpcWorldApplication(options: NpcWorldApplicationOptions) {
       return record;
     },
     async tick(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
     async readRecentEvents(limit = 10) {
-      return options.world.readRecentEvents({
+      return await options.world.readRecentEvents({
         actorId: options.actorId,
         limit,
       });
     },
     async readRelationshipsForActor(actorId = options.actorId) {
-      return relationships.readForActor(actorId);
+      return await relationships.readForActor(actorId);
     },
   };
 }

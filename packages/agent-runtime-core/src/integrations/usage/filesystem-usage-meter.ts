@@ -35,7 +35,7 @@ export class FilesystemUsageMeter implements UsageMeter {
   }
 
   async list(runtimeId: string): Promise<ComputeUsageRecord[]> {
-    return this.readRecords(runtimeId);
+    return await this.readRecords(runtimeId);
   }
 
   private async readRecords(runtimeId: string): Promise<ComputeUsageRecord[]> {

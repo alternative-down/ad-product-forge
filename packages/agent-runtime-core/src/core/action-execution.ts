@@ -23,7 +23,7 @@ export function createSequentialActionExecutionStrategy(): ActionExecutionStrate
 export function createParallelActionExecutionStrategy(): ActionExecutionStrategy {
   return {
     async execute(actionRequests, executeAction) {
-      return Promise.all(actionRequests.map((actionRequest) => executeAction(actionRequest)));
+      return await Promise.all(actionRequests.map((actionRequest) => executeAction(actionRequest)));
     },
   };
 }

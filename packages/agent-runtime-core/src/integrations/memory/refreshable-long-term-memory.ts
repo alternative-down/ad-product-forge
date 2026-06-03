@@ -72,11 +72,11 @@ export class SourceBackedLongTermMemory implements LongTermMemoryStore, LongTerm
   }
 
   async list(): Promise<LongTermMemoryDocument[]> {
-    return this.store.list();
+    return await this.store.list();
   }
 
   async recall(request: LongTermMemoryRecallRequest): Promise<RetrievedDocument[]> {
-    return this.recallEngine.recall(request);
+    return await this.recallEngine.recall(request);
   }
 
   async refresh() {
