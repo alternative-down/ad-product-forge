@@ -14,8 +14,10 @@ import { RecallPersistence, createRecallPersistence } from './recall/persistence
 import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
 import { createIndexManager, IndexManager } from './recall/index-manager';
 import { createDebugSearch, DebugSearch } from './recall/debug-search';
-
-const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
+import {
+  buildRecallQueryFromStep,
+  shouldSkipRecallInjection,
+} from './recall/query-helpers';
 
 /** Input shape for LTM recall step. Concrete type matching buildRecallStepFromIteration output. */
 export interface RecallStepInput {
@@ -31,16 +33,10 @@ export interface RecallFromStepInput {
   resourceId?: string;
 }
 
-import type {
-  LongTermMemoryRecallHistory,
-  LongTermMemoryRecallSnapshot,
-  createAgentLongTermMemoryStore,
-} from './store';
-import type { LtmSnapshotDeps } from '../agent-ltm-snapshot';
+import type { createAgentLongTermMemoryStore } from './store';
 
-import { buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
+import { buildRecallSystemMessage } from '../agent-ltm-helpers';
 import {
-  buildLtmRecallSnapshot,
   partitionRecallResults,
   buildNextRecallHistory,
 } from '../agent-ltm-snapshot';
@@ -51,7 +47,6 @@ import {
   type RecallOrchestratorDeps,
 } from './recall/orchestrator';
 import { runVectorQuery} from './recall/vector-search';
-import { buildRecallQueryFromStep as buildRecallQueryFromStepImpl } from './recall/format-helpers';
 
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
@@ -226,44 +221,12 @@ export class AgentLongTermMemoryRecall {
       queryVectorIndex: this.queryVectorIndex.bind(this),
     });
   }
-  // ─── recallFromStep sub-methods ─────────────────────────────────────────
-
-  // isRecallInFlight() and logInFlightSkip() are delegated to this.inFlightTracker.
-  // See: apps/forge/src/agents/ltm/recall/in-flight-tracker.ts (#5352)
-
-  private async persistMissRecall(
-    input: RecallFromStepInput,
-    recentFingerprints: string[],
-  ): Promise<void> {
-    await this.persistRecallSnapshotWithInput(input, {
-      status: 'miss',
-      history: {
-        recentFingerprints,
-        updatedAt: String(Date.now()),
-      },
-    });
-  }
-
-  private async persistHitRecall(
-    input: RecallFromStepInput,
-    queryText: string,
-    recallConfig: RecallConfig,
-    indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number },
-    dedupedGraph: { hit: boolean; score?: number; context: string },
-    filteredResults: LtmSearchResult[],
-    history: LongTermMemoryRecallHistory,
-  ): Promise<void> {
-    await this.persistRecallSnapshotWithInput(input, {
-      queryText,
-      recallConfig,
-      indexStats,
-      dedupedGraph,
-      filteredResults,
-      history,
-      status: 'hit',
-    });
-  }
-
+  // ─── recallFromStep ────────────────────────────────────────────────────
+  //
+  // Persistence wrappers (persistMissRecall, persistHitRecall, persistRecallSnapshot,
+  // persistRecallSnapshotWithInput, readRecallThreadState) moved to this.persistence (#5352).
+  // Query helpers (buildRecallQueryFromStep, shouldSkipRecallInjection) moved to
+  // ./recall/query-helpers.
 
   async recallFromStep(input: RecallFromStepInput) {
     const recallStartedAt = Date.now();
@@ -284,11 +247,15 @@ export class AgentLongTermMemoryRecall {
           resourceId: input.resourceId ?? null,
         },
       });
-      const queryText = this.buildRecallQueryFromStep(input.step);
-      const recallThreadState = await this.readRecallThreadState(input.threadId);
+      const queryText = buildRecallQueryFromStep(input.step);
+      const recallThreadState = await this.persistence.readRecallThreadState(input.threadId, this.recentRawTokens);
 
       if (!queryText) {
-        await this.persistMissRecall(input, recallThreadState.recentFingerprints);
+        await this.persistence.persistMissRecall(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          { step: input.step, steps: input.steps },
+          recallThreadState.recentFingerprints,
+        );
         return null;
       }
 
@@ -305,12 +272,16 @@ export class AgentLongTermMemoryRecall {
         windowSize: recallThreadState.windowSize,
       });
       const indexStats = await this.getIndexStats();
-      if (this.shouldSkipRecallInjection({
+      if (shouldSkipRecallInjection({
         graph: { ...graph, sourcesCount: 0 },
         results,
         rawWindowMessageCount: recallThreadState.rawWindowMessageCount ?? 0,
       })) {
-        await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
+        await this.persistence.persistHitRecall(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          { step: input.step, steps: input.steps },
+          { queryText, recallConfig, indexStats, dedupedGraph: graph, filteredResults: results, history: nextHistory }
+        );
         return null;
       }
 
@@ -323,11 +294,19 @@ export class AgentLongTermMemoryRecall {
       });
 
       if (recallText == null) {
-        await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
+        await this.persistence.persistHitRecall(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          { step: input.step, steps: input.steps },
+          { queryText, recallConfig, indexStats, dedupedGraph: graph, filteredResults: results, history: nextHistory }
+        );
         return null;
       }
 
-      await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
+      await this.persistence.persistHitRecall(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          { step: input.step, steps: input.steps },
+          { queryText, recallConfig, indexStats, dedupedGraph: graph, filteredResults: results, history: nextHistory }
+        );
 
       forgeDebug({
         scope: 'ltm',
@@ -366,11 +345,14 @@ export class AgentLongTermMemoryRecall {
       const persistedState = await this.persistenceStore.readRecallState();
       const snapshotError = errorMsg(error);
       try {
-        await this.persistRecallSnapshotWithInput(input, {
-          status: 'error',
-          error: snapshotError,
-          history: persistedState?.history ?? undefined,
-        });
+        await this.persistence.persistRecallSnapshotWithInput(
+          { threadId: input.threadId, resourceId: input.resourceId, step: input.step, steps: input.steps },
+          {
+            status: 'error',
+            error: snapshotError,
+            history: persistedState?.history ?? undefined,
+          },
+        );
       } catch (e) {
         forgeDebug({
           scope: 'ltm-recall',
@@ -475,79 +457,6 @@ export class AgentLongTermMemoryRecall {
     });
   }
 
-  private buildRecallQueryFromStep(step: unknown): string {
-    return buildRecallQueryFromStepImpl(step);
-  }
-
-  private async persistRecallSnapshot(
-    threadContext: { threadId: string | null; resourceId?: string },
-    snapshot: LongTermMemoryRecallSnapshot,
-    history?: LongTermMemoryRecallHistory,
-  ) {
-    await this.persistence.persistRecallSnapshot(threadContext, snapshot, history);
-  }
-
-  private async persistRecallSnapshotWithInput(
-    input: RecallFromStepInput,
-    deps: {
-      queryText?: string;
-      recallConfig?: LtmSnapshotDeps['recallConfig'];
-      indexStats?: LtmSnapshotDeps['indexStats'];
-      dedupedGraph?: LtmSnapshotDeps['dedupedGraph'];
-      filteredResults?: LtmSnapshotDeps['filteredResults'];
-      history?: LongTermMemoryRecallHistory;
-      status: 'miss' | 'hit' | 'error';
-      error?: string;
-    },
-  ) {
-    const threadContext = {
-      threadId: input.threadId,
-      resourceId: input.resourceId,
-    };
-    const snapshot = buildLtmRecallSnapshot(
-      {
-        lastInitAt: this.indexManager.getLastInitAt(),
-        steps: input.steps,
-        queryText: deps.queryText,
-        recallConfig: deps.recallConfig,
-        indexStats: deps.indexStats,
-        dedupedGraph: deps.dedupedGraph,
-        filteredResults: deps.filteredResults,
-      },
-      threadContext,
-      { status: deps.status, error: deps.error },
-    );
-    await this.persistRecallSnapshot(threadContext, snapshot, deps.history);
-  }
-
-  private shouldSkipRecallInjection(input: {
-    graph: {
-      hit: boolean;
-      sourcesCount: number;
-    };
-    results: LtmSearchResult[];
-    rawWindowMessageCount: number;
-  }) {
-    if (input.rawWindowMessageCount <= 0) {
-      return false;
-    }
-
-    const recallItemCount = input.graph.hit ? input.graph.sourcesCount : input.results.length;
-
-    if (recallItemCount <= 0) {
-      return false;
-    }
-
-    const limit = Math.max(
-      1,
-      Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO),
-    );
-    return recallItemCount >= limit;
-  }
-
-  private async readRecallThreadState(threadId: string | null) {
-    return await this.persistence.readRecallThreadState(threadId, this.recentRawTokens);
-  }
 }
 
 export function createAgentLongTermMemoryRecall(input: {
