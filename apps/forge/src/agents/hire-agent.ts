@@ -13,6 +13,14 @@ import {
   type NewAgentProvider,
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+} from '../database/schema-config';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
+import type { AgentScheduleManager } from '../schedules/manager/manager';
+import type { InternalChatService } from '../communication/internal-chat-service';
 import { encryptSecret } from '../encryption/crypto';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
@@ -33,10 +41,10 @@ export const HireInternalAgentInputSchema = z.object({
   modelProfileId: z.string().min(1, 'modelProfileId is required'),
   omModelProfileId: z.string().min(1, 'omModelProfileId is required'),
   workspaceBasePath: z.string().min(1, 'workspaceBasePath is required'),
-  workspaceFilesystem: z.any().optional(),
-  workspaceSandbox: z.any().optional(),
+  workspaceFilesystem: WorkspaceFilesystemConfigSchema.optional(),
+  workspaceSandbox: WorkspaceSandboxConfigSchema.optional(),
   weeklyBudgetUsd: z.number().nonnegative('weeklyBudgetUsd must be non-negative'),
-  providerCredentials: z.record(z.string(), z.any()).optional(),
+  providerCredentials: z.custom<ProviderCredentialsMap>().optional(),
   githubApps: z
     .custom<{
       installForRepo: (repo: string) => Promise<void>;
@@ -44,10 +52,10 @@ export const HireInternalAgentInputSchema = z.object({
     }>()
     .optional()
     .default({} as any),
-  emailMailboxes: z.any().nullable().optional(),
-  coolify: z.any().nullable().optional(),
-  schedules: z.any(),
-  internalChat: z.any(),
+  emailMailboxes: z.custom<AgentEmailManager>().nullable(),
+  coolify: z.custom<CoolifyManager>().nullable(),
+  schedules: z.custom<AgentScheduleManager>(),
+  internalChat: z.custom<InternalChatService>(),
 });
 
 export type HireInternalAgentInput = z.infer<typeof HireInternalAgentInputSchema>;
@@ -130,7 +138,6 @@ async function rollbackHireDbAndEmail(
   await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
   await tx.delete(agents).where(eq(agents.id, agentId));
 
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (provisionedMailbox && emailMailboxes) {
     try {
       await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -152,11 +159,9 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   const validated = validateHireInternalAgentInput(input);
   const agentId = validated.agentId ?? createId();
   const now = Date.now();
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const shouldProvisionEmail = validated.emailMailboxes
     ? await validated.emailMailboxes.isConfigured()
     : false;
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const provisionedMailbox = shouldProvisionEmail
     ? await validated.emailMailboxes!.provisionMailbox({
         agentId,
@@ -170,7 +175,6 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       description: validated.roleDescription,
     },
     ...validated.providerCredentials,
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     ...(provisionedMailbox ? { email: provisionedMailbox.credentials } : {}),
   };
   const agentRecord: NewAgent = {
@@ -185,8 +189,12 @@ export async function hireInternalAgent(db: Database, input: unknown) {
     workspaceAutoSync: 1,
     workspaceBm25: 1,
     workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
-    workspaceFilesystem: validated.workspaceFilesystem ?? null,
-    workspaceSandbox: validated.workspaceSandbox ?? null,
+    workspaceFilesystem: validated.workspaceFilesystem
+      ? JSON.stringify(validated.workspaceFilesystem)
+      : null,
+    workspaceSandbox: validated.workspaceSandbox
+      ? JSON.stringify(validated.workspaceSandbox)
+      : null,
     createdAt: now,
     updatedAt: now,
   };

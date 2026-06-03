@@ -25,9 +25,7 @@ vi.mock('../encryption/crypto', () => ({
 }));
 
 import { hireInternalAgent } from './hire-agent';
-const agents = 'agents';
-const agentExecutionContracts = 'agentExecutionContracts';
-const agentProviders = 'agentProviders';
+import { agents, agentExecutionContracts, agentProviders } from '../database/schema-agents';
 
 const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
