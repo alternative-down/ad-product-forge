@@ -12,6 +12,7 @@ import {
 import { errorMsg } from '../error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
+import { createIndexManager, IndexManager } from './recall/index-manager';
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
@@ -124,12 +125,10 @@ export class AgentLongTermMemoryRecall {
   private readonly conversationStore: ConversationStore;
   private readonly recentRawTokens: number;
   private readonly persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
-  private workspaceInitialized = false;
-  private lastIndexedStamp: string | null = null;
-  private lastInitAt: string | null = null;
   private readonly orchestrator: RecallOrchestrator;
   private readonly persistence: RecallPersistence;
   private readonly inFlightTracker: InFlightRecallTracker;
+  private readonly indexManager: IndexManager;
   private readonly _trackedRecallOperation: <T>(
     label: string,
     operation: Promise<T>,
@@ -208,7 +207,15 @@ export class AgentLongTermMemoryRecall {
       conversationStore: this.conversationStore,
       agentWorkspacePath: this.agentWorkspacePath,
       agentMemoryPath: this.agentMemoryPath,
-      lastInitAt: this.lastInitAt,
+      lastInitAt: null,
+    });
+    this.indexManager = createIndexManager({
+      agentId: this.agentId,
+      retrievalWorkspace: this.retrievalWorkspace,
+      persistence: this.persistence,
+      persistenceStore: this.persistenceStore,
+      inFlightTracker: this.inFlightTracker,
+      initTimeoutMs: this.initTimeoutMs,
     });
   }
   // ─── recallFromStep sub-methods ─────────────────────────────────────────
@@ -383,93 +390,20 @@ export class AgentLongTermMemoryRecall {
     return Promise.resolve();
   }
 
-  async initialize() {
-    if (this.workspaceInitialized) {
-      return;
-    }
-
-    const stageStartedAt = Date.now();
-    const currentStamp = await this.readCurrentIndexStamp();
-
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace init start',
-      context: {
-        agentId: this.agentId,
-        stamp: currentStamp,
-      },
-    });
-    await this.inFlightTracker.runTrackedRecallOperation(
-      'retrieval.refresh',
-      this.retrievalWorkspace.refresh(),
-      this.initTimeoutMs,
-      'ltm recall retrieval init timed out',
-    );
-    this.workspaceInitialized = true;
-    this.lastIndexedStamp = currentStamp;
-    this.lastInitAt = new Date().toISOString();
-    this.persistence.setLastInitAt(this.lastInitAt);
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace init complete',
-      context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      },
-    });
+  /**
+   * @deprecated Delegate to this.indexManager.initialize.
+   * Kept for backward compat with the public API; will be removed in a future major refactor.
+   */
+  async initialize(): Promise<void> {
+    await this.indexManager.initialize();
   }
 
-  async refreshIndex() {
-    await this.initialize();
-    const stageStartedAt = Date.now();
-    const currentStamp = await this.readCurrentIndexStamp();
-
-    if (currentStamp === this.lastIndexedStamp) {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall workspace index unchanged',
-        context: {
-          agentId: this.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          stamp: currentStamp,
-        },
-      });
-      return;
-    }
-
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace reindex start',
-      context: {
-        agentId: this.agentId,
-        previousStamp: this.lastIndexedStamp,
-        nextStamp: currentStamp,
-      },
-    });
-    await this.inFlightTracker.runTrackedRecallOperation(
-      'retrieval.refresh',
-      this.retrievalWorkspace.refresh(),
-      this.initTimeoutMs,
-      'ltm recall retrieval refresh timed out',
-    );
-    this.lastIndexedStamp = currentStamp;
-    this.lastInitAt = new Date().toISOString();
-    this.persistence.setLastInitAt(this.lastInitAt);
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace reindex complete',
-      context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      },
-    });
+  /**
+   * @deprecated Delegate to this.indexManager.refreshIndex.
+   * Kept for backward compat with the public API; will be removed in a future major refactor.
+   */
+  async refreshIndex(): Promise<void> {
+    await this.indexManager.refreshIndex();
   }
 
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
@@ -486,13 +420,13 @@ export class AgentLongTermMemoryRecall {
         graphThreshold: recallConfig.scoreThreshold,
         graphScore: null,
         graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-        lastInitAt: this.lastInitAt,
+        lastInitAt: this.indexManager.getLastInitAt(),
         workspaceCanBm25: true,
         workspaceCanVector: true,
         workspaceCanHybrid: true,
-        availableIndexes: indexState.availableIndexes,
+        availableIndexes: indexState.availableIndexes as string[],
         activeIndexName: 'forge_runtime_memory_recall',
-        activeIndexStats: indexState.activeIndexStats,
+        activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
         queryEmbedding: [],
         queryEmbeddingDimension: 0,
         workspaceFormattedContext: '',
@@ -536,13 +470,13 @@ export class AgentLongTermMemoryRecall {
       graphThreshold: recallConfig.scoreThreshold,
       graphScore: graphSearch.score,
       graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-      lastInitAt: this.lastInitAt,
+      lastInitAt: this.indexManager.getLastInitAt(),
       workspaceCanBm25: true,
       workspaceCanVector: true,
       workspaceCanHybrid: true,
-      availableIndexes: indexState.availableIndexes,
+      availableIndexes: indexState.availableIndexes as string[],
       activeIndexName: 'forge_runtime_memory_recall',
-      activeIndexStats: indexState.activeIndexStats,
+      activeIndexStats: indexState.activeIndexStats as { dimension: number; count: number; metric: string | null } | null,
       queryEmbedding,
       queryEmbeddingDimension: queryEmbedding.length,
       workspaceFormattedContext,
@@ -588,8 +522,11 @@ export class AgentLongTermMemoryRecall {
     } satisfies AgentLongTermMemoryRecallDebugSearchResult;
   }
 
+  /**
+   * @deprecated Delegate to this.indexManager.readCurrentIndexStamp.
+   */
   private async readCurrentIndexStamp() {
-    return await this.persistenceStore.readRecallIndexStamp();
+    return await this.indexManager.readCurrentIndexStamp();
   }
 
   async resolveRecallConfig() {
@@ -614,16 +551,11 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async getWorkspaceIndexState() {
-    return {
-      workspaceCanBm25: true,
-      workspaceCanVector: true,
-      workspaceCanHybrid: true,
-      ...(await this.retrievalWorkspace.getStats()),
-    };
+    return await this.indexManager.getWorkspaceIndexState();
   }
 
   private async getIndexStats() {
-    return await this.persistence.getIndexStats();
+    return await this.indexManager.getIndexStats();
   }
 
   private async queryVectorIndex(
@@ -675,7 +607,7 @@ export class AgentLongTermMemoryRecall {
     };
     const snapshot = buildLtmRecallSnapshot(
       {
-        lastInitAt: this.lastInitAt,
+        lastInitAt: this.indexManager.getLastInitAt(),
         steps: input.steps,
         queryText: deps.queryText,
         recallConfig: deps.recallConfig,
