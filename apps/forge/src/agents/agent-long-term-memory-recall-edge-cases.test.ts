@@ -171,7 +171,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
     const recallSearch = vi
       .spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValue(defaultRecallSearch());
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -187,7 +187,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
     const recallSearch = vi
       .spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValue(defaultRecallSearch());
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -207,7 +207,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
     const recallSearch = vi
       .spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValue(defaultRecallSearch());
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -227,7 +227,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
     const recallSearch = vi
       .spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValue(defaultRecallSearch());
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -250,7 +250,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       ...defaultRecallSearch(),
       results: [{ id: 'r1', content: 'file content', score: 0.9 }],
     });
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -278,7 +278,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       ...defaultRecallSearch(),
       results: [{ id: 'r2', content: 'nested', score: 0.85 }],
     });
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -304,7 +304,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
     const recallSearch = vi
       .spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValue(defaultRecallSearch());
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -326,7 +326,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       ...defaultRecallSearch(),
       results: [{ id: 'r3', content: 'result', score: 0.8 }],
     });
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -353,7 +353,7 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       ...defaultRecallSearch(),
       results: [{ id: 'r1', content: 'test', score: 0.9 }],
     });
-    const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    const threadState = vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -385,7 +385,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
 
     // First call — graph hits, history is empty → fingerprint added
     // Second call — same graph fingerprint in history → filtered out
-    vi.spyOn(recall as any, 'readRecallThreadState')
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState')
       .mockResolvedValueOnce({ recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0 })
       .mockResolvedValueOnce({
         recentFingerprints: ['graph:052a59b0dfbda092b9a767c1be95e9437d8b93f7'],
@@ -431,7 +431,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const ps = makePersistenceStore();
     const recall = await createRecall({ persistenceStore: ps });
 
-    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -451,7 +451,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const ps = makePersistenceStore();
     const recall = await createRecall({ persistenceStore: ps });
 
-    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: ['workspace:doc-A'],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -480,7 +480,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const ps = makePersistenceStore();
     const recall = await createRecall({ persistenceStore: ps });
 
-    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: Array(25)
         .fill(null)
         .map((_, i) => `workspace:doc-${i}`),
@@ -506,7 +506,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const ps = makePersistenceStore();
     const recall = await createRecall({ persistenceStore: ps });
 
-    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
@@ -526,7 +526,7 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const ps = makePersistenceStore();
     const recall = await createRecall({ persistenceStore: ps });
 
-    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn((recall as any).persistence, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 20,
       rawWindowMessageCount: 0,
