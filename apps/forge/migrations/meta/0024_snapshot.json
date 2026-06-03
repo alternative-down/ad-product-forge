@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e1653396-44d8-4f8d-804f-e27c3b0bdc0f",
-  "prevId": "ba946d1a-40a9-412d-a472-1e1399755dba",
+  "id": "ba946d1a-40a9-412d-a472-1e1399755dba",
+  "prevId": "a390ccf9-9010-4ec2-aa74-30a8953352fd",
   "tables": {
     "agent_checkpointed_om_states": {
       "name": "agent_checkpointed_om_states",
@@ -131,23 +131,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "is_active": {
-          "name": "is_active",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -166,13 +151,6 @@
           "name": "agent_execution_contracts_ends_at_idx",
           "columns": [
             "ends_at"
-          ],
-          "isUnique": false
-        },
-        "agent_execution_contracts_updated_at_idx": {
-          "name": "agent_execution_contracts_updated_at_idx",
-          "columns": [
-            "updated_at"
           ],
           "isUnique": false
         }
@@ -308,13 +286,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -432,13 +403,6 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -666,14 +630,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -773,13 +737,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "read_at": {
           "name": "read_at",
           "type": "integer",
@@ -863,13 +820,6 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -1267,29 +1217,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "agents_role_id_idx": {
-          "name": "agents_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
-          "isUnique": false
-        },
-        "agents_model_profile_id_idx": {
-          "name": "agents_model_profile_id_idx",
-          "columns": [
-            "model_profile_id"
-          ],
-          "isUnique": false
-        },
-        "agents_om_model_profile_id_idx": {
-          "name": "agents_om_model_profile_id_idx",
-          "columns": [
-            "om_model_profile_id"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "agents_role_id_agent_roles_id_fk": {
           "name": "agents_role_id_agent_roles_id_fk",
@@ -1414,13 +1342,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -1435,13 +1356,6 @@
           "name": "company_cash_ledger_effective_at_idx",
           "columns": [
             "effective_at"
-          ],
-          "isUnique": false
-        },
-        "company_cash_ledger_updated_at_idx": {
-          "name": "company_cash_ledger_updated_at_idx",
-          "columns": [
-            "updated_at"
           ],
           "isUnique": false
         }
@@ -1659,13 +1573,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -1777,13 +1684,6 @@
             "updated_at"
           ],
           "isUnique": false
-        },
-        "forge_internal_chat_conversations_created_by_account_id_idx": {
-          "name": "forge_internal_chat_conversations_created_by_account_id_idx",
-          "columns": [
-            "created_by_account_id"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -1863,13 +1763,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -1887,13 +1780,6 @@
             "attachment_index"
           ],
           "isUnique": true
-        },
-        "forge_internal_chat_message_attachments_updated_at_idx": {
-          "name": "forge_internal_chat_message_attachments_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -1937,20 +1823,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
           "autoincrement": false
         }
       },
@@ -2054,13 +1926,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -2075,20 +1940,6 @@
           "name": "forge_internal_chat_messages_created_at_idx",
           "columns": [
             "created_at"
-          ],
-          "isUnique": false
-        },
-        "internal_chat_messages_updated_at_idx": {
-          "name": "internal_chat_messages_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
-          "isUnique": false
-        },
-        "forge_internal_chat_messages_author_account_id_idx": {
-          "name": "forge_internal_chat_messages_author_account_id_idx",
-          "columns": [
-            "author_account_id"
           ],
           "isUnique": false
         }
@@ -2118,102 +1969,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "knowledge_documents": {
-      "name": "knowledge_documents",
-      "columns": {
-        "document_id": {
-          "name": "document_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "owner_agent_id": {
-          "name": "owner_agent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "tags": {
-          "name": "tags",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "knowledge_documents_owner_agent_id_idx": {
-          "name": "knowledge_documents_owner_agent_id_idx",
-          "columns": [
-            "owner_agent_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "knowledge_documents_owner_agent_id_agents_id_fk": {
-          "name": "knowledge_documents_owner_agent_id_agents_id_fk",
-          "tableFrom": "knowledge_documents",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "owner_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2454,14 +2209,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2507,13 +2262,6 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -2575,13 +2323,6 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -2984,115 +2725,13 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "forge_ticket_messages": {
-      "name": "forge_ticket_messages",
+    "webhook_routes": {
+      "name": "webhook_routes",
       "columns": {
-        "id": {
-          "name": "id",
+        "route_id": {
+          "name": "route_id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "ticket_id": {
-          "name": "ticket_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "author_type": {
-          "name": "author_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "author_agent_id": {
-          "name": "author_agent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "forge_ticket_messages_ticket_idx": {
-          "name": "forge_ticket_messages_ticket_idx",
-          "columns": [
-            "ticket_id"
-          ],
-          "isUnique": false
-        },
-        "forge_ticket_messages_created_at_idx": {
-          "name": "forge_ticket_messages_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
-          "isUnique": false
-        },
-        "ticket_messages_updated_at_idx": {
-          "name": "ticket_messages_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "forge_ticket_messages_ticket_id_forge_tickets_id_fk": {
-          "name": "forge_ticket_messages_ticket_id_forge_tickets_id_fk",
-          "tableFrom": "forge_ticket_messages",
-          "tableTo": "forge_tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "forge_tickets": {
-      "name": "forge_tickets",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "product_id": {
-          "name": "product_id",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -3103,35 +2742,27 @@
           "notNull": true,
           "autoincrement": false
         },
-        "subject": {
-          "name": "subject",
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'open'"
-        },
-        "priority": {
-          "name": "priority",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'medium'"
-        },
-        "external_id": {
-          "name": "external_id",
+        "secret": {
+          "name": "secret",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -3146,46 +2777,23 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
-      "indexes": {
-        "forge_tickets_product_idx": {
-          "name": "forge_tickets_product_idx",
-          "columns": [
-            "product_id"
-          ],
-          "isUnique": false
-        },
-        "forge_tickets_agent_idx": {
-          "name": "forge_tickets_agent_idx",
-          "columns": [
+      "foreignKeys": {
+        "webhook_routes_agent_id_agents_id_fk": {
+          "name": "webhook_routes_agent_id_agents_id_fk",
+          "tableFrom": "webhook_routes",
+          "tableTo": "agents",
+          "columnsFrom": [
             "agent_id"
           ],
-          "isUnique": false
-        },
-        "forge_tickets_status_idx": {
-          "name": "forge_tickets_status_idx",
-          "columns": [
-            "status"
+          "columnsTo": [
+            "id"
           ],
-          "isUnique": false
-        },
-        "forge_tickets_external_id_idx": {
-          "name": "forge_tickets_external_id_idx",
-          "columns": [
-            "external_id"
-          ],
-          "isUnique": true
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -3272,22 +2880,6 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "webhook_events_route_id_idx": {
-          "name": "webhook_events_route_id_idx",
-          "columns": [
-            "route_id"
-          ],
-          "isUnique": false
-        },
-        "webhook_events_agent_id_idx": {
-          "name": "webhook_events_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
-          "isUnique": false
-        }
-      },
       "foreignKeys": {
         "webhook_events_route_id_webhook_routes_route_id_fk": {
           "name": "webhook_events_route_id_webhook_routes_route_id_fk",
@@ -3305,88 +2897,6 @@
         "webhook_events_agent_id_agents_id_fk": {
           "name": "webhook_events_agent_id_agents_id_fk",
           "tableFrom": "webhook_events",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "webhook_routes": {
-      "name": "webhook_routes",
-      "columns": {
-        "route_id": {
-          "name": "route_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "secret": {
-          "name": "secret",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "webhook_routes_agent_id_idx": {
-          "name": "webhook_routes_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "webhook_routes_agent_id_agents_id_fk": {
-          "name": "webhook_routes_agent_id_agents_id_fk",
-          "tableFrom": "webhook_routes",
           "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
