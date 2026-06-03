@@ -284,7 +284,7 @@ describe('AgentLongTermMemoryRecall initialize', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
     }) as any;
-    (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
+    (recall.indexManager as { workspaceInitialized: boolean }).workspaceInitialized = true;
     await recall.initialize();
     expect(retrieval.refresh).not.toHaveBeenCalled();
   });
@@ -315,12 +315,12 @@ describe('AgentLongTermMemoryRecall refreshIndex', () => {
       persistenceStore: persistence,
     }) as any;
 
-    (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
-    (recall as { lastIndexedStamp: string }).lastIndexedStamp = 'stamp-1';
+    (recall.indexManager as { workspaceInitialized: boolean }).workspaceInitialized = true;
+    (recall.indexManager as { lastIndexedStamp: string }).lastIndexedStamp = 'stamp-1';
 
     await recall.refreshIndex();
     // initialize sets stamp to s1, then refreshIndex compares stamp s1 == s1 -> no refresh
-    expect((recall as { lastIndexedStamp: string }).lastIndexedStamp).toBe('stamp-1');
+    expect((recall.indexManager as { lastIndexedStamp: string }).lastIndexedStamp).toBe('stamp-1');
   });
 });
 
