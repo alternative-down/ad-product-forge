@@ -24,7 +24,7 @@ vi.mock('./agent-contract-store', () => ({
 }));
 
 import { adjustAgentContractBudget } from './adjust-agent-contract-budget';
-const agentExecutionContracts = 'agentExecutionContracts';
+import { agentExecutionContracts } from '../database/schema-agents';
 
 function createMockDb(contract: Record<string, unknown> | null) {
   const tx = {
