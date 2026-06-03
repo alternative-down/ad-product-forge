@@ -33,7 +33,6 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
-export { createRoleSchema } from './routes/schemas/roles';
 
 export const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
@@ -66,6 +65,4 @@ export const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-export { updateRoleSchema } from './routes/schemas/roles';
 
-export { deleteRoleSchema } from './routes/schemas/roles';

@@ -72,7 +72,6 @@ import {
 } from '../agents/global-skills';
 
 import {
-  createRoleSchema as _createRoleSchema,
   roleToolPermissionSchema as _roleToolPermissionSchema,
   roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema} from './schemas';
 import {
