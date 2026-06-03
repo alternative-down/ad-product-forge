@@ -6,7 +6,6 @@ const defaultStringSchema = z.string();
 const defaultNumberSchema = z.number();
 const defaultBooleanSchema = z.boolean();
 const defaultObjectSchema = z.object({}).catchall(z.unknown());
-const defaultArraySchema = z.array(z.unknown());
 
 export function mcpJsonSchemaToZod(schema: McpJsonSchema | undefined): z.ZodTypeAny {
   if (schema === undefined || schema === true) {
