@@ -29,7 +29,7 @@ export class ConfiguredProviderGateway implements StepModelProviderGateway {
     const { providerId } = splitModelId(config.modelId);
     const scopedHeaders = providerId != null ? (this.headersByProvider[providerId] ?? {}) : {};
 
-    return this.base.createStepModel({
+    return await this.base.createStepModel({
       ...config,
       headers: {
         ...this.headers,

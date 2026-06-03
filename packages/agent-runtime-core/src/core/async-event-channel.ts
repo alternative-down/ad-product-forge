@@ -44,7 +44,7 @@ export class AsyncEventChannel<TEvent> implements AsyncIterable<TEvent> {
       return null;
     }
 
-    return new Promise<TEvent | null>((resolve) => {
+    return await new Promise<TEvent | null>((resolve) => {
       const waiter = (event: TEvent | null) => {
         if (timeout) {
           clearTimeout(timeout);

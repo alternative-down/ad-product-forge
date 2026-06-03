@@ -28,7 +28,7 @@ export class FilesystemRuntimeJournal implements RuntimeJournal {
   }
 
   async readSnapshot(runtimeId: string): Promise<RuntimeJournalSnapshot> {
-    return this.readOrCreateSnapshot(runtimeId);
+    return await this.readOrCreateSnapshot(runtimeId);
   }
 
   private async readOrCreateSnapshot(runtimeId: string) {

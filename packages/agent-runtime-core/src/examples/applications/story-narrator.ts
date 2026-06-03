@@ -80,10 +80,10 @@ export function createStoryNarratorApplication(options: StoryNarratorApplication
       return storedEvent;
     },
     async readRecentStoryEvents(limit = 10) {
-      return storyEvents.readRecent(limit);
+      return await storyEvents.readRecent(limit);
     },
     async narrate(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
   };
 }

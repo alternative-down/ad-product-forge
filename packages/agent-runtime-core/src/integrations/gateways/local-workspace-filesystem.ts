@@ -33,7 +33,7 @@ export class LocalWorkspaceFilesystem {
   }
 
   async readFile(targetPath: string) {
-    return fs.readFile(await this.resolveContainedPath(targetPath, false));
+    return await fs.readFile(await this.resolveContainedPath(targetPath, false));
   }
 
   async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
@@ -51,7 +51,7 @@ export class LocalWorkspaceFilesystem {
     const absolutePath = await this.resolveContainedPath(targetPath, false);
     const entries = await fs.readdir(absolutePath, { withFileTypes: true });
 
-    return Promise.all(
+    return await Promise.all(
       entries.map(async (entry) => {
         const entryAbsolutePath = path.join(absolutePath, entry.name);
         const stats = await fs.stat(entryAbsolutePath);

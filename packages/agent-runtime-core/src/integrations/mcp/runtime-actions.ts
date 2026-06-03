@@ -16,7 +16,7 @@ export async function createMcpActionDefinitions(
     description: tool.description != null && tool.description.trim().length > 0 ? tool.description : `Call MCP tool ${tool.name}.`,
     inputSchema: toRuntimeActionInputSchema(tool.inputSchema),
     async execute(input) {
-      return session.callTool(tool.name, input);
+      return await session.callTool(tool.name, input);
     },
   }));
 }

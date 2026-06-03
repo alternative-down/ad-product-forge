@@ -435,7 +435,7 @@ export class AgentRuntime {
     stepNumber: number,
     actionRequests: Array<{ name: string; input: Record<string, unknown> }>,
   ) {
-    return this.actionExecution.execute(actionRequests, (actionRequest) =>
+    return await this.actionExecution.execute(actionRequests, (actionRequest) =>
       this.actions.execute(actionRequest.name, actionRequest.input, {
         runtimeId: this.runtimeId,
         stepId,

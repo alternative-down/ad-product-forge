@@ -33,7 +33,7 @@ export class RuntimeSpeechRenderer {
       return null;
     }
 
-    return this.tts.synthesize({
+    return await this.tts.synthesize({
       ...request,
       text,
     });
@@ -47,7 +47,7 @@ export class RuntimeSpeechRenderer {
       return null;
     }
 
-    return this.streamingTts.synthesizeStream({
+    return await this.streamingTts.synthesizeStream({
       ...request,
       text,
     });
@@ -57,13 +57,13 @@ export class RuntimeSpeechRenderer {
     record: StepRecord,
     request: Omit<TextToSpeechRequest, 'text'> = {},
   ): Promise<TextToSpeechResponse | null> {
-    return this.renderText(getStepMessageText(record), request);
+    return await this.renderText(getStepMessageText(record), request);
   }
 
   async renderStepStream(
     record: StepRecord,
     request: Omit<TextToSpeechRequest, 'text'> = {},
   ): Promise<StreamingTextToSpeechResponse | null> {
-    return this.renderTextStream(getStepMessageText(record), request);
+    return await this.renderTextStream(getStepMessageText(record), request);
   }
 }

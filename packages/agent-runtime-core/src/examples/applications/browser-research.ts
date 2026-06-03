@@ -20,7 +20,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
       sessionPromise = options.browser.createSession(sessionOptions);
     }
 
-    return sessionPromise;
+    return await sessionPromise;
   };
 
   host.runtime.registerAction({
@@ -32,7 +32,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
     async execute(input) {
       const session = await getSession();
       await session.navigate(input.url);
-      return session.snapshot();
+      return await session.snapshot();
     },
   });
   host.runtime.registerAction({
@@ -44,7 +44,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
     async execute(input) {
       const session = await getSession();
       await session.click(input.target);
-      return session.snapshot();
+      return await session.snapshot();
     },
   });
   host.runtime.registerAction({
@@ -57,7 +57,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
     async execute(input) {
       const session = await getSession();
       await session.type(input.target, input.text);
-      return session.snapshot();
+      return await session.snapshot();
     },
   });
   host.runtime.registerAction({
@@ -66,7 +66,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
     inputSchema: z.object({}),
     async execute() {
       const session = await getSession();
-      return session.snapshot();
+      return await session.snapshot();
     },
   });
   host.runtime.registerAction({
@@ -102,7 +102,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
     inputSchema: z.object({}),
     async execute() {
       const session = await getSession();
-      return session.screenshot();
+      return await session.screenshot();
     },
   });
   host.runtime.registerAction({
@@ -150,7 +150,7 @@ export function createBrowserResearchApplication(options: BrowserResearchApplica
       return snapshot;
     },
     async run(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
     async closeSession() {
       if (!sessionPromise) {

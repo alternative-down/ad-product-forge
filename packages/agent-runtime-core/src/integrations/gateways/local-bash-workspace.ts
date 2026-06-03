@@ -39,7 +39,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       return resolved.error;
     }
 
-    return this.waitForProcess(
+    return await this.waitForProcess(
       this.spawnProcess({
         command: request.command,
         cwd: resolved.cwd,

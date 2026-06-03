@@ -24,7 +24,7 @@ export class ConfiguredBrowserGateway implements BrowserGateway {
   }
 
   async createSession(options: BrowserSessionOptions = {}): Promise<BrowserSession> {
-    return this.base.createSession({
+    return await this.base.createSession({
       userAgent: options.userAgent ?? this.userAgent,
       viewport: options.viewport ?? this.viewport,
       headers: {

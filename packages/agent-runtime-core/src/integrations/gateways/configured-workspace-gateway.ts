@@ -45,7 +45,7 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
   }
 
   async execute(request: WorkspaceCommandRequest): Promise<WorkspaceCommandResult> {
-    return this.base.execute({
+    return await this.base.execute({
       ...request,
       cwd: request.cwd ?? this.cwd,
       env: this.buildEnv(request.env),
@@ -60,7 +60,7 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
       throw new Error('Workspace gateway does not support background processes');
     }
 
-    return this.base.startBackground({
+    return await this.base.startBackground({
       ...request,
       cwd: request.cwd ?? this.cwd,
       env: this.buildEnv(request.env),
@@ -75,7 +75,7 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
       throw new Error('Workspace gateway does not support process output inspection');
     }
 
-    return this.base.getProcessOutput(request);
+    return await this.base.getProcessOutput(request);
   }
 
   async killProcess(pid: string): Promise<WorkspaceProcessOutputResult | null> {
@@ -83,6 +83,6 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
       throw new Error('Workspace gateway does not support background process termination');
     }
 
-    return this.base.killProcess(pid);
+    return await this.base.killProcess(pid);
   }
 }

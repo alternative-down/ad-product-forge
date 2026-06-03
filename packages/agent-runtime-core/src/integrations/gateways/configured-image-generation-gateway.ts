@@ -25,7 +25,7 @@ export class ConfiguredImageGenerationGateway implements ImageGenerationGateway 
   }
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
-    return this.base.generate({
+    return await this.base.generate({
       ...request,
       model: request.model ?? this.model,
       aspectRatio: request.aspectRatio ?? this.aspectRatio,
