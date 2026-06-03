@@ -14,7 +14,7 @@ vi.mock('../finance/company-cash-operations', () => ({
 }));
 
 import { topUpActiveAgentContract } from './top-up-agent-contract';
-const agentExecutionContracts = 'agentExecutionContracts';
+import { agentExecutionContracts } from '../database/schema-agents';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
   const tx = {
