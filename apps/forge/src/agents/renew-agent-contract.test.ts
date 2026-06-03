@@ -1,12 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { mockRecordCashIn, mockRecordCashOut, mockGetCurrentBalanceUsd, mockGetContractSpend } =
-  vi.hoisted(() => ({
-    mockRecordCashIn: vi.fn().mockResolvedValue(undefined),
-    mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
-    mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(200),
-    mockGetContractSpend: vi.fn().mockResolvedValue(30),
-  }));
+const {
+  mockRecordCashIn,
+  mockRecordCashOut,
+  mockGetCurrentBalanceUsd,
+  mockGetContractSpend,
+  mockGetActiveContract,
+} = vi.hoisted(() => ({
+  mockRecordCashIn: vi.fn().mockResolvedValue(undefined),
+  mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
+  mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(200),
+  mockGetContractSpend: vi.fn().mockResolvedValue(30),
+  mockGetActiveContract: vi.fn(),
+}));
 
 vi.mock('../finance/company-cash-ledger', () => ({
   createCompanyCashLedger: vi.fn(() => ({ getCurrentBalanceUsd: mockGetCurrentBalanceUsd })),
@@ -20,13 +26,19 @@ vi.mock('../finance/company-cash-operations', () => ({
 }));
 
 vi.mock('./agent-contract-store', () => ({
-  createAgentContractStore: vi.fn(() => ({ getContractSpend: mockGetContractSpend })),
+  createAgentContractStore: vi.fn(() => ({
+    getActiveContract: mockGetActiveContract,
+    getContractSpend: mockGetContractSpend,
+  })),
 }));
 
 import { renewAgentContract } from './renew-agent-contract';
 const agentExecutionContracts = 'agentExecutionContracts';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
+  // Mirror the contract argument into the contract store mock — the source
+  // (renewAgentContract) reads via contractStore.getActiveContract, not the DB.
+  mockGetActiveContract.mockResolvedValue(contract ?? null);
   const txUpdate = vi.fn().mockReturnValue({
     set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
   });
