@@ -4,8 +4,8 @@ import type {
   createAgentLongTermMemoryStore,
 } from '../store';
 import { readOperationalMemoryState } from '@forge-runtime/core';
-import { buildLtmRecallSnapshot } from '../../agent-ltm-snapshot';
-import type { LtmSnapshotDeps } from '../../agent-ltm-snapshot';
+import { buildLtmRecallSnapshot } from '../snapshot';
+import type { LtmSnapshotDeps } from '../snapshot';
 import type { ConversationStore } from '@forge-runtime/core';
 import type { LtmSearchResult } from '../helpers';
 import type { RecallConfig } from './types';
