@@ -34,10 +34,11 @@ export class InMemoryOperationalMemoryConversationStateStore implements Operatio
   private readonly states = new Map<string, OperationalMemoryConversationState>();
 
   async load(threadId: string): Promise<OperationalMemoryConversationState | null> {
-    return this.states.get(threadId) ?? null;
+    return await this.states.get(threadId) ?? null;
   }
 
   async save(state: OperationalMemoryConversationState): Promise<void> {
+    await Promise.resolve();
     this.states.set(state.threadId, state);
   }
 }

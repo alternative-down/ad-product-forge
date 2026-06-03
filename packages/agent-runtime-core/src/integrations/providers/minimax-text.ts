@@ -44,6 +44,7 @@ export class MiniMaxProviderGateway implements StepModelProviderGateway {
   }
 
   async createStepModel(config: StepModelProviderConfig) {
+    await Promise.resolve();
     return createMiniMaxTextModelAdapter({
       apiKey: this.apiKey,
       baseURL: this.baseURL,

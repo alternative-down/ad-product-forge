@@ -33,6 +33,7 @@ export class BufferedRealtimeTextToSpeechGateway implements RealtimeTextToSpeech
         return {
           mimeType: response.mimeType,
           stream: (async function* () {
+            await Promise.resolve();
             yield response;
           })(),
         };
@@ -50,6 +51,7 @@ export class BufferedRealtimeTextToSpeechGateway implements RealtimeTextToSpeech
       }): Promise<void> | void;
     } = {},
   ): Promise<RealtimeTextToSpeechSession> {
+    await Promise.resolve();
     return new BufferedRealtimeTextToSpeechSession({
       streamingTts: this.streamingTts,
       voiceId: options.voiceId,
@@ -104,6 +106,7 @@ class BufferedRealtimeTextToSpeechSession implements RealtimeTextToSpeechSession
   }
 
   async close(): Promise<void> {
+    await Promise.resolve();
     this.closed = true;
   }
 }

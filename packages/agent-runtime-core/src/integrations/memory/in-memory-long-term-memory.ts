@@ -60,6 +60,7 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
   }
 
   async list(): Promise<LongTermMemoryDocument[]> {
+    await Promise.resolve();
     return Array.from(this.documents.values());
   }
 

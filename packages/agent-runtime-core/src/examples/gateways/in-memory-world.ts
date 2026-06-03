@@ -5,10 +5,12 @@ export class InMemoryWorldGateway implements WorldGateway {
   private readonly commands: WorldCommand[] = [];
 
   async emitEvent(event: WorldEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 
   async readRecentEvents(input: { actorId?: string; limit?: number }): Promise<WorldEvent[]> {
+  await Promise.resolve();
     const filtered = input.actorId != null
       ? this.events.filter((event) => event.actorId === input.actorId || event.actorId == null)
       : this.events;
@@ -18,6 +20,7 @@ export class InMemoryWorldGateway implements WorldGateway {
   }
 
   async applyCommand(command: WorldCommand): Promise<void> {
+    await Promise.resolve();
     this.commands.push(command);
   }
 

@@ -68,6 +68,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 
   async streamStep(request: StepModelRequest): Promise<StepModelStream> {
+    await Promise.resolve();
     const prompt = buildAiSdkPrompt({
       baseSystem: this.system,
       context: request.context,

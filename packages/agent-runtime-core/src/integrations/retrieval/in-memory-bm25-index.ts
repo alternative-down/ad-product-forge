@@ -24,6 +24,7 @@ export class InMemoryBm25Index implements KeywordIndex {
       metadata?: Record<string, unknown>;
     }>,
   ): Promise<void> {
+    await Promise.resolve();
     for (const document of documents) {
       const terms = tokenize(document.text);
 
@@ -56,6 +57,7 @@ export class InMemoryBm25Index implements KeywordIndex {
   }
 
   async search(query: string, options: { topK?: number } = {}): Promise<RetrievedDocument[]> {
+    await Promise.resolve();
     const queryTerms = Array.from(new Set(tokenize(query)));
     const topK = options.topK ?? 5;
     const totalDocuments = this.documents.size;

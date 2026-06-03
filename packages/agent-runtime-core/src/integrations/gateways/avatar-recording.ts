@@ -13,6 +13,7 @@ export class InMemoryAvatarEventRecorder implements AvatarEventRecorder {
   private readonly events: AvatarEvent[] = [];
 
   async record(event: AvatarEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

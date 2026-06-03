@@ -105,6 +105,7 @@ async function writeBlobRecord(options: {
 }
 
 async function* createSingleChunkStream(response: TextToSpeechResponse): AsyncIterable<AudioChunk> {
+  await Promise.resolve();
   yield {
     mimeType: response.mimeType,
     bytes: response.bytes,

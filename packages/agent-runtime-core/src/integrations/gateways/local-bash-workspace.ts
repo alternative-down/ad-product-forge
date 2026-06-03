@@ -52,6 +52,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   async startBackground(
     request: WorkspaceBackgroundCommandRequest,
   ): Promise<WorkspaceBackgroundCommandResult> {
+    await Promise.resolve();
     const resolved = this.resolveRequest(request);
 
     if (resolved.error) {
