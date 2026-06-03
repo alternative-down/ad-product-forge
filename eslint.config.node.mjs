@@ -254,4 +254,22 @@ export default defineConfig([
       'reexport-check/no-unnecessary-reexports': 2,
     },
   },
+  // ── Public API entry points ─────────────────────────────────────────────
+  //
+  // Public API entry points (declared in packages/agent-runtime-core/package.json#exports)
+  // are intentional re-export surfaces. The reexport-check rule would otherwise flag
+  // each named re-export as 'unnecessary'. Disable for these specific files only.
+  //
+  // To add a new entry point: append its source path below.
+  {
+    files: [
+      'src/core-entry.ts',
+      'src/integrations-entry.ts',
+      'src/integrations/index.ts',
+      'src/examples/index.ts',
+    ],
+    rules: {
+      'reexport-check/no-unnecessary-reexports': 'off',
+    },
+  },
 ]);
