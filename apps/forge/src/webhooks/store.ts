@@ -1,6 +1,5 @@
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
+import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/schema';
 import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
@@ -9,9 +8,6 @@ import { createId } from '../utils/id';
 export type CreateEventResult =
   | { kind: 'created'; eventId: string }
   | { kind: 'duplicate'; eventId: string };
-
-
-
 
 // WebhookEvent is imported from the database schema (InferModel<typeof webhookEvents>)
 
@@ -23,7 +19,6 @@ export function createWebhookStore(db: Database) {
   }): Promise<WebhookRoute> {
     const now = Date.now();
     const route = {
-
       routeId: createId(),
       agentId: input.agentId,
       name: input.name,
@@ -32,71 +27,61 @@ export function createWebhookStore(db: Database) {
       createdAt: now,
       updatedAt: now,
     };
-    try {
-      await db.insert(webhookRoutes).values(route as NewWebhookRoute);
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'createRoute DB write failed',
-        context: { agentId: input.agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'createRoute',
+      verb: 'write',
+      context: { agentId: input.agentId },
+      fn: () => db.insert(webhookRoutes).values(route as NewWebhookRoute),
+    });
     return route as WebhookRoute;
   }
 
   async function getRoute(routeId: string): Promise<WebhookRoute | null> {
-    try {
-      const rows = await db
-        .select()
-        .from(webhookRoutes)
-        .where(eq(webhookRoutes.routeId, routeId))
-        .limit(1)
-        .all();
-      return (rows as WebhookRoute[])[0] ?? null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'getRoute DB read failed: ' + errorMsg(err),
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'getRoute',
+      verb: 'read',
+      context: { routeId },
+      fn: async () => {
+        const rows = await db
+          .select()
+          .from(webhookRoutes)
+          .where(eq(webhookRoutes.routeId, routeId))
+          .limit(1)
+          .all();
+        return (rows as WebhookRoute[])[0] ?? null;
+      },
+    });
   }
 
   async function listRoutesByAgent(agentId: string): Promise<WebhookRoute[]> {
-    try {
-      return (await db
-        .select()
-        .from(webhookRoutes)
-        .where(eq(webhookRoutes.agentId, agentId))
-        .orderBy(desc(webhookRoutes.createdAt))
-        .all()) as WebhookRoute[];
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'listRoutesByAgent DB read failed: ' + errorMsg(err),
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'listRoutesByAgent',
+      verb: 'read',
+      context: { agentId },
+      fn: async () =>
+        (await db
+          .select()
+          .from(webhookRoutes)
+          .where(eq(webhookRoutes.agentId, agentId))
+          .orderBy(desc(webhookRoutes.createdAt))
+          .all()) as WebhookRoute[],
+    });
   }
 
   async function deactivateRoute(routeId: string): Promise<void> {
-    try {
-      await db.update(webhookRoutes)
-        .set({ isActive: 0, updatedAt: Date.now() })
-        .where(eq(webhookRoutes.routeId, routeId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'deactivateRoute DB write failed',
-        context: { routeId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'deactivateRoute',
+      verb: 'write',
+      context: { routeId },
+      fn: () =>
+        db.update(webhookRoutes)
+          .set({ isActive: 0, updatedAt: Date.now() })
+          .where(eq(webhookRoutes.routeId, routeId)),
+    });
   }
 
   async function createEvent(input: {
@@ -108,7 +93,6 @@ export function createWebhookStore(db: Database) {
   }): Promise<CreateEventResult> {
     const now = Date.now();
     const event = {
-
       eventId: createId(),
       routeId: input.routeId,
       agentId: input.agentId,
@@ -122,53 +106,39 @@ export function createWebhookStore(db: Database) {
       processedAt: null,
     };
 
+    const eventContext = { routeId: input.routeId, agentId: input.agentId };
+
     // AC-3: no idempotencyKey (or empty string) → no dedup, original behavior.
     // (T4, T9: missing/empty key MUST behave as today.)
     if (input.idempotencyKey == null || input.idempotencyKey === '') {
-      try {
-        await db.insert(webhookEvents).values(event as NewWebhookEvent);
-      } catch (err) {
-        forgeDebug({
-          scope: 'webhooks-store',
-          level: 'error',
-          message: 'createEvent DB write failed',
-          context: {
-            routeId: input.routeId,
-            agentId: input.agentId,
-            error: errorMsg(err),
-          },
-        });
-        throw err;
-      }
+      await withDbErrorLogging({
+        scope: 'webhooks-store',
+        op: 'createEvent',
+        verb: 'write',
+        context: eventContext,
+        fn: () => db.insert(webhookEvents).values(event as NewWebhookEvent),
+      });
       return { kind: 'created', eventId: event.eventId };
     }
 
     // AC-1, AC-2, AC-4: idempotencyKey present.
     //   - AC-2: scoped per route (composite unique on (routeId, idempotencyKey))
     //   - AC-4: atomic INSERT OR IGNORE → 10 parallel requests converge to 1 row
-    let insertedRows: Array<{ eventId: string }>;
-    try {
-      insertedRows = (await db
-        .insert(webhookEvents)
-        .values(event as NewWebhookEvent)
-        .onConflictDoNothing({
-          target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
-          where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
-        })
-        .returning({ eventId: webhookEvents.eventId })) as unknown as Array<{ eventId: string }>;
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'createEvent DB write failed',
-        context: {
-          routeId: input.routeId,
-          agentId: input.agentId,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
+    const insertedRows = await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'createEvent',
+      verb: 'write',
+      context: eventContext,
+      fn: async () =>
+        (await db
+          .insert(webhookEvents)
+          .values(event as NewWebhookEvent)
+          .onConflictDoNothing({
+            target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
+            where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
+          })
+          .returning({ eventId: webhookEvents.eventId })) as unknown as Array<{ eventId: string }>,
+    });
 
     if (insertedRows.length > 0) {
       return { kind: 'created', eventId: insertedRows[0].eventId };
@@ -200,56 +170,46 @@ export function createWebhookStore(db: Database) {
   }
 
   async function listEventsByAgent(agentId: string, limit = 50): Promise<WebhookEvent[]> {
-    try {
-      return (await db
-        .select()
-        .from(webhookEvents)
-        .where(eq(webhookEvents.agentId, agentId))
-        .orderBy(desc(webhookEvents.receivedAt))
-        .limit(limit)
-        .all()) as WebhookEvent[];
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'listEventsByAgent DB read failed: ' + errorMsg(err),
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'listEventsByAgent',
+      verb: 'read',
+      context: { agentId },
+      fn: async () =>
+        (await db
+          .select()
+          .from(webhookEvents)
+          .where(eq(webhookEvents.agentId, agentId))
+          .orderBy(desc(webhookEvents.receivedAt))
+          .limit(limit)
+          .all()) as WebhookEvent[],
+    });
   }
 
   async function markProcessed(eventId: string): Promise<void> {
-    try {
-      await db
-        .update(webhookEvents)
-        .set({ status: 'processed', processedAt: Date.now() })
-        .where(eq(webhookEvents.eventId, eventId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'markProcessed DB write failed',
-        context: { eventId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'markProcessed',
+      verb: 'write',
+      context: { eventId },
+      fn: () =>
+        db.update(webhookEvents)
+          .set({ status: 'processed', processedAt: Date.now() })
+          .where(eq(webhookEvents.eventId, eventId)),
+    });
   }
 
   async function markFailed(eventId: string): Promise<void> {
-    try {
-      await db
-        .update(webhookEvents)
-        .set({ status: 'failed', processedAt: Date.now() })
-        .where(eq(webhookEvents.eventId, eventId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'webhooks-store',
-        level: 'error',
-        message: 'markFailed DB write failed',
-        context: { eventId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'markFailed',
+      verb: 'write',
+      context: { eventId },
+      fn: () =>
+        db.update(webhookEvents)
+          .set({ status: 'failed', processedAt: Date.now() })
+          .where(eq(webhookEvents.eventId, eventId)),
+    });
   }
 
   return {
