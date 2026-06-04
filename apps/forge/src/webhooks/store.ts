@@ -38,7 +38,7 @@ export function createWebhookStore(db: Database) {
   }
 
   async function getRoute(routeId: string): Promise<WebhookRoute | null> {
-    return withDbErrorLogging({
+    return await withDbErrorLogging({
       scope: 'webhooks-store',
       op: 'getRoute',
       verb: 'read',
@@ -56,7 +56,7 @@ export function createWebhookStore(db: Database) {
   }
 
   async function listRoutesByAgent(agentId: string): Promise<WebhookRoute[]> {
-    return withDbErrorLogging({
+    return await withDbErrorLogging({
       scope: 'webhooks-store',
       op: 'listRoutesByAgent',
       verb: 'read',
@@ -170,7 +170,7 @@ export function createWebhookStore(db: Database) {
   }
 
   async function listEventsByAgent(agentId: string, limit = 50): Promise<WebhookEvent[]> {
-    return withDbErrorLogging({
+    return await withDbErrorLogging({
       scope: 'webhooks-store',
       op: 'listEventsByAgent',
       verb: 'read',

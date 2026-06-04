@@ -44,7 +44,7 @@ export async function withDbErrorLogging<T>(params: {
   op: string;
   verb: 'read' | 'write';
   context: Record<string, unknown>;
-  fn: () => Promise<T>;
+  fn: () => T | PromiseLike<T>;
 }): Promise<T> {
   try {
     return await params.fn();
