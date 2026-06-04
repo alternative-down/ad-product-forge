@@ -197,6 +197,13 @@
       "when": 1780522073127,
       "tag": "0027_add_updated_at_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1780567023576,
+      "tag": "0028_create_forge_tickets",
+      "breakpoints": true
     }
   ]
 }
