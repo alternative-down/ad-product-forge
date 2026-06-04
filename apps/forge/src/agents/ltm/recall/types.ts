@@ -1,9 +1,33 @@
 export type RecallConfig = {
   searchMode: 'hybrid' | 'vector' | 'bm25';
+  workspaceTopK: number;
+  graphTopK: number;
+  graphThreshold: number;
   scoreThreshold: number;
   documentCount: number;
   graphRandomWalkSteps: number;
   graphIncludeSources: boolean;
+};
+
+/**
+ * The shape returned by the `readRuntimeMemorySettings` dependency.
+ *
+ * Defined in `types.ts` (this file) so it can be referenced from both
+ * `RecallOrchestratorDeps` and the `RecallOrchestrator` class without
+ * duplicating the field list. Previously this shape was declared inline
+ * in two places in `orchestrator.ts` (the public dep type and the
+ * private field), which drifted silently when a field was added without
+ * updating both call sites — see #5484.
+ */
+export type LtmRecallRuntimeSettings = {
+  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK: number;
+  ltmRecallGraphTopK: number;
+  ltmRecallGraphThreshold: number;
+  ltmRecallGraphRandomWalkSteps: number;
+  ltmRecallGraphIncludeSources: boolean;
+  ltmRecallScoreThreshold: number;
+  ltmRecallDocumentCount: number;
 };
 
 export type GraphSearchOptions = {
