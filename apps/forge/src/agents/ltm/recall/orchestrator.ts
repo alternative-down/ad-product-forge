@@ -1,7 +1,7 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import type { LtmSearchResult } from '../helpers';
-import type { RecallConfig } from './types';
+import type { RecallConfig, LtmRecallRuntimeSettings } from './types';
 import { runGraphSearch } from './graph-search';
 import { runWorkspaceSearch } from './workspace-search';
 
@@ -13,16 +13,7 @@ export type RecallOrchestratorDeps = {
   agentWorkspacePath: string;
   agentMemoryPath: string;
   workspaceEmbedder: string;
-  readRuntimeMemorySettings?: () => Promise<{
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
-    ltmRecallWorkspaceTopK: number;
-    ltmRecallGraphTopK: number;
-    ltmRecallGraphThreshold: number;
-    ltmRecallGraphRandomWalkSteps: number;
-    ltmRecallGraphIncludeSources: boolean;
-    ltmRecallScoreThreshold: number;
-    ltmRecallDocumentCount: number;
-  }>;
+  readRuntimeMemorySettings?: () => Promise<LtmRecallRuntimeSettings>;
   recallTimeoutMs: number;
   runTrackedRecallOperation: <T>(
     label: string,
@@ -59,16 +50,7 @@ export class RecallOrchestrator {
   private readonly agentWorkspacePath: string;
   private readonly agentMemoryPath: string;
   private readonly workspaceEmbedder: string;
-  private readonly readRuntimeMemorySettings?: () => Promise<{
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
-    ltmRecallWorkspaceTopK: number;
-    ltmRecallGraphTopK: number;
-    ltmRecallGraphThreshold: number;
-    ltmRecallGraphRandomWalkSteps: number;
-    ltmRecallGraphIncludeSources: boolean;
-    ltmRecallScoreThreshold: number;
-    ltmRecallDocumentCount: number;
-  }>;
+  private readonly readRuntimeMemorySettings?: () => Promise<LtmRecallRuntimeSettings>;
   private readonly recallTimeoutMs: number;
   private readonly runTrackedRecallOperation: <T>(
     label: string,
@@ -102,6 +84,9 @@ export class RecallOrchestrator {
 
     return {
       searchMode: runtimeSettings.ltmRecallSearchMode,
+      workspaceTopK: runtimeSettings.ltmRecallWorkspaceTopK,
+      graphTopK: runtimeSettings.ltmRecallGraphTopK,
+      graphThreshold: runtimeSettings.ltmRecallGraphThreshold,
       scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
       documentCount: runtimeSettings.ltmRecallDocumentCount,
       graphRandomWalkSteps: runtimeSettings.ltmRecallGraphRandomWalkSteps,
@@ -176,14 +161,14 @@ export class RecallOrchestrator {
 
   async runRecallSearch(queryText: string, config: RecallConfig): Promise<RecallSearchResult> {
     const workspaceSearch = await this.searchWorkspace(queryText, {
-      topK: config.documentCount,
+      topK: config.workspaceTopK,
       scoreThreshold: config.scoreThreshold,
       resultCount: config.documentCount,
       mode: config.searchMode,
     });
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
-      topK: config.documentCount,
-      threshold: config.scoreThreshold,
+      topK: config.graphTopK,
+      threshold: config.graphThreshold,
       randomWalkSteps: config.graphRandomWalkSteps,
       includeSources: config.graphIncludeSources,
       contextResults: workspaceSearch.results,
@@ -197,8 +182,8 @@ export class RecallOrchestrator {
       results: workspaceSearch.results,
       rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
-      effectiveGraphTopK: config.documentCount,
-      effectiveGraphThreshold: config.scoreThreshold,
+      effectiveGraphTopK: config.graphTopK,
+      effectiveGraphThreshold: config.graphThreshold,
     };
   }
 }

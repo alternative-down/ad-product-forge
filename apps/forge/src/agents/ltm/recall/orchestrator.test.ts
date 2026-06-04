@@ -40,6 +40,27 @@ const baseSettings = {
   ltmRecallDocumentCount: 4,
 };
 
+/**
+ * Settings override used by the consumption tests (issue #5484).
+ *
+ * Each of the 3 dropped fields is set to a value distinct from the field
+ * that the old code would have used as a fallback:
+ *   - `ltmRecallWorkspaceTopK: 11` — old code used `ltmRecallDocumentCount: 7`
+ *   - `ltmRecallGraphTopK: 8` — old code used `ltmRecallDocumentCount: 7`
+ *   - `ltmRecallGraphThreshold: 0.42` — old code used `ltmRecallScoreThreshold: 0.3`
+ *
+ * Before the fix, the assertions on workspaceSearch.topK=11, graphSearch.topK=8,
+ * graphSearch.threshold=0.42 all fail. After the fix they pass.
+ */
+const consumptionSettings = {
+  ...baseSettings,
+  ltmRecallWorkspaceTopK: 11,
+  ltmRecallGraphTopK: 8,
+  ltmRecallGraphThreshold: 0.42,
+  ltmRecallScoreThreshold: 0.3,
+  ltmRecallDocumentCount: 7,
+};
+
 function createMockDeps(opts: { settings?: typeof baseSettings | null; stats?: { activeIndexStats?: { dimension?: number } } } = {}): RecallOrchestratorDeps {
   return {
     retrievalWorkspace: {
@@ -74,6 +95,9 @@ describe('RecallOrchestrator', () => {
 
       expect(config).toEqual<RecallConfig>({
         searchMode: 'hybrid',
+        workspaceTopK: 5,
+        graphTopK: 5,
+        graphThreshold: 0.5,
         scoreThreshold: 0.7,
         documentCount: 4,
         graphRandomWalkSteps: 3,
@@ -202,8 +226,11 @@ describe('RecallOrchestrator', () => {
 
       const out = await orch.runRecallSearch('q', {
         searchMode: 'hybrid',
+        workspaceTopK: 7,
+        graphTopK: 3,
+        graphThreshold: 0.5,
         scoreThreshold: 0.5,
-        documentCount: 3,
+        documentCount: 99, // intentionally distinct from workspaceTopK to prove field mapping
         graphRandomWalkSteps: 3,
         graphIncludeSources: true,
       });
@@ -241,6 +268,9 @@ describe('RecallOrchestrator', () => {
 
       const out = await orch.runRecallSearch('q', {
         searchMode: 'hybrid',
+        workspaceTopK: 7,
+        graphTopK: 3,
+        graphThreshold: 0.5,
         scoreThreshold: 0.5,
         documentCount: 3,
         graphRandomWalkSteps: 3,
@@ -251,8 +281,14 @@ describe('RecallOrchestrator', () => {
       expect(out.graph.hit).toBe(false);
     });
 
-    it('passes config.documentCount as workspace topK and resultCount', async () => {
-      const deps = createMockDeps();
+    /**
+     * Consumption test #1 (issue #5484):
+     * `ltmRecallWorkspaceTopK` is plumbed through to `runWorkspaceSearch` as `topK`.
+     * Before the fix, the orchestrator used `config.documentCount` (= 7) instead of
+     * `config.workspaceTopK` (= 11).
+     */
+    it('plumbs ltmRecallWorkspaceTopK to runWorkspaceSearch.topK (#5484)', async () => {
+      const deps = createMockDeps({ settings: consumptionSettings });
       const orch = new RecallOrchestrator(deps);
       (runWorkspaceSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
         formatted: '',
@@ -274,17 +310,108 @@ describe('RecallOrchestrator', () => {
 
       await orch.runRecallSearch('q', {
         searchMode: 'vector',
-        scoreThreshold: 0.3,
-        documentCount: 7,
-        graphRandomWalkSteps: 2,
-        graphIncludeSources: false,
+        workspaceTopK: consumptionSettings.ltmRecallWorkspaceTopK,
+        graphTopK: consumptionSettings.ltmRecallGraphTopK,
+        graphThreshold: consumptionSettings.ltmRecallGraphThreshold,
+        scoreThreshold: consumptionSettings.ltmRecallScoreThreshold,
+        documentCount: consumptionSettings.ltmRecallDocumentCount,
+        graphRandomWalkSteps: consumptionSettings.ltmRecallGraphRandomWalkSteps,
+        graphIncludeSources: consumptionSettings.ltmRecallGraphIncludeSources,
       });
 
       const workspaceCall = (runWorkspaceSearch as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(workspaceCall?.[1]).toMatchObject({
-        topK: 7,
-        resultCount: 7,
+        topK: 11, // ltmRecallWorkspaceTopK
+        resultCount: 7, // ltmRecallDocumentCount
         mode: 'vector',
+      });
+    });
+
+    /**
+     * Consumption test #2 (issue #5484):
+     * `ltmRecallGraphTopK` is plumbed through to `runGraphSearch` as `topK`.
+     * Before the fix, the orchestrator used `config.documentCount` (= 7) instead
+     * of `config.graphTopK` (= 8).
+     */
+    it('plumbs ltmRecallGraphTopK to runGraphSearch.topK (#5484)', async () => {
+      const deps = createMockDeps({ settings: consumptionSettings });
+      const orch = new RecallOrchestrator(deps);
+      (runWorkspaceSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        formatted: '',
+        results: [],
+      });
+      (runGraphSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        queryText: '',
+        dimension: 0,
+        includeSources: false,
+        hit: false,
+        score: null,
+        context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
+      });
+
+      await orch.runRecallSearch('q', {
+        searchMode: 'vector',
+        workspaceTopK: consumptionSettings.ltmRecallWorkspaceTopK,
+        graphTopK: consumptionSettings.ltmRecallGraphTopK,
+        graphThreshold: consumptionSettings.ltmRecallGraphThreshold,
+        scoreThreshold: consumptionSettings.ltmRecallScoreThreshold,
+        documentCount: consumptionSettings.ltmRecallDocumentCount,
+        graphRandomWalkSteps: consumptionSettings.ltmRecallGraphRandomWalkSteps,
+        graphIncludeSources: consumptionSettings.ltmRecallGraphIncludeSources,
+      });
+
+      const graphCall = (runGraphSearch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(graphCall?.[2]).toMatchObject({
+        topK: 8, // ltmRecallGraphTopK
+      });
+    });
+
+    /**
+     * Consumption test #3 (issue #5484):
+     * `ltmRecallGraphThreshold` is plumbed through to `runGraphSearch` as `threshold`.
+     * Before the fix, the orchestrator used `config.scoreThreshold` (= 0.3) instead
+     * of `config.graphThreshold` (= 0.42).
+     */
+    it('plumbs ltmRecallGraphThreshold to runGraphSearch.threshold (#5484)', async () => {
+      const deps = createMockDeps({ settings: consumptionSettings });
+      const orch = new RecallOrchestrator(deps);
+      (runWorkspaceSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        formatted: '',
+        results: [],
+      });
+      (runGraphSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        queryText: '',
+        dimension: 0,
+        includeSources: false,
+        hit: false,
+        score: null,
+        context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
+      });
+
+      await orch.runRecallSearch('q', {
+        searchMode: 'vector',
+        workspaceTopK: consumptionSettings.ltmRecallWorkspaceTopK,
+        graphTopK: consumptionSettings.ltmRecallGraphTopK,
+        graphThreshold: consumptionSettings.ltmRecallGraphThreshold,
+        scoreThreshold: consumptionSettings.ltmRecallScoreThreshold,
+        documentCount: consumptionSettings.ltmRecallDocumentCount,
+        graphRandomWalkSteps: consumptionSettings.ltmRecallGraphRandomWalkSteps,
+        graphIncludeSources: consumptionSettings.ltmRecallGraphIncludeSources,
+      });
+
+      const graphCall = (runGraphSearch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(graphCall?.[2]).toMatchObject({
+        threshold: 0.42, // ltmRecallGraphThreshold
       });
     });
   });
