@@ -37,7 +37,7 @@ export function registerDashboardRoutes({
           finance.listCompanyCashMovements({ limit: 10 }),
         ]);
         const rows = await db.query.agents.findMany({
-          columns: { id: true, executionState: true, role: true },
+          columns: { id: true, executionState: true, roleId: true },
         });
         const loadedAgents = registry.size;
         const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
@@ -50,7 +50,7 @@ export function registerDashboardRoutes({
             runningAgents,
             absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent')
               .length,
-            roles: new Set(rows.map((r: any) => r.role).filter(Boolean)).size,
+            roles: new Set(rows.map((r) => r.roleId).filter(Boolean)).size,
             activeContracts: (
               await db.query.agentExecutionContracts.findMany({
                 where: eq(agentExecutionContracts.isActive, 1),

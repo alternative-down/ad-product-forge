@@ -31,7 +31,7 @@ function createMockHttpServer() {
   };
 }
 
-function createMockDb(rows: { id: string; executionState: string; role: string | null }[] = []) {
+function createMockDb(rows: { id: string; executionState: string; roleId: string | null }[] = []) {
   const activeContractRows = [{ id: 'c1' }, { id: 'c2' }];
   return {
     query: {
@@ -131,10 +131,10 @@ describe('registerDashboardRoutes', () => {
     it('returns aggregated totals and cash data on success', async () => {
       const http = createMockHttpServer();
       const db = createMockDb([
-        { id: 'a1', executionState: 'idle', role: 'admin' },
-        { id: 'a2', executionState: 'running', role: 'admin' },
-        { id: 'a3', executionState: 'absent', role: 'editor' },
-        { id: 'a4', executionState: 'idle', role: null },
+        { id: 'a1', executionState: 'idle', roleId: 'admin' },
+        { id: 'a2', executionState: 'running', roleId: 'admin' },
+        { id: 'a3', executionState: 'absent', roleId: 'editor' },
+        { id: 'a4', executionState: 'idle', roleId: null },
       ]);
       const registry = createMockRegistry(7);
       const finance = createMockFinance({ balanceUsd: 9999.99 });
@@ -177,9 +177,34 @@ describe('registerDashboardRoutes', () => {
       expect(parsed.cash.recentMovements).toHaveLength(2);
     });
 
+    it('counts distinct roleIds, not role (regression for #5481)', async () => {
+      const http = createMockHttpServer();
+      const db = createMockDb([
+        { id: 'a1', executionState: 'idle', roleId: 'admin' },
+        { id: 'a2', executionState: 'idle', roleId: 'editor' },
+        { id: 'a3', executionState: 'idle', roleId: 'viewer' },
+        { id: 'a4', executionState: 'idle', roleId: null },
+      ]);
+      registerDashboardRoutes({
+        httpServer: http as never,
+        db: db as never,
+        registry: createMockRegistry() as never,
+        finance: createMockFinance() as never,
+        readModel: {} as never,
+        systemRM: createMockSystemRM() as never,
+      });
+      const handler = http.getHandler('/admin/overview');
+      const result = (await handler.handler()) as { body: string };
+      const parsed = JSON.parse(result.body) as { totals: { roles: number } };
+      // 3 distinct roleIds (admin/editor/viewer); null is filtered.
+      // If bug returns (uses 'role' field instead of 'roleId'), all rows
+      // would be undefined and the set size would be 1, not 3.
+      expect(parsed.totals.roles).toBe(3);
+    });
+
     it('treats empty executionState as absent', async () => {
       const http = createMockHttpServer();
-      const db = createMockDb([{ id: 'a1', executionState: '', role: null }]);
+      const db = createMockDb([{ id: 'a1', executionState: '', roleId: null }]);
       registerDashboardRoutes({
         httpServer: http as never,
         db: db as never,
