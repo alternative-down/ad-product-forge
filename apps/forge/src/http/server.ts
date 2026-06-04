@@ -1,7 +1,7 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 
 const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
 const MAX_BODY_BYTES =
@@ -251,7 +251,7 @@ export function createForgeHttpServer(
         res.end(
           JSON.stringify({
             error: 'Invalid request',
-            details: error.flatten(),
+            details: z.flattenError(error),
           }),
         );
         return;

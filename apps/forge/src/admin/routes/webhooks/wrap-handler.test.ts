@@ -62,7 +62,7 @@ describe('wrapAdminRoute', () => {
   it('returns 400 with validation_failed for ZodError', async () => {
     const wrapped = wrapAdminRoute(ROUTE_PATH, async () => {
       throw new ZodError([
-        { code: 'invalid_type', expected: 'string', received: 'undefined', path: ['agentId'], message: 'Required' },
+        { code: 'invalid_type', expected: 'string', input: undefined, path: ['agentId'], message: 'Required' },
       ] as never);
     });
     const result = await wrapped(REQUEST);
