@@ -1,4 +1,5 @@
 import http from 'node:http';
+import net from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -335,7 +336,93 @@ describe('createForgeHttpServer', () => {
       expect(JSON.parse(res.body)).toEqual({ error: 'Request body too large' });
     });
 
-    it('respects custom maxBodyBytes from server config', async () => {
+    it('drains/destroys the request stream after 413 (DoS guard, #5448)', async () => {
+      // Use a tiny limit so we can trigger the rejection without sending
+      // 1MB+ of body in the test. The fix is the same regardless of limit.
+      const dosServer = createForgeHttpServer({ port: 0, maxBodyBytes: 100 });
+      dosServer.registerRoute({
+        method: 'POST',
+        path: '/dos-guard',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await dosServer.start();
+
+      try {
+        const savedPort = testPort;
+        testPort = dosServer.port as number;
+        try {
+          // Simulate the DoS scenario: open a raw socket, declare a body
+          // larger than the limit, but only send a small amount of data.
+          // Before the fix, the server would keep the request stream open
+          // and Node would buffer chunks internally as they arrive. After
+          // the fix, the request is destroyed via setImmediate so Node
+          // stops allocating memory for unread bytes.
+          const requestLine = 'POST /dos-guard HTTP/1.1';
+          const headers = [
+            'Host: localhost',
+            'Content-Type: application/json',
+            'Content-Length: 10000000', // 10MB declared
+          ].join('\r\n');
+          const bodyChunk = 'x'.repeat(500); // 500 bytes > 100 limit
+          const rawRequest =
+            requestLine + '\r\n' + headers + '\r\n\r\n' + bodyChunk;
+
+          const socket = await new Promise<net.Socket>((resolve, reject) => {
+            const s = net.createConnection(testPort, 'localhost', () => {
+              s.write(rawRequest);
+              resolve(s);
+            });
+            s.on('error', reject);
+          });
+
+          try {
+            // Read the 413 response (server writes headers + body before
+            // the setImmediate fires the request.destroy()).
+            const responseText = await new Promise<string>((resolve, reject) => {
+              let data = '';
+              const onData = (chunk: Buffer) => {
+                data += chunk.toString('utf8');
+                const headerEnd = data.indexOf('\r\n\r\n');
+                if (headerEnd !== -1) {
+                  socket.off('data', onData);
+                  resolve(data);
+                }
+              };
+              socket.on('data', onData);
+              socket.once('end', () => resolve(data));
+              socket.once('close', () => resolve(data));
+              setTimeout(
+                () => reject(new Error('timeout waiting for 413')),
+                2000,
+              );
+            });
+
+            expect(responseText).toContain('413');
+            expect(responseText).toContain('Request body too large');
+
+            // The fix: after the 413 is written, the request stream is
+            // destroyed. The socket should close within a reasonable time.
+            const closed = await new Promise<boolean>((resolve) => {
+              if (socket.destroyed) {
+                resolve(true);
+                return;
+              }
+              socket.once('close', () => resolve(true));
+              setTimeout(() => resolve(socket.destroyed), 500);
+            });
+            expect(closed).toBe(true);
+          } finally {
+            if (!socket.destroyed) socket.destroy();
+          }
+        } finally {
+          testPort = savedPort;
+        }
+      } finally {
+        await dosServer.stop();
+      }
+    });
+
+        it('respects custom maxBodyBytes from server config', async () => {
       const smallServer = createForgeHttpServer({ port: 0, maxBodyBytes: 512 * 1024 });
       smallServer.registerRoute({
         method: 'POST',
