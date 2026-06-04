@@ -76,6 +76,15 @@ export type CreateForgeHttpServerConfig = {
   /** Maximum request body size in bytes. Defaults to FORGE_HTTP_MAX_BODY_BYTES env var
    *  or 1 MB when not set. */
   maxBodyBytes?: number;
+  /** Rate limit configuration for the sliding window.
+   *  When set, requests beyond the limit return 429 Too Many Requests with
+   *  Retry-After + X-RateLimit-* headers. Defaults to { windowMs: 60_000, max: 120 }. */
+  rateLimit?: {
+    /** Sliding window duration in milliseconds. Default 60_000 (1 minute). */
+    windowMs?: number;
+    /** Maximum requests per window. Default 120. */
+    max?: number;
+  };
 };
 
 export interface ForgeHttpServer {
@@ -107,24 +116,40 @@ export function createForgeHttpServer(
 
   // ── Rate Limit Tracking ──────────────────────────────────────────────────
   // Sliding window: tracks request timestamps within the current window.
-  const RATE_WINDOW_MS = 60_000; // 1-minute window
-  const RATE_MAX = 120; // requests per window
+  // Configurable via config.rateLimit; defaults preserve the original constants
+  // so existing clients see no behavior change.
+  const RATE_WINDOW_MS = config.rateLimit?.windowMs ?? 60_000; // 1-minute window
+  const RATE_MAX = config.rateLimit?.max ?? 120; // requests per window
   const requestTimestamps: number[] = [];
 
-  function getRateLimitHeaders(): Record<string, string> {
-    const now = Date.now();
-    // Expire timestamps outside the sliding window
-    const cutoff = now - RATE_WINDOW_MS;
+  // Prune timestamps older than the window. Idempotent and safe to call from
+  // any handler. Used by both getRateLimitHeaders() and the rate-limit check
+  // below so cleanup runs even when no successful response is written (e.g.,
+  // dropped connections, errors that throw before writeHead).
+  function pruneExpiredTimestamps() {
+    const cutoff = Date.now() - RATE_WINDOW_MS;
     while (requestTimestamps.length > 0 && requestTimestamps[0] < cutoff) {
       requestTimestamps.shift();
     }
+  }
+
+  function getRateLimitHeaders(): Record<string, string> {
+    pruneExpiredTimestamps();
     const remaining = Math.max(0, RATE_MAX - requestTimestamps.length);
-    const resetMs = now + RATE_WINDOW_MS;
+    const resetMs = Date.now() + RATE_WINDOW_MS;
     return {
       'X-RateLimit-Limit': String(RATE_MAX),
       'X-RateLimit-Remaining': String(remaining),
       'X-RateLimit-Reset': String(Math.ceil(resetMs / 1000)),
     };
+  }
+
+  // Returns true when the sliding window is at capacity. Callers should
+  // return 429 if true. We don't mutate the timestamp list here — the caller
+  // is responsible for tracking via requestTimestamps.push() on success.
+  function isRateLimited(): boolean {
+    pruneExpiredTimestamps();
+    return requestTimestamps.length >= RATE_MAX;
   }
   const server = http.createServer(async (req, res) => {
     if (req.url === undefined || req.method === undefined) {
@@ -190,6 +215,22 @@ export function createForgeHttpServer(
       }
     }
 
+    // Rate limit check happens BEFORE body read so rate-limited requests
+    // do not waste CPU/memory reading their body. The check uses the same
+    // sliding window as getRateLimitHeaders() and prunes expired entries.
+    if (isRateLimited()) {
+      const rateLimitHeaders = getRateLimitHeaders();
+      res.writeHead(429, {
+        ...corsHeaders,
+        ...rateLimitHeaders,
+        'retry-after': String(Math.ceil(RATE_WINDOW_MS / 1000)),
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      res.end(JSON.stringify({ error: 'Too many requests' }));
+      return;
+    }
+
     const bodyResult = await readBodyWithLimit(req, limit);
 
     if (bodyResult.isRejected) {
@@ -204,7 +245,9 @@ export function createForgeHttpServer(
       return;
     }
 
-    // Track request for rate limiting (before handler executes)
+    // Track request for rate limiting (after body read succeeds, before
+    // handler executes). Rate-limited requests that returned 429 above do
+    // not push here — we only track requests that consumed handler time.
     requestTimestamps.push(Date.now());
 
     try {

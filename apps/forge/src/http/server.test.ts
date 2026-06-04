@@ -834,4 +834,254 @@ describe('createForgeHttpServer', () => {
       });
     });
   });
+
+  describe('rate limiting enforcement (#5447)', () => {
+    // Each test creates its own server with a small rate limit so we can
+    // exercise the limit without sending 120+ requests. The default rate
+    // limit is tested in rate-limit-headers.test.ts.
+    it('does not enforce rate limit below the threshold', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 60_000, max: 3 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        for (let i = 0; i < 3; i += 1) {
+          const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(200);
+        }
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('returns 429 when rate limit is exceeded', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 60_000, max: 3 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        // First 3 succeed.
+        for (let i = 0; i < 3; i += 1) {
+          const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(200);
+        }
+        // 4th request: rate limited.
+        const blocked = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(blocked.status).toBe(429);
+        expect(blocked.body).toContain('Too many requests');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('429 response has Retry-After and X-RateLimit-* headers', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 60_000, max: 2 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        // Burn the budget.
+        await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        // 3rd request: 429 with all expected headers.
+        const blocked = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(blocked.status).toBe(429);
+        expect(blocked.headers['retry-after']).toBeDefined();
+        expect(blocked.headers['x-ratelimit-limit']).toBe('2');
+        expect(blocked.headers['x-ratelimit-remaining']).toBe('0');
+        expect(blocked.headers['x-ratelimit-reset']).toBeDefined();
+        expect(blocked.headers['content-type']).toContain('application/json');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('rate-limited requests do not consume body read budget (DoS protection)', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 60_000, max: 1 },
+        maxBodyBytes: 100, // tiny limit
+      });
+      srv.registerRoute({
+        method: 'POST',
+        path: '/big-body',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        // 1st request: small body, succeeds and consumes the rate limit
+        // budget. Without this, the rate limit is never hit because 413
+        // responses do not push a timestamp (they return before the push).
+        const small = JSON.stringify({ data: 'ok' });
+        const first = await makeRawRequest('POST', '/big-body', small, undefined, srv.port as number);
+        expect(first.status).toBe(200);
+
+        // 2nd request: would be 413 (body > 100 bytes), but rate limit
+        // check happens FIRST. If the rate limit check happened AFTER the
+        // body read, this would be 413. The fix puts the rate limit check
+        // before body read, so this is 429 and the body is not even read.
+        const big = JSON.stringify({ data: 'x'.repeat(200) });
+        const second = await makeRawRequest('POST', '/big-body', big, undefined, srv.port as number);
+        expect(second.status).toBe(429);
+        expect(second.body).toContain('Too many requests');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('OPTIONS preflight does not count against rate limit', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 60_000, max: 2 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        // Send 10 OPTIONS preflights (all return 204, no push).
+        for (let i = 0; i < 10; i += 1) {
+          const preflight = await makeRawRequest(
+            'OPTIONS',
+            '/limited',
+            undefined,
+            { origin: 'https://example.com' },
+            srv.port as number,
+          );
+          expect(preflight.status).toBe(204);
+        }
+        // Real GETs should still succeed (budget not consumed by preflights).
+        for (let i = 0; i < 2; i += 1) {
+          const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(200);
+        }
+        // 3rd GET: rate limited.
+        const blocked = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(blocked.status).toBe(429);
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('401 and 404 responses do not count against rate limit', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        adminApiKey: 'secret',
+        rateLimit: { windowMs: 60_000, max: 2 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      // Register an admin route so the auth check fires (otherwise 404
+      // is returned before auth, masking the 401 case).
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/x',
+        handler: async () => ({ status: 200, body: 'admin' }),
+      });
+      await srv.start();
+      try {
+        // 5 unauthenticated /admin requests (all 401, no push).
+        for (let i = 0; i < 5; i += 1) {
+          const res = await makeRawRequest(
+            'GET',
+            '/admin/x',
+            undefined,
+            { 'x-forge-admin-api-key': 'wrong' },
+            srv.port as number,
+          );
+          expect(res.status).toBe(401);
+        }
+        // 5 404 requests.
+        for (let i = 0; i < 5; i += 1) {
+          const res = await makeRawRequest('GET', '/nope', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(404);
+        }
+        // Budget should still be intact: 2 GETs succeed.
+        for (let i = 0; i < 2; i += 1) {
+          const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(200);
+        }
+        // 3rd GET: rate limited.
+        const blocked = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(blocked.status).toBe(429);
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('rate limit window expires after time passes', async () => {
+      // 200ms window so the test runs fast.
+      const srv = createForgeHttpServer({
+        port: 0,
+        rateLimit: { windowMs: 200, max: 2 },
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        // Burn the budget.
+        for (let i = 0; i < 2; i += 1) {
+          const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+          expect(res.status).toBe(200);
+        }
+        // 3rd: rate limited.
+        const blocked = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(blocked.status).toBe(429);
+
+        // Wait for the window to slide.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+
+        // New request should succeed.
+        const afterReset = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(afterReset.status).toBe(200);
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('default rate limit preserves 120 requests per 60s (no behavior change)', async () => {
+      // Verifies config defaults match the original constants so the existing
+      // rate-limit-headers.test.ts contract is preserved.
+      const srv = createForgeHttpServer({ port: 0 });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/limited',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/limited', undefined, undefined, srv.port as number);
+        expect(res.headers['x-ratelimit-limit']).toBe('120');
+        expect(res.headers['x-ratelimit-remaining']).toBe('119');
+      } finally {
+        await srv.stop();
+      }
+    });
+  });
 });
