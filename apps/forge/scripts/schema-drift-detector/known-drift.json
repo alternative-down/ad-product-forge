@@ -1,0 +1,567 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-06-04",
+  "description": "Schema-vs-migration drift that has been audited and intentionally accepted. New drift in PRs that is NOT in this list will fail CI (when in blocking mode).",
+  "entries": [
+    {
+      "id": "schema-column-agent_execution_contracts.is_active",
+      "type": "schema-only-column",
+      "table": "agent_execution_contracts",
+      "column": "is_active",
+      "schema_file": "schema-agents.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "6bfef336",
+        "pr": null,
+        "summary": "fix(1540): add isActive column to agent_execution_contracts"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-agent_home_metric_snapshots.updated_at",
+      "type": "schema-only-column",
+      "table": "agent_home_metric_snapshots",
+      "column": "updated_at",
+      "schema_file": "schema-agents.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-agent_schedules.wake_when_running",
+      "type": "schema-only-column",
+      "table": "agent_schedules",
+      "column": "wake_when_running",
+      "schema_file": "schema-agents.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-forge_internal_chat_conversation_members.updated_at",
+      "type": "schema-only-column",
+      "table": "forge_internal_chat_conversation_members",
+      "column": "updated_at",
+      "schema_file": "schema-chat.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-forge_internal_chat_messages.updated_at",
+      "type": "schema-only-column",
+      "table": "forge_internal_chat_messages",
+      "column": "updated_at",
+      "schema_file": "schema-chat.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-forge_internal_chat_message_reads.created_at",
+      "type": "schema-only-column",
+      "table": "forge_internal_chat_message_reads",
+      "column": "created_at",
+      "schema_file": "schema-chat.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-forge_internal_chat_message_reads.updated_at",
+      "type": "schema-only-column",
+      "table": "forge_internal_chat_message_reads",
+      "column": "updated_at",
+      "schema_file": "schema-chat.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-forge_internal_chat_message_attachments.updated_at",
+      "type": "schema-only-column",
+      "table": "forge_internal_chat_message_attachments",
+      "column": "updated_at",
+      "schema_file": "schema-chat.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.step_delay_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "step_delay_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "e5aba416",
+        "pr": null,
+        "summary": "feat: add configurable step delay control"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.communication_dm_flushing_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "communication_dm_flushing_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.communication_group_flushing_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "communication_group_flushing_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.memory_last_messages_full_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "memory_last_messages_full_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.memory_last_messages_count",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "memory_last_messages_count",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.token_count_filter_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "token_count_filter_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.token_count_filter_limit",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "token_count_filter_limit",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_enabled",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_enabled",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_total_context_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_total_context_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_recent_raw_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_recent_raw_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_raw_observation_batch_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_raw_observation_batch_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_observation_support_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_observation_support_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.checkpointed_om_reflection_support_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "checkpointed_om_reflection_support_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_observation_message_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_observation_message_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_observation_buffer_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_observation_buffer_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_observation_buffer_activation",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_observation_buffer_activation",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_observation_previous_observer_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_observation_previous_observer_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_reflection_observation_tokens",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_reflection_observation_tokens",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.om_reflection_buffer_activation",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "om_reflection_buffer_activation",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_search_mode",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_search_mode",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_workspace_top_k",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_workspace_top_k",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_graph_top_k",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_graph_top_k",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_graph_threshold",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_graph_threshold",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_graph_random_walk_steps",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_graph_random_walk_steps",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_graph_include_sources",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_graph_include_sources",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_score_threshold",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_score_threshold",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-system_settings.ltm_recall_document_count",
+      "type": "schema-only-column",
+      "table": "system_settings",
+      "column": "ltm_recall_document_count",
+      "schema_file": "schema-config.ts",
+      "reason": "feature_flag_column_intentional",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": null,
+      "added_at": "2026-06-04T10:30Z",
+      "added_by": "aldric-zvqgom"
+    }
+  ]
+}
