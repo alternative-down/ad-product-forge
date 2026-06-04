@@ -136,7 +136,7 @@ describe('withDbErrorLogging', () => {
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const FORGE_SRC = join(process.cwd(), 'apps/forge/src');
+const FORGE_SRC = join(import.meta.dirname, '..', '..');
 
 /** Recursively collect all store.ts files under apps/forge/src. */
 function collectStoreFiles(dir: string): string[] {
