@@ -474,7 +474,7 @@ export async function generateHiredAgentInstructions(
         scope: 'hiring-requests-handler',
         level: 'error',
         message: 'hireAgent tool result failed schema validation',
-        context: { parseError: parsedToolResult.error.flatten() },
+        context: { parseError: z.flattenError(parsedToolResult.error) },
       });
     }
 
