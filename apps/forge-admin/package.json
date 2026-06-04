@@ -47,7 +47,7 @@
     "@humanwhocodes/module-importer": "^1.0.1",
     "@humanwhocodes/retry": "^0.4.3",
     "@tailwindcss/vite": "^4.2.2",
-    "@tanstack/router-plugin": "^1.167.12",
+    "@tanstack/router-plugin": "^1.168.14",
     "@types/estree": "^1.0.8",
     "@types/node": "^25.6.0",
     "@types/react": "^18.3.1",
