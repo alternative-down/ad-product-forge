@@ -35,5 +35,13 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Schema drift detector
+        # Informational mode (--no-fail) for now: the baseline covers 35
+        # known drift items. Once the baseline stabilizes and the team is
+        # used to the tool, switch to blocking mode by removing --no-fail.
+        # See apps/forge/scripts/schema-drift-detector/known-drift.json
+        # and issue #5446 for the rollout plan.
+        run: node apps/forge/scripts/schema-drift-detector/detect.mjs --no-fail
+
       - name: Build
         run: npm run build -- --force
