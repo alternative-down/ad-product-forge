@@ -9,7 +9,13 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
 
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
-  const migrationsFolder = join(process.cwd(), 'migrations');
+  // Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the
+// path resolves correctly regardless of the cwd from which the app is launched.
+// The file lives at apps/forge/src/database/, so ../../migrations points to
+// apps/forge/migrations. This fixes a latent production bug where launching
+// the app from any directory other than apps/forge/ caused ENOENT on
+// the migrations folder (see #5493).
+const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
   const databasePath = getAppDatabasePath();
 
   try {

@@ -46,15 +46,12 @@ import { describe, expect, test } from 'vitest';
  */
 export const MAX_TOTAL_STATEMENTS = 200;
 
-const MIGRATIONS_DIR = join(process.cwd(), 'apps', 'forge', 'migrations');
-const MIGRATE_SOURCE_PATH = join(
-  process.cwd(),
-  'apps',
-  'forge',
-  'src',
-  'database',
-  'migrate.ts',
-);
+// Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the
+// path resolves correctly regardless of the cwd from which vitest was launched.
+// The file lives at apps/forge/src/database/, so ../../migrations points to
+// apps/forge/migrations. The source path is one level above the migrations dir.
+const MIGRATIONS_DIR = join(import.meta.dirname, '..', '..', 'migrations');
+const MIGRATE_SOURCE_PATH = join(import.meta.dirname, 'migrate.ts');
 
 interface MigrationFileStatements {
   file: string;
