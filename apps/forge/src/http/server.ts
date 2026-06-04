@@ -348,11 +348,15 @@ function readBodyWithLimit(request: http.IncomingMessage, limit: number): Promis
       bytesReceived += buf.byteLength;
 
       if (bytesReceived > limit) {
-        // Stop pushing chunks but do NOT destroy — destroying the socket
-        // causes ECONNRESET before the 413 response can be written.
-        // Removing the data listener is sufficient to stop collection.
+        // Stop our handlers; pause the stream so Node stops buffering
+        // chunks internally (otherwise the OS socket keeps receiving
+        // and Node allocates memory for unread bytes — see #5448).
+        // The destroy is scheduled via setImmediate so the caller has
+        // a chance to write the 413 response in the same tick.
         request.removeAllListeners('data');
         request.removeAllListeners('end');
+        request.pause();
+        setImmediate(() => request.destroy());
         resolve({ isRejected: true });
         return;
       }
