@@ -114,3 +114,164 @@ describe('withDbErrorLogging', () => {
     expect(call?.context.extra).toBe(1);
   });
 });
+
+/**
+ * Static-analysis guard test (issue #5485).
+ *
+ * Enforces Format A across all store files in the codebase by scanning
+ * store.ts files under apps/forge/src for the legacy Format B pattern:
+ *   - message: '...' + errorMsg(err)   (string concatenation)
+ *   - message: `...${errorMsg(err)}...`  (template literal)
+ *
+ * If any store file uses Format B (inline error in message), this test
+ * fails. The fix is to migrate the site to withDbErrorLogging, which
+ * always emits Format A.
+ *
+ * Why a static check (vs a runtime test)? The Format-B problem is
+ * structural: it is about how forgeDebug is CALLED at call sites. The
+ * unit tests for withDbErrorLogging only verify the helper's own
+ * behavior. We need a file-level check to catch new call sites that
+ * bypass the helper.
+ */
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+const FORGE_SRC = join(import.meta.dirname, '..', '..');
+
+/** Recursively collect all store.ts files under apps/forge/src. */
+function collectStoreFiles(dir: string): string[] {
+  const results = [];
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      results.push(...collectStoreFiles(fullPath));
+    } else if (/store\.ts$/.test(entry) && !/\.test\.ts$/.test(entry)) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+/**
+ * Detect Format-B pattern in a file.
+ *
+ * Matches:
+ *   1. message: '<prefix>' + errorMsg(err)   (string concatenation)
+ *   2. message: `...${errorMsg(err)}...`  (template literal)
+ *
+ * Does NOT match (these are Format A, the desired form):
+ *   - message: 'op DB verb failed'         (bare string, no error)
+ *   - context: { ..., error: errorMsg(err) } (error in context, not message)
+ */
+function findFormatBLocations(content: string): Array<{ line: number; text: string }> {
+  const lines = content.split('\n');
+  const results = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Pattern 1: message: '...' + errorMsg(err) or message: " + errorMsg(err)
+    if (/message:\s*['"`].*['"`]\s*\+\s*errorMsg\s*\(/.test(line)) {
+      results.push({ line: i + 1, text: line.trim() });
+      continue;
+    }
+    // Pattern 2: message: `...${errorMsg(err)}...`  (template literal)
+    if (/message:\s*`[^`]*\$\{[^}]*errorMsg\s*\(/.test(line)) {
+      results.push({ line: i + 1, text: line.trim() });
+    }
+  }
+  return results;
+}
+
+describe('Log format guard (issue #5485, Format A)', () => {
+  const storeFiles = collectStoreFiles(FORGE_SRC);
+
+  it('finds at least one store file (sanity)', () => {
+    expect(storeFiles.length).toBeGreaterThan(0);
+  });
+
+  it('no NEW Format-B sites have been added (baseline-aware)', () => {
+    // Baseline: 9 known Format-B sites in the codebase, pending migration
+    // via the broader rollout tracked in #5468.
+    //
+    // Pre-#5483 the count was 13 (3 in webhooks + 4 in notifications + 5
+    // in schedules + 1 in agent-contract-store). After #5483 (webhooks
+    // migration), the in-scope count is 9:
+    //   - notifications/store.ts: 4 sites
+    //   - schedules/manager/store.ts: 5 sites
+    // (agent-contract-store.ts is out of scope per Aldric's boundary.)
+    //
+    // As #5468 (broader rollout) progresses, this number should shrink
+    // toward 0. Update BASELINE_FORMAT_B_COUNT when you intentionally
+    // migrate a site.
+    const violations = [];
+    for (const file of storeFiles) {
+      const content = readFileSync(file, 'utf8');
+      const matches = findFormatBLocations(content);
+      for (const match of matches) {
+        violations.push({
+          file: file.replace(process.cwd() + '/', ''),
+          line: match.line,
+          text: match.text,
+        });
+      }
+    }
+    if (violations.length > BASELINE_FORMAT_B_COUNT) {
+      const newCount = violations.length - BASELINE_FORMAT_B_COUNT;
+      const summary = violations
+        .map((v) => '  ' + v.file + ':' + v.line + '\n    ' + v.text)
+        .join('\n');
+      throw new Error(
+        'Found ' + newCount + ' NEW Format-B log site(s) (was ' + BASELINE_FORMAT_B_COUNT +
+        ', now ' + violations.length + ').\n' +
+        'Format A is the canonical spec (see apps/forge/src/database/error-logging.ts).\n' +
+        'Migrate new sites to withDbErrorLogging to emit Format A.\n\n' +
+        summary
+      );
+    }
+  });
+
+  it('reports current Format-B site count (informational)', () => {
+    // Soft check: this is the count that should decrease as #5468 progresses.
+    // If this test fails, the baseline (BASELINE_FORMAT_B_COUNT) needs updating.
+    let count = 0;
+    for (const file of storeFiles) {
+      const content = readFileSync(file, 'utf8');
+      const matches = findFormatBLocations(content);
+      count += matches.length;
+    }
+    // eslint-disable-next-line no-console
+    console.log('Current Format-B sites:', count, '(baseline:', BASELINE_FORMAT_B_COUNT + ')');
+    expect(count).toBeLessThanOrEqual(BASELINE_FORMAT_B_COUNT);
+  });
+
+  it('reports store files using forgeDebug directly (informational)', () => {
+    // Defensive check: every forgeDebug({ ... level: error ... }) call in a
+    // store file should be inside a withDbErrorLogging call. This catches
+    // new ad-hoc try/catch blocks that re-introduce Format B's pattern.
+    //
+    // We look for forgeDebug( calls in files that do not import the helper.
+    // If a file imports the helper, all forgeDebug calls in it should be via
+    // the helper. If a file does not import the helper, it must not be
+    // calling forgeDebug directly.
+    const noHelperButUsesForgeDebug = [];
+    for (const file of storeFiles) {
+      const content = readFileSync(file, 'utf8');
+      const importsHelper = /import\s*\{[^}]*withDbErrorLogging[^}]*\}\s*from\s*['"][^'"]*error-logging['"]/.test(content);
+      const callsForgeDebug = /forgeDebug\s*\(/.test(content);
+      if (callsForgeDebug && !importsHelper) {
+        noHelperButUsesForgeDebug.push(file.replace(process.cwd() + '/', ''));
+      }
+    }
+    expect(noHelperButUsesForgeDebug.length).toBeLessThanOrEqual(BASELINE_NO_HELPER_COUNT);
+  });
+});
+
+// Known count of Format-B sites in the codebase as of issue #5485.
+// See the baseline-aware test above for the derivation. Update this when
+// you intentionally migrate a site via #5468 rollout.
+const BASELINE_FORMAT_B_COUNT = 9;
+
+// Number of store files that use forgeDebug directly (not via withDbErrorLogging).
+// As of #5485, 10 store files still use forgeDebug directly. These will migrate
+// to withDbErrorLogging as part of #5468. Same baseline-aware pattern.
+const BASELINE_NO_HELPER_COUNT = 10;
