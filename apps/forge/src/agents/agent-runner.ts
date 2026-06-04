@@ -15,23 +15,17 @@ import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager } from './agent-runner-loop-manager';
 import { createRunnerMessageManager } from './agent-runner-message-manager';
 
-import {
-  errorMsg,
-  formatAbsentExecutionError,
-} from './error-formatting';
-import { extractRunnerControlDirective } from './agent-runner-control-directives';
+import { errorMsg } from './error-formatting';
 
 import { withTimeout } from '../utils/async';
 
 import { advanceGenerateToken } from './agent-runner-state';
-import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
-import {
-  generateWithTimeoutRetries,
-  RUNNER_AWAIT_TIMEOUT_MS,
-} from './agent-runner-generate';
+import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
+import { generateWithTimeoutRetries, RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 
 import { createScheduler, type Scheduler, type SchedulerState } from './agent-runner-scheduler';
+import { executeStep as executeStepExtracted, type ExecuteStepDeps } from './agent-runner-execute';
 
 import { ONE_MINUTE_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
@@ -81,12 +75,7 @@ export function createAgentRunner(
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
-  let lastGenerateProgress: {
-    stage: string;
-    at: number;
-    detail: Record<string, unknown> | null;
-  } | null = null;
-  const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
+const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
@@ -233,15 +222,7 @@ export function createAgentRunner(
     void messageManager.appendPendingRunMessages(events, options);
   }
 
-  function flushPendingRunMessages(
-    options: {
-      allowOriginIdleOnly?: boolean;
-    } = {},
-  ) {
-    return messageManager.flushPendingRunMessages(options);
-  }
-
-  function stop() {
+function stop() {
     stopped = true;
     startingRun = false;
     startingRunStartedAt = null;
@@ -390,222 +371,85 @@ export function createAgentRunner(
   }
 
   async function executeStep(contractId: string, _runEpoch: number) {
-    if (stopped || executing || isStaleRun(_runEpoch)) {
-      return;
-    }
+    // Wire-up: delegate to the extracted, fully-tested version (agent-runner-execute.ts).
+    // The extracted version was created in PR #2321 but never wired up. This closes #5453.
+    // Behavior changes (intentional improvements, not regressions):
+    //   - Lock is acquired AFTER the execution-state check (not before) so that
+    //     'idle' early-exits don't leave a stale lock in place.
+    //   - progressState is reset on the 'idle' early-exit path
+    //     (closure did not reset, leaving dangling timestamps).
+    //   - activeRunId flows through deps.epochState.activeRunId (closure used a
+    //     closure-captured let; extracted uses a shared epochState object).
+    //   - All 20 tests in agent-runner-execute.test.ts now run against the
+    //     production code path (previously they tested dead code).
+    await executeStepExtracted(buildExecuteStepDeps(contractId, _runEpoch));
+  }
 
-    executing = true;
-    scheduler.advanceStepEpoch();
-    let continueRunning = false;
-    let drainWakeQueueAfterStep = false;
-    let prompt = '';
-    lastStepStartedAt = Date.now();
-    lastStepStage = 'step-started';
-
-    try {
-      lastStepStage = 'checking-execution-state';
-      const executionState = await withTimeout(
-        store.getExecutionState(runtime.id),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state lookup timed out for ${runtime.id}`,
-      );
-
-      if (executionState === 'idle' || isStaleRun(_runEpoch)) {
-        return;
-      }
-
-      if (executionState === 'absent') {
-        await withTimeout(
-          store.setExecutionState(runtime.id, 'running'),
-          RUNNER_AWAIT_TIMEOUT_MS,
-          `Agent execution state update timed out for ${runtime.id}`,
-        );
-      }
-
-      lastStepStage = 'loading-runnable-contract';
-      const contract = await withTimeout(
-        store.getRunnableContract(runtime.id),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent runnable contract lookup timed out for ${runtime.id}`,
-      );
-
-      if (isStaleRun(_runEpoch)) {
-        return;
-      }
-
-      if (!contract) {
-        await transitionToIdle(_runEpoch, {
-          deferWakeQueueDrain: true,
-        });
-        drainWakeQueueAfterStep = true;
-        return;
-      }
-
-      if (contract.id !== contractId) {
-        await queueNextStep(_runEpoch);
-        return;
-      }
-
-      const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
-      pendingLongTermMemoryRecallSystemText = null;
-      lastStepStage = 'flushing-pending-run-messages';
-      prompt =
-        flushPendingRunMessages({
-          allowOriginIdleOnly: true,
-        }) ?? '';
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'debug',
-        runtimeId: runtime.id,
-        message: 'executing step',
-      });
-
-      lastStepStage = 'agent-generate';
-      const backoffState = { backoffMs: scheduler.getState().backoffMs, instant: scheduler.getState().instant, nextStepAt: scheduler.getState().nextStepAt };
-      const result = await generateWithTimeoutRetries(
-        prompt,
-        _runEpoch,
-        contractId,
-        contract,
-        stepLongTermMemoryRecallSystemText,
-        {
-          db,
-          runtime,
-          currentRuntime,
-          store,
-          usage: usage as unknown as AgentRunnerUsage,
-          notifications,
-          homeMetricSnapshots,
-          messageManager,
-          runLastMessages,
-          flushPendingRunMessages,
-          // The Scheduler type in GenerateDeps is a narrower interface than
-          // what createScheduler returns. Cast through the declared
-          // Scheduler type to silence the type mismatch on
-          // planNextStepDelay (returns Promise<number> in the full impl,
-          // Promise<void> in the GenerateDeps contract).
-          scheduler: scheduler as unknown as Scheduler,
-          epochState: {
-            activeRunEpoch: 0,
-            activeStepEpoch: 0,
-            activeGenerateToken: 0,
-            activeRunId: null,
-          },
-          backoffState,
-          progressState: {
-            lastStepStartedAt: null,
-            lastStepStage: null,
-            lastGenerateProgress: null,
-          },
-          loopState: { lastLoopSignature: null, repeatedLoopCount: 0 },
-          loopDetector: loopManager,
-          currentGenerateAbortController,
-          setCurrentGenerateAbortController: (c) => {
-            currentGenerateAbortController = c;
-          },
-          markGenerateProgress: () => {},
-          setBackoffMs: (ms: number) => {
-            backoffState.backoffMs = ms;
-          },
-          setInstant: (v: boolean) => {
-            backoffState.instant = v;
-          },
-          setNextStepAt: (v: number | null) => {
-            backoffState.nextStepAt = v;
-          },
-          setLoopSignature: (sig) => {
-            loopManager.getState().lastLoopSignature = sig;
-          },
-          loopSignature: loopManager.getState().lastLoopSignature ?? '',
-          activeRunId,
-          loadAgentContextInstructions: loadAgentContextInstructions as (
-            currentRuntime: InternalAgentRuntime,
-            db: Database,
-          ) => Promise<string | null>,
-          isStopped: () => stopped,
-        },
-      );
-
-      if (isStaleRun(_runEpoch)) {
-        return;
-      }
-      lastStepStage = 'finalizing-run';
-      if (!result) {
-        throw new Error('Unexpected: generate result is undefined');
-      }
-      const controlDirective = extractRunnerControlDirective(result);
-      const stopRequested = controlDirective === 'stop';
-
-      if (stopRequested && messageManager.getPendingCount() === 0) {
-        scheduler.clearTimer();
-        resetLoopDetector();
-        await transitionToIdle(_runEpoch, {
-          deferWakeQueueDrain: true,
-        });
-        drainWakeQueueAfterStep = true;
-        return;
-      }
-
-      scheduler.resetBackoff();
-      continueRunning = messageManager.getPendingCount() > 0;
-    } catch (error) {
-      if (isStaleRun(_runEpoch)) {
-        return;
-      }
-
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'error',
-        runtimeId: runtime.id,
-        message: 'step failed',
-        context: {
-          mastraId: currentRuntime.mastraId,
-          pricingModelKey: currentRuntime.pricingModelKey,
-          modelProfileId: currentRuntime.modelProfileId,
-          stepStartedAt: lastStepStartedAt,
-          stepStage: lastStepStage,
-          lastGenerateProgress,
-          prompt,
-          error: errorMsg(error),
-        },
-      });
-      await withTimeout(
-        store.setExecutionAbsent(
-          runtime.id,
-          formatAbsentExecutionError({
-            stage: lastStepStage,
-            lastGenerateProgress,
-            error,
-          }),
-        ),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state update timed out for ${runtime.id}`,
-      ).catch((stateError) => {
-        forgeDebug({
-          scope: 'agent-runner',
-          level: 'error',
-          runtimeId: runtime.id,
-          message: 'failed to set absent state',
-          context: { stateError },
-        });
-      });
-      schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
-    } finally {
-      lastStepStartedAt = null;
-      lastStepStage = null;
-      lastGenerateProgress = null;
-      if (scheduler.getActiveStepEpoch() === _runEpoch) {
-        executing = false;
-      }
-
-      if (drainWakeQueueAfterStep && !isStaleRun(_runEpoch)) {
-        await wakeQueue.onRunnerIdle();
-      }
-
-      if (continueRunning && !isStaleRun(_runEpoch)) {
-        await queueNextStep(_runEpoch);
-      }
-    }
+  function buildExecuteStepDeps(contractId: string, runEpoch: number): ExecuteStepDeps {
+    return {
+      // Identity
+      contractId,
+      runEpoch,
+      runtimeId: runtime.id,
+      mastraId: currentRuntime.mastraId ?? '',
+      pricingModelKey: currentRuntime.pricingModelKey ?? '',
+      modelProfileId: currentRuntime.modelProfileId ?? '',
+      // Runner state guards
+      stopped,
+      executingRef: { get value() { return executing; }, set value(v: boolean) { executing = v; } },
+      isStaleRun,
+      // State containers
+      epochState: {
+        activeRunEpoch: 0,
+        activeStepEpoch: scheduler.getActiveStepEpoch(),
+        activeGenerateToken: 0,
+        activeRunId,
+      },
+      backoffState: scheduler.getState(),
+      progressState: {
+        lastStepStartedAt,
+        lastStepStage,
+        lastGenerateProgress: null,
+      },
+      loopState: loopManager.getState(),
+      // Stores & managers
+      store,
+      messageManager,
+      // Scheduler type mismatch: planNextStepDelay returns Promise<number> in
+      // createScheduler's full impl, Promise<void> in the Scheduler interface.
+      // Cast through 'unknown' to silence (this same cast was used in the
+      // original closure's GenerateDeps config).
+      scheduler: scheduler as unknown as Scheduler,
+      loopDetector: loopManager,
+      // Wake-queue boundary
+      onRunnerIdle: () => wakeQueue.onRunnerIdle(),
+      // Core runner actions
+      transitionToIdle,
+      queueNextStep,
+      generateWithTimeoutRetries,
+      markGenerateProgress: () => {},
+      setLoopSignature: (sig) => { loopManager.getState().lastLoopSignature = sig; },
+      loopSignature: loopManager.getState().lastLoopSignature ?? '',
+      loadAgentContextInstructions: loadAgentContextInstructions as (
+        currentRuntime: InternalAgentRuntime,
+        db: Database,
+      ) => Promise<string | null>,
+      currentRuntime,
+      db,
+      // Pending messages / LTM
+      pendingLongTermMemoryRecallSystemText,
+      flushPendingRunMessages: (opts) => messageManager.flushPendingRunMessages(opts),
+      // Additional runner state
+      usage: usage as unknown as AgentRunnerUsage,
+      notifications,
+      homeMetricSnapshots,
+      runLastMessages,
+      currentGenerateAbortController,
+      setCurrentGenerateAbortController: (c) => { currentGenerateAbortController = c; },
+      // Error logging
+      runtime,
+      forgeDebug,
+    };
   }
 
   function applyIdleState(_runEpoch: number) {
