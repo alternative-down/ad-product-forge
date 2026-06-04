@@ -204,6 +204,13 @@
       "when": 1780567023576,
       "tag": "0028_create_forge_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1780585619512,
+      "tag": "0029_add_is_active_to_agent_execution_contracts",
+      "breakpoints": true
     }
   ]
 }

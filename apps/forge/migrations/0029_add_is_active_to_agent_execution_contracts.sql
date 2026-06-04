@@ -1,0 +1,47 @@
+-- =============================================================================
+-- Migration 0029: Add is_active column to agent_execution_contracts
+-- =============================================================================
+--
+-- ROOT CAUSE
+-- ---------
+-- `schema-agents.ts` declares `isActive: integer('is_active').notNull().default(1)`
+-- on the `agent_execution_contracts` table, but no migration has ever added
+-- the column. Same drift family as the original P0 outage (Jun 3 2026) and
+-- the latent bombs fixed in #5443 (0027) and #5450 (0028).
+--
+-- SYMPTOM (active)
+-- ----------------
+-- `apps/forge/src/admin/read-model/agents.ts:66` queries:
+--   db.query.agentExecutionContracts.findMany({
+--     where: eq(agentExecutionContracts.isActive, 1),
+--     columns: { id: true },
+--   })
+-- Returns 500 on `/admin/dashboard` and `/admin/agents` with:
+--   SQLITE_ERROR: no such column: is_active
+--
+-- The SELECT runs at every dashboard request, so this 500 affects all admin
+-- users continuously until the column is added.
+--
+-- TABLES MODIFIED
+-- ---------------
+--   1. agent_execution_contracts  (1 column added, 1 index added)
+--
+-- Total: 2 statements. Well below the 27 libsql batch transaction threshold
+-- (the limit that #5438 fixed).
+--
+-- IDEMPOTENCY
+-- -----------
+-- SQLite has NO `ADD COLUMN IF NOT EXISTS` (Postgres-only). We rely on
+-- Drizzle's `__drizzle_migrations` journal to prevent re-application.
+-- The CREATE INDEX uses `IF NOT EXISTS` (SQLite-supported) for safety.
+--
+-- REFERENCES
+-- ----------
+--   - #5480 (this issue): column missing on agent_execution_contracts
+--   - #5443 (0027): 7 missing updated_at columns on the same table
+--   - #5450 (0028): 2 missing tables (forge_tickets, forge_ticket_messages)
+--   - P0 outage Jun 3 2026 20:31Z: 8h 17min prod recovery, same drift family
+-- =============================================================================
+
+ALTER TABLE `agent_execution_contracts` ADD COLUMN `is_active` integer NOT NULL DEFAULT 1;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `agent_execution_contracts_is_active_idx` ON `agent_execution_contracts` (`is_active`);
