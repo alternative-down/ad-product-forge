@@ -8,7 +8,6 @@ import {
   llmProfiles,
   systemLlmDefaults,
   type LlmProfile,
-  type SystemLlmDefaults,
 } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
@@ -277,60 +276,35 @@ export function createLlmSettingsStore(db: Database) {
     }
 
     const now = Date.now();
-    let existing: SystemLlmDefaults | null = null;
     try {
-      existing = (await getDefaultsRow()) ?? null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to query LLM defaults',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    if (existing) {
-      try {
-        await db
-          .update(systemLlmDefaults)
-          .set({
-            primaryProfileId: parsed.primaryProfileId,
-            omProfileId: parsed.omProfileId,
-            hiringRhProfileId: parsed.hiringRhProfileId,
-            updatedAt: now,
-          })
-          .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
-      } catch (err) {
-        forgeDebug({
-          scope: 'llm',
-          level: 'error',
-          message: 'Failed to update LLM defaults',
-          context: { error: errorMsg(err) },
-        });
-        throw err;
-      }
-    } else {
-      try {
-        await db.insert(systemLlmDefaults).values({
+      await db
+        .insert(systemLlmDefaults)
+        .values({
           id: DEFAULTS_ROW_ID,
           primaryProfileId: parsed.primaryProfileId,
           omProfileId: parsed.omProfileId,
           hiringRhProfileId: parsed.hiringRhProfileId,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: systemLlmDefaults.id,
+          set: {
+            primaryProfileId: parsed.primaryProfileId,
+            omProfileId: parsed.omProfileId,
+            hiringRhProfileId: parsed.hiringRhProfileId,
+            updatedAt: now,
+          },
         });
-      } catch (err) {
-        forgeDebug({
-          scope: 'llm',
-          level: 'error',
-          message: 'Failed to insert LLM defaults',
-          context: { error: errorMsg(err) },
-        });
-        throw err;
-      }
+    } catch (err) {
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to upsert LLM defaults',
+        context: { error: errorMsg(err) },
+      });
+      throw err;
     }
-
     return parsed;
   }
 
