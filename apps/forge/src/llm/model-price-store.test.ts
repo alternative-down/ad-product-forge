@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { llmModelPrices } from '../database/schema';
+
 describe('createLlmModelPriceStore', () => {
   // Mock DB interface
   function createMockDb(
@@ -45,7 +47,9 @@ describe('createLlmModelPriceStore', () => {
         })),
       })),
       insert: vi.fn(() => ({
-        values: vi.fn(() => Promise.resolve()),
+        values: vi.fn(() => ({
+          onConflictDoUpdate: vi.fn(() => Promise.resolve()),
+        })),
       })),
       prices,
     };
@@ -122,6 +126,49 @@ describe('createLlmModelPriceStore', () => {
         inputCachePerMillionUsd: 2,
         outputPerMillionUsd: 20,
       });
+    });
+
+    // Regression test for #5502: atomic upsert with onConflictDoUpdate
+    // (replaces findFirst+update|insert race-prone pattern). On OLD code, the
+    // branch where findFirst returns an existing row would call db.update(); on
+    // NEW code, the path is always insert().values().onConflictDoUpdate(), so
+    // concurrent upserts for the same modelKey cannot race.
+    it('uses atomic onConflictDoUpdate with target=modelKey (no separate update call)', async () => {
+      const onConflictDoUpdateMock = vi.fn().mockResolvedValue(undefined);
+      const valuesMock = vi.fn().mockReturnValue({ onConflictDoUpdate: onConflictDoUpdateMock });
+      const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
+      const updateMock = vi.fn();
+
+      const db = {
+        query: { llmModelPrices: { findFirst: vi.fn().mockResolvedValue(null) } },
+        insert: insertMock,
+        update: updateMock,
+      } as any;
+
+      const { createLlmModelPriceStore } = await import('./model-price-store.js');
+      const store = createLlmModelPriceStore(
+        db as unknown as import('../database/index.js').Database,
+      );
+
+      await store.upsertPrice({
+        modelKey: 'gpt-4',
+        inputPerMillionUsd: 2,
+        inputCachePerMillionUsd: 1,
+        outputPerMillionUsd: 8,
+      });
+
+      // Single atomic statement
+      expect(insertMock).toHaveBeenCalled();
+      expect(updateMock).not.toHaveBeenCalled();
+      expect(onConflictDoUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: llmModelPrices.modelKey,
+          set: expect.objectContaining({
+            inputPerMillionUsd: 2,
+            outputPerMillionUsd: 8,
+          }),
+        }),
+      );
     });
   });
 });

@@ -1,5 +1,4 @@
 import { errorMsg } from '../agents/error-formatting';
-import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import { llmModelPrices } from '../database/schema';
@@ -31,30 +30,25 @@ export function createLlmModelPriceStore(db: Database) {
   }) {
     const now = Date.now();
     try {
-      const existing = await db.query.llmModelPrices.findFirst({
-        where: eq(llmModelPrices.modelKey, input.modelKey),
-      });
-
-      if (existing != null) {
-        await db
-          .update(llmModelPrices)
-          .set({
-            inputPerMillionUsd: input.inputPerMillionUsd,
-            inputCachePerMillionUsd: input.inputCachePerMillionUsd,
-            outputPerMillionUsd: input.outputPerMillionUsd,
-            updatedAt: now,
-          })
-          .where(eq(llmModelPrices.modelKey, input.modelKey));
-      } else {
-        await db.insert(llmModelPrices).values({
+      await db
+        .insert(llmModelPrices)
+        .values({
           modelKey: input.modelKey,
           inputPerMillionUsd: input.inputPerMillionUsd,
           inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
           outputPerMillionUsd: input.outputPerMillionUsd,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: llmModelPrices.modelKey,
+          set: {
+            inputPerMillionUsd: input.inputPerMillionUsd,
+            inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
+            outputPerMillionUsd: input.outputPerMillionUsd,
+            updatedAt: now,
+          },
         });
-      }
     } catch (err) {
       forgeDebug({
         scope: 'llm',
