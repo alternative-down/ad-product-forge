@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createPaymentReceivablesStore } from './payment-receivables';
+import { paymentTransactions } from './payment-schema';
+import { companyCashLedger } from '../database/schema';
 
 // ─── Mock DB factory ────────────────────────────────────────────────────────
 const DRIZZLE_NAME = Symbol.for('drizzle:Name');
@@ -263,5 +265,103 @@ describe('createPaymentReceivablesStore', () => {
   it('listRecentTransactions returns an empty array when no transactions exist', async () => {
     const result = await store.listRecentTransactions({ limit: 10 } as any);
     expect(result).toHaveLength(0);
+  });
+
+  // ─── #5539, #5540, #5541 fix tests ──────────────────────────────────────
+  // Use the REAL drizzle table objects. Identify inserts by table object
+  // identity (===), since Symbol.for('drizzle:Name') is undefined on the
+  // table objects in the test environment (pre-existing mock quirk).
+  describe('processPaymentEvent atomicity + status fix', () => {
+    function makeDb(opts: { rejectTxInsert?: boolean; txStore?: any[] } = {}) {
+      const txStore = opts.txStore ?? [];
+      const insertCalls: Array<{ table: any; values: any }> = [];
+      function insert(table: any) {
+        return {
+          values: (v: any) => {
+            insertCalls.push({ table, values: v });
+            return {
+              then: (resolve: any, reject: any) => {
+                if (table === paymentTransactions && opts.rejectTxInsert) {
+                  return reject(new Error('Simulated tx insert failure'));
+                }
+                if (table === paymentTransactions) txStore.push(v);
+                resolve({ rowCount: 1 });
+              },
+            };
+          },
+        };
+      }
+      const db = {
+        insert,
+        transaction: (fn: any) => fn({
+          insert,
+          select: () => ({
+            from: (_t: any) => ({
+              where: (_c: any) => ({
+                limit: () => ({ all: () => Promise.resolve(txStore) }),
+              }),
+            }),
+          }),
+        }),
+      };
+      return { db, insertCalls, txStore };
+    }
+
+    it('wraps tx insert and ledger insert in a single db.transaction (Closes #5541)', async () => {
+      const { db, insertCalls } = makeDb();
+      const storeLocal = createPaymentReceivablesStore(db as any) as any;
+      await storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_atom', customerId: 'c1', amountUsd: 50, status: 'completed',
+      });
+      const txInsert = insertCalls.find(c => c.table === paymentTransactions);
+      const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
+      expect(txInsert).toBeDefined();
+      expect(ledgerInsert).toBeDefined();
+    });
+
+    it('writes ledger entry with status="posted" (Closes #5539, was "cleared")', async () => {
+      const { db, insertCalls } = makeDb();
+      const storeLocal = createPaymentReceivablesStore(db as any) as any;
+      await storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_status', customerId: 'c1', amountUsd: 50, status: 'completed',
+      });
+      const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
+      expect(ledgerInsert).toBeDefined();
+      expect(ledgerInsert!.values.status).toBe('posted');
+    });
+
+    it('does not write ledger entry for non-completed status', async () => {
+      const { db, insertCalls } = makeDb();
+      const storeLocal = createPaymentReceivablesStore(db as any) as any;
+      await storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_failed', customerId: 'c1', amountUsd: 50, status: 'failed', failureReason: 'declined',
+      });
+      const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
+      expect(ledgerInsert).toBeUndefined();
+    });
+
+    it('returns isNew=false on second call with same provider+providerPaymentId (idempotency, Closes #5540)', async () => {
+      const txStore: any[] = [];
+      const { db } = makeDb({ txStore });
+      const storeLocal = createPaymentReceivablesStore(db as any) as any;
+      const r1 = await storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, status: 'completed',
+      });
+      const r2 = await storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, status: 'completed',
+      });
+      expect(r1.isNew).toBe(true);
+      expect(r2.isNew).toBe(false);
+    });
+
+    it('rolls back if tx insert fails — ledger insert does not run (Closes #5541)', async () => {
+      const { db, insertCalls } = makeDb({ rejectTxInsert: true });
+      const storeLocal = createPaymentReceivablesStore(db as any) as any;
+      await expect(storeLocal.processPaymentEvent({
+        provider: 'stripe', providerPaymentId: 'evt_rollback', customerId: 'c1', amountUsd: 50, status: 'completed',
+      })).rejects.toThrow('Simulated tx insert failure');
+      const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
+      expect(ledgerInsert).toBeUndefined();
+    });
   });
 });
