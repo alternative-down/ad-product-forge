@@ -1,7 +1,7 @@
 import { asc, eq, inArray } from 'drizzle-orm';
 import { errorMsg } from '../agents/error-formatting';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   agents,
   agentRoles,

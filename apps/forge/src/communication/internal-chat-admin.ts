@@ -12,7 +12,7 @@
  */
 import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   internalChatAccounts,
   internalChatConversationMembers,

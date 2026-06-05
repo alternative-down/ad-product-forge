@@ -8,7 +8,7 @@ import { errorMsg } from '../../../agents/error-formatting';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
-import type { Database } from '../../../database/schema';
+import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';

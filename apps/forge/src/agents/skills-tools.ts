@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
 import { resolveAgentSkillRoot } from './workspace-skill-paths';

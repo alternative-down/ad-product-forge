@@ -13,7 +13,7 @@ import {
   type Job,
   type RecurrenceSpecDateRange,
 } from 'node-schedule';
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 import { createAgentScheduleStore } from '../manager/store';
 import { forgeDebug } from '@forge-runtime/core';
 

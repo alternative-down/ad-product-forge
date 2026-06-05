@@ -2,7 +2,7 @@ import { errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';

@@ -1,5 +1,5 @@
 import { errorMsg } from './error-formatting';
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { forgeDebug } from '@forge-runtime/core';
 
 import { buildHiredAgentProfile } from './hiring-profile';

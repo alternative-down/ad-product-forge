@@ -1,7 +1,7 @@
 import { errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { createInternalAgentRuntime } from './create-forge-agent';
 import type { InternalAgentRuntime } from './runtime/types';
 import { loadAgentRuntimeData } from './agent-loader-data';

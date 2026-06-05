@@ -12,7 +12,7 @@ import {
 } from '../database/schema';
 import { parseFilterDate } from './internal-chat-helpers';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 
 /**
  * Internal Chat — Messages Module

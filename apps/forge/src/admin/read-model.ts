@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { sql } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';

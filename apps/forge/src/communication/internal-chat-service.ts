@@ -54,7 +54,7 @@ import type {
 } from '@forge-runtime/core';
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   internalChatAccounts as _internalChatAccounts,
   internalChatConversationMembers as _internalChatConversationMembers,

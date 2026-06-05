@@ -1,7 +1,7 @@
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { runInternalHiring, runInternalTermination } from './internal-agent-lifecycle';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';

@@ -6,7 +6,7 @@ import type { AgentWakeEvent } from '@forge-runtime/core';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';

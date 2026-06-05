@@ -12,7 +12,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { internalChatConversations, internalChatConversationMembers } from '../database/schema';
 import type { InternalChatConversation } from '../database/schema';
 

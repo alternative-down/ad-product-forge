@@ -1,6 +1,6 @@
 import { forgeDebug, type AgentWakeEvent } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { AgentLoaderConfig } from './agent-loader';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';

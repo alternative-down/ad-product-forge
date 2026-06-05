@@ -3,7 +3,7 @@ import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   llmProfiles,
   systemLlmDefaults,

@@ -2,7 +2,7 @@ import { createId } from '../utils/id';
 import { errorMsg } from '../agents/error-formatting';
 import { and, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   agents,
   agentRoles,

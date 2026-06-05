@@ -3,7 +3,7 @@ import { errorMsg } from '../agents/error-formatting';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { companyCashLedger } from '../database/schema';
 
 type CompanyCashDirection = 'in' | 'out';

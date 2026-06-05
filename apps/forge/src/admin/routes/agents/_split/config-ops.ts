@@ -13,7 +13,7 @@ import {
 } from '../../schemas/agents';
 import type { HttpHandler } from '../../../../http/server';
 import { agents } from '../../../../database/schema';
-import type { Database } from '../../../../database/schema';
+import type { Database } from '../../../../database/client';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../../github/manager';
 

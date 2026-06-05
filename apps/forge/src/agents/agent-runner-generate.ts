@@ -19,7 +19,7 @@
  * - State helpers: isStaleRun, advanceGenerateToken, nextBackoff, resetBackoff, calculateDelayMs
  */
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
 import type { AgentNotificationStore } from '../notifications/store';

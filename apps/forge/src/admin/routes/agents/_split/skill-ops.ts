@@ -13,7 +13,7 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../../../../agents/global-skills';
 import type { HttpHandler } from '../../../../http/server';
-import type { Database } from '../../../../database/schema';
+import type { Database } from '../../../../database/client';
 
 const publishAgentSkillToGlobalSchema = z
   .object({

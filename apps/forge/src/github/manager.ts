@@ -30,7 +30,7 @@
 import { nanoid } from 'nanoid';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 import { agentProviders, agents } from '../database/schema';
 import type { createForgeHttpServer } from '../http/server';

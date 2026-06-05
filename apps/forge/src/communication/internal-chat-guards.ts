@@ -3,7 +3,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { and, eq } from 'drizzle-orm';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { ConversationNotFoundError, ChatGroupNotFoundError } from './internal-chat-errors';
 
 export interface InternalChatGuardsDeps {

@@ -3,7 +3,7 @@ import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 

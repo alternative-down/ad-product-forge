@@ -15,7 +15,7 @@
  * so the runner owns the lifecycle.
  */
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
 import type { AgentNotificationStore } from '../notifications/store';

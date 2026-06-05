@@ -1,7 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { and, eq } from 'drizzle-orm';
 
 import { agents, agentProviders, agentRoles } from '../database/schema';

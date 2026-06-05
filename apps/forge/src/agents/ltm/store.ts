@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 import type { InferModel } from 'drizzle-orm';
 import { agentLongTermMemoryRecallStates, agentLongTermMemoryStates } from '../../database/schema';
 import { forgeDebug } from '@forge-runtime/core';

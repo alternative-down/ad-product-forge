@@ -3,7 +3,7 @@ import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { agentNotifications } from '../database/schema';
 
 export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;

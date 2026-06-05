@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { errorMsg } from '../agents/error-formatting';
 import { z } from 'zod';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,

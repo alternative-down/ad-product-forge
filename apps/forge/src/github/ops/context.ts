@@ -15,7 +15,7 @@
  */
 import type { Octokit } from 'octokit';
 
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { AgentNotificationStore } from '../../notifications/store';
 import type {

@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
 
 import type { CommunicationFile } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { internalChatMessageAttachments, type NewInternalChatMessageAttachment } from '../database/schema';
 import { createId } from '../utils/id';
 import { resolveContentType, sanitizeAttachmentName } from './internal-chat-helpers';

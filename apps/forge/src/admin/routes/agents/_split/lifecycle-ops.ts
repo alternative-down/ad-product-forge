@@ -5,7 +5,7 @@
  */
 
 import { parseJsonBody, jsonResponse } from '../../index';
-import type { Database } from '../../../../database/schema';
+import type { Database } from '../../../../database/client';
 import type { HttpHandler } from '../../../../http/server';
 
 // Extract error message for user-facing display

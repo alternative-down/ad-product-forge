@@ -6,7 +6,7 @@ import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import { type WorkspaceEmbedderId } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { agents } from '../database/schema';
 
 const CONCURRENCY_LIMIT = 4;

@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { changeAgentRole, reloadAgentsForRole } from './runtime';
 import { createCapabilityStore } from './store';
 import { forgeCapabilityIds, hasToolPermission } from './catalog';

@@ -2,7 +2,7 @@ import { errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { agents, agentProviders } from '../database/schema';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
