@@ -309,50 +309,61 @@ export function createPaymentReceivablesStore(db: Database) {
     const now = Date.now();
     const txId = createId();
     try {
-      const existing = await db
-        .select()
-        .from(paymentTransactions)
-        .where(
-          and(
-            eq(paymentTransactions.provider, input.provider),
-            eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
-          ),
-        )
-        .limit(1)
-        .all();
+      // Closes #5540 (race) and #5541 (no transaction wrapper):
+      // - SQLite serializes writes within a transaction; concurrent events queue
+      //   so the second findFirst sees the first's insert
+      // - tx insert + ledger insert are now atomic — if either fails, both roll back
+      return await db.transaction(async (tx) => {
+        const existing = await tx
+          .select()
+          .from(paymentTransactions)
+          .where(
+            and(
+              eq(paymentTransactions.provider, input.provider),
+              eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
+            ),
+          )
+          .limit(1)
+          .all();
 
-      if (existing.length > 0) {
-        return { id: existing[0].id ?? txId, isNew: false };
-      }
-      await (db.insert(paymentTransactions) as unknown as InsertBuilder<unknown>).values({
-        id: txId,
-        provider: input.provider,
-        providerPaymentId: input.providerPaymentId,
-        customerId: input.customerId ?? null,
-        amountUsd: input.amountUsd,
-        status: input.status,
-        failureReason: input.failureReason ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      if (input.status === 'completed') {
-        await db.insert(companyCashLedger).values({
-          id: createId(),
-          type: 'payment_received',
-          direction: 'in',
+        if (existing.length > 0) {
+          return { id: existing[0].id ?? txId, isNew: false };
+        }
+        await (tx.insert(paymentTransactions) as unknown as InsertBuilder<unknown>).values({
+          id: txId,
+          provider: input.provider,
+          providerPaymentId: input.providerPaymentId,
+          customerId: input.customerId ?? null,
           amountUsd: input.amountUsd,
-          description: 'Payment ' + input.providerPaymentId,
-          referenceType: 'payment_transaction',
-          referenceId: txId,
-          status: 'cleared',
-          effectiveAt: now,
+          status: input.status,
+          failureReason: input.failureReason ?? null,
           createdAt: now,
           updatedAt: now,
         });
-      }
 
-      return { id: txId, isNew: true };
+        if (input.status === 'completed') {
+          // Closes #5539 (status enum mismatch):
+          // - CompanyCashStatus = 'planned' | 'posted' | 'canceled'
+          // - 'cleared' is NOT a valid enum value, so the entry was invisible to getCurrentBalanceUsd
+          //   (which only sums 'posted' entries)
+          // - This was a silent accounting bug: payments entered the DB but balance = 0
+          await tx.insert(companyCashLedger).values({
+            id: createId(),
+            type: 'payment_received',
+            direction: 'in',
+            amountUsd: input.amountUsd,
+            description: 'Payment ' + input.providerPaymentId,
+            referenceType: 'payment_transaction',
+            referenceId: txId,
+            status: 'posted',
+            effectiveAt: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        return { id: txId, isNew: true };
+      });
     } catch (err) {
       forgeDebug({
         scope: 'payment-receivables',
@@ -364,7 +375,6 @@ export function createPaymentReceivablesStore(db: Database) {
       throw err;
     }
   }
-
   return {
     getProvider,
     upsertProvider,
