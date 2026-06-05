@@ -73,6 +73,30 @@ describe('loadCommunicationProviders', () => {
     );
   });
 
+  it('silently skips Discord when getSelfContact is undefined (forward-compat for 3rd-party providers)', async () => {
+    // Simulate a 3rd-party provider that implements the optional getSelfContact
+    // type contract by omitting the method. The optional chain in
+    // loadCommunicationProviders must handle this without crashing and without
+    // logging (no error to report).
+    const originalGetSelfContact = discordProvider.getSelfContact;
+    // @ts-expect-error -- intentionally removing the method to simulate a 3rd-party provider
+    delete discordProvider.getSelfContact;
+    try {
+      const providers = await loadCommunicationProviders({
+        discord: { channels: [], token: 'valid-token' },
+      });
+
+      // The optional chain returns undefined when getSelfContact is missing.
+      // No throw → no catch → provider IS loaded (the loader is permissive about
+      // 3rd-party providers that don't implement the optional health-check).
+      expect(providers.map((p) => p.id)).toEqual(['discord']);
+      // No forgeDebug call because there's no error to report.
+      expect(mockForgeDebug).not.toHaveBeenCalled();
+    } finally {
+      discordProvider.getSelfContact = originalGetSelfContact;
+    }
+  });
+
   it('skips Discord when its credentials are malformed (token missing)', async () => {
     const credentials = {
       discord: { channels: [] },

@@ -132,6 +132,11 @@ export async function loadCommunicationProviders(
         channels: discord.channels ?? undefined,
       });
 
+      // Forward-compat: CommunicationProvider.getSelfContact is OPTIONAL in the
+      // type contract (see packages/forge-runtime-core/src/communication.ts).
+      // Discord + internal-chat always provide it; third-party providers may not.
+      // The optional chain ensures the loader doesn't crash if a future provider
+      // omits the method. Throw is caught by the surrounding try/catch above.
       await provider.getSelfContact?.();
 
       providers.push(provider);
