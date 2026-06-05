@@ -16,6 +16,7 @@
 import type { Octokit } from 'octokit';
 
 import type { Database } from '../../database/client';
+import type { ForgeHttpServerAdapter } from '../../http/server';
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { AgentNotificationStore } from '../../notifications/store';
 import type {
@@ -106,7 +107,7 @@ export interface GithubOpsConfig {
 
 export interface OpsConfig {
   db: Database;
-  httpServer: any;
+  httpServer: ForgeHttpServerAdapter;
   publicBaseUrl?: string;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }
