@@ -1,3 +1,4 @@
+import { parseFilterDate } from '../communication/filter-helpers';
 import {
   ChannelType,
   Client,
@@ -125,20 +126,6 @@ export async function resolveDiscordTargetChannel(
     });
     throw error;
   }
-}
-
-function parseFilterDate(value: string | undefined, fieldName: string) {
-  if ((value ?? '') === '') {
-    return null;
-  }
-
-  const parsed = Date.parse(value ?? '');
-
-  if (Number.isNaN(parsed)) {
-    throw new Error(`Invalid ${fieldName}: ${value}`);
-  }
-
-  return parsed;
 }
 
 export async function listChannelMessages(input: {

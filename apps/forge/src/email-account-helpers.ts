@@ -2,7 +2,7 @@
  * email-account helpers — extracted from createEmailProvider for testability.
  * These are pure/pure-ish functions that don't close over provider state.
  */
-import { forgeDebug, type CommunicationFile } from '@forge-runtime/core';
+import { type CommunicationFile } from '@forge-runtime/core';
 import type { Email } from 'postal-mime';
 
 export function toUint8Array(value: ArrayBuffer | Uint8Array | string): Uint8Array {
@@ -89,20 +89,6 @@ export function pruneRecentOutboundMessages(
   }
 }
 
-export function parseFilterDate(value: string | undefined, fieldName: string): number | null {
-  if (value === null || value === undefined) return null;
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    forgeDebug({
-      scope: 'email-account-helpers',
-      level: 'warn',
-      message: 'parseNumericField: invalid value',
-      context: { fieldName, value },
-    });
-    throw new Error(`Invalid ${fieldName}: ${value}`);
-  }
-  return parsed;
-}
 
 export function resolveConversationParticipant(
   email: Email,

@@ -7,12 +7,12 @@ import {
   buildGroupMetadata,
   buildGroupRow,
   createInternalChatSlug,
-  parseFilterDate,
   resolveContentType,
   sanitizeAttachmentName,
   sortParticipantsBySelfFirst,
   resolveConversationDisplayName,
 } from './internal-chat-helpers';
+import { parseFilterDate } from './filter-helpers';
 
 // ---------------------------------------------------------------------------
 // buildGroupMemberViews
@@ -321,6 +321,10 @@ describe('parseFilterDate', () => {
 
   it('includes the field name in error messages', () => {
     expect(() => parseFilterDate('invalid', 'from')).toThrow('Invalid from: invalid');
+  });
+
+  it('returns null for empty string (no filter)', () => {
+    expect(parseFilterDate('', 'since')).toBeNull();
   });
 });
 
