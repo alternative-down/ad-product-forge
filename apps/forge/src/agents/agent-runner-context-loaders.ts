@@ -11,7 +11,7 @@ import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
 import { agentSchedules } from '../database/schema';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { InternalAgentRuntime } from './runtime/types';
 import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
 

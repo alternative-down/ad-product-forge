@@ -1,7 +1,7 @@
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { withDbErrorLogging } from '../database/error-logging';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
 

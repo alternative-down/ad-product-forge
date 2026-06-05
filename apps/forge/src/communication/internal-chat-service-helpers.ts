@@ -7,7 +7,7 @@
  */
 import { and, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 import {

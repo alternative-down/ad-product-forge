@@ -232,7 +232,6 @@ vi.mock('../internal-agent-registry', () => {
 
 // ─── Imports after all mocks ─────────────────────────────────────────────────
 
-// import type { Database } from '../../database/schema';
 import { registerAgentWriteOpsRoutes } from '../../admin/routes/agents/write-ops';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { systemSettings } from '../database/schema';
 
 const SYSTEM_SETTINGS_ID = 'global';

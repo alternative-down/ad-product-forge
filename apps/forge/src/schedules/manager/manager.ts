@@ -2,7 +2,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { z } from 'zod';
 
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
 import { createScheduleLifecycle, type ScheduleLifecycleRecord } from '../lifecycle/lifecycle';
 import {

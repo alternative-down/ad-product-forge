@@ -10,7 +10,7 @@ import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
 
-import type { Database } from '../../../database/schema';
+import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';

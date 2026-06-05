@@ -14,7 +14,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { agents } from '../../database/schema';
 
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{

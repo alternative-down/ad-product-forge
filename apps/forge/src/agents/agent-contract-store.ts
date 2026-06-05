@@ -5,7 +5,7 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { createTimeProvider, type TimeProvider } from '../utils/time';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   agents,
   agentExecutionContracts,

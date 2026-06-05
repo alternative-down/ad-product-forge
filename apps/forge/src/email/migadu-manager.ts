@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { agentProviders } from '../database/schema';
 import { decryptSecret } from '../encryption/crypto';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';

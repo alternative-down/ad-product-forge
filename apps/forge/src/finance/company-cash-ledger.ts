@@ -4,7 +4,7 @@ import { createId } from '../utils/id';
 
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { companyCashLedger } from '../database/schema';
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';

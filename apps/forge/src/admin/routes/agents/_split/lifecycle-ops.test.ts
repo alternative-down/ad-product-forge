@@ -1,4 +1,4 @@
-import type { Database } from '../../../../database/schema';
+import type { Database } from '../../../../database/client';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({

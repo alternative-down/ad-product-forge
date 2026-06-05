@@ -1,7 +1,7 @@
 import { errorMsg } from '../agents/error-formatting';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { llmModelPrices } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 

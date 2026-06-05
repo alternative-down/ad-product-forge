@@ -1,7 +1,7 @@
 import { and, isNull, eq, sql } from 'drizzle-orm';
 import { internalChatMessageReads, internalChatMessages } from '../database/schema';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { forgeDebug } from '@forge-runtime/core';
 
 // =============================================================================

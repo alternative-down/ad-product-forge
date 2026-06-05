@@ -4,7 +4,7 @@
  * Notification triggering for schedules.
  * Extracted from manager.ts (#4877) — notification triggering concern only.
  */
-import type { Database } from '../../database/schema';
+import type { Database } from '../../database/client';
 import { createAgentNotificationStore } from '../../notifications/store';
 import {
   createNotificationContent,

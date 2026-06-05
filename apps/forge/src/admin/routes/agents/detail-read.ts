@@ -11,7 +11,7 @@ import { errorMsg } from '../../../agents/error-formatting';
 import { forgeDebug } from '../debug';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 
-import type { Database } from '../../../database/schema';
+import type { Database } from '../../../database/client';
 import {
   type McpServerConfig,
   agentExecutionSteps,

@@ -12,11 +12,8 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationFile } from '@forge-runtime/core';
 
-import type {
-  Database,
-  InternalChatConversation,
-  NewInternalChatMessageRead,
-} from '../database/schema';
+import type { Database } from '../database/client';
+import type { InternalChatConversation, NewInternalChatMessageRead } from '../database/schema';
 import {
   internalChatConversations,
   internalChatConversationMembers,

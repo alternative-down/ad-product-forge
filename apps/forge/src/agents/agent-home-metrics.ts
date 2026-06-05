@@ -5,7 +5,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import {
   agents,
   agentExecutionSteps,

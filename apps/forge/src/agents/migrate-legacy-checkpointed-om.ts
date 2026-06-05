@@ -3,7 +3,7 @@ import type { ConversationStore } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { agentCheckpointedOmStates } from '../database/schema';
 
 export async function migrateLegacyCheckpointedOmState(input: {

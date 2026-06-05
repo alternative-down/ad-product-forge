@@ -3,7 +3,8 @@ import { errorMsg } from '../../agents/error-formatting';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database, AgentSchedule } from '../../database/schema';
+import type { Database } from '../../database/client';
+import type { AgentSchedule } from '../../database/schema';
 import { agentSchedules } from '../../database/schema';
 
 type ScheduleType = 'cron' | 'date';

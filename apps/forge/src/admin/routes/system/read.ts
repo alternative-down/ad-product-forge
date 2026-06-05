@@ -11,7 +11,7 @@ import { errorMsg } from '../../../agents/error-formatting';
 
 import { mcpServerConfigs } from '../../../database/schema';
 
-import type { Database } from '../../../database/schema';
+import type { Database } from '../../../database/client';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
 import type { createForgeHttpServer } from '../../../http/server';
 import { buildOauthState } from './oauth-state';

@@ -1,5 +1,5 @@
 import { errorMsg } from './error-formatting';
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import { forgeDebug } from '@forge-runtime/core';
 import { agentHomeMetricSnapshots } from '../database/schema';
 import { createId } from '../utils/id';

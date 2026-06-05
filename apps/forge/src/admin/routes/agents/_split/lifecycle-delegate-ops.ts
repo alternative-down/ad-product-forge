@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
-import type { Database } from '../../../../database/schema';
+import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
 
