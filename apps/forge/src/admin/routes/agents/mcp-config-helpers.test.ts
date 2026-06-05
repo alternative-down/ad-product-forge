@@ -7,59 +7,54 @@ vi.mock('../../../utils/id', () => ({ createId: vi.fn().mockReturnValue('generat
 vi.mock('../../../database/client', () => ({}));
 
 describe('assignAgentMcpServer', () => {
-  it('inserts new config when no existing link found', async () => {
-    const updateMock = (vi.fn() as any).mockReturnThis();
-    updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const insertMock = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue(null);
-    const db = {
-      query: { agentMcpConfigs: { findFirst: findFirstMock } },
-      update: updateMock,
-      insert: insertMock,
-    } as any;
+  // Helper: chainable mock matching drizzle's db.insert().values().onConflictDoUpdate()
+  function makeDb() {
+    const onConflictDoUpdateMock = vi.fn().mockResolvedValue(undefined);
+    const valuesMock = vi.fn().mockReturnValue({ onConflictDoUpdate: onConflictDoUpdateMock });
+    const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
+    return { insertMock, valuesMock, onConflictDoUpdateMock, db: { insert: insertMock } as any };
+  }
+
+  it('uses atomic onConflictDoUpdate with composite [agentId, serverId] target', async () => {
+    const { insertMock, onConflictDoUpdateMock, db } = makeDb();
 
     const result = await assignAgentMcpServer(db, 'agent-1', 'server-1', true);
 
-    expect(findFirstMock).toHaveBeenCalled();
-    expect(insertMock).toHaveBeenCalled();
+    // Atomic upsert: single insert + onConflictDoUpdate (NOT findFirst+update)
+    expect(insertMock).toHaveBeenCalledWith(agentMcpConfigs);
+    expect(onConflictDoUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: [agentMcpConfigs.agentId, agentMcpConfigs.serverId],
+        set: expect.objectContaining({ isActive: 1 }),
+      }),
+    );
     expect(result.isNew).toBe(true);
     expect(result.configId).toBe('generated-id');
   });
 
-  it('updates existing config when link found', async () => {
-    const updateMock = (vi.fn() as any).mockReturnThis();
-    updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue({
-      id: 'existing-config',
-      agentId: 'agent-1',
-      serverId: 'server-1',
-    });
-    const db = {
-      query: { agentMcpConfigs: { findFirst: findFirstMock } },
-      update: updateMock,
-    } as any;
+  it('uses atomic onConflictDoUpdate for existing link (no separate update call)', async () => {
+    // Regression: OLD code did findFirst → update on existing; NEW code always uses
+    // atomic insert+onConflictDoUpdate, so concurrent calls cannot race.
+    const { insertMock, onConflictDoUpdateMock, db } = makeDb();
 
-    const result = await assignAgentMcpServer(db, 'agent-1', 'server-1', false);
+    await assignAgentMcpServer(db, 'agent-1', 'server-1', false);
 
-    expect(updateMock).toHaveBeenCalled();
-    expect(result.isNew).toBe(false);
-    expect(result.configId).toBe('existing-config');
+    // Single atomic statement — the "update when existing" path is collapsed into
+    // the onConflictDoUpdate clause. db.update is never called for upserts.
+    expect(insertMock).toHaveBeenCalled();
+    expect(onConflictDoUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        set: expect.objectContaining({ isActive: 0 }),
+      }),
+    );
   });
 
-  it('defaults isActive to true', async () => {
-    const updateMock = (vi.fn() as any).mockReturnThis();
-    updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const insertMock = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue(null);
-    const db = {
-      query: { agentMcpConfigs: { findFirst: findFirstMock } },
-      update: updateMock,
-      insert: insertMock,
-    } as any;
+  it('defaults isActive to true (1) in the inserted values', async () => {
+    const { valuesMock, db } = makeDb();
 
     await assignAgentMcpServer(db, 'agent-1', 'server-1');
 
-    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: 1 }));
+    expect(valuesMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: 1 }));
   });
 });
 
