@@ -41,7 +41,6 @@ const mockHelpers = {
   })),
   sanitizeAttachmentName: vi.fn((name: string) => name),
   resolveContentType: vi.fn(() => undefined),
-  parseFilterDate: vi.fn(() => null),
   sortParticipantsBySelfFirst: vi.fn(<T extends Record<string, unknown>>(rows: T[]) => rows),
   resolveConversationDisplayName: vi.fn(() => undefined),
 };

@@ -10,7 +10,7 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
-import { parseFilterDate } from './internal-chat-helpers';
+import { parseFilterDate } from './filter-helpers';
 
 import type { Database } from '../database/client';
 

@@ -1,4 +1,3 @@
-import { forgeDebug } from '@forge-runtime/core';
 
 import { customAlphabet } from 'nanoid';
 import path from 'node:path';
@@ -36,30 +35,6 @@ export interface InternalChatGroupRow {
 // ---------------------------------------------------------------------------
 // Slug & filename helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Parses a date string into a Unix timestamp (ms), or null if undefined.
- * Throws if the value is provided but not a valid date string.
- */
-export function parseFilterDate(value: string | undefined, fieldName: string): number | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const parsed = Date.parse(value);
-
-  if (Number.isNaN(parsed)) {
-    forgeDebug({
-      scope: 'internal-chat-helpers',
-      level: 'warn',
-      message: 'validateChatAddress: invalid field',
-      context: { fieldName, value },
-    });
-    throw new Error(`Invalid ${fieldName}: ${value}`);
-  }
-
-  return parsed;
-}
 
 /**
  * Creates a slug suitable for internal chat group identifiers.

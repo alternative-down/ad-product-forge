@@ -70,7 +70,6 @@ import {
   buildGroupRow as _buildGroupRow,
   buildConversationParticipantNames as _buildConversationParticipantNames,
   createInternalChatSlug as _createInternalChatSlug,
-  parseFilterDate as _parseFilterDate,
   resolveContentType as _resolveContentType,
   sanitizeAttachmentName as _sanitizeAttachmentName,
   sortParticipantsBySelfFirst as _sortParticipantsBySelfFirst,

@@ -18,13 +18,13 @@ import type {
 import {
   toCommunicationAttachments,
   pruneRecentOutboundMessages,
-  parseFilterDate,
   resolveConversationParticipant,
   resolveEmailThreadKey,
   resolveCreatedAt,
   extractEmailBody,
   toReplySubject,
 } from './email-account-helpers';
+import { parseFilterDate } from './communication/filter-helpers';
 
 type EmailProviderConfig = {
   id?: string;
