@@ -111,7 +111,7 @@ export function createSystemSettingsStore(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'system-settings',
-        level: 'info',
+        level: 'error',
         message: 'getSettings failed',
         context: { error: errorMsg(err) },
       });
@@ -122,10 +122,6 @@ export function createSystemSettingsStore(db: Database) {
   async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
     try {
       const now = Date.now();
-      const existing = await db.query.systemSettings.findFirst({
-        where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
-      });
-
       const row = {
         id: SYSTEM_SETTINGS_ID,
         companyName: input.companyName,
@@ -154,20 +150,25 @@ export function createSystemSettingsStore(db: Database) {
         ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
         ltmRecallDocumentCount: input.ltmRecallDocumentCount,
         updatedAt: now,
-        createdAt: (existing as any)?.createdAt ?? now,
       };
 
-      if (existing === null || existing === undefined) {
-        await db.update(systemSettings).set(row).where(eq(systemSettings.id, SYSTEM_SETTINGS_ID));
-      } else {
-        await db.insert(systemSettings).values(row);
-      }
+      // Atomic upsert (race-free, see #5502). Excludes `id` (the conflict
+      // target) from the SET clause; no createdAt column exists in the schema.
+      const { id: _id, ...updateSet } = row;
+
+      await db
+        .insert(systemSettings)
+        .values(row)
+        .onConflictDoUpdate({
+          target: systemSettings.id,
+          set: updateSet,
+        });
 
       return { ...input, updatedAt: now };
     } catch (err) {
       forgeDebug({
         scope: 'system-settings',
-        level: 'info',
+        level: 'error',
         message: 'upsertSettings failed',
         context: { error: errorMsg(err) },
       });

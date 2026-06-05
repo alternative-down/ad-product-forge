@@ -29,8 +29,9 @@ const mockRow = vi.hoisted(() => ({
   updatedAt: 1700000000000,
 }));
 
-// Track insert calls for verification
+// Track insert / onConflictDoUpdate calls for verification
 const insertCalls: unknown[] = [];
+const onConflictCalls: unknown[] = [];
 
 const mockDb = vi.hoisted(() => ({
   query: {
@@ -42,7 +43,10 @@ const mockDb = vi.hoisted(() => ({
     values: vi.fn().mockImplementation((vals: unknown) => {
       insertCalls.push(vals);
       return {
-        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+        onConflictDoUpdate: vi.fn().mockImplementation((arg: unknown) => {
+          onConflictCalls.push(arg);
+          return Promise.resolve(undefined);
+        }),
       };
     }),
   })),
@@ -52,13 +56,19 @@ vi.mock('../database/schema', () => ({
   systemSettings: {},
 }));
 
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
 import { createSystemSettingsStore } from './store';
 import { systemSettings } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 describe('createSystemSettingsStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertCalls.length = 0;
+    onConflictCalls.length = 0;
   });
 
   // ── getSettings ──────────────────────────────────────────────────────────
@@ -125,11 +135,12 @@ describe('createSystemSettingsStore', () => {
     test('resolves non-hybrid ltmRecallSearchMode to actual value', async () => {
       mockDb.query.systemSettings.findFirst.mockResolvedValue({
         ...mockRow,
-        ltmRecallSearchMode: 'hybrid',
+        ltmRecallSearchMode: 'vector',
       });
       const store = createSystemSettingsStore(mockDb as any);
       const settings = await store.getSettings();
-      expect(settings.ltmRecallSearchMode).toBe('bm25');
+      // resolveRecallSearchMode: non-hybrid value passes through
+      expect(settings.ltmRecallSearchMode).toBe('vector');
     });
 
     test('calls findFirst on systemSettings query', async () => {
@@ -137,6 +148,27 @@ describe('createSystemSettingsStore', () => {
       const store = createSystemSettingsStore(mockDb as any);
       await store.getSettings();
       expect(mockDb.query.systemSettings.findFirst).toHaveBeenCalled();
+    });
+
+    test('logs at level error and returns defaults on DB error (regression for #5521)', async () => {
+      const dbError = new Error('connection refused');
+      mockDb.query.systemSettings.findFirst.mockRejectedValue(dbError);
+      const store = createSystemSettingsStore(mockDb as any);
+      const settings = await store.getSettings();
+      // Loud log so on-call can find it; was level 'info' which is invisible
+      expect(forgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'system-settings',
+          level: 'error',
+          message: 'getSettings failed',
+        }),
+      );
+      // Backward-compat: callers still get DEFAULTS on error (16+ call sites)
+      expect(settings).toMatchObject({
+        companyName: '',
+        stepDelayEnabled: true,
+        updatedAt: null,
+      });
     });
   });
 
@@ -179,7 +211,7 @@ describe('createSystemSettingsStore', () => {
       expect(result.memoryLastMessagesFullEnabled).toBe(true);
       expect(result.checkpointedOmEnabled).toBe(true);
       expect(result.checkpointedOmTotalContextTokens).toBe(40000);
-      expect(result.ltmRecallSearchMode).toBe('bm25');
+      expect(result.ltmRecallSearchMode).toBe('hybrid');
       expect(result.ltmRecallWorkspaceTopK).toBe(5);
       expect(result.ltmRecallScoreThreshold).toBe(0.85);
       expect(result.ltmRecallGraphIncludeSources).toBe(false);
@@ -249,7 +281,16 @@ describe('createSystemSettingsStore', () => {
       });
 
       expect(insertCalls.length).toBe(1);
-      // onConflictDoUpdate is on the returned chain from values()
+      // onConflictDoUpdate must be called with the row, excluding `id`
+      expect(onConflictCalls.length).toBe(1);
+      const setArg = onConflictCalls[0] as { set: Record<string, unknown>; target: unknown };
+      expect(setArg.target).toBe(systemSettings.id);
+      expect(setArg.set).not.toHaveProperty('id');
+      expect(setArg.set).toMatchObject({
+        companyName: 'Test',
+        stepDelayEnabled: 1,
+        communicationDmFlushingEnabled: 1,
+      });
     });
 
     test('converts boolean true to integer 1 in insert values', async () => {
