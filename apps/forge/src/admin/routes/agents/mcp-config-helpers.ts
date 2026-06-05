@@ -14,31 +14,25 @@ export async function assignAgentMcpServer(
   serverId: string,
   isActive: boolean = true,
 ): Promise<AssignAgentMcpServerResult> {
-  const existing = await db.query.agentMcpConfigs.findFirst({
-    where: and(eq(agentMcpConfigs.agentId, agentId), eq(agentMcpConfigs.serverId, serverId)),
-  });
-
-  if (existing) {
-    await db
-      .update(agentMcpConfigs)
-      .set({
-        isActive: isActive ? 1 : 0,
-        updatedAt: Date.now(),
-      })
-      .where(eq(agentMcpConfigs.id, existing.id));
-
-    return { configId: existing.id, isNew: false };
-  }
-
   const configId = createId();
-  await db.insert(agentMcpConfigs).values({
-    id: configId,
-    agentId,
-    serverId,
-    isActive: isActive ? 1 : 0,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
+  const now = Date.now();
+  await db
+    .insert(agentMcpConfigs)
+    .values({
+      id: configId,
+      agentId,
+      serverId,
+      isActive: isActive ? 1 : 0,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [agentMcpConfigs.agentId, agentMcpConfigs.serverId],
+      set: {
+        isActive: isActive ? 1 : 0,
+        updatedAt: now,
+      },
+    });
 
   return { configId, isNew: true };
 }

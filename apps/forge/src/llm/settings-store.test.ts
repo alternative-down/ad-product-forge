@@ -415,9 +415,9 @@ describe('llm/settings-store', () => {
       db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(null);
 
-      const mockInsert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      const mockOnConflict = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflict });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
       db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
@@ -432,7 +432,18 @@ describe('llm/settings-store', () => {
         omProfileId: 'p2',
         hiringRhProfileId: 'p3',
       });
+      // Atomic upsert path: insert + onConflictDoUpdate (no separate findFirst+update)
       expect(mockInsert).toHaveBeenCalled();
+      expect(mockOnConflict).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: expect.anything(),
+          set: expect.objectContaining({
+            primaryProfileId: 'p1',
+            omProfileId: 'p2',
+            hiringRhProfileId: 'p3',
+          }),
+        }),
+      );
     });
 
     it('updates existing defaults row when one exists', async () => {
@@ -446,12 +457,10 @@ describe('llm/settings-store', () => {
       const existingDefaults = createMockDefaultsRow();
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(existingDefaults);
 
-      const mockUpdate = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
-      db.update = mockUpdate as Database['update'];
+      const mockOnConflict = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflict });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+      db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
       await store.updateDefaults({
@@ -460,7 +469,10 @@ describe('llm/settings-store', () => {
         hiringRhProfileId: 'new-p3',
       });
 
-      expect(mockUpdate).toHaveBeenCalled();
+      // Atomic upsert path: even when existing row present, insert+onConflictDoUpdate
+      // is the SINGLE atomic statement (not findFirst+update).
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockOnConflict).toHaveBeenCalled();
     });
   });
 

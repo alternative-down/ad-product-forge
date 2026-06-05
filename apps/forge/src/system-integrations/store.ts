@@ -205,28 +205,23 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       const now = Date.now();
       const parsedConfig = parseUpsertConfig(input.providerType, input.config);
-      const existing = await db.query.systemIntegrations.findFirst({
-        where: eq(systemIntegrations.providerType, input.providerType),
-      });
-
-      if (existing != null) {
-        await db
-          .update(systemIntegrations)
-          .set({
-            encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
-            isEnabled: input.isEnabled === false ? 0 : 1,
-            updatedAt: now,
-          })
-          .where(eq(systemIntegrations.providerType, input.providerType));
-      } else {
-        await db.insert(systemIntegrations).values({
+      await db
+        .insert(systemIntegrations)
+        .values({
           providerType: input.providerType,
           encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
           isEnabled: input.isEnabled === false ? 0 : 1,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: systemIntegrations.providerType,
+          set: {
+            encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
+            isEnabled: input.isEnabled === false ? 0 : 1,
+            updatedAt: now,
+          },
         });
-      }
 
       return {
         providerType: input.providerType,

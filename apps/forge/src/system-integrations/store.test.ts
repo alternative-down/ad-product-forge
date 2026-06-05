@@ -18,7 +18,9 @@ function createMockDb(overrides?: Partial<Database>): Database {
       },
     },
     insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockResolvedValue(undefined),
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
     }),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
@@ -167,7 +169,10 @@ describe('system-integrations/store', () => {
       expect(db.insert).toHaveBeenCalled();
     });
 
-    it('updates an existing integration when one exists', async () => {
+    it('upserts with atomic onConflictDoUpdate when existing integration present', async () => {
+      // Regression: OLD code did findFirst+update when existing; NEW code uses
+      // atomic insert+onConflictDoUpdate (target=providerType) so concurrent
+      // upserts for the same providerType cannot race.
       const existingRow = createMockRow('migadu');
       (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
         existingRow,
@@ -180,8 +185,11 @@ describe('system-integrations/store', () => {
       });
 
       expect(result.providerType).toBe('migadu');
-      // Verify update chain: db.update().set().where()
-      expect(db.update).toHaveBeenCalled();
+      // Atomic upsert: insert + onConflictDoUpdate (NOT findFirst+update)
+      expect(db.update).not.toHaveBeenCalled();
+      expect(db.insert).toHaveBeenCalled();
+      const valuesCall = (db.insert as ReturnType<typeof vi.fn>).mock.results[0].value.values.mock.calls[0][0];
+      expect(valuesCall).toMatchObject({ providerType: 'migadu' });
     });
 
     it('sets isEnabled to false when isEnabled: false is passed', async () => {
