@@ -47,7 +47,6 @@ import {
   mcpServerConfigs as _mcpServerConfigs,
 } from '../database/schema';
 import { encryptSecret as _encryptSecret } from '../encryption/crypto';
-import { parseProviderCredentials as _parseProviderCredentials } from '../communication/provider-loader';
 import { createId as _createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
