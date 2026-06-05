@@ -661,13 +661,20 @@ describe('createForgeHttpServer', () => {
       let adminServer: Awaited<ReturnType<typeof createForgeHttpServer>>;
 
       beforeEach(async () => {
-        testPort = 30000 + Math.floor(Math.random() * 20000);
-        adminServer = createForgeHttpServer({ port: testPort, adminApiKey: ADMIN_KEY });
+        // Use port: 0 (OS-assigned) instead of a random port in 30000-49999.
+        // Random ports in a fixed range can collide across test files or
+        // leave sockets in TIME_WAIT, causing EADDRINUSE on subsequent
+        // tests (~1/8 failure rate before this fix).
+        adminServer = createForgeHttpServer({ port: 0, adminApiKey: ADMIN_KEY });
         await adminServer.start();
+        testPort = adminServer.port as number;
       });
 
       afterEach(async () => {
         await adminServer.stop();
+        // Brief delay to ensure the socket is fully released before the
+        // next test starts a new server on the OS-assigned port.
+        await new Promise((resolve) => setTimeout(resolve, 50));
       });
 
       it('serves /admin/* with correct API key', async () => {
