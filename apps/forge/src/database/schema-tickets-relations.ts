@@ -22,5 +22,3 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
   }),
 }));
 
-import type { Database } from './client';
-export type { Database };

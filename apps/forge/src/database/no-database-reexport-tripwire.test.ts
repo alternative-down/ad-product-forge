@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 // That wildcard re-export was a time bomb — 75 files depended on it transitively.
 // If someone re-adds the re-export, this @ts-expect-error becomes "Unused directive"
 // and TypeScript errors → CI fails. This is the tripwire.
-import type { Database } from '../schema';
+import type { Database } from './schema';
 
 describe('Database import tripwire (regression for #5554)', () => {
   it('schema must not expose Database via wildcard chain', () => {
