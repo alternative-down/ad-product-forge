@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { buildIterationFeedback } from './agent-runner-feedback';
-import { RUN_STOP_REMINDER } from './agent-runner-wake';
+import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 
 const MOCK_RUNTIME_ID = 'agent-42';
 

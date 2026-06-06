@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
+import { formatPendingRunEvents } from './agent-runner-wake';
+import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 
 describe('RUN_STOP_REMINDER', () => {
   it('is a string (array joined with newlines)', () => {
