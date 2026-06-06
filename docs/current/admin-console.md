@@ -1,6 +1,6 @@
 # Admin Console
 
-Forge now includes a separate admin UI application in [apps/forge-admin](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin).
+Forge now includes a separate admin UI application in [apps/forge-admin](apps/forge-admin).
 
 This application is intentionally narrow.
 
@@ -210,18 +210,18 @@ The frontend is a thin client over admin-specific HTTP endpoints registered by F
 
 Current backend code:
 
-- [admin/read-model.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/read-model.ts)
-- [admin/routes.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/admin/routes.ts)
-- [system-integrations/store.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/system-integrations/store.ts)
+- [admin/read-model.ts](apps/forge/src/admin/read-model.ts)
+- [admin/routes.ts](apps/forge/src/admin/routes.ts)
+- [system-integrations/store.ts](apps/forge/src/system-integrations/store.ts)
 
 Current frontend anchors:
 
-- [router.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/router.tsx)
-- [\_\_root.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/routes/__root.tsx)
-- [overview/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/overview/page.tsx)
-- [agents/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/agents/page.tsx)
-- [system/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/system/page.tsx)
-- [roles/page.tsx](/home/nicolas/Documentos/github/ad-product-forge/apps/forge-admin/src/features/roles/page.tsx)
+- [router.tsx](apps/forge-admin/src/router.tsx)
+- [\_\_root.tsx](apps/forge-admin/src/routes/__root.tsx)
+- [overview/page.tsx](apps/forge-admin/src/features/overview/page.tsx)
+- [agents/page.tsx](apps/forge-admin/src/features/agents/page.tsx)
+- [system/page.tsx](apps/forge-admin/src/features/system/page.tsx)
+- [roles/page.tsx](apps/forge-admin/src/features/roles/page.tsx)
 
 The admin API is intentionally separate from:
 
