@@ -12,7 +12,6 @@ import {
 import { advanceStepEpoch as epochAdvanceStepEpoch } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
-const _RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager, type FlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
