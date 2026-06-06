@@ -2,7 +2,7 @@
 
 ## Environment configuration
 
-Current application environment is defined primarily in [main.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/main.ts) and [crypto.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/encryption/crypto.ts).
+Current application environment is defined primarily in [main.ts](apps/forge/src/main.ts) and [crypto.ts](apps/forge/src/encryption/crypto.ts).
 
 ## Required variables
 
@@ -77,7 +77,7 @@ This keeps Forge environment variables focused on application bootstrap, not ope
 
 ## HTTP server
 
-Forge owns its own HTTP server in [server.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/http/server.ts).
+Forge owns its own HTTP server in [server.ts](apps/forge/src/http/server.ts).
 
 The server is intentionally minimal:
 
