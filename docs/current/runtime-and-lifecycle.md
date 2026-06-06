@@ -2,7 +2,7 @@
 
 ## Agent loading
 
-Agent loading is centralized in [agent-loader.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-loader.ts).
+Agent loading is centralized in [agent-loader.ts](apps/forge/src/agents/agent-loader.ts).
 
 The loader currently:
 
@@ -33,9 +33,9 @@ This gives Forge live reload behavior for agents without restarting the app proc
 
 Hiring orchestration is split across:
 
-- [internal-agent-lifecycle.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/internal-agent-lifecycle.ts)
-- [hire-agent.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/hire-agent.ts)
-- [internal-agents.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/workflows/internal-agents.ts)
+- [internal-agent-lifecycle.ts](apps/forge/src/agents/internal-agent-lifecycle.ts)
+- [hire-agent.ts](apps/forge/src/agents/hire-agent.ts)
+- [internal-agents.ts](apps/forge/src/workflows/internal-agents.ts)
 
 Current hiring flow:
 
@@ -57,7 +57,7 @@ If GitHub App creation fails after the agent is created, the system terminates t
 
 ## Termination
 
-Termination currently lives in [terminate-agent.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/terminate-agent.ts).
+Termination currently lives in [terminate-agent.ts](apps/forge/src/agents/terminate-agent.ts).
 
 Current termination flow:
 
@@ -89,7 +89,7 @@ All of these converge on the agent runner through `notifyExternalEvent`.
 
 ## Schedules and heartbeat
 
-Schedules are owned by [schedules/manager.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/schedules/manager.ts) and persisted in `agent_schedules`.
+Schedules are owned by [schedules/manager.ts](apps/forge/src/schedules/manager.ts) and persisted in `agent_schedules`.
 
 Current behavior:
 
@@ -116,7 +116,7 @@ Role grants and function-role assignments also trigger runtime reload of affecte
 
 ## Execution loop
 
-The execution loop lives in [agent-runner.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-runner.ts).
+The execution loop lives in [agent-runner.ts](apps/forge/src/agents/agent-runner.ts).
 
 Current behavior:
 

@@ -22,7 +22,7 @@ The current system has three main layers:
 
 ## Main process startup
 
-Current startup lives in [main.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/main.ts).
+Current startup lives in [main.ts](apps/forge/src/main.ts).
 
 At boot, the application:
 
@@ -60,7 +60,7 @@ This means the application boundary is:
 
 ## Runtime construction boundary
 
-The agent runtime is built in [create-forge-agent.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/create-forge-agent.ts).
+The agent runtime is built in [create-forge-agent.ts](apps/forge/src/agents/create-forge-agent.ts).
 
 That file currently owns:
 
@@ -112,7 +112,7 @@ Each agent also has a per-agent workspace directory containing:
 
 ## HTTP boundary
 
-Forge exposes its own HTTP server in [server.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/http/server.ts).
+Forge exposes its own HTTP server in [server.ts](apps/forge/src/http/server.ts).
 
 Today this is used for:
 
@@ -130,8 +130,8 @@ Today this is used for:
 
 ## Authoritative code anchors
 
-- [main.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/main.ts)
-- [create-forge-agent.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/create-forge-agent.ts)
-- [agent-loader.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-loader.ts)
-- [internal-agent-registry.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/internal-agent-registry.ts)
-- [agent-runner.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/agents/agent-runner.ts)
+- [main.ts](apps/forge/src/main.ts)
+- [create-forge-agent.ts](apps/forge/src/agents/create-forge-agent.ts)
+- [agent-loader.ts](apps/forge/src/agents/agent-loader.ts)
+- [internal-agent-registry.ts](apps/forge/src/agents/internal-agent-registry.ts)
+- [agent-runner.ts](apps/forge/src/agents/agent-runner.ts)

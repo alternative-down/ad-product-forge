@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createLlmSettingsStore } from './settings-store';
+import { decryptSecret } from '../encryption/crypto';
 
 import type { Database } from '../database/client';
 type LlmProfile = any;
@@ -182,6 +183,21 @@ describe('llm/settings-store', () => {
       expect(result.apiKey).toBe(null);
     });
   });
+
+    it('throws when decryptSecret fails (no silent apiKey empty string)', async () => {
+      vi.mocked(decryptSecret).mockImplementationOnce(() => {
+        throw new Error('Simulated decryption failure');
+      });
+
+      const row = createMockProfileRow({ id: 'corrupt-profile' });
+      db.query.llmProfiles.findFirst = vi.fn().mockResolvedValue(row);
+
+      const store = createLlmSettingsStore(db);
+
+      await expect(store.getProfile('corrupt-profile')).rejects.toThrow(
+        /Failed to decrypt LLM profile corrupt-profile/,
+      );
+    });
 
   // ── getDefaults ─────────────────────────────────────────────────────────────
 
