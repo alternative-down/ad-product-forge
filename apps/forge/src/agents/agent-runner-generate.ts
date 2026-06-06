@@ -14,7 +14,7 @@
  * - Messaging: messageManager, runLastMessages, flushPendingRunMessages
  * - Scheduling: scheduler
  * - Config: loadAgentContextInstructions (from agent-runner-context-loaders.ts)
- * - Constants: GENERATE_TIMEOUT_MS, GENERATE_TIMEOUT_MAX_ATTEMPTS, GENERATE_TIMEOUT_BACKOFF_MS,
+ * - Constants: GENERATE_TIMEOUT_MAX_ATTEMPTS, GENERATE_TIMEOUT_BACKOFF_MS,
  * - Helpers: buildStepSystemPrompt, extractRunnerControlDirectiveFromIteration, etc.
  * - State helpers: isStaleRun, advanceGenerateToken, nextBackoff, resetBackoff, calculateDelayMs
  */
@@ -47,8 +47,6 @@ import {
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
 
-import { FIFTEEN_MINUTES_MS } from './time-constants';
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import {
@@ -58,7 +56,6 @@ import {
   type ProgressState,
 } from './agent-runner-generate-timeout';
 
-const _GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
