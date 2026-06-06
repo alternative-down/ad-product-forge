@@ -9,7 +9,6 @@ import { errorMsg } from '../../agents/error-formatting';
 import {
   gracefulShutdown,
   scheduleJob,
-  cancelJob as cancelScheduledJob, // eslint-disable-line @typescript-eslint/no-unused-vars
   type Job,
   type RecurrenceSpecDateRange,
 } from 'node-schedule';
@@ -17,21 +16,41 @@ import type { Database } from '../../database/client';
 import { createAgentScheduleStore } from '../manager/store';
 import { forgeDebug } from '@forge-runtime/core';
 
-/** Minimal shape of a schedule record as used by lifecycle operations. */
-export type ScheduleLifecycleRecord = {
+/** Common fields shared by every schedule record. */
+type ScheduleLifecycleBase = {
   scheduleId: string;
-  scheduleType: 'cron' | 'date';
-  scheduledDate?: number;
-  cronExpression?: string;
-  timezone?: string;
   isActive: boolean;
   kind: 'agent' | 'heartbeat';
   agentId: string;
-  description?: string;
   name: string;
+  description?: string;
   content?: string;
   wakeWhenRunning?: boolean;
 };
+
+/** A one-shot schedule that fires once at a specific Date. */
+export type DateScheduleRecord = ScheduleLifecycleBase & {
+  scheduleType: 'date';
+  /** Unix-ms timestamp at which the job should fire. */
+  scheduledDate: number;
+};
+
+/** A recurring schedule expressed as a cron expression with optional IANA timezone. */
+export type CronScheduleRecord = ScheduleLifecycleBase & {
+  scheduleType: 'cron';
+  /** Standard 5-field cron expression. */
+  cronExpression: string;
+  /** IANA timezone identifier. Omitted means server-local. */
+  timezone?: string;
+};
+
+/**
+ * Discriminated union of all schedule shapes the lifecycle layer understands.
+ * TypeScript narrows on `scheduleType`, so helpers can rely on the variant's
+ * required fields (e.g. `DateScheduleRecord.scheduledDate` is `number`, not
+ * `number | undefined`) without runtime defensive checks.
+ */
+export type ScheduleLifecycleRecord = DateScheduleRecord | CronScheduleRecord;
 
 export type ScheduleLifecycleDeps = {
   db: Database;
@@ -56,8 +75,8 @@ export interface ScheduleLifecycle {
   register(record: ScheduleLifecycleRecord): Promise<void>;
 }
 
-function buildCronSpec(record: ScheduleLifecycleRecord): RecurrenceSpecDateRange {
-  return { rule: record.cronExpression!, tz: record.timezone };
+function buildCronSpec(record: CronScheduleRecord): RecurrenceSpecDateRange {
+  return { rule: record.cronExpression, tz: record.timezone };
 }
 
 /**
@@ -80,6 +99,61 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   function cancelIfNotActive(scheduleId: string, remainsActive: boolean): void {
     if (!remainsActive) cancelJob(scheduleId);
+  }
+
+  /** Shared error log for register failures. Keeps both variants consistent. */
+  function logRegisterFailure(kind: 'date' | 'cron', scheduleId: string, err: unknown): void {
+    forgeDebug({
+      scope: 'schedules',
+      level: 'warn',
+      message: `register: failed to schedule ${kind} job`,
+      context: { scheduleId, error: errorMsg(err) },
+    });
+  }
+
+  /**
+   * Register a one-shot date schedule. The narrowed `DateScheduleRecord` type
+   * guarantees `scheduledDate` is a `number` — no defensive check needed.
+   */
+  async function registerDate(record: DateScheduleRecord): Promise<void> {
+    const scheduledDate = new Date(record.scheduledDate);
+    if (scheduledDate.getTime() <= Date.now()) {
+      await store.deactivateSchedule(record.scheduleId);
+      return;
+    }
+    try {
+      const job = scheduleJob(record.scheduleId, scheduledDate, async (fireDate) => {
+        cancelIfNotActive(record.scheduleId, false);
+        await deps.onFire(record, fireDate);
+      });
+      jobs.set(record.scheduleId, job);
+      await store.setNextTriggerAt(record.scheduleId, scheduledDate.getTime());
+    } catch (err) {
+      logRegisterFailure('date', record.scheduleId, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Register a recurring cron schedule. The narrowed `CronScheduleRecord` type
+   * guarantees `cronExpression` is a `string` — no defensive check needed.
+   */
+  async function registerCron(record: CronScheduleRecord): Promise<void> {
+    const spec: RecurrenceSpecDateRange = buildCronSpec(record);
+    let job;
+    try {
+      job = scheduleJob(record.scheduleId, spec, async (fireDate) => {
+        const nextInvocation = jobs.get(record.scheduleId)?.nextInvocation();
+        cancelIfNotActive(record.scheduleId, true);
+        await deps.onFire(record, fireDate);
+        await store.setNextTriggerAt(record.scheduleId, nextInvocation?.getTime() ?? null);
+      });
+      jobs.set(record.scheduleId, job);
+      await store.setNextTriggerAt(record.scheduleId, job.nextInvocation()?.getTime() ?? null);
+    } catch (err) {
+      logRegisterFailure('cron', record.scheduleId, err);
+      throw err;
+    }
   }
 
   async function loadAll(): Promise<void> {
@@ -117,6 +191,12 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     }
   }
 
+  /**
+   * Dispatch entry point. The discriminated union narrows `record` on
+   * `scheduleType`, so each branch hands a fully-typed variant to its helper.
+   * No runtime `?? ''` or `!` assertions needed — the type system enforces
+   * field presence for the chosen variant.
+   */
   async function register(record: ScheduleLifecycleRecord): Promise<void> {
     if (!record.isActive) return;
 
@@ -125,57 +205,10 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     cancelJob(record.scheduleId);
 
     if (record.scheduleType === 'date') {
-      if ((record.scheduledDate ?? '') === '') {
-        throw new Error(`Date schedule ${record.scheduleId} is missing scheduledDate`);
-      }
-      const scheduledDate = new Date(record.scheduledDate!);
-      if (scheduledDate.getTime() <= Date.now()) {
-        await store.deactivateSchedule(record.scheduleId);
-        return;
-      }
-      try {
-        const job = scheduleJob(record.scheduleId, scheduledDate, async (fireDate) => {
-          cancelIfNotActive(record.scheduleId, false);
-          await deps.onFire(record, fireDate);
-        });
-        jobs.set(record.scheduleId, job);
-        await store.setNextTriggerAt(record.scheduleId, scheduledDate.getTime());
-      } catch (err) {
-        forgeDebug({
-          scope: 'schedules',
-          level: 'warn',
-          message: 'register: failed to schedule date job',
-          context: { scheduleId: record.scheduleId, error: errorMsg(err) },
-        });
-        throw err;
-      }
+      await registerDate(record);
       return;
     }
-
-    if ((record.cronExpression ?? '') === '') {
-      throw new Error(`Cron schedule ${record.scheduleId} is missing cronExpression`);
-    }
-
-    const spec: RecurrenceSpecDateRange = buildCronSpec(record);
-    let job;
-    try {
-      job = scheduleJob(record.scheduleId, spec, async (fireDate) => {
-        const nextInvocation = jobs.get(record.scheduleId)?.nextInvocation();
-        cancelIfNotActive(record.scheduleId, true);
-        await deps.onFire(record, fireDate);
-        await store.setNextTriggerAt(record.scheduleId, nextInvocation?.getTime() ?? null);
-      });
-      jobs.set(record.scheduleId, job);
-      await store.setNextTriggerAt(record.scheduleId, job.nextInvocation()?.getTime() ?? null);
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'warn',
-        message: 'register: failed to schedule cron job',
-        context: { scheduleId: record.scheduleId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await registerCron(record);
   }
 
   return { loadAll, cancel: cancelJob, stop, register };

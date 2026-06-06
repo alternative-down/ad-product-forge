@@ -443,7 +443,7 @@ export function createAgentScheduleManager(input: {
     }
 
     try {
-      await getLifecycle().register(scheduleRecord);
+      await getLifecycle().register(scheduleRecord as unknown as ScheduleLifecycleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({

@@ -3,7 +3,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // ─── Mocks (hoisted so they exist before the module-under-test is imported) ──
 
 const mockScheduleJob = vi.hoisted(() => vi.fn());
-const mockCancelJob = vi.hoisted(() => vi.fn());
 const mockGracefulShutdown = vi.hoisted(() => vi.fn());
 const mockForgeDebug = vi.hoisted(() => vi.fn());
 
@@ -17,7 +16,6 @@ function makeMockJob() {
 
 vi.mock('node-schedule', () => ({
   scheduleJob: mockScheduleJob,
-  cancelJob: mockCancelJob,
   gracefulShutdown: mockGracefulShutdown,
   Job: Object,
   RecurrenceSpecDateRange: Object,
@@ -44,23 +42,48 @@ import type {
   ScheduleLifecycle,
   ScheduleLifecycleDeps,
   ScheduleLifecycleRecord,
+  DateScheduleRecord,
+  CronScheduleRecord,
 } from './lifecycle';
 import { createScheduleLifecycle } from './lifecycle';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function makeRecord(overrides: Partial<ScheduleLifecycleRecord> = {}): ScheduleLifecycleRecord {
-  return {
+  const base = {
     scheduleId: 'sch_test1',
-    scheduleType: 'cron',
-    cronExpression: '0 9 * * *',
-    timezone: 'UTC',
     isActive: true,
-    kind: 'agent',
+    kind: 'agent' as const,
     agentId: 'ag_test1',
     name: 'Test Schedule',
-    ...overrides,
   };
+  if (overrides.scheduleType === 'date') {
+    return {
+      ...base,
+      ...overrides,
+      scheduleType: 'date',
+      scheduledDate: overrides.scheduledDate ?? Date.now() + 60_000,
+    } as DateScheduleRecord;
+  }
+  if (overrides.scheduleType === 'cron') {
+    return {
+      ...base,
+      ...overrides,
+      scheduleType: 'cron',
+      cronExpression: overrides.cronExpression ?? '0 9 * * *',
+      timezone: overrides.timezone ?? 'UTC',
+    } as CronScheduleRecord;
+  }
+  // Default branch: overrides.scheduleType is not 'date' (could be 'cron' or undefined).
+  // The cast to Partial<CronScheduleRecord> widens the union for field access.
+  const cronOverrides = overrides as Partial<CronScheduleRecord>;
+  return {
+    ...base,
+    ...cronOverrides,
+    scheduleType: 'cron',
+    cronExpression: cronOverrides.cronExpression ?? '0 9 * * *',
+    timezone: cronOverrides.timezone ?? 'UTC',
+  } as CronScheduleRecord;
 }
 
 function makeDeps(overrides: Partial<ScheduleLifecycleDeps> = {}): ScheduleLifecycleDeps {
@@ -89,7 +112,6 @@ function setupScheduleJobMock() {
 describe('createScheduleLifecycle', () => {
   beforeEach(() => {
     mockScheduleJob.mockReset();
-    mockCancelJob.mockReset();
     mockGracefulShutdown.mockReset().mockResolvedValue(undefined);
     mockForgeDebug.mockReset();
     mockStore.listActiveSchedules.mockReset();
@@ -227,18 +249,16 @@ describe('createScheduleLifecycle', () => {
     });
   });
 
+  // NOTE: Tests for 'throws when scheduledDate is missing' and
+  // 'throws when cronExpression is missing' were removed by the discriminated
+  // union refactor (#5571 + #5572 + #5576 cluster). The narrowed
+  // DateScheduleRecord/CronScheduleRecord types make it impossible to construct
+  // a record with a missing variant field, so the runtime defensive check is
+  // no longer reachable. The type system is the contract; manager.ts casts
+  // through `as unknown as`, so upstream Zod validation is the safety net.
   // ── register: date type ────────────────────────────────────────────────
 
   describe('register() with date schedule', () => {
-    it('throws when scheduledDate is missing', async () => {
-      setupScheduleJobMock();
-      const lifecycle = createScheduleLifecycle(makeDeps());
-      await expect(
-        lifecycle.register(makeRecord({ scheduleType: 'date', scheduledDate: undefined })),
-      ).rejects.toThrow(/missing scheduledDate/);
-      expect(mockScheduleJob).not.toHaveBeenCalled();
-    });
-
     it('deactivates a past-date schedule without scheduling', async () => {
       setupScheduleJobMock();
       const past = Date.now() - 60_000;
@@ -288,15 +308,6 @@ describe('createScheduleLifecycle', () => {
   // ── register: cron type ────────────────────────────────────────────────
 
   describe('register() with cron schedule', () => {
-    it('throws when cronExpression is missing', async () => {
-      setupScheduleJobMock();
-      const lifecycle = createScheduleLifecycle(makeDeps());
-      await expect(
-        lifecycle.register(makeRecord({ cronExpression: undefined })),
-      ).rejects.toThrow(/missing cronExpression/);
-      expect(mockScheduleJob).not.toHaveBeenCalled();
-    });
-
     it('schedules a cron job with the correct spec and sets nextTriggerAt', async () => {
       const { specs } = setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
