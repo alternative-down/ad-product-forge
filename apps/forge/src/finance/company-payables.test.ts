@@ -218,14 +218,32 @@ function createMockPayablesDb(
     }),
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
       return fn({
+        query: {
+          companyCashLedger: {
+            findFirst: async (opts: unknown) => findFirstInLedger(opts as any),
+          },
+        },
         insert: () => ({
-          values: async (values: Record<string, unknown>) => {
-            if ('recurrencePeriod' in values) {
-              payablesStore.push(values as unknown as any);
-            } else {
-              ledgerStore.push(values as unknown as any);
-            }
-            return { rowCount: 1 };
+          values: (values: Record<string, unknown>) => {
+            const exec = () => {
+              if ('recurrencePeriod' in values) {
+                payablesStore.push(values as unknown as any);
+              } else {
+                ledgerStore.push(values as unknown as any);
+              }
+              return { rowCount: 1 };
+            };
+            return {
+              onConflictDoNothing: (_opts: unknown) => Promise.resolve(exec()),
+              then: (resolve: any, reject: any) => {
+                try {
+                  resolve(exec());
+                } catch (e) {
+                  reject(e);
+                }
+                return {} as any;
+              },
+            };
           },
         }),
         update: () => ({

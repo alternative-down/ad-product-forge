@@ -169,36 +169,52 @@ export function createCompanyPayables(db: Database) {
 
       const currentDueAt = entry.dueAt ?? payable.nextDueAt;
       const nextDueAt = advanceDueAt(currentDueAt, payable.recurrencePeriod as RecurrencePeriod);
-      const existingNextEntry = await db.query.companyCashLedger.findFirst({
-        where: and(
-          eq(companyCashLedger.referenceType, 'recurring-payable'),
-          eq(companyCashLedger.referenceId, payable.id),
-          eq(companyCashLedger.status, 'planned'),
-          gte(companyCashLedger.dueAt, nextDueAt),
-        ),
-      });
 
-      if (existingNextEntry != null) {
-        return null;
-      }
-
-      // Wrap planned occurrence + payable update in transaction
-      await db.transaction(async (tx) => {
-        const eid = createId();
-        await tx.insert(companyCashLedger).values({
-          id: eid,
-          type: 'recurring-payable',
-          direction: 'out',
-          amountUsd: payable.amountUsd,
-          description: payable.description ?? payable.name,
-          referenceType: 'recurring-payable',
-          referenceId: payable.id,
-          status: 'planned',
-          dueAt: nextDueAt,
-          effectiveAt: null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+      // Wrap planned occurrence + existence re-check + payable update in
+      // a single transaction. Defense in depth:
+      //   1. Re-check existence INSIDE the tx (closes the TOCTOU window for
+      //      single-writer scenarios)
+      //   2. onConflictDoNothing on the unique (referenceType, referenceId,
+      //      dueAt) index (closes the race for concurrent writers)
+      // See migration 0030 for the index definition.
+      return await db.transaction(async (tx) => {
+        const existingNextEntry = await tx.query.companyCashLedger.findFirst({
+          where: and(
+            eq(companyCashLedger.referenceType, 'recurring-payable'),
+            eq(companyCashLedger.referenceId, payable.id),
+            eq(companyCashLedger.status, 'planned'),
+            gte(companyCashLedger.dueAt, nextDueAt),
+          ),
         });
+
+        if (existingNextEntry != null) {
+          return null;
+        }
+
+        const eid = createId();
+        await tx
+          .insert(companyCashLedger)
+          .values({
+            id: eid,
+            type: 'recurring-payable',
+            direction: 'out',
+            amountUsd: payable.amountUsd,
+            description: payable.description ?? payable.name,
+            referenceType: 'recurring-payable',
+            referenceId: payable.id,
+            status: 'planned',
+            dueAt: nextDueAt,
+            effectiveAt: null,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          })
+          .onConflictDoNothing({
+            target: [
+              companyCashLedger.referenceType,
+              companyCashLedger.referenceId,
+              companyCashLedger.dueAt,
+            ],
+          });
 
         await tx
           .update(companyRecurringPayables)
@@ -207,12 +223,12 @@ export function createCompanyPayables(db: Database) {
             updatedAt: Date.now(),
           })
           .where(eq(companyRecurringPayables.id, payable.id));
-      });
 
-      return {
-        payableId: payable.id,
-        nextDueAt,
-      };
+        return {
+          payableId: payable.id,
+          nextDueAt,
+        };
+      });
     } catch (err) {
       forgeDebug({
         scope: 'company-payables',
