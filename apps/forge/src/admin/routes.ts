@@ -89,8 +89,8 @@ import {
   registerAgentMcpRoutes,
   registerAgentSchedulesRoutes,
   registerAgentNotificationsRoutes,
-  registerAgentProviderMcpRoutes,
 } from './routes/agents/detail-read';
+import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
 import { registerAgentReadRoutes as _registerAgentReadRoutes } from './routes/agents/read';
 import { registerAgentWriteRoutes as _registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
