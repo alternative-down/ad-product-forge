@@ -62,6 +62,18 @@ export function parseFirstRecipient(addresses?: Email['to']): ParsedRecipient | 
   return null;
 }
 
+export function filterRecentByTtl<T extends { createdAt: string | number }>(
+  messages: T[],
+  ttlMs: number,
+  now: number = Date.now(),
+): T[] {
+  const cutoff = now - ttlMs;
+  return messages.filter((m) => {
+    const createdAtMs = typeof m.createdAt === 'string' ? Date.parse(m.createdAt) : m.createdAt;
+    return createdAtMs >= cutoff;
+  });
+}
+
 export function pruneRecentOutboundMessages(
   recentOutboundMessages: Map<
     string,
@@ -77,10 +89,10 @@ export function pruneRecentOutboundMessages(
     }>
   >,
   ttlMs: number,
+  now: number = Date.now(),
 ): void {
-  const cutoff = Date.now() - ttlMs;
   for (const [targetKey, messages] of recentOutboundMessages.entries()) {
-    const visible = messages.filter((m) => Date.parse(m.createdAt) >= cutoff);
+    const visible = filterRecentByTtl(messages, ttlMs, now);
     if (visible.length === 0) {
       recentOutboundMessages.delete(targetKey);
     } else {
@@ -128,7 +140,7 @@ export function resolveEmailThreadKey(parsed: Email): string {
     references[0] !== undefined
   )
     return references[0];
-  return parsed.messageId ?? `orphan-${Date.now()}`;
+  return parsed.messageId ?? `orphan-${parsed.subject ?? parsed.from?.address ?? 'no-message-id'}`;
 }
 
 export function resolveCreatedAt(email: Email): string {
@@ -148,7 +160,7 @@ export function extractEmailBody(email: Email): string {
   for (const line of lines) {
     const trimmedLine = line.trim();
     if (trimmedLine === '--') break;
-    if (trimmedLine.match(/^[>|#*_-]+$/)) continue;
+    if (/^>\s*(?:>\s*)*$/.test(trimmedLine)) continue;
     cleanedLines.push(trimmedLine);
   }
   return cleanedLines.join('\n').trim();
