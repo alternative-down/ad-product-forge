@@ -3,7 +3,6 @@
     "apps/forge/src/admin/read-model/shared-test-helpers.ts",
     "apps/forge/src/admin/routes/agents/_split/config-ops.ts",
     "apps/forge/src/admin/routes/agents/_split/contract-ops.ts",
-    "apps/forge/src/admin/routes/agents/_split/provider-ops.ts",
     "apps/forge/src/admin/routes/agents/admin-route-error-helper.ts",
     "apps/forge/src/admin/routes/agents/mcp-config-helpers.ts",
     "apps/forge/src/admin/routes/agents/mcp-server-helpers.ts",
