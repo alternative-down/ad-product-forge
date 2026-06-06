@@ -123,7 +123,11 @@ export function createPaymentReceivablesStore(db: Database) {
       if (existing.length > 0) {
         await db
           .update(paymentCustomers)
-          .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
+          .set({
+            email: input.email ?? existing[0].email ?? null,
+            name: input.name ?? existing[0].name ?? null,
+            updatedAt: now,
+          })
           .where(eq(paymentCustomers.id, existing[0].id));
         return existing[0].id;
       }
