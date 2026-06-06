@@ -30,26 +30,10 @@ const deleteRoleSchema = z
   })
   .strict();
 
-const _roleCapabilitySchema = z
-  .object({
-    roleId: z.string(),
-    capabilityName: z.string(),
-    capabilityValue: z.boolean(),
-  })
-  .strict();
-
 const roleToolPermissionSchema = z
   .object({
     roleId: z.string(),
     toolName: z.string(),
-    allowed: z.boolean(),
-  })
-  .strict();
-
-const _roleWorkflowPermissionSchema = z
-  .object({
-    roleId: z.string(),
-    workflowName: z.string(),
     allowed: z.boolean(),
   })
   .strict();
@@ -80,8 +64,8 @@ export function registerRoleOps(
         forgeDebug({
           scope: 'admin',
           level: 'error',
-          message: '/admin/roles/create',
-          context: { error: errorMsg(err) },
+          message: '/admin/roles/create route handler failed',
+          context: { path: '/admin/roles/create', error: errorMsg(err) },
         });
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
@@ -105,8 +89,8 @@ export function registerRoleOps(
         forgeDebug({
           scope: 'admin',
           level: 'error',
-          message: '/admin/roles/update',
-          context: { error: errorMsg(err) },
+          message: '/admin/roles/update route handler failed',
+          context: { path: '/admin/roles/update', error: errorMsg(err) },
         });
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
@@ -149,8 +133,8 @@ export function registerRoleOps(
         forgeDebug({
           scope: 'admin',
           level: 'error',
-          message: '/admin/roles/tool-permissions',
-          context: { error: errorMsg(err) },
+          message: '/admin/roles/tool-permissions route handler failed',
+          context: { path: '/admin/roles/tool-permissions', error: errorMsg(err) },
         });
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
