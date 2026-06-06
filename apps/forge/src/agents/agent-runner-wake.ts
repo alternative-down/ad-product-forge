@@ -1,6 +1,5 @@
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
-export { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 
 export function formatPendingRunEvents(events: AgentWakeEvent[]) {
   const groups = new Map<string, AgentWakeEvent[]>();

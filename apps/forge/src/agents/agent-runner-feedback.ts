@@ -22,7 +22,7 @@ import {
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
-import { RUN_STOP_REMINDER } from './agent-runner-wake';
+import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 import type { GenerateTimeoutHandle } from './agent-runner-generate-timeout';
 
 export interface BuildIterationFeedbackDeps {
