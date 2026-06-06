@@ -11,14 +11,8 @@ import type { HttpHandler } from '../../../../http/server';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
 import type { Database } from '../../../../database/client';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
+import { errorMsg } from '../../../../agents/error-formatting';
 
-
-// Extract error message for user-facing display
-function errorMsg(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return JSON.stringify(err);
-}
 
 // ─── Request body schema ─────────────────────────────────────────────────────
 const mcpCreateBodySchema = z.object({

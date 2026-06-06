@@ -11,14 +11,8 @@ import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
+import { errorMsg } from '../../../../agents/error-formatting';
 
-
-// Extract error message for user-facing display
-function errorMsg(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return JSON.stringify(err);
-}
 
 export function registerLifecycleDelegateOps(
   httpServer: {

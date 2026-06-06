@@ -8,13 +8,6 @@ import { parseJsonBody, jsonResponse } from '../../index';
 import type { Database } from '../../../../database/client';
 import type { HttpHandler } from '../../../../http/server';
 
-// Extract error message for user-facing display
-function errorMsg(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return JSON.stringify(err);
-}
-
 // ─── Typed interfaces for lifecycle ops ────────────────────────────────────
 interface RegistryEntry {
   runner: {
@@ -34,6 +27,7 @@ interface Ops {
 }
 
 import { agentActionSchema } from '../../schemas/agents';
+import { errorMsg } from '../../../../agents/error-formatting';
 
 export function registerLifecycleOps(
   httpServer: {
