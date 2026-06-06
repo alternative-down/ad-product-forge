@@ -13,6 +13,7 @@ import type {
 } from '@forge-runtime/core';
 
 import type { DiscordSendableChannel } from './discord-types';
+import { filterRecentByTtl } from './email-account-helpers';
 import {
   createDiscordClient,
   listCandidateChannels,
@@ -45,9 +46,7 @@ export function createDiscordProvider(config: {
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
-      const visibleMessages = messages.filter(
-        (message) => now - message.createdAt <= OUTBOUND_ECHO_TTL_MS,
-      );
+      const visibleMessages = filterRecentByTtl(messages, OUTBOUND_ECHO_TTL_MS, now);
 
       if (visibleMessages.length === 0) {
         recentOutboundMessages.delete(conversationKey);

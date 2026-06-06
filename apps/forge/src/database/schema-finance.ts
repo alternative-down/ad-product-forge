@@ -4,8 +4,9 @@ import {
   sqliteTable,
   text,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import { InferModel } from 'drizzle-orm';
+import { InferModel, sql } from 'drizzle-orm';
 
 export const companyCashLedger = sqliteTable(
   'company_cash_ledger',
@@ -29,6 +30,9 @@ export const companyCashLedger = sqliteTable(
       table.effectiveAt,
     ),
     companyCashLedgerUpdatedAtIdx: index('company_cash_ledger_updated_at_idx').on(table.updatedAt),
+    companyCashLedgerRecurringPayableUniqueIdx: uniqueIndex('company_cash_ledger_recurring_payable_unique_idx')
+      .on(table.referenceType, table.referenceId, table.dueAt)
+      .where(sql`${table.referenceType} = 'recurring-payable'`),
   }),
 );
 

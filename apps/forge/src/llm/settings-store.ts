@@ -338,16 +338,17 @@ export function createLlmSettingsStore(db: Database) {
 function toProfileRecord(row: LlmProfile): LlmProfileRecord {
   const { id, encryptedApiKey, isEnabled, ...rest } = row;
 
-  let apiKey = '';
+  let apiKey: string;
   try {
     apiKey = decryptSecret(encryptedApiKey);
-  } catch {
+  } catch (err) {
     forgeDebug({
       scope: 'llm-settings',
-      level: 'warn',
+      level: 'error',
       message: 'Failed to decrypt LLM profile API key',
-      context: { profileId: id },
+      context: { profileId: id, error: errorMsg(err) },
     });
+    throw new Error(`Failed to decrypt LLM profile ${id}: ${errorMsg(err)}`);
   }
 
   return {

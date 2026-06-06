@@ -364,4 +364,124 @@ describe('createPaymentReceivablesStore', () => {
       expect(ledgerInsert).toBeUndefined();
     });
   });
+
+  describe('upsertCustomer', () => {
+    it('preserves existing email when input.email is undefined', async () => {
+      // Arrange: pre-existing customer
+      const existing = {
+        id: 'cust-1',
+        provider: 'stripe',
+        providerCustomerId: 'cust_ext_1',
+        email: 'old@example.com',
+        name: 'Old Name',
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      db.select = vi.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            limit: () => ({
+              all: () => Promise.resolve([existing]),
+            }),
+          }),
+        }),
+      });
+      let captured: Record<string, unknown> | undefined;
+      db.update = vi.fn().mockReturnValue({
+        set: (vals: Record<string, unknown>) => {
+          captured = vals;
+          return { where: () => Promise.resolve({ rowCount: 1 }) };
+        },
+      });
+
+      // Act: call upsertCustomer with only name (no email)
+      const result = await store.upsertCustomer({
+        provider: 'stripe',
+        providerCustomerId: 'cust_ext_1',
+        name: 'New Name',
+      });
+
+      // Assert: existing email preserved, name updated
+      expect(result).toBe('cust-1');
+      expect(captured?.email).toBe('old@example.com');
+      expect(captured?.name).toBe('New Name');
+      expect(captured?.updatedAt).toBeDefined();
+    });
+
+    it('updates both fields when both are provided', async () => {
+      const existing = {
+        id: 'cust-2',
+        provider: 'asaas',
+        providerCustomerId: 'cust_ext_2',
+        email: 'old@example.com',
+        name: 'Old Name',
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      db.select = vi.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            limit: () => ({
+              all: () => Promise.resolve([existing]),
+            }),
+          }),
+        }),
+      });
+      let captured: Record<string, unknown> | undefined;
+      db.update = vi.fn().mockReturnValue({
+        set: (vals: Record<string, unknown>) => {
+          captured = vals;
+          return { where: () => Promise.resolve({ rowCount: 1 }) };
+        },
+      });
+
+      const result = await store.upsertCustomer({
+        provider: 'asaas',
+        providerCustomerId: 'cust_ext_2',
+        email: 'new@example.com',
+        name: 'New Name',
+      });
+
+      expect(result).toBe('cust-2');
+      expect(captured?.email).toBe('new@example.com');
+      expect(captured?.name).toBe('New Name');
+    });
+
+    it('preserves both fields when neither is provided', async () => {
+      const existing = {
+        id: 'cust-3',
+        provider: 'stripe',
+        providerCustomerId: 'cust_ext_3',
+        email: 'old@example.com',
+        name: 'Old Name',
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      db.select = vi.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            limit: () => ({
+              all: () => Promise.resolve([existing]),
+            }),
+          }),
+        }),
+      });
+      let captured: Record<string, unknown> | undefined;
+      db.update = vi.fn().mockReturnValue({
+        set: (vals: Record<string, unknown>) => {
+          captured = vals;
+          return { where: () => Promise.resolve({ rowCount: 1 }) };
+        },
+      });
+
+      const result = await store.upsertCustomer({
+        provider: 'stripe',
+        providerCustomerId: 'cust_ext_3',
+      });
+
+      expect(result).toBe('cust-3');
+      expect(captured?.email).toBe('old@example.com');
+      expect(captured?.name).toBe('Old Name');
+    });
+  });
 });

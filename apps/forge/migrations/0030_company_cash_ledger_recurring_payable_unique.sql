@@ -1,0 +1,51 @@
+-- =============================================================================
+-- Migration 0030: Add unique index on (reference_type, reference_id, due_at)
+-- for company_cash_ledger to prevent duplicate planned occurrences under
+-- concurrent invocations of syncRecurringPayableOccurrence.
+-- =============================================================================
+--
+-- ROOT CAUSE
+-- ---------
+-- apps/forge/src/finance/company-payables.ts:147-227
+-- (syncRecurringPayableOccurrence) has a TOCTOU race: 3 sequential reads to
+-- validate state, then a transaction-wrapped insert. Between the existence
+-- check and the write, another invocation can pass the same check and insert
+-- a duplicate planned ledger entry for the same (referenceType, referenceId,
+-- dueAt) tuple. The unique index is the schema-level guard that, combined
+-- with onConflictDoNothing, makes the insert atomic.
+--
+-- This is the same anti-pattern as #5502, #5520/#5525, #5529, #5530, #5531,
+-- #5540, and #5548 (7th instance of findFirst+insert race, 2 days).
+--
+-- TABLES MODIFIED
+-- ---------------
+--   1. company_cash_ledger  (1 unique index added)
+--
+-- Total: 1 statement. Well below the 27 libsql batch transaction threshold.
+--
+-- IDEMPOTENCY
+-- -----------
+-- CREATE UNIQUE INDEX uses `IF NOT EXISTS` (SQLite-supported) for safety.
+-- SQLite has NO `ADD COLUMN IF NOT EXISTS` (Postgres-only); we rely on
+-- Drizzle's `__drizzle_migrations` journal to prevent re-application.
+--
+-- BACKFILL
+-- --------
+-- If the existing DB has duplicate (reference_type, reference_id, due_at)
+-- rows where reference_type = 'recurring-payable', the index creation will
+-- fail. In normal operation this race shouldn't have produced duplicates
+-- yet (this is the fix that prevents future duplicates), but if prod data
+-- has been corrupted by earlier runs, a pre-migration dedup script is
+-- required (out of scope for this PR; tracked in #5549 follow-up).
+--
+-- REFERENCES
+-- ----------
+--   - #5549 (this issue): TOCTOU race in syncRecurringPayableOccurrence
+--   - #5525 (canonical atomic-upsert pattern): same fix template
+--   - #5540 (sibling finance race, fixed in #5564): same anti-pattern
+--   - #0026 webhook_idempotency_unique: similar pattern reference
+-- =============================================================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS `company_cash_ledger_recurring_payable_unique_idx`
+  ON `company_cash_ledger` (`reference_type`, `reference_id`, `due_at`)
+  WHERE `reference_type` = 'recurring-payable';
