@@ -9,7 +9,7 @@ import { terminateInternalAgent } from './terminate-agent';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { AgentScheduleManager } from '../schedules/manager';
+import type { AgentScheduleManager } from '../schedules/manager/index';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import type { InternalChatService } from '../communication/internal-chat-service';
 

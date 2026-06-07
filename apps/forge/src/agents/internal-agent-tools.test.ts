@@ -19,7 +19,7 @@ import type { Database } from '../database/client';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import type { createAgentScheduleManager } from '../schedules/manager/index';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 function createInternalAgentToolConfig() {

@@ -1,26 +1,17 @@
 /**
  * Public API of the manager subsystem.
+ *
+ * Re-exports from 4 sub-modules: manager (SUT), store (DB CRUD),
+ * normalize (input handling), auth (authorization checks).
+ *
+ * The file-level eslint-disable is intentional: this is a barrel
+ * aggregating 4 domain modules. Consumers use named imports.
+ *
+ * Tripwire: see `manager/index.test.ts` which asserts that the barrel
+ * surface matches the union of the 4 sub-modules' exports. See #5611.
  */
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- barrel aggregating SUT + sub-modules
-export {
-  createAgentScheduleManager,
-  type AgentScheduleManager,
-} from './manager';
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- barrel for DB CRUD
-export { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- barrel for input normalization
-export {
-  normalizeScheduleUpdate,
-  buildScheduleUpdateInput,
-  buildScheduleRollbackInput,
-  type NormalizedScheduleUpdate,
-  type ScheduleUpdateInputParts,
-  type ExistingScheduleFields,
-} from './normalize';
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- barrel for auth checks
-export {
-  isScheduleEditor,
-  requireScheduleEditor,
-  requireScheduleDeleter,
-  type ScheduleAuthorizable,
-} from './auth';
+/* eslint-disable reexport-check/no-unnecessary-reexports */
+export * from './manager';
+export * from './store';
+export * from './normalize';
+export * from './auth';
