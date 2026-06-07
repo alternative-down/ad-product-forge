@@ -108,8 +108,15 @@ export function registerRoleOps(
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
         const msg = errorMsg(err);
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${errorMsg(err)}` });
-        if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/roles/delete route handler failed',
+          context: { path: '/admin/roles/delete', error: msg },
+        });
+        if ((err as { code?: string }).code === 'ROLE_HAS_ASSIGNED_AGENTS') {
+          return jsonResponse({ error: msg }, 409);
+        }
         return jsonResponse({ error: msg }, 500);
       }
     },

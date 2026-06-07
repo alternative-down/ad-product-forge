@@ -167,8 +167,12 @@ describe('registerRoleOps', () => {
       expect(mockCapabilities.deleteRole).toHaveBeenCalledWith('role-delete-me');
     });
 
-    it('returns 409 when role has assignments (Cannot delete)', async () => {
-      mockCapabilities.deleteRole.mockRejectedValue(new Error('Cannot delete role with assigned agents'));
+    it('returns 409 when role has assignments (typed ROLE_HAS_ASSIGNED_AGENTS code)', async () => {
+      const err = new Error('Cannot delete role with assigned agents') as Error & {
+        code: 'ROLE_HAS_ASSIGNED_AGENTS';
+      };
+      err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
+      mockCapabilities.deleteRole.mockRejectedValue(err);
       registerRoleOps(httpServer as any, mockDb);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/delete');
 
@@ -177,6 +181,28 @@ describe('registerRoleOps', () => {
       expect(response.status).toBe(409);
       const body = JSON.parse(response.body);
       expect(body.error).toContain('Cannot delete role');
+    });
+
+    it('logs error with scope admin (not admin:roles) when delete fails', async () => {
+      const err = new Error('Cannot delete role with assigned agents') as Error & {
+        code: 'ROLE_HAS_ASSIGNED_AGENTS';
+      };
+      err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
+      mockCapabilities.deleteRole.mockRejectedValue(err);
+      const { forgeDebug } = await import('@forge-runtime/core');
+      registerRoleOps(httpServer as any, mockDb);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/delete');
+
+      await handler(makeRequest({ roleId: 'role-protected' }));
+
+      const calls = (forgeDebug as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c: any[]) => c[0]);
+      const matchingCall = calls.find(
+        (c: any) => c.message === '/admin/roles/delete route handler failed',
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall?.scope).toBe('admin');
+      expect(matchingCall?.scope).not.toBe('admin:roles');
+      expect(matchingCall?.context?.path).toBe('/admin/roles/delete');
     });
 
     it('returns 500 on other delete errors', async () => {
