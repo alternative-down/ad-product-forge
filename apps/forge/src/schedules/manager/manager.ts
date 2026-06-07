@@ -217,12 +217,12 @@ export function createAgentScheduleManager(input: {
     );
     const { scheduleType, cronExpression, scheduledDate } = normalized;
     validateScheduleShape({
-      scheduleType: scheduleType as 'cron' | 'date',
+      scheduleType: scheduleType,
       cronExpression: cronExpression ?? undefined,
       scheduledDate: scheduledDate ?? undefined,
     });
     if (normalized.shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
+      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
     const rollbackInput = buildScheduleRollbackInput(
       existing as unknown as ExistingScheduleFields,
@@ -231,7 +231,7 @@ export function createAgentScheduleManager(input: {
       agentId,
       scheduleId,
       buildScheduleUpdateInput(parsed, {
-        scheduleType: normalized.scheduleType as 'cron' | 'date',
+        scheduleType: normalized.scheduleType,
         cronExpression: normalized.cronExpression ?? null,
         scheduledDate: normalized.scheduledDate,
         wakeWhenRunning: normalized.wakeWhenRunning,
@@ -312,12 +312,12 @@ export function createAgentScheduleManager(input: {
     );
     const { scheduleType, cronExpression, scheduledDate } = normalized;
     validateScheduleShape({
-      scheduleType: scheduleType as 'cron' | 'date',
+      scheduleType: scheduleType,
       cronExpression: cronExpression ?? undefined,
       scheduledDate: scheduledDate ?? undefined,
     });
     if (normalized.shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
+      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
     const rollbackInput = buildScheduleRollbackInput(
       existing as unknown as ExistingScheduleFields,
@@ -326,7 +326,7 @@ export function createAgentScheduleManager(input: {
       agentId,
       scheduleId,
       buildScheduleUpdateInput(parsed, {
-        scheduleType: normalized.scheduleType as 'cron' | 'date',
+        scheduleType: normalized.scheduleType,
         cronExpression: normalized.cronExpression ?? null,
         scheduledDate: normalized.scheduledDate,
         wakeWhenRunning: normalized.wakeWhenRunning,
