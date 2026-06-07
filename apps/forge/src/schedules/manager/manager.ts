@@ -265,6 +265,9 @@ export function createAgentScheduleManager(input: {
         context: { agentId, scheduleId, error: errorMsg(error) },
       });
 
+      // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
+      getLifecycle().cancel(scheduleId);
+
       if (
         isActiveSchedule(existing as unknown as StoredSchedule) === true &&
         isActiveSchedule(restored as unknown as StoredSchedule) === true
@@ -319,7 +322,7 @@ export function createAgentScheduleManager(input: {
     const rollbackInput = buildScheduleRollbackInput(
       existing as unknown as ExistingScheduleFields,
     ) as UpdateAgentScheduleInput;
-    const updated = await store.updateOwnedSchedule(
+    const updated = await store.updateAgentSchedule(
       agentId,
       scheduleId,
       buildScheduleUpdateInput(parsed, {
@@ -344,7 +347,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       // DB update succeeded but scheduler registration failed — rollback DB state
-      const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
+      const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
