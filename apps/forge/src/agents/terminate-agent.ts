@@ -12,7 +12,7 @@ import { createAgentContractStore } from './agent-contract-store';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { AgentScheduleManager } from '../schedules/manager';
+import type { AgentScheduleManager } from '../schedules/manager/index';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 export async function terminateInternalAgent(

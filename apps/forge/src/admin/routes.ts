@@ -27,7 +27,7 @@ import {
 import { createCapabilityStore } from '../capabilities/store';
 import { changeAgentRoleFromAdmin } from '../capabilities/runtime';
 import type { createForgeHttpServer } from '../http/server';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import type { createAgentScheduleManager } from '../schedules/manager/index';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createAdminReadModel } from './read-model';
 import { createSystemReadModel } from './read-model/system';

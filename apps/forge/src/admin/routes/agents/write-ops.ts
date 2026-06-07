@@ -15,7 +15,7 @@ import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../coolify/manager';
-import type { createAgentScheduleManager } from '../../../schedules/manager';
+import type { createAgentScheduleManager } from '../../../schedules/manager/index';
 
 interface RegistryEntry {
   runner: {

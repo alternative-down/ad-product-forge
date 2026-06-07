@@ -104,7 +104,7 @@ export function createAgentScheduleManager(input: {
       await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
     } catch (error) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
         context: {
@@ -146,7 +146,7 @@ export function createAgentScheduleManager(input: {
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'createSchedule: registerSchedule failed, cleaned up record',
         context: { agentId, error: errorMsg(error) },
@@ -202,7 +202,7 @@ export function createAgentScheduleManager(input: {
 
     if (existing === null) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'updateSchedule schedule not found',
         context: { agentId, scheduleId },
@@ -240,7 +240,7 @@ export function createAgentScheduleManager(input: {
 
     if (updated === null) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'updateSchedule schedule not found',
         context: { agentId, scheduleId },
@@ -346,7 +346,7 @@ export function createAgentScheduleManager(input: {
       // DB update succeeded but scheduler registration failed — rollback DB state
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back',
         context: { agentId, scheduleId, error: errorMsg(error) },
@@ -390,7 +390,7 @@ export function createAgentScheduleManager(input: {
       return { success: true };
     } catch (error) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: `deleteSchedule failed: ${errorMsg(error)}`,
         context: { agentId, scheduleId },
@@ -434,7 +434,7 @@ export function createAgentScheduleManager(input: {
 
     if (scheduleRecord === null) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'createScheduleForAgent failed to load schedule',
         context: { agentId: parsed.targetAgentId, recordId: record.id },
@@ -447,7 +447,7 @@ export function createAgentScheduleManager(input: {
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: 'createScheduleForAgent: registerSchedule failed, cleaned up record',
         context: { agentId: parsed.targetAgentId, error: errorMsg(error) },
@@ -517,7 +517,7 @@ export function createAgentScheduleManager(input: {
         await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
       } catch (error) {
         forgeDebug({
-          scope: 'schedules',
+          scope: 'schedules-manager',
           level: 'error',
           message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${errorMsg(error)}`,
           context: { agentId, scheduleId: scheduleRecord.scheduleId },
@@ -531,7 +531,7 @@ export function createAgentScheduleManager(input: {
       await store.deleteHeartbeatSchedule(agentId);
     } catch (error) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: `removeAgent: failed to delete heartbeat schedule: ${errorMsg(error)}`,
         context: { agentId },

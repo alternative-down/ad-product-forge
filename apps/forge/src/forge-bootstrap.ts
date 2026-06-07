@@ -10,7 +10,7 @@ import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
 import { createCoolifyManager } from './coolify/manager';
 import { createMiniMaxManager } from './minimax/manager';
-import { createAgentScheduleManager } from './schedules/manager';
+import { createAgentScheduleManager } from './schedules/manager/index';
 import { registerAdminRoutes } from './admin/routes';
 import { createAdminReadModel } from './admin/read-model';
 import { createSystemIntegrationStore } from './system-integrations/store';
