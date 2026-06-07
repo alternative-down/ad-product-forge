@@ -351,7 +351,7 @@ describe('loadAgents', () => {
     expect(loadFromRegCall?.[0].context?.agentCount).toBe(2);
   });
 
-  it('logs agent count when finished loading', async () => {
+  it('logs loading complete with counts when all agents succeed', async () => {
     const config = {
       workspaceBasePath: '/workspace',
       githubApps: {},
@@ -364,10 +364,36 @@ describe('loadAgents', () => {
 
     await loadAgents(mockDb, config);
 
-    const successCall = mockForgeDebug.mock.calls.find(
-      (c) => c[0].message === 'Successfully loaded agents',
+    const completeCall = mockForgeDebug.mock.calls.find(
+      (c) => c[0].message === 'Agent loading complete',
     );
-    expect(successCall?.[0].context?.agentCount).toBe(2);
+    expect(completeCall?.[0].context?.totalAgents).toBe(2);
+    expect(completeCall?.[0].context?.loadedAgents).toBe(2);
+    expect(completeCall?.[0].context?.failedAgents).toBe(0);
+  });
+
+  it('logs loading complete with failure count when some agents fail', async () => {
+    mockLoadAgentRuntimeData
+      .mockRejectedValueOnce(new Error('agent-1-fail'))
+      .mockResolvedValueOnce(mockRuntimeData);
+    const config = {
+      workspaceBasePath: '/workspace',
+      githubApps: {},
+      emailMailboxes: {},
+      coolify: {},
+      minimax: {},
+      schedules: {},
+      internalChat: mockInternalChat as any,
+    } as unknown as AgentLoaderConfig;
+
+    await loadAgents(mockDb, config);
+
+    const completeCall = mockForgeDebug.mock.calls.find(
+      (c) => c[0].message === 'Agent loading complete',
+    );
+    expect(completeCall?.[0].context?.totalAgents).toBe(2);
+    expect(completeCall?.[0].context?.loadedAgents).toBe(1);
+    expect(completeCall?.[0].context?.failedAgents).toBe(1);
   });
 
   it('continues loading other agents when one fails', async () => {

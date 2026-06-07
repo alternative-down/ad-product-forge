@@ -167,12 +167,12 @@ describe('buildAgentRuntimeConfig', () => {
     expect(result.workspaceBasePath).toBe('/workspace');
   });
 
-  it('maps workspace fields from agent when present', () => {
+  it('parses JSON-encoded workspace config fields and resolves embedder id', () => {
     const runtimeData = makeMinimalRuntimeData();
-    runtimeData.agent.workspaceFilesystem = { type: 's3', bucket: 'test' } as never;
-    runtimeData.agent.workspaceSandbox = { type: 'docker' } as never;
-    runtimeData.agent.workspaceSkills = { enabled: true } as never;
-    runtimeData.agent.workspaceEmbedder = 'embedder-1' as never;
+    runtimeData.agent.workspaceFilesystem = JSON.stringify({ basePath: '/app', allowedPaths: ['/a', '/b'] }) as never;
+    runtimeData.agent.workspaceSandbox = JSON.stringify({ workingDirectory: '/sandbox' }) as never;
+    runtimeData.agent.workspaceSkills = JSON.stringify(['skill-1', 'skill-2']) as never;
+    runtimeData.agent.workspaceEmbedder = 'fastembed' as never;
     const loaderConfig = makeLoaderConfig();
 
     const result = buildAgentRuntimeConfig(
@@ -181,10 +181,44 @@ describe('buildAgentRuntimeConfig', () => {
       { tools: [], breakdown: {} } as any,
     );
 
-    expect(result.workspaceFilesystem).toEqual({ type: 's3', bucket: 'test' });
-    expect(result.workspaceSandbox).toEqual({ type: 'docker' });
-    expect(result.workspaceSkills).toEqual({ enabled: true });
-    expect(result.workspaceEmbedder).toBe('embedder-1');
+    expect(result.workspaceFilesystem).toEqual({ basePath: '/app', allowedPaths: ['/a', '/b'] });
+    expect(result.workspaceSandbox).toEqual({ workingDirectory: '/sandbox' });
+    expect(result.workspaceSkills).toEqual(['skill-1', 'skill-2']);
+    expect(result.workspaceEmbedder).toBe('fastembed');
+  });
+
+  it('returns undefined for empty workspace config fields', () => {
+    const runtimeData = makeMinimalRuntimeData();
+    runtimeData.agent.workspaceFilesystem = '' as never;
+    runtimeData.agent.workspaceSandbox = '' as never;
+    runtimeData.agent.workspaceSkills = '' as never;
+    runtimeData.agent.workspaceEmbedder = 'fastembed' as never;
+    const loaderConfig = makeLoaderConfig();
+
+    const result = buildAgentRuntimeConfig(
+      loaderConfig as any,
+      runtimeData as any,
+      { tools: [], breakdown: {} } as any,
+    );
+
+    expect(result.workspaceFilesystem).toBeUndefined();
+    expect(result.workspaceSandbox).toBeUndefined();
+    expect(result.workspaceSkills).toBeUndefined();
+    expect(result.workspaceEmbedder).toBe('fastembed');
+  });
+
+  it('falls back to default embedder for invalid id', () => {
+    const runtimeData = makeMinimalRuntimeData();
+    runtimeData.agent.workspaceEmbedder = 'unknown-embedder' as never;
+    const loaderConfig = makeLoaderConfig();
+
+    const result = buildAgentRuntimeConfig(
+      loaderConfig as any,
+      runtimeData as any,
+      { tools: [], breakdown: {} } as any,
+    );
+
+    expect(result.workspaceEmbedder).toBe('fastembed');
   });
 
   it('maps providers from runtime data', () => {
