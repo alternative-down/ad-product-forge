@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { forgeDebug } from '@forge-runtime/core';
 import {
   isScheduleEditor,
   requireScheduleEditor,
@@ -8,6 +9,14 @@ import {
   createScheduleSchema,
   createScheduleForAgentSchema,
 } from '../tools/schemas';
+
+// Mock forgeDebug so we can assert the log call shape (scope + message)
+// of the auth functions. The actual call body is irrelevant for the tripwire.
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+const mockedForgeDebug = vi.mocked(forgeDebug);
+
 
 const makeSchedule = (overrides: any = {}): any =>
   ({
@@ -259,5 +268,54 @@ describe('requireScheduleDeleter', () => {
   test('does not throw for self-created schedule', () => {
     const schedule = makeSchedule({ creatorId: null, agentId: 'self-agent' });
     expect(() => requireScheduleDeleter(schedule, 'self-agent')).not.toThrow();
+  });
+});
+
+
+// ── forgeDebug tripwire (sub-pattern 3d) ────────────────────────────────────
+// Regression: a copy-paste artifact caused both requireScheduleEditor and
+// requireScheduleDeleter to log a message starting with the nonexistent
+// function name "checkScheduleAuthorization". These tests assert the log
+// message contains the actual function name, so the typo can't return.
+
+describe('forgeDebug tripwire (sub-pattern 3d regression)', () => {
+  beforeEach(() => {
+    mockedForgeDebug.mockClear();
+  });
+
+  test('requireScheduleEditor logs the actual function name', () => {
+    const schedule = makeSchedule({ scheduleId: 'sched-ed', creatorId: 'alice', agentId: 'bob' });
+    expect(() => requireScheduleEditor(schedule, 'bob')).toThrow();
+    expect(mockedForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'manager-auth',
+        message: expect.stringContaining('requireScheduleEditor'),
+      }),
+    );
+  });
+
+  test('requireScheduleEditor log message does NOT reference the dead function name', () => {
+    const schedule = makeSchedule({ scheduleId: 'sched-ed2', creatorId: 'alice', agentId: 'bob' });
+    expect(() => requireScheduleEditor(schedule, 'bob')).toThrow();
+    const call = mockedForgeDebug.mock.calls[0]?.[0] as { message?: string } | undefined;
+    expect(call?.message).not.toContain('checkScheduleAuthorization');
+  });
+
+  test('requireScheduleDeleter logs the actual function name', () => {
+    const schedule = makeSchedule({ scheduleId: 'sched-de', creatorId: 'alice', agentId: 'bob' });
+    expect(() => requireScheduleDeleter(schedule, 'bob')).toThrow();
+    expect(mockedForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'manager-auth',
+        message: expect.stringContaining('requireScheduleDeleter'),
+      }),
+    );
+  });
+
+  test('requireScheduleDeleter log message does NOT reference the dead function name', () => {
+    const schedule = makeSchedule({ scheduleId: 'sched-de2', creatorId: 'alice', agentId: 'bob' });
+    expect(() => requireScheduleDeleter(schedule, 'bob')).toThrow();
+    const call = mockedForgeDebug.mock.calls[0]?.[0] as { message?: string } | undefined;
+    expect(call?.message).not.toContain('checkScheduleAuthorization');
   });
 });

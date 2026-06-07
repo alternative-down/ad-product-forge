@@ -38,9 +38,9 @@ export function isScheduleEditor(schedule: ScheduleAuthorizable, requesterAgentI
 export function requireScheduleEditor(schedule: ScheduleAuthorizable, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
     forgeDebug({
-      scope: 'schedule-impl-helpers',
+      scope: 'manager-auth',
       level: 'warn',
-      message: 'checkScheduleAuthorization: not authorized to edit',
+      message: 'requireScheduleEditor: not authorized to edit',
       context: { scheduleId: schedule.scheduleId },
     });
     throw new Error(`Not authorized to edit schedule: ${schedule.scheduleId}`);
@@ -53,9 +53,9 @@ export function requireScheduleEditor(schedule: ScheduleAuthorizable, requesterA
 export function requireScheduleDeleter(schedule: ScheduleAuthorizable, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
     forgeDebug({
-      scope: 'schedule-impl-helpers',
+      scope: 'manager-auth',
       level: 'warn',
-      message: 'checkScheduleAuthorization: not authorized to delete',
+      message: 'requireScheduleDeleter: not authorized to delete',
       context: { scheduleId: schedule.scheduleId },
     });
     throw new Error(`Not authorized to delete schedule: ${schedule.scheduleId}`);
