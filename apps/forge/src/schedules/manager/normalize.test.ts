@@ -36,7 +36,7 @@ describe('buildScheduleUpdateInput', () => {
 
   it('uses normalized schedule fields regardless of parsed values', () => {
     const result = buildScheduleUpdateInput(
-      { scheduleType: 'should-be-ignored' },
+      { scheduleType: 'cron' },
       {
         scheduleType: 'date',
         cronExpression: null,

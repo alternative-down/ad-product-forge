@@ -46,6 +46,36 @@ import type {
   CronScheduleRecord,
 } from './lifecycle';
 import { createScheduleLifecycle } from './lifecycle';
+import type { AgentSchedule } from '../../database/schema';
+
+// Wrapper that converts a ScheduleLifecycleRecord (the narrow discriminated
+// union) into the AgentSchedule DB row shape + scheduleId alias that
+// register() now accepts. This lets existing makeRecord-based tests keep
+// their assertions while adapting to the wider register() signature
+// (per Cluster T1 / #5608). Coerces 0|1 booleans and string-typed values
+// to their DB representations.
+function asDbRow(record: ScheduleLifecycleRecord): AgentSchedule & { scheduleId: string } {
+  return {
+    id: record.scheduleId,
+    scheduleId: record.scheduleId,
+    agentId: record.agentId,
+    kind: record.kind,
+    name: record.name,
+    description: record.description ?? null,
+    scheduleType: record.scheduleType,
+    cronExpression: record.scheduleType === 'cron' ? record.cronExpression : null,
+    scheduledDate: record.scheduleType === 'date' ? record.scheduledDate : null,
+    timezone: 'timezone' in record ? (record.timezone as string) : 'UTC',
+    content: record.content ?? '',
+    wakeWhenRunning: record.wakeWhenRunning ? 1 : 0,
+    isActive: record.isActive ? 1 : 0,
+    lastTriggeredAt: null,
+    nextTriggerAt: null,
+    creatorId: null,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -215,7 +245,7 @@ describe('createScheduleLifecycle', () => {
     it('cancels a registered job and removes it from the map', async () => {
       setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ scheduleId: 'sch_x' }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleId: 'sch_x' })));
       // Re-fetch the job we registered so we can assert cancel was called.
       const job = mockScheduleJob.mock.results[0]!.value as ReturnType<typeof makeMockJob>;
 
@@ -239,8 +269,8 @@ describe('createScheduleLifecycle', () => {
     it('cancels all jobs and calls gracefulShutdown', async () => {
       setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ scheduleId: 'sch_1' }));
-      await lifecycle.register(makeRecord({ scheduleId: 'sch_2' }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleId: 'sch_1' })));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleId: 'sch_2' })));
 
       await lifecycle.stop();
 
@@ -274,7 +304,7 @@ describe('createScheduleLifecycle', () => {
     it('rejects records with isActive=false (no schedule, no DB write)', async () => {
       setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ isActive: false }));
+      await lifecycle.register(asDbRow(makeRecord({ isActive: false })));
       expect(mockScheduleJob).not.toHaveBeenCalled();
       expect(mockStore.setNextTriggerAt).not.toHaveBeenCalled();
     });
@@ -282,10 +312,10 @@ describe('createScheduleLifecycle', () => {
     it('cancels a pre-existing job with the same id before re-registering', async () => {
       setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ scheduleId: 'sch_dup' }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleId: 'sch_dup' })));
       const firstJob = mockScheduleJob.mock.results[0]!.value as ReturnType<typeof makeMockJob>;
 
-      await lifecycle.register(makeRecord({ scheduleId: 'sch_dup' }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleId: 'sch_dup' })));
 
       expect(firstJob.cancel).toHaveBeenCalledTimes(1);
       expect(mockScheduleJob).toHaveBeenCalledTimes(2);
@@ -306,7 +336,7 @@ describe('createScheduleLifecycle', () => {
       setupScheduleJobMock();
       const past = Date.now() - 60_000;
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ scheduleType: 'date', scheduledDate: past }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleType: 'date', scheduledDate: past })));
       expect(mockScheduleJob).not.toHaveBeenCalled();
       expect(mockStore.deactivateSchedule).toHaveBeenCalledWith('sch_test1');
     });
@@ -315,7 +345,7 @@ describe('createScheduleLifecycle', () => {
       setupScheduleJobMock();
       const future = Date.now() + 60_000;
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await lifecycle.register(makeRecord({ scheduleType: 'date', scheduledDate: future }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleType: 'date', scheduledDate: future })));
       expect(mockScheduleJob).toHaveBeenCalledTimes(1);
       expect(mockStore.setNextTriggerAt).toHaveBeenCalledWith('sch_test1', future);
     });
@@ -325,7 +355,7 @@ describe('createScheduleLifecycle', () => {
       const future = Date.now() + 60_000;
       const onFire = vi.fn().mockResolvedValue(undefined);
       const lifecycle = createScheduleLifecycle(makeDeps({ onFire }));
-      await lifecycle.register(makeRecord({ scheduleType: 'date', scheduledDate: future }));
+      await lifecycle.register(asDbRow(makeRecord({ scheduleType: 'date', scheduledDate: future })));
 
       const cb = callbacks.get('sch_test1')!;
       await cb(new Date(future));
@@ -343,7 +373,7 @@ describe('createScheduleLifecycle', () => {
       const future = Date.now() + 60_000;
       const lifecycle = createScheduleLifecycle(makeDeps());
       await expect(
-        lifecycle.register(makeRecord({ scheduleType: 'date', scheduledDate: future })),
+        lifecycle.register(asDbRow(makeRecord({ scheduleType: 'date', scheduledDate: future }))),
       ).rejects.toThrow('date parse fail');
     });
   });
@@ -355,7 +385,7 @@ describe('createScheduleLifecycle', () => {
       const { specs } = setupScheduleJobMock();
       const lifecycle = createScheduleLifecycle(makeDeps());
       await lifecycle.register(
-        makeRecord({ cronExpression: '*/5 * * * *', timezone: 'America/Sao_Paulo' }),
+        asDbRow(makeRecord({ cronExpression: '*/5 * * * *', timezone: 'America/Sao_Paulo' })),
       );
       expect(mockScheduleJob).toHaveBeenCalledTimes(1);
       expect(specs.get('sch_test1')).toEqual({ rule: '*/5 * * * *', tz: 'America/Sao_Paulo' });
@@ -366,7 +396,7 @@ describe('createScheduleLifecycle', () => {
       const { callbacks } = setupScheduleJobMock();
       const onFire = vi.fn().mockResolvedValue(undefined);
       const lifecycle = createScheduleLifecycle(makeDeps({ onFire }));
-      await lifecycle.register(makeRecord());
+      await lifecycle.register(asDbRow(makeRecord()));
 
       const cb = callbacks.get('sch_test1')!;
       const fireDate = new Date('2026-01-01T09:00:00Z');
@@ -383,7 +413,7 @@ describe('createScheduleLifecycle', () => {
         throw new Error('cron parse fail');
       });
       const lifecycle = createScheduleLifecycle(makeDeps());
-      await expect(lifecycle.register(makeRecord())).rejects.toThrow('cron parse fail');
+      await expect(lifecycle.register(asDbRow(makeRecord()))).rejects.toThrow('cron parse fail');
     });
   });
 
@@ -392,20 +422,22 @@ describe('createScheduleLifecycle', () => {
   // scheduleType value bypasses the type system (e.g., a record constructed
   // at runtime with a variant not yet declared in the union). The TYPE-LEVEL
   // tripwire is the `const _exhaustive: never = record;` line in the
-  // switch's default branch — it forces a TSC error if a new variant is
-  // added without updating the dispatch. This test exercises the RUNTIME
-  // fallback so the error message format is validated.
-  describe('register() exhaustiveness fallback (#5596)', () => {
+  // scheduleType runtime guard (per Cluster T1 / #5608): toLifecycleRecord
+  // narrows the scheduleType from the DB row's string to the literal
+  // 'cron' | 'date'. A future variant (e.g., 'interval') is rejected at
+  // the boundary so the discriminated-union dispatch in register() always
+  // sees a narrowed value — the structural exhaustiveness check (never)
+  // is now compile-time only.
+  describe('register() scheduleType runtime guard (#5608)', () => {
     it('throws a descriptive error for an unknown scheduleType', async () => {
       const lifecycle = createScheduleLifecycle(makeDeps());
-      // Cast through unknown to simulate a future variant not yet in the union
-      // (e.g., a hypothetical 'interval' scheduleType). The runtime
-      // exhaustiveness check should catch it.
       const fakeRecord = {
         ...makeRecord(),
         scheduleType: 'interval' as const,
       } as unknown as ScheduleLifecycleRecord;
-      await expect(lifecycle.register(fakeRecord)).rejects.toThrow(/Unknown scheduleType/);
+      await expect(lifecycle.register(asDbRow(fakeRecord))).rejects.toThrow(
+        /invalid scheduleType/,
+      );
     });
   });
 });
