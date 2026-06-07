@@ -77,7 +77,6 @@ describe('createAgentScheduleStore', () => {
     expect(store).toHaveProperty('getScheduleByKind');
     expect(store).toHaveProperty('getScheduleById');
     expect(store).toHaveProperty('updateAgentSchedule');
-    expect(store).toHaveProperty('updateOwnedSchedule');
     expect(store).toHaveProperty('deleteAgentSchedule');
     expect(store).toHaveProperty('deactivateSchedule');
     expect(store).toHaveProperty('setNextTriggerAt');
@@ -434,43 +433,6 @@ describe('updateAgentSchedule', () => {
     const store = createAgentScheduleStore(db as any);
 
     await store.updateAgentSchedule('ag_001', 'sch_001', { name: 'New Name' });
-    expect(db.update).toHaveBeenCalled();
-  });
-});
-
-describe('updateOwnedSchedule', () => {
-  it('returns null when schedule not found', async () => {
-    const db = createMockDb([]);
-    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
-    const store = createAgentScheduleStore(db as any);
-    const result = await store.updateOwnedSchedule('ag_001', 'sch_nonexistent', {
-      name: 'New Name',
-    });
-    expect(result).toBeNull();
-  });
-
-  it('returns null for heartbeat kind', async () => {
-    const rows = [createMockRow({ agentId: 'ag_001', kind: 'heartbeat' })];
-    const db = createMockDb(rows);
-    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
-    const store = createAgentScheduleStore(db as any);
-    const result = await store.updateOwnedSchedule('ag_001', 'sch_hb', { name: 'New' });
-    expect(result).toBeNull();
-  });
-
-  it('calls db.update with merged fields', async () => {
-    const rows = [createMockRow({ agentId: 'ag_001', kind: 'agent', name: 'Old Name' })];
-    const db = createMockDb(rows);
-    let findFirstCallCount = 0;
-    (db.query.agentSchedules as any).findFirst = vi.fn(async () => {
-      findFirstCallCount++;
-      return findFirstCallCount === 1 ? rows[0] : null;
-    });
-    db.update = vi.fn().mockReturnThis();
-    db.set = vi.fn().mockReturnThis();
-    (db as any).where = vi.fn().mockResolvedValue(undefined);
-    const store = createAgentScheduleStore(db as any);
-    await store.updateOwnedSchedule('ag_001', 'sch_001', { name: 'New Name' });
     expect(db.update).toHaveBeenCalled();
   });
 });
