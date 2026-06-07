@@ -144,7 +144,9 @@ export function createCapabilityStore(db: Database) {
           message: 'deleteRole: cannot delete role with assigned agents',
           context: { roleId },
         });
-        throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
+        const err = new Error(`Cannot delete role with assigned agents: ${roleId}`) as Error & { code: 'ROLE_HAS_ASSIGNED_AGENTS' };
+        err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
+        throw err;
       }
 
       await tx.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));
