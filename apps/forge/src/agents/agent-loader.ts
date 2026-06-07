@@ -127,9 +127,9 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
 
   const agents = new Map<string, InternalAgentRuntime>();
 
-  for (const agentConfig of agentConfigs) {
-    try {
-      const runtime = await loadAgent(db, {
+  const results = await Promise.allSettled(
+    agentConfigs.map((agentConfig) =>
+      loadAgent(db, {
         workspaceBasePath: config.workspaceBasePath,
         githubApps: config.githubApps,
         emailMailboxes: config.emailMailboxes,
@@ -138,25 +138,34 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         schedules: config.schedules,
         internalChat: config.internalChat,
         agentId: agentConfig.id,
-      });
-      agents.set(agentConfig.id, runtime);
-    } catch (error) {
+      }),
+    ),
+  );
+
+  results.forEach((result, index) => {
+    const agentId = agentConfigs[index]!.id;
+    if (result.status === 'fulfilled') {
+      agents.set(agentId, result.value);
+    } else {
       forgeDebug({
         scope: 'agent-loader',
         level: 'error',
-        agentId: agentConfig.id,
+        agentId,
         message: 'Failed to load agent',
-        context: { error: errorMsg(error) },
+        context: { error: errorMsg(result.reason) },
       });
-      // Continue loading other agents even if one fails
     }
-  }
+  });
 
   forgeDebug({
     scope: 'agent-loader',
     level: 'info',
-    message: 'Successfully loaded agents',
-    context: { agentCount: agents.size },
+    message: 'Agent loading complete',
+    context: {
+      totalAgents: agentConfigs.length,
+      loadedAgents: agents.size,
+      failedAgents: agentConfigs.length - agents.size,
+    },
   });
   return agents;
 }
