@@ -300,7 +300,8 @@ export function createAgentScheduleTools(
         forgeDebug({
           scope: 'tools:schedules',
           level: 'error',
-          message: 'list_self_crons failed: ' + errorMsg(error),
+          message: 'list_self_crons failed',
+          context: { error: errorMsg(error) },
         });
         return {
           valid: false,
@@ -371,7 +372,8 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_self_crons action=create failed: ' + errorMsg(error),
+              message: 'manage_self_crons action=create failed',
+              context: { error: errorMsg(error) },
             });
             return {
               valid: false,
@@ -423,7 +425,8 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_self_crons action=update failed: ' + errorMsg(error),
+              message: 'manage_self_crons action=update failed',
+              context: { error: errorMsg(error) },
             });
             return {
               valid: false,
@@ -464,7 +467,8 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'manage_self_crons action=update failed: ' + errorMsg(error),
+            message: 'manage_self_crons action=delete failed',
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
@@ -510,7 +514,8 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'list_crons failed: ' + errorMsg(error),
+            message: 'list_crons failed',
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
@@ -590,7 +595,8 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_crons action=create failed: ' + errorMsg(error),
+              message: 'manage_crons action=create failed',
+              context: { error: errorMsg(error) },
             });
             return {
               valid: false,
@@ -642,7 +648,8 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_crons action=update failed: ' + errorMsg(error),
+              message: 'manage_crons action=update failed',
+              context: { error: errorMsg(error) },
             });
             return {
               valid: false,
@@ -683,7 +690,8 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'manage_crons action=update failed: ' + errorMsg(error),
+            message: 'manage_crons action=delete failed',
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,

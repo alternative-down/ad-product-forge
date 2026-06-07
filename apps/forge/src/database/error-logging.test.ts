@@ -195,9 +195,11 @@ describe('Log format guard (issue #5485, Format A)', () => {
     //
     // Pre-#5483 the count was 13 (3 in webhooks + 4 in notifications + 5
     // in schedules + 1 in agent-contract-store). After #5483 (webhooks
-    // migration), the in-scope count is 9:
+    // migration), the in-scope count was 9:
     //   - notifications/store.ts: 4 sites
     //   - schedules/manager/store.ts: 5 sites
+    // After #5607 (Varek: 5 sites in schedules/manager/store.ts migrated),
+    // the in-scope count is 4 (all in notifications/store.ts).
     // (agent-contract-store.ts is out of scope per Aldric's boundary.)
     //
     // As #5468 (broader rollout) progresses, this number should shrink
@@ -269,7 +271,7 @@ describe('Log format guard (issue #5485, Format A)', () => {
 // Known count of Format-B sites in the codebase as of issue #5485.
 // See the baseline-aware test above for the derivation. Update this when
 // you intentionally migrate a site via #5468 rollout.
-const BASELINE_FORMAT_B_COUNT = 9;
+const BASELINE_FORMAT_B_COUNT = 4;
 
 // Number of store files that use forgeDebug directly (not via withDbErrorLogging).
 // As of #5485, 10 store files still use forgeDebug directly. These will migrate
