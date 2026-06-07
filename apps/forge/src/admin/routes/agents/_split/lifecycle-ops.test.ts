@@ -207,4 +207,76 @@ describe('registerLifecycleOps', () => {
       expect(response.status).toBe(500);
     });
   });
+
+  describe('forgeDebug logging in catch blocks', () => {
+    let forgeDebug: ReturnType<typeof vi.fn>;
+    beforeEach(async () => {
+      const { forgeDebug: fd } = await import('@forge-runtime/core');
+      forgeDebug = fd as unknown as ReturnType<typeof vi.fn>;
+    });
+
+    it('logs error with scope admin when /admin/agent/reload fails', async () => {
+      const errorOps = {
+        loadAgent: vi.fn().mockRejectedValue(new Error('reload-fail')),
+        registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
+      };
+      const { registerLifecycleOps } = await import('./lifecycle-ops');
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, errorOps);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
+
+      await handler(makeRequest({ agentId: 'agent-1' }));
+
+      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
+      const matchingCall = calls.find(
+        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/reload route handler failed',
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall?.level).toBe('error');
+      expect(matchingCall?.context?.path).toBe('/admin/agent/reload');
+      expect(matchingCall?.context?.error).toContain('reload-fail');
+    });
+
+    it('logs error with scope admin when /admin/agent/force-idle fails', async () => {
+      const getOps = {
+        loadAgent: vi.fn(),
+        registry: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue({
+            runner: { forceIdle: vi.fn().mockRejectedValue(new Error('idle-fail')) },
+          }),
+        },
+      };
+      const { registerLifecycleOps } = await import('./lifecycle-ops');
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, getOps);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
+
+      await handler(makeRequest({ agentId: 'agent-2' }));
+
+      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
+      const matchingCall = calls.find(
+        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/force-idle route handler failed',
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall?.context?.error).toContain('idle-fail');
+    });
+
+    it('logs error with scope admin when /admin/agent/rewakeup fails', async () => {
+      const errorOps = {
+        loadAgent: vi.fn().mockRejectedValue(new Error('rewakeup-fail')),
+        registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
+      };
+      const { registerLifecycleOps } = await import('./lifecycle-ops');
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, errorOps);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
+
+      await handler(makeRequest({ agentId: 'agent-3' }));
+
+      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
+      const matchingCall = calls.find(
+        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/rewakeup route handler failed',
+      );
+      expect(matchingCall).toBeDefined();
+      expect(matchingCall?.context?.error).toContain('rewakeup-fail');
+    });
+  });
 });

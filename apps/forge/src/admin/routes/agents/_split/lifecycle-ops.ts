@@ -28,6 +28,7 @@ interface Ops {
 
 import { agentActionSchema } from '../../schemas/agents';
 import { errorMsg } from '../../../../agents/error-formatting';
+import { forgeDebug } from '../../debug';
 
 export function registerLifecycleOps(
   httpServer: {
@@ -51,6 +52,12 @@ export function registerLifecycleOps(
         await ops.registry.add(input.db, runtime);
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/reload route handler failed',
+          context: { path: '/admin/agent/reload', error: errorMsg(error) },
+        });
         return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },
@@ -70,6 +77,12 @@ export function registerLifecycleOps(
         }
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/force-idle route handler failed',
+          context: { path: '/admin/agent/force-idle', error: errorMsg(error) },
+        });
         return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },
@@ -107,6 +120,12 @@ export function registerLifecycleOps(
 
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/rewakeup route handler failed',
+          context: { path: '/admin/agent/rewakeup', error: errorMsg(error) },
+        });
         return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },

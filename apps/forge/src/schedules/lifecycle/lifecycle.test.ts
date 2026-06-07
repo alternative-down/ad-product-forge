@@ -164,6 +164,49 @@ describe('createScheduleLifecycle', () => {
       await lifecycle.loadAll();
       expect(mockScheduleJob).not.toHaveBeenCalled();
     });
+
+    // Tripwire for #5595: loadAll must run schedules in parallel via
+    // Promise.allSettled, not as a sequential for-await loop. With N
+    // schedules, sequential would take N × delay. We assert both a
+    // structural property (all started before any completed) and a soft
+    // wall-clock budget (3 × 30ms would be ~90ms sequential; parallel is
+    // ~30ms; we allow 80ms for CI jitter).
+    it('loads schedules in parallel (regression: #5595)', async () => {
+      // Use the standard helper so scheduleJob returns a real mock job
+      // (otherwise registerCron's job.nextInvocation() would NPE).
+      setupScheduleJobMock();
+      const callOrder: string[] = [];
+      mockStore.listActiveSchedules.mockResolvedValue([
+        makeRecord({ scheduleId: 'sch_p1' }),
+        makeRecord({ scheduleId: 'sch_p2' }),
+        makeRecord({ scheduleId: 'sch_p3' }),
+      ]);
+      mockStore.setNextTriggerAt.mockImplementation(async (id: string) => {
+        callOrder.push(`start:${id}`);
+        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+        callOrder.push(`end:${id}`);
+        return undefined;
+      });
+
+      const lifecycle = createScheduleLifecycle(makeDeps());
+      const t0 = Date.now();
+      await lifecycle.loadAll();
+      const elapsed = Date.now() - t0;
+
+      // Structural: all 'start:*' must appear before any 'end:*'.
+      // In sequential code, pattern would be: start:p1, end:p1, start:p2, end:p2, ...
+      const startIdxs = callOrder
+        .map((s, i) => (s.startsWith('start:') ? i : -1))
+        .filter((i) => i >= 0);
+      const firstEndIdx = callOrder.findIndex((s) => s.startsWith('end:'));
+      const lastStartIdx = startIdxs[startIdxs.length - 1];
+      expect(firstEndIdx).toBeGreaterThan(-1);          // at least one end recorded
+      expect(startIdxs.length).toBe(3);                 // all 3 schedules started
+      expect(lastStartIdx).toBeLessThan(firstEndIdx);   // and ALL started before ANY ended
+
+      // Wall clock: parallel ~30ms; sequential ~90ms. 80ms budget for CI jitter.
+      expect(elapsed).toBeLessThan(80);
+    });
   });
 
   // ── cancel ─────────────────────────────────────────────────────────────
@@ -341,6 +384,28 @@ describe('createScheduleLifecycle', () => {
       });
       const lifecycle = createScheduleLifecycle(makeDeps());
       await expect(lifecycle.register(makeRecord())).rejects.toThrow('cron parse fail');
+    });
+  });
+
+  // Tripwire for #5596: the switch's default branch is the exhaustiveness
+  // fallback. It throws a descriptive error if a hypothetical future
+  // scheduleType value bypasses the type system (e.g., a record constructed
+  // at runtime with a variant not yet declared in the union). The TYPE-LEVEL
+  // tripwire is the `const _exhaustive: never = record;` line in the
+  // switch's default branch — it forces a TSC error if a new variant is
+  // added without updating the dispatch. This test exercises the RUNTIME
+  // fallback so the error message format is validated.
+  describe('register() exhaustiveness fallback (#5596)', () => {
+    it('throws a descriptive error for an unknown scheduleType', async () => {
+      const lifecycle = createScheduleLifecycle(makeDeps());
+      // Cast through unknown to simulate a future variant not yet in the union
+      // (e.g., a hypothetical 'interval' scheduleType). The runtime
+      // exhaustiveness check should catch it.
+      const fakeRecord = {
+        ...makeRecord(),
+        scheduleType: 'interval' as const,
+      } as unknown as ScheduleLifecycleRecord;
+      await expect(lifecycle.register(fakeRecord)).rejects.toThrow(/Unknown scheduleType/);
     });
   });
 });

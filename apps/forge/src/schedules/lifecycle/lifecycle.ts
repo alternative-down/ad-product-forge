@@ -158,20 +158,25 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   async function loadAll(): Promise<void> {
     const schedules = await store.listActiveSchedules();
-    for (const record of schedules) {
-      try {
-        cancelJob(record.scheduleId);
-        await register(record);
-      } catch (err) {
-        forgeDebug({
-          scope: 'schedules',
-          level: 'warn',
-          message: 'loadAll: skipped schedule due to registration failure',
-          context: { scheduleId: record.scheduleId, error: errorMsg(err) },
-        });
-        // Continue loading remaining schedules
-      }
-    }
+    // Parallel: Promise.allSettled preserves the "continue on failure" semantics
+    // of the previous sequential loop. With ~50 active schedules, startup goes
+    // from N×setup-time to ~setup-time total. See #5595.
+    await Promise.allSettled(
+      schedules.map(async (record) => {
+        try {
+          cancelJob(record.scheduleId);
+          await register(record);
+        } catch (err) {
+          forgeDebug({
+            scope: 'schedules',
+            level: 'warn',
+            message: 'loadAll: skipped schedule due to registration failure',
+            context: { scheduleId: record.scheduleId, error: errorMsg(err) },
+          });
+          // Continue loading remaining schedules
+        }
+      }),
+    );
   }
 
   async function stop(): Promise<void> {
@@ -204,11 +209,21 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     // updateSchedule + loadAll races.
     cancelJob(record.scheduleId);
 
-    if (record.scheduleType === 'date') {
-      await registerDate(record);
-      return;
+    // Exhaustiveness check: the discriminated union narrows `record` per case,
+    // and the `default` branch's `never` assignment makes the compiler fail
+    // if a future variant is added without updating this dispatch. See #5596.
+    switch (record.scheduleType) {
+      case 'date':
+        await registerDate(record);
+        return;
+      case 'cron':
+        await registerCron(record);
+        return;
+      default: {
+        const _exhaustive: never = record;
+        throw new Error(`Unknown scheduleType: ${JSON.stringify(_exhaustive)}`);
+      }
     }
-    await registerCron(record);
   }
 
   return { loadAll, cancel: cancelJob, stop, register };
