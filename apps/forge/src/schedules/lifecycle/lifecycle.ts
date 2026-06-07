@@ -52,6 +52,28 @@ export type CronScheduleRecord = ScheduleLifecycleBase & {
  */
 export type ScheduleLifecycleRecord = DateScheduleRecord | CronScheduleRecord;
 
+/**
+ * Structural input type for register(). Wide enough to accept the DB row
+ * (AgentSchedule + scheduleId alias) and the StoredSchedule shape from
+ * toScheduleBase. Coerces 0|1 integer booleans to real booleans via
+ * toLifecycleRecord().
+ */
+export type ScheduleLifecycleInput = {
+  scheduleId: string;
+  /** Narrowed by toLifecycleRecord at runtime; invalid values throw. */
+  scheduleType: string;
+  agentId: string;
+  name: string;
+  isActive: boolean | number;
+  kind?: 'agent' | 'heartbeat' | string;
+  description?: string | null;
+  content?: string;
+  wakeWhenRunning?: boolean | number;
+  cronExpression?: string | null;
+  timezone?: string;
+  scheduledDate?: number | null;
+};
+
 export type ScheduleLifecycleDeps = {
   db: Database;
   /** Fires when a scheduled job executes (callback set by the business-logic layer). */
@@ -68,11 +90,17 @@ export interface ScheduleLifecycle {
   stop(): Promise<void>;
   /**
    * Register (or re-register) a schedule with node-schedule.
+   * Accepts any object that has a scheduleId, narrowed scheduleType, and the
+   * fields the lifecycle needs. The DB row shape (AgentSchedule + scheduleId
+   * alias) and the StoredSchedule shape (toScheduleBase output) both satisfy
+   * this structural type. The conversion to the discriminated union is done
+   * internally so callers don't need the `as unknown as ScheduleLifecycleRecord`
+   * double cast.
    * Cancels any pre-existing job for the same id first, then schedules the new one.
    * Calls deps.onFire when a job fires.
    * Calls store.deactivateSchedule for past-date one-shot schedules.
    */
-  register(record: ScheduleLifecycleRecord): Promise<void>;
+  register(record: ScheduleLifecycleInput): Promise<void>;
 }
 
 function buildCronSpec(record: CronScheduleRecord): RecurrenceSpecDateRange {
@@ -197,30 +225,76 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
   }
 
   /**
-   * Dispatch entry point. The discriminated union narrows `record` on
+   * Convert the wide ScheduleLifecycleInput to the discriminated
+   * ScheduleLifecycleRecord used internally. Coerces 0|1 integer booleans
+   * to real booleans, and narrows the scheduleType to the literal union.
+   * This is the only place where the input is "cast" to the lifecycle
+   * record — call sites pass their shape directly and rely on this function
+   * for the runtime invariant check.
+   */
+  function toLifecycleRecord(record: ScheduleLifecycleInput): ScheduleLifecycleRecord {
+    const base = {
+      scheduleId: record.scheduleId,
+      isActive: record.isActive === 1 || record.isActive === true,
+      kind: (record.kind === 'heartbeat' ? 'heartbeat' : 'agent') as
+        | 'agent'
+        | 'heartbeat',
+      agentId: record.agentId,
+      name: record.name,
+      description: record.description ?? undefined,
+      content: record.content ?? '',
+      wakeWhenRunning:
+        record.wakeWhenRunning === 1 || record.wakeWhenRunning === true,
+    };
+    if (record.scheduleType === 'cron') {
+      return {
+        ...base,
+        scheduleType: 'cron' as const,
+        cronExpression: record.cronExpression ?? '',
+        timezone: record.timezone as string,
+      };
+    }
+    if (record.scheduleType === 'date') {
+      return {
+        ...base,
+        scheduleType: 'date',
+        scheduledDate: record.scheduledDate ?? 0,
+      };
+    }
+    // Runtime guard for DB rows whose schedule_type column is typed as
+    // text (Drizzle widens to string). The DB invariant is the literal
+    // union 'cron' | 'date'; anything else is rejected at the boundary
+    // so register()'s discriminated-union dispatch always sees a
+    // narrowed value. See #5608.
+    throw new Error(`invalid scheduleType: ${JSON.stringify(record.scheduleType)}`);
+  }
+
+  /**
+   * Dispatch entry point. The discriminated union narrows `lifecycleRecord` on
    * `scheduleType`, so each branch hands a fully-typed variant to its helper.
    * No runtime `?? ''` or `!` assertions needed — the type system enforces
    * field presence for the chosen variant.
    */
-  async function register(record: ScheduleLifecycleRecord): Promise<void> {
-    if (!record.isActive) return;
+  async function register(record: ScheduleLifecycleInput): Promise<void> {
+    const lifecycleRecord = toLifecycleRecord(record);
+    if (!lifecycleRecord.isActive) return;
 
     // Cancel any pre-existing job to prevent duplicate firings from concurrent
     // updateSchedule + loadAll races.
-    cancelJob(record.scheduleId);
+    cancelJob(lifecycleRecord.scheduleId);
 
-    // Exhaustiveness check: the discriminated union narrows `record` per case,
+    // Exhaustiveness check: the discriminated union narrows `lifecycleRecord` per case,
     // and the `default` branch's `never` assignment makes the compiler fail
     // if a future variant is added without updating this dispatch. See #5596.
-    switch (record.scheduleType) {
+    switch (lifecycleRecord.scheduleType) {
       case 'date':
-        await registerDate(record);
+        await registerDate(lifecycleRecord);
         return;
       case 'cron':
-        await registerCron(record);
+        await registerCron(lifecycleRecord);
         return;
       default: {
-        const _exhaustive: never = record;
+        const _exhaustive: never = lifecycleRecord;
         throw new Error(`Unknown scheduleType: ${JSON.stringify(_exhaustive)}`);
       }
     }
