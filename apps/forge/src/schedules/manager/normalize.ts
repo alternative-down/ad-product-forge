@@ -1,5 +1,21 @@
+/**
+ * Type guard + literal union for schedule scheduling kinds.
+ *
+ * The DB column agent_schedules.schedule_type is typed as text (Drizzle
+ * inference widens to string). All write paths in this module originate from
+ * either the zod discriminated union (createScheduleSchema) which already
+ * narrows to 'cron' | 'date', or a previous value produced by this same
+ * module. Therefore the DB invariant is 'cron' | 'date', and we encode that
+ * here as a literal union + runtime guard.
+ */
+export type ScheduleType = 'cron' | 'date';
+
+export function isScheduleType(s: string): s is ScheduleType {
+  return s === 'cron' || s === 'date';
+}
+
 export type NormalizedScheduleUpdate = {
-  scheduleType: string;
+  scheduleType: ScheduleType;
   cronExpression: string | null | undefined;
   scheduledDate: number | null;
   wakeWhenRunning: boolean;
@@ -9,7 +25,7 @@ export type NormalizedScheduleUpdate = {
 
 /** Shape of the parsed update input that contributes non-normalized fields. */
 export type ScheduleUpdateInputParts = {
-  scheduleType?: string | null;
+  scheduleType?: ScheduleType | null;
   name?: string | null;
   description?: string | null;
   timezone?: string | null;
@@ -23,7 +39,7 @@ export type ScheduleUpdateInputParts = {
 export type ExistingScheduleFields = {
   name: string;
   description: string | null;
-  scheduleType: string;
+  scheduleType: ScheduleType;
   cronExpression: string | null | undefined;
   scheduledDate: string | null | undefined;
   timezone: string | null;
@@ -41,16 +57,17 @@ export type ExistingScheduleFields = {
   nextTriggerAt$set?: number | null;
 };
 
+
 export function normalizeScheduleUpdate(
   parsed: {
-    scheduleType?: string;
+    scheduleType?: ScheduleType;
     cronExpression?: string | null;
     scheduledDate?: string | null;
     isActive?: boolean;
     wakeWhenRunning?: boolean;
   },
   existing: {
-    scheduleType: string;
+    scheduleType: ScheduleType;
     cronExpression: string | null | undefined;
     scheduledDate: string | null | undefined;
     wakeWhenRunning: boolean;
@@ -96,7 +113,7 @@ export function normalizeScheduleUpdate(
 export function buildScheduleUpdateInput(
   parsed: ScheduleUpdateInputParts,
   normalized: {
-    scheduleType: string;
+    scheduleType: ScheduleType;
     cronExpression: string | null;
     scheduledDate: number | null;
     wakeWhenRunning: boolean;
@@ -104,7 +121,7 @@ export function buildScheduleUpdateInput(
 ): {
   name: string | null;
   description: string | null;
-  scheduleType: string;
+  scheduleType: ScheduleType;
   cronExpression: string | null | undefined;
   scheduledDate: number | null;
   timezone: string | null;
@@ -132,7 +149,7 @@ export function buildScheduleUpdateInput(
 export function buildScheduleRollbackInput(existing: ExistingScheduleFields): {
   name: string;
   description: string | null;
-  scheduleType: string;
+  scheduleType: ScheduleType;
   cronExpression: string | null;
   scheduledDate: string | null;
   timezone: string | null;
