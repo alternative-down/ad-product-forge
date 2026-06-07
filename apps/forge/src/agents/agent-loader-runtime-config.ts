@@ -1,12 +1,13 @@
 import type { AgentRuntimeData } from './agent-loader-data';
 import type { AgentToolset } from './agent-loader-tools';
 import type { CreateAgentConfig } from './runtime/types';
-import type {
-  WorkspaceFilesystemConfig,
-  WorkspaceSandboxConfig,
-  WorkspaceSkillsConfig,
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+  WorkspaceSkillsConfigSchema,
 } from '../database/schema';
-import type { WorkspaceEmbedderId } from '@forge-runtime/core';
+import { resolveWorkspaceEmbedderId } from '@forge-runtime/core';
+import type { z } from 'zod';
 import type { AgentLoaderConfig } from './agent-loader-types';
 
 export function buildAgentRuntimeConfig(
@@ -52,15 +53,34 @@ export function buildAgentRuntimeConfig(
     tools: toolset.tools,
     providers: runtimeData.providers,
     workspaceBasePath: loaderConfig.workspaceBasePath,
-    workspaceFilesystem: runtimeData.agent.workspaceFilesystem as unknown as
-      | WorkspaceFilesystemConfig
-      | undefined,
-    workspaceSandbox: runtimeData.agent.workspaceSandbox as unknown as
-      | WorkspaceSandboxConfig
-      | undefined,
-    workspaceSkills: runtimeData.agent.workspaceSkills as unknown as
-      | WorkspaceSkillsConfig
-      | undefined,
-    workspaceEmbedder: runtimeData.agent.workspaceEmbedder as unknown as WorkspaceEmbedderId,
+    workspaceFilesystem: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceFilesystem,
+      WorkspaceFilesystemConfigSchema,
+    ),
+    workspaceSandbox: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceSandbox,
+      WorkspaceSandboxConfigSchema,
+    ),
+    workspaceSkills: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceSkills,
+      WorkspaceSkillsConfigSchema,
+    ),
+    workspaceEmbedder: resolveWorkspaceEmbedderId(runtimeData.agent.workspaceEmbedder),
   };
+}
+
+/**
+ * Parses and validates a JSON-encoded workspace config field from the agents table.
+ * Returns undefined for null/undefined/empty input. Throws on malformed JSON
+ * or schema validation failure (the value was stored by HireInternalAgentInput
+ * validation, so this should not happen in practice).
+ */
+function parseWorkspaceJsonConfig<T>(
+  value: string | null | undefined,
+  schema: z.ZodType<T>,
+): T | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  return schema.parse(JSON.parse(value));
 }
