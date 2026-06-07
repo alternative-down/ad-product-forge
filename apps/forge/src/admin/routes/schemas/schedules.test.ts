@@ -299,3 +299,106 @@ describe('schema.safeParse', () => {
     expect(result.success).toBe(false);
   });
 });
+
+// ─── createScheduleSchema — discriminated union (rejects invalid combinations) [#5560] ────
+//
+// Tripwire: before the fix, createScheduleSchema was a plain z.object that
+// accepted {scheduleType: 'cron', scheduledDate: '...', no cronExpression}.
+// The bug only surfaced at runtime when the manager called .parse() again.
+// The discriminated union rejects these at the route boundary.
+
+describe('createScheduleSchema — discriminated union [#5560]', () => {
+  it('rejects cron branch when scheduledDate is provided (must use date branch)', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      scheduledDate: '2025-06-01T10:00:00Z',
+      content: 'c',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      // The issue's specific bug: scheduledDate leaked into cron branch.
+      // zod's error must mention the offending path.
+      const paths = result.error.issues.map((i) => i.path.join('.'));
+      expect(paths).toContain('scheduledDate');
+    }
+  });
+
+  it('rejects date branch when cronExpression is provided (must use cron branch)', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'date',
+      cronExpression: '0 9 * * *',
+      scheduledDate: '2025-06-01T10:00:00Z',
+      content: 'c',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path.join('.'));
+      expect(paths).toContain('cronExpression');
+    }
+  });
+
+  it('rejects cron branch when both cronExpression and scheduledDate are missing', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      content: 'c',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects date branch when scheduledDate is missing', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'date',
+      content: 'c',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts cron branch with cronExpression and explicitly undefined scheduledDate', () => {
+    // Mirrors the reference schema (schedules/tools/schemas.ts) which allows
+    // explicit undefined on the wrong-branch field. This keeps the admin route
+    // consistent with the existing tools-layer pattern.
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      scheduledDate: undefined,
+      content: 'c',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts date branch with scheduledDate and explicitly undefined cronExpression', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'date',
+      scheduledDate: '2025-06-01T10:00:00Z',
+      cronExpression: undefined,
+      content: 'c',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('is a z.discriminatedUnion (locks the shape — prevents regression to plain z.object)', () => {
+    // Snapshot-style assertion: zod's discriminatedUnion exposes
+    // { discriminator, options } on its .def. A plain z.object does not
+    // have these fields. This locks the schema's structure so future
+    // 'simplifications' don't silently reintroduce #5560.
+    const def = (
+      createScheduleSchema as unknown as {
+        def: { discriminator?: string; options?: ReadonlyArray<unknown> };
+      }
+    ).def;
+    expect(def.discriminator).toBe('scheduleType');
+    expect(def.options).toHaveLength(2);
+  });
+});
