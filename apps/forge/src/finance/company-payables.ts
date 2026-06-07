@@ -1,11 +1,11 @@
 import { and, eq, gte } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
+import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
 
 import type { Database } from '../database/client';
 import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
@@ -15,31 +15,29 @@ export type CompanyPayablesStore = ReturnType<typeof createCompanyPayables>;
 
 export function createCompanyPayables(db: Database) {
   async function listRecurringPayables() {
-    try {
-      const rows = await db.query.companyRecurringPayables.findMany({
-        orderBy: (fields, { asc }) => [asc(fields.name)],
-      });
+    return await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'listRecurringPayables',
+      verb: 'read',
+      context: {},
+      fn: async () => {
+        const rows = await db.query.companyRecurringPayables.findMany({
+          orderBy: (fields, { asc }) => [asc(fields.name)],
+        });
 
-      return rows.map((row: PayableRow) => {
-        const { id, recurrencePeriod, isActive, ...rest } = row;
+        return rows.map((row: PayableRow) => {
+          const { id, recurrencePeriod, isActive, ...rest } = row;
 
-        return {
-          ...rest,
-          payableId: id,
-          description: rest.description ?? undefined,
-          recurrencePeriod: recurrencePeriod as RecurrencePeriod,
-          isActive: isActive === 1,
-        };
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-payables',
-        level: 'error',
-        message: 'Failed to list recurring payables',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+          return {
+            ...rest,
+            payableId: id,
+            description: rest.description ?? undefined,
+            recurrencePeriod: recurrencePeriod as RecurrencePeriod,
+            isActive: isActive === 1,
+          };
+        });
+      },
+    });
   }
 
   async function createRecurringPayable(input: {
@@ -52,149 +50,168 @@ export function createCompanyPayables(db: Database) {
     const now = Date.now();
     const payableId = createId();
 
-    try {
-      // Wrap payable insert + planned occurrence in transaction
-      const entryId = await db.transaction(async (tx) => {
-        await tx.insert(companyRecurringPayables).values({
-          id: payableId,
-          name: input.name,
-          description: input.description,
-          amountUsd: input.amountUsd,
-          recurrencePeriod: input.recurrencePeriod,
-          nextDueAt: input.dueAt,
-          isActive: 1,
-          createdAt: now,
-          updatedAt: now,
+    return await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'createRecurringPayable',
+      verb: 'write',
+      context: { payableId, name: input.name },
+      fn: async () => {
+        // Wrap payable insert + planned occurrence in transaction
+        const entryId = await db.transaction(async (tx) => {
+          await tx.insert(companyRecurringPayables).values({
+            id: payableId,
+            name: input.name,
+            description: input.description,
+            amountUsd: input.amountUsd,
+            recurrencePeriod: input.recurrencePeriod,
+            nextDueAt: input.dueAt,
+            isActive: 1,
+            createdAt: now,
+            updatedAt: now,
+          });
+
+          const eid = createId();
+          await tx.insert(companyCashLedger).values({
+            id: eid,
+            type: 'recurring-payable',
+            direction: 'out',
+            amountUsd: input.amountUsd,
+            description: input.description ?? input.name,
+            referenceType: 'recurring-payable',
+            referenceId: payableId,
+            status: 'planned',
+            dueAt: input.dueAt,
+            effectiveAt: null,
+            createdAt: now,
+            updatedAt: now,
+          });
+          return eid;
         });
 
-        const eid = createId();
-        await tx.insert(companyCashLedger).values({
-          id: eid,
-          type: 'recurring-payable',
-          direction: 'out',
-          amountUsd: input.amountUsd,
-          description: input.description ?? input.name,
-          referenceType: 'recurring-payable',
-          referenceId: payableId,
-          status: 'planned',
-          dueAt: input.dueAt,
-          effectiveAt: null,
-          createdAt: now,
-          updatedAt: now,
-        });
-        return eid;
-      });
-
-      return {
-        payableId,
-        entryId,
-      };
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-payables',
-        level: 'error',
-        message: 'Failed to create recurring payable',
-        context: {
+        return {
           payableId,
-          name: input.name,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
+          entryId,
+        };
+      },
+    });
   }
 
   async function setRecurringPayableActive(payableId: string, isActive: boolean) {
-    try {
-      const payable = await db.query.companyRecurringPayables.findFirst({
-        where: eq(companyRecurringPayables.id, payableId),
-      });
+    const now = Date.now();
 
-      if (payable === null || payable === undefined) {
-        forgeDebug({
-          scope: 'company-payables',
-          level: 'warn',
-          message: 'cancelRecurringPayable: payable not found',
-          context: { payableId },
-        });
-        throw new Error(`Recurring payable not found: ${payableId}`);
-      }
+    const payable = await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'setRecurringPayableActive',
+      verb: 'read',
+      context: { payableId },
+      fn: () =>
+        db.query.companyRecurringPayables.findFirst({
+          where: eq(companyRecurringPayables.id, payableId),
+        }),
+    });
 
-      await db
-        .update(companyRecurringPayables)
-        .set({
-          isActive: isActive ? 1 : 0,
-          updatedAt: Date.now(),
-        })
-        .where(eq(companyRecurringPayables.id, payableId));
-
-      return {
-        payableId,
-        isActive,
-      };
-    } catch (err) {
+    // #5546: findFirst returns T | undefined, not T | null | undefined. The
+    // previous `=== null || === undefined` check was redundant.
+    if (!payable) {
       forgeDebug({
         scope: 'company-payables',
-        level: 'error',
-        message: 'Failed to set recurring payable active',
-        context: { payableId, isActive, error: errorMsg(err) },
+        level: 'warn',
+        // #5547: was copy-pasted from cancelRecurringPayable. The current
+        // function is setRecurringPayableActive, so on-call grep matches.
+        message: 'setRecurringPayableActive: payable not found',
+        context: { payableId },
       });
-      throw err;
+      throw new Error(`Recurring payable not found: ${payableId}`);
     }
+
+    // #5551: use a single `const now` to keep createdAt/updatedAt coherent
+    // and to match the pattern used by createRecurringPayable.
+    await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'setRecurringPayableActive',
+      verb: 'write',
+      context: { payableId, isActive },
+      fn: () =>
+        db
+          .update(companyRecurringPayables)
+          .set({
+            isActive: isActive ? 1 : 0,
+            updatedAt: now,
+          })
+          .where(eq(companyRecurringPayables.id, payableId)),
+    });
+
+    return {
+      payableId,
+      isActive,
+    };
   }
 
   async function syncRecurringPayableOccurrence(input: { entryId: string }) {
-    try {
-      const entry = await db.query.companyCashLedger.findFirst({
-        where: eq(companyCashLedger.id, input.entryId),
-      });
+    const entry = await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'syncRecurringPayableOccurrence',
+      verb: 'read',
+      context: { entryId: input.entryId },
+      fn: () =>
+        db.query.companyCashLedger.findFirst({
+          where: eq(companyCashLedger.id, input.entryId),
+        }),
+    });
 
-      if (
-        entry === null ||
-        entry === undefined ||
-        entry.referenceType !== 'recurring-payable' ||
-        entry.referenceId === null ||
-        entry.referenceId === undefined
-      ) {
-        return null;
-      }
+    // #5546: drop the redundant `=== null || === undefined` checks.
+    // Drizzle's findFirst returns T | undefined, and referenceId is a
+    // non-null text column, so `!entry.referenceId` is sufficient.
+    if (!entry || entry.referenceType !== 'recurring-payable' || entry.referenceId === null) {
+      return null;
+    }
+    // Extract narrowed local so TS preserves the narrowing into the inner
+    // withDbErrorLogging closure (closure bodies don't see outer narrowing).
+    const referenceId: string = entry.referenceId;
 
-      const payable = await db.query.companyRecurringPayables.findFirst({
-        where: eq(companyRecurringPayables.id, entry.referenceId),
-      });
+    const payable = await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'syncRecurringPayableOccurrence',
+      verb: 'read',
+      context: { entryId: input.entryId, referenceId: entry.referenceId },
+      fn: () =>
+        db.query.companyRecurringPayables.findFirst({
+          where: eq(companyRecurringPayables.id, referenceId),
+        }),
+    });
 
-      if (payable === null || payable === undefined || payable.isActive !== 1) {
-        return null;
-      }
+    if (!payable || payable.isActive !== 1) {
+      return null;
+    }
 
-      const currentDueAt = entry.dueAt ?? payable.nextDueAt;
-      const nextDueAt = advanceDueAt(currentDueAt, payable.recurrencePeriod as RecurrencePeriod);
+    const currentDueAt = entry.dueAt ?? payable.nextDueAt;
+    const nextDueAt = advanceDueAt(currentDueAt, payable.recurrencePeriod as RecurrencePeriod);
 
-      // Wrap planned occurrence + existence re-check + payable update in
-      // a single transaction. Defense in depth:
-      //   1. Re-check existence INSIDE the tx (closes the TOCTOU window for
-      //      single-writer scenarios)
-      //   2. onConflictDoNothing on the unique (referenceType, referenceId,
-      //      dueAt) index (closes the race for concurrent writers)
-      // See migration 0030 for the index definition.
-      return await db.transaction(async (tx) => {
-        const existingNextEntry = await tx.query.companyCashLedger.findFirst({
-          where: and(
-            eq(companyCashLedger.referenceType, 'recurring-payable'),
-            eq(companyCashLedger.referenceId, payable.id),
-            eq(companyCashLedger.status, 'planned'),
-            gte(companyCashLedger.dueAt, nextDueAt),
-          ),
-        });
+    return await withDbErrorLogging({
+      scope: 'company-payables',
+      op: 'syncRecurringPayableOccurrence',
+      verb: 'write',
+      context: { entryId: input.entryId, nextDueAt },
+      fn: () => {
+        // #5551: use a single `const now` for the whole transaction so the
+        // new ledger entry and the payable update share one timestamp.
+        const now = Date.now();
+        return db.transaction(async (tx) => {
+          const existingNextEntry = await tx.query.companyCashLedger.findFirst({
+            where: and(
+              eq(companyCashLedger.referenceType, 'recurring-payable'),
+              eq(companyCashLedger.referenceId, payable.id),
+              eq(companyCashLedger.status, 'planned'),
+              gte(companyCashLedger.dueAt, nextDueAt),
+            ),
+          });
 
-        if (existingNextEntry != null) {
-          return null;
-        }
+          if (existingNextEntry != null) {
+            return null;
+          }
 
-        const eid = createId();
-        await tx
-          .insert(companyCashLedger)
-          .values({
+          const eid = createId();
+          await tx.insert(companyCashLedger).values({
             id: eid,
             type: 'recurring-payable',
             direction: 'out',
@@ -205,42 +222,25 @@ export function createCompanyPayables(db: Database) {
             status: 'planned',
             dueAt: nextDueAt,
             effectiveAt: null,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          })
-          .onConflictDoNothing({
-            target: [
-              companyCashLedger.referenceType,
-              companyCashLedger.referenceId,
-              companyCashLedger.dueAt,
-            ],
+            createdAt: now,
+            updatedAt: now,
           });
 
-        await tx
-          .update(companyRecurringPayables)
-          .set({
-            nextDueAt,
-            updatedAt: Date.now(),
-          })
-          .where(eq(companyRecurringPayables.id, payable.id));
+          await tx
+            .update(companyRecurringPayables)
+            .set({
+              nextDueAt,
+              updatedAt: now,
+            })
+            .where(eq(companyRecurringPayables.id, payable.id));
 
-        return {
-          payableId: payable.id,
-          nextDueAt,
-        };
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-payables',
-        level: 'error',
-        message: 'Failed to sync recurring payable occurrence',
-        context: {
-          entryId: input.entryId,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
+          return {
+            payableId: payable.id,
+            nextDueAt,
+          };
+        });
+      },
+    });
   }
 
   return {
@@ -251,23 +251,30 @@ export function createCompanyPayables(db: Database) {
   };
 }
 
-function advanceDueAt(currentDueAt: number, recurrencePeriod: RecurrencePeriod) {
+/**
+ * Advances a dueAt timestamp by one recurrence period.
+ *
+ * #5550: rewritten as an exhaustive switch with `never` to prevent the
+ * dead `return currentDueAt;` fallback from masking future enum additions.
+ * The Date is mutated locally and returned as a timestamp, preserving the
+ * previous behavior for the 3 current RecurrencePeriod values.
+ */
+function advanceDueAt(currentDueAt: number, recurrencePeriod: RecurrencePeriod): number {
   const date = new Date(currentDueAt);
-
-  if (recurrencePeriod === 'weekly') {
-    date.setDate(date.getDate() + 7);
-    return date.getTime();
+  switch (recurrencePeriod) {
+    case 'weekly':
+      date.setDate(date.getDate() + 7);
+      break;
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
+    case 'yearly':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    default: {
+      const _exhaustive: never = recurrencePeriod;
+      throw new Error(`Unknown recurrencePeriod: ${String(_exhaustive)}`);
+    }
   }
-
-  if (recurrencePeriod === 'monthly') {
-    date.setMonth(date.getMonth() + 1);
-    return date.getTime();
-  }
-
-  if (recurrencePeriod === 'yearly') {
-    date.setFullYear(date.getFullYear() + 1);
-    return date.getTime();
-  }
-
-  return currentDueAt;
+  return date.getTime();
 }
