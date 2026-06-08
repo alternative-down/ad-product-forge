@@ -91,10 +91,20 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
       // module) which is safe, but the libsql-specific `migrate` function
       // must not be used.
       const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-      const hasLibsqlMigrateImport = /from\s+['"]drizzle-orm\/libsql\/migrator['"]/.test(
-        source,
+      expect(/from\s+['"]drizzle-orm\/libsql\/migrator['"]/.test(source)).toBe(false);
+    });
+
+    test('migrate.ts folderMillis skip check uses createdAt comparison (L#19 tripwire)', () => {
+      // L#19 tripwire: the source uses `Number(lastDbMigration.createdAt) >= migration.folderMillis`
+      // (DB-side createdAt vs file-side folderMillis). Regressing to a direct `folderMillis vs
+      // folderMillis` comparison would silently re-apply already-applied migrations when the
+      // journal createdAt drifts from folderMillis (e.g., clock skew, manual edits). If you
+      // need to change the skip check, also update the doc-comment in `runMigrations` and
+      // Tripwire PROVEN via sanity mutation 1/5 -> 5/5 at 2026-06-08T08:51Z. See PR #5621 body for L#19 lesson reference (by name, no workspace-relative file path).
+      const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+      expect(source).toMatch(
+        /Number\(lastDbMigration\.createdAt\)\s*>=\s*migration\.folderMillis/,
       );
-      expect(hasLibsqlMigrateImport).toBe(false);
     });
   });
 
