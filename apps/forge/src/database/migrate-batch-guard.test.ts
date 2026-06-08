@@ -100,7 +100,7 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
       // folderMillis` comparison would silently re-apply already-applied migrations when the
       // journal createdAt drifts from folderMillis (e.g., clock skew, manual edits). If you
       // need to change the skip check, also update the doc-comment in `runMigrations` and
-      // cross-ref memory/patterns/l19-doc-comment-runtime-invariant-2026-06-07.md.
+      // Tripwire PROVEN via sanity mutation 1/5 -> 5/5 at 2026-06-08T08:51Z. See PR #5621 body for L#19 lesson reference (by name, no workspace-relative file path).
       const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
       expect(source).toMatch(
         /Number\(lastDbMigration\.createdAt\)\s*>=\s*migration\.folderMillis/,
