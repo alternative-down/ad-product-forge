@@ -76,24 +76,19 @@ describe('runMigrations', () => {
 
     const infoCalls = debugCalls.filter((c) => c.level === 'info');
     const messages = infoCalls.map((c) => c.message);
-    expect(messages).toContain('Running pending migrations for application database');
+    expect(messages).toContain('Starting migration run');
     expect(messages).toContain('Migrations completed successfully');
   });
 
-  test('logs database path in context', async () => {
+  test('logs starting context with database path, cwd, and migrations folder (#5641)', async () => {
     await runMigrations(mockDb);
 
-    const pathCall = debugCalls.find((c) => c.message === 'Application database path');
-    expect(pathCall?.context).toMatchObject({
+    const startCall = debugCalls.find((c) => c.message === 'Starting migration run');
+    expect(startCall?.context).toMatchObject({
       databasePath: '/data/app.db',
+      cwd: expect.any(String),
+      migrationsFolder: expect.any(String),
     });
-  });
-
-  test('logs cwd in context', async () => {
-    await runMigrations(mockDb);
-
-    const cwdCall = debugCalls.find((c) => c.message === 'Working directory');
-    expect(cwdCall?.context).toEqual({ cwd: expect.any(String) });
   });
 
   test('logs applied rows before migrate (calls db.all)', async () => {
