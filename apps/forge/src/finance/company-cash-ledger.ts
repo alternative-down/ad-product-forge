@@ -11,7 +11,6 @@ type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
 
 export function createCompanyCashLedger(db: Database) {
   interface BalanceTotalRow { total: number }
-
   async function getCurrentBalanceUsd(): Promise<number> {
     try {
       const rows = await db
