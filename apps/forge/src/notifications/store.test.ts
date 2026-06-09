@@ -1,4 +1,8 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const STORE_SOURCE_PATH = join(__dirname, 'store.ts');
 import { createAgentNotificationStore } from './store';
 
 interface NotificationRow {
@@ -177,6 +181,51 @@ describe('createAgentNotificationStore', () => {
       const list = await mock.db.query.agentNotifications.findMany();
       expect(list).toHaveLength(1);
       expect(list[0].content).toBe('Test');
+    });
+  });
+
+  // ── L#19 tripwire: content length cap (#5628) ─────────────────────────────────
+  describe('L#19 tripwire: createNotification content length cap (#5628)', () => {
+    test('accepts content at exactly MAX_NOTIFICATION_CONTENT_LENGTH (16_384 chars)', async () => {
+      const content = 'a'.repeat(16_384);
+      const result = await store.createNotification({ agentId: 'ag_001', content });
+      expect(result).not.toBeNull();
+      expect((result as any).content).toHaveLength(16_384);
+    });
+
+    test('rejects content one byte over MAX (16_385 chars) and returns null', async () => {
+      const content = 'a'.repeat(16_385);
+      const insertSpy = vi.mocked(mock.db.insert);
+      const result = await store.createNotification({ agentId: 'ag_001', content });
+      expect(result).toBeNull();
+      expect(insertSpy).not.toHaveBeenCalled();
+    });
+
+    test('rejects pathological 10MB content and does not bloat DB', async () => {
+      const content = 'x'.repeat(10 * 1024 * 1024);
+      const insertSpy = vi.mocked(mock.db.insert);
+      const result = await store.createNotification({ agentId: 'ag_001', content });
+      expect(result).toBeNull();
+      expect(insertSpy).not.toHaveBeenCalled();
+      const list = await mock.db.query.agentNotifications.findMany();
+      expect(list).toHaveLength(0);
+    });
+
+    test('accepts empty content (length 0 is below cap)', async () => {
+      const result = await store.createNotification({ agentId: 'ag_001', content: '' });
+      expect(result).not.toBeNull();
+      expect((result as any).content).toBe('');
+    });
+
+    test('source declares MAX_NOTIFICATION_CONTENT_LENGTH constant at 16_384', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      expect(source).toMatch(/const MAX_NOTIFICATION_CONTENT_LENGTH = 16_384/);
+    });
+
+    test('source rejects content over cap via length check before insert', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      expect(source).toMatch(/input.content.length > MAX_NOTIFICATION_CONTENT_LENGTH/);
+      expect(source).toMatch(/return null/);
     });
   });
 

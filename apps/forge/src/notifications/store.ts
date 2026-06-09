@@ -6,6 +6,12 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { Database } from '../database/client';
 import { agentNotifications } from '../database/schema';
 
+/** Maximum allowed length of a notification content string (16KB).
+ * Exceeding this limit returns null and logs an error via forgeDebug.
+ * Prevents DB bloat and protects listNotifications performance.
+ */
+const MAX_NOTIFICATION_CONTENT_LENGTH = 16_384;
+
 export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;
 
 export function createAgentNotificationStore(db: Database) {
@@ -21,6 +27,16 @@ export function createAgentNotificationStore(db: Database) {
     updatedAt: number;
     readAt: null;
   } | null> {
+    if (input.content.length > MAX_NOTIFICATION_CONTENT_LENGTH) {
+      forgeDebug({
+        scope: 'notifications-store',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'createNotification content exceeds max length',
+        context: { length: input.content.length, max: MAX_NOTIFICATION_CONTENT_LENGTH },
+      });
+      return null;
+    }
     const now = input.createdAt ?? Date.now();
     const notification = {
       id: createId(),
