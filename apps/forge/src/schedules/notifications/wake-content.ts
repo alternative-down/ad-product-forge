@@ -167,51 +167,6 @@ export function createHeartbeatWakeInstruction(content?: string) {
   return lines.join('\n');
 }
 
-function _createAgentScheduleInstruction(schedule: {
-  name: string;
-  description?: string | null;
-  scheduleKind: 'agent' | 'heartbeat';
-  scheduleType: 'cron' | 'date';
-  cronExpression?: string | null;
-  scheduledDate?: number | null;
-  timezone: string;
-  nextTriggerAt?: number | null;
-  content: string;
-  wakeWhenRunning: boolean;
-}) {
-  const kind = schedule.scheduleKind;
-  const type = schedule.scheduleType;
-
-  const parts = [
-    `A scheduled task is waiting for you.`,
-    '',
-    `Task name: ${schedule.name}`,
-    `Task kind: ${kind}`,
-    `Task type: ${type}`,
-    `Timezone: ${schedule.timezone}`,
-    `Wake while running: ${schedule.wakeWhenRunning ? 'enabled' : 'only when idle'}`,
-  ];
-
-  if (schedule.description != null && schedule.description.trim() !== '') {
-    parts.push(`Description: ${schedule.description.trim()}`);
-  }
-
-  if (type === 'cron' && schedule.cronExpression !== undefined) {
-    parts.push(`Cron: ${schedule.cronExpression}`);
-  }
-
-  if (type === 'date' && schedule.scheduledDate !== undefined) {
-    parts.push(`Scheduled date: ${new Date(schedule.scheduledDate as number).toISOString()}`);
-  }
-
-  if (schedule.nextTriggerAt !== undefined) {
-    parts.push(`Next trigger at: ${new Date(schedule.nextTriggerAt as number).toISOString()}`);
-  }
-
-  parts.push('', 'Instructions:', schedule.content.trim());
-
-  return parts.join('\n');
-}
 export function toToolOutput(scheduleRecord: {
   scheduleId: string;
   name: string;

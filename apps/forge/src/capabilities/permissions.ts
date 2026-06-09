@@ -21,14 +21,12 @@ export function resolveLoadedToolIds(toolIds: string[]) {
     resolvedToolIds.add('list_role_capabilities');
   }
 
-  if (!hasCrossAgentCronTools) {
-    resolvedToolIds.add('manage_self_crons');
-    resolvedToolIds.add('list_self_crons');
-  }
-
   if (hasCrossAgentCronTools) {
     resolvedToolIds.delete('manage_self_crons');
     resolvedToolIds.delete('list_self_crons');
+  } else {
+    resolvedToolIds.add('manage_self_crons');
+    resolvedToolIds.add('list_self_crons');
   }
 
   return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));

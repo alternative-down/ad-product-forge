@@ -6,7 +6,6 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/sqlite-core';
-import { relations as _relations } from 'drizzle-orm';
 import { InferModel } from 'drizzle-orm';
 import { agents } from './schema-agents.js';
 
