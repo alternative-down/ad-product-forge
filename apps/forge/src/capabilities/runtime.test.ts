@@ -522,3 +522,28 @@ describe('capabilities/runtime', () => {
     });
   });
 });
+
+// ── L#19 tripwire: type invariants for reloadAgentsForRole (#5629) ──────────
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const RUNTIME_SOURCE_PATH = join(__dirname, 'runtime.ts');
+
+describe('L#19 tripwire: reloadAgentsForRole type invariants (#5629)', () => {
+  it('source uses `columns: { id: true }` projection (Drizzle types make agent.id fully known)', () => {
+    const source = readFileSync(RUNTIME_SOURCE_PATH, 'utf8');
+    expect(source).toMatch(/columns:\s*\{\s*id:\s*true\s*,?\s*\}/);
+  });
+
+  it('source does NOT use `(agent: any)` in the reloadAgentsForRole map callback (L#18 N=11)', () => {
+    const source = readFileSync(RUNTIME_SOURCE_PATH, 'utf8');
+    // The fix removes the type lie. Pattern matches `: any` inside the map callback only.
+    expect(source).not.toMatch(/assignedAgents\.map\(\(agent:\s*any\)/);
+  });
+
+  it('source calls reloadAgentIfLoaded with agent.id (forces Drizzle type to flow through)', () => {
+    const source = readFileSync(RUNTIME_SOURCE_PATH, 'utf8');
+    expect(source).toMatch(/assignedAgents\.map\(\(agent\)\s*=>\s*reloadAgentIfLoaded\(db,\s*config,\s*agent\.id\)\)/);
+  });
+});

@@ -56,7 +56,7 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
     context: { roleId, agentCount: assignedAgents.length },
   });
 
-  await Promise.all(assignedAgents.map((agent: any) => reloadAgentIfLoaded(db, config, agent.id)));
+  await Promise.all(assignedAgents.map((agent) => reloadAgentIfLoaded(db, config, agent.id)));
 }
 
 export async function changeAgentRole(input: {
