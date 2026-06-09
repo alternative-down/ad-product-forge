@@ -22,25 +22,8 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
     forgeDebug({
       scope: 'migrations',
       level: 'info',
-      message: 'Running pending migrations for application database',
-    });
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Application database path',
-      context: { databasePath },
-    });
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Working directory',
-      context: { cwd: process.cwd() },
-    });
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Migrations folder',
-      context: { migrationsFolder },
+      message: 'Starting migration run',
+      context: { databasePath, cwd: process.cwd(), migrationsFolder },
     });
 
     // Ensure the __drizzle_migrations bookkeeping table exists. We use the
@@ -95,16 +78,11 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
     // after a partial failure). This trades a small per-statement round
     // trip for full coverage of every migration the team writes.
     let appliedCount = 0;
+    const appliedHashes: string[] = [];
     for (const migration of allMigrations) {
       if (lastDbMigration && Number(lastDbMigration.createdAt) >= migration.folderMillis) {
         continue;
       }
-      forgeDebug({
-        scope: 'migrations',
-        level: 'info',
-        message: 'Applying migration',
-        context: { tag: migration.hash.slice(0, 8), folderMillis: migration.folderMillis },
-      });
       for (const stmt of migration.sql) {
         const trimmed = stmt.trim();
         if (trimmed.length === 0) continue;
@@ -113,8 +91,20 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
       await db.run(
         sql`INSERT INTO __drizzle_migrations ("hash", "created_at") VALUES(${migration.hash}, ${migration.folderMillis})`
       );
+      appliedHashes.push(migration.hash.slice(0, 8));
       appliedCount += 1;
     }
+
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Migrations completed',
+      context: {
+        appliedCount,
+        appliedHashes,
+        totalMigrations: allMigrations.length,
+      },
+    });
 
     const dbMigrationsAfter = (await db.all<{
       id: number;

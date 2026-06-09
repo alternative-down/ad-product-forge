@@ -185,3 +185,38 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
     });
   });
 });
+
+// ── L#19 tripwire: forgeDebug consolidation (#5641) ──────────────────────────
+
+describe('L#19 tripwire: forgeDebug consolidation (#5641)', () => {
+  test('source has exactly one combined "Starting migration run" call (replaces 4 startup calls)', () => {
+    const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+    const matches = source.match(/forgeDebug\(\{[\s\S]*?message:\s*['"]Starting migration run['"]/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  test('source does NOT use the old "Running pending migrations" or "Application database path" or "Working directory" or "Migrations folder" messages', () => {
+    const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+    expect(source).not.toMatch(/message:\s*['"]Running pending migrations for application database['"]/);
+    expect(source).not.toMatch(/message:\s*['"]Application database path['"]/);
+    expect(source).not.toMatch(/message:\s*['"]Working directory['"]/);
+    expect(source).not.toMatch(/message:\s*['"]Migrations folder['"]/);
+  });
+
+  test('source has no per-migration "Applying migration" emit inside the loop (replaced by summary)', () => {
+    const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+    expect(source).not.toMatch(/message:\s*['"]Applying migration['"]/);
+  });
+
+  test('source emits one "Migrations completed" summary with appliedHashes context', () => {
+    const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+    expect(source).toMatch(/message:\s*['"]Migrations completed['"]/);
+    expect(source).toMatch(/appliedHashes/);
+  });
+
+  test('source uses accumulated hashes pattern: appliedHashes: string[] declared before loop', () => {
+    const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
+    expect(source).toMatch(/const\s+appliedHashes:\s*string\[\]\s*=\s*\[\]/);
+    expect(source).toMatch(/appliedHashes\.push\(migration\.hash\.slice\(0,\s*8\)\)/);
+  });
+});
