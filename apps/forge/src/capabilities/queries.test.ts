@@ -19,6 +19,8 @@ vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
 
+import { makeDbMock } from './test-utils/db-mock';
+
 // ─── Per-test mock factories ───────────────────────────────────────────────
 
 function createRolesMock() {
@@ -47,14 +49,14 @@ function createDb(overrides: {
   roleToolPermissions?: ReturnType<typeof createPermissionsMock>;
   roleWorkflowPermissions?: ReturnType<typeof createPermissionsMock>;
 } = {}) {
-  return {
+  return makeDbMock({
     query: {
       agentRoles: overrides.agentRoles ?? createRolesMock(),
       agents: overrides.agents ?? createAgentsMock(),
       roleToolPermissions: overrides.roleToolPermissions ?? createPermissionsMock(),
       roleWorkflowPermissions: overrides.roleWorkflowPermissions ?? createPermissionsMock(),
     },
-  };
+  } as any);
 }
 
 // ─── queryRoles ───────────────────────────────────────────────────────────
@@ -66,7 +68,7 @@ describe('queryRoles', () => {
     agentRoles.findMany.mockResolvedValue(roles);
     const db = createDb({ agentRoles });
 
-    const result = await queryRoles(db as any);
+    const result = await queryRoles(db);
 
     expect(agentRoles.findMany).toHaveBeenCalledWith({ orderBy: expect.anything() });
     expect(result).toEqual(roles);
@@ -77,7 +79,7 @@ describe('queryRoles', () => {
     agentRoles.findMany.mockRejectedValue(new Error('DB error'));
     const db = createDb({ agentRoles });
 
-    const result = await queryRoles(db as any);
+    const result = await queryRoles(db);
 
     expect(result).toEqual([]);
   });
@@ -92,7 +94,7 @@ describe('queryRole', () => {
     agentRoles.findFirst.mockResolvedValue(role);
     const db = createDb({ agentRoles });
 
-    const result = await queryRole(db as any, 'role-1');
+    const result = await queryRole(db, 'role-1');
 
     expect(agentRoles.findFirst).toHaveBeenCalled();
     expect(result).toEqual(role);
@@ -103,7 +105,7 @@ describe('queryRole', () => {
     agentRoles.findFirst.mockResolvedValue(null);
     const db = createDb({ agentRoles });
 
-    const result = await queryRole(db as any, 'nonexistent');
+    const result = await queryRole(db, 'nonexistent');
 
     expect(result).toBeNull();
   });
@@ -113,7 +115,7 @@ describe('queryRole', () => {
     agentRoles.findFirst.mockRejectedValue(new Error('DB error'));
     const db = createDb({ agentRoles });
 
-    const result = await queryRole(db as any, 'role-1');
+    const result = await queryRole(db, 'role-1');
 
     expect(result).toBeNull();
   });
@@ -128,7 +130,7 @@ describe('queryToolPermissions', () => {
     roleToolPermissions.findMany.mockResolvedValue(permissions);
     const db = createDb({ roleToolPermissions });
 
-    const result = await queryToolPermissions(db as any, 'role-1');
+    const result = await queryToolPermissions(db, 'role-1');
 
     expect(roleToolPermissions.findMany).toHaveBeenCalledWith({
       where: expect.anything(),
@@ -142,7 +144,7 @@ describe('queryToolPermissions', () => {
     roleToolPermissions.findMany.mockRejectedValue(new Error('DB error'));
     const db = createDb({ roleToolPermissions });
 
-    const result = await queryToolPermissions(db as any, 'role-1');
+    const result = await queryToolPermissions(db, 'role-1');
 
     expect(result).toEqual([]);
   });
@@ -157,7 +159,7 @@ describe('queryWorkflowPermissions', () => {
     roleWorkflowPermissions.findMany.mockResolvedValue(permissions);
     const db = createDb({ roleWorkflowPermissions });
 
-    const result = await queryWorkflowPermissions(db as any, 'role-1');
+    const result = await queryWorkflowPermissions(db, 'role-1');
 
     expect(roleWorkflowPermissions.findMany).toHaveBeenCalledWith({
       where: expect.anything(),
@@ -171,7 +173,7 @@ describe('queryWorkflowPermissions', () => {
     roleWorkflowPermissions.findMany.mockRejectedValue(new Error('DB error'));
     const db = createDb({ roleWorkflowPermissions });
 
-    const result = await queryWorkflowPermissions(db as any, 'role-1');
+    const result = await queryWorkflowPermissions(db, 'role-1');
 
     expect(result).toEqual([]);
   });
@@ -185,7 +187,7 @@ describe('queryAgentsByRoleId', () => {
     agents.findFirst.mockResolvedValue({ id: 'agent-1' });
     const db = createDb({ agents });
 
-    const result = await queryAgentsByRoleId(db as any, 'role-1');
+    const result = await queryAgentsByRoleId(db, 'role-1');
 
     expect(result).toEqual({ id: 'agent-1' });
   });
@@ -195,7 +197,7 @@ describe('queryAgentsByRoleId', () => {
     agents.findFirst.mockResolvedValue(null);
     const db = createDb({ agents });
 
-    const result = await queryAgentsByRoleId(db as any, 'role-1');
+    const result = await queryAgentsByRoleId(db, 'role-1');
 
     expect(result).toBeNull();
   });
@@ -205,7 +207,7 @@ describe('queryAgentsByRoleId', () => {
     agents.findFirst.mockRejectedValue(new Error('DB error'));
     const db = createDb({ agents });
 
-    await expect(queryAgentsByRoleId(db as any, 'role-1')).rejects.toThrow('DB error');
+    await expect(queryAgentsByRoleId(db, 'role-1')).rejects.toThrow('DB error');
   });
 });
 
@@ -218,7 +220,7 @@ describe('queryAgent', () => {
     agents.findFirst.mockResolvedValue(agent);
     const db = createDb({ agents });
 
-    const result = await queryAgent(db as any, 'agent-1');
+    const result = await queryAgent(db, 'agent-1');
 
     expect(result).toEqual(agent);
   });
@@ -228,7 +230,7 @@ describe('queryAgent', () => {
     agents.findFirst.mockResolvedValue(null);
     const db = createDb({ agents });
 
-    const result = await queryAgent(db as any, 'nonexistent');
+    const result = await queryAgent(db, 'nonexistent');
 
     expect(result).toBeNull();
   });
@@ -246,7 +248,7 @@ describe('queryAgents', () => {
     agents.findMany.mockResolvedValue(agentsData);
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, {});
+    const result = await queryAgents(db, {});
 
     expect(result).toEqual(agentsData);
   });
@@ -257,7 +259,7 @@ describe('queryAgents', () => {
     agents.findMany.mockResolvedValue(agentsData);
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, { agentId: 'a1' });
+    const result = await queryAgents(db, { agentId: 'a1' });
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('a1');
@@ -269,7 +271,7 @@ describe('queryAgents', () => {
     agents.findMany.mockResolvedValue(agentsData);
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, { executionState: 'running' });
+    const result = await queryAgents(db, { executionState: 'running' });
 
     expect(result).toHaveLength(1);
     expect(result[0].executionState).toBe('running');
@@ -281,7 +283,7 @@ describe('queryAgents', () => {
     agents.findMany.mockResolvedValue(agentsData);
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, { agentId: 'a1', executionState: 'idle' });
+    const result = await queryAgents(db, { agentId: 'a1', executionState: 'idle' });
 
     expect(result).toHaveLength(1);
   });
@@ -291,7 +293,7 @@ describe('queryAgents', () => {
     agents.findMany.mockRejectedValue(new Error('DB error'));
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, {});
+    const result = await queryAgents(db, {});
 
     expect(result).toEqual([]);
   });
@@ -302,7 +304,7 @@ describe('queryAgents', () => {
     agents.findMany.mockResolvedValue(agentsData);
     const db = createDb({ agents });
 
-    const result = await queryAgents(db as any, { agentId: 'a1' });
+    const result = await queryAgents(db, { agentId: 'a1' });
 
     expect(result).toHaveLength(1);
     expect(result[0].role).toBeDefined();

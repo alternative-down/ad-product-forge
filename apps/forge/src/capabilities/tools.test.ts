@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createCapabilityTools } from './tools';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
+import { makeDbMock } from './test-utils/db-mock';
 
 const mocks = vi.hoisted(() => ({
   listRoles: vi.fn(),
@@ -45,7 +46,7 @@ vi.mock('./catalog', () => ({
 const { hasToolPermission } = await import('./catalog');
 
 function mockDb() {
-  return {} as any;
+  return makeDbMock({});
 }
 function mockLoaderConfig(): AgentLoaderConfig {
   return { agents: [] } as any;
