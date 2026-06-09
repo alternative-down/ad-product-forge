@@ -4,7 +4,10 @@ import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
-import { agentNotifications } from '../database/schema';
+import {
+  agentNotifications,
+  type AgentNotification,
+} from '../database/schema';
 
 /** Maximum allowed length of a notification content string (16KB).
  * Exceeding this limit returns null and logs an error via forgeDebug.
@@ -90,8 +93,8 @@ export function createAgentNotificationStore(db: Database) {
     }
 
     const unreadNotificationIds = rows
-      .filter((row: any) => row.readAt === null)
-      .map((row: any) => row.id);
+      .filter((row: AgentNotification) => row.readAt === null)
+      .map((row: AgentNotification) => row.id);
 
     if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
       try {
@@ -114,7 +117,7 @@ export function createAgentNotificationStore(db: Database) {
       }
     }
 
-    return rows.map((row: any) => ({
+    return rows.map((row: AgentNotification) => ({
       notificationId: row.id,
       content: row.content,
       timestamp: row.createdAt,

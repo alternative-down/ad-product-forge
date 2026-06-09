@@ -49,7 +49,7 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
       from __drizzle_migrations
       order by created_at desc
       limit 1
-    `)) as Array<{ id: number; hash: string; createdAt: number }> | { error: string };
+    `)) as Array<{ id: number; hash: string; createdAt: number }>;
 
     const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
     const allMigrations = readMigrationFiles({ migrationsFolder });
@@ -118,7 +118,7 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
       from __drizzle_migrations
       order by created_at desc
       limit 10
-    `)) as Array<{ id: number; hash: string; createdAt: number }> | { error: string };
+    `)) as Array<{ id: number; hash: string; createdAt: number }>;
 
     forgeDebug({
       scope: 'migrations',
@@ -151,7 +151,7 @@ const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
         from __drizzle_migrations
         order by created_at desc
         limit 10
-      `)) as Array<{ id: number; hash: string; createdAt: number }>;
+      `));
     } catch (innerError) {
       appliedRowsAtFailure = { error: errorMsg(innerError) };
     }

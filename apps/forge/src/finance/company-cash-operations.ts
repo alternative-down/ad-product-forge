@@ -17,7 +17,7 @@ type CompanyCashEntryInput = {
   referenceId?: string;
 };
 
-type DbSession = Database | any;
+type DbSession = Database;
 
 export function createCompanyCashOperations(db: Database) {
   async function createEntry(
@@ -45,6 +45,7 @@ export function createCompanyCashOperations(db: Database) {
         dueAt: input.dueAt ?? now,
         effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
         createdAt: now,
+        updatedAt: now,
       });
     } catch (err) {
       forgeDebug({
