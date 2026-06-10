@@ -107,7 +107,7 @@ describe('withDbErrorLogging', () => {
       }),
     ).rejects.toThrow('boom');
 
-    const call = mockedForgeDebug.mock.calls[0]?.[0] as { context: Record<string, unknown> } | undefined;
+    const call = mockedForgeDebug.mock.calls[0]?.[0] as unknown as { context: Record<string, unknown> } | undefined;
     expect(call).toBeDefined();
     // `error` is overwritten by the formatted err — the helper's contract.
     expect(call?.context.error).toBe('formatted: Error: boom');
@@ -265,6 +265,33 @@ describe('Log format guard (issue #5485, Format A)', () => {
       }
     }
     expect(noHelperButUsesForgeDebug.length).toBeLessThanOrEqual(BASELINE_NO_HELPER_COUNT);
+  });
+
+  it('L110 mock call cast uses double-assertion `as unknown as` (L#19 cross-version safe, L#18 N=11 sub-pattern 3c mitigation)', () => {
+    // Context: the cast at the 'merges context fields with the error key' test
+    // (L#18 N=11 type lie) was a single-assertion `as { context: ... }`. This
+    // triggers TS2352 in Kaelen env (zod 4.3.6, different toolchain) but
+    // passes silently in Aldric env (zod 3.25.76 + TSC 6.0.3). L#18 N/10/14b
+    // sub-mode (env-dependent detection, NOT code defect). The fix: replace
+    // with `as unknown as { context: ... }` — a double-assertion that is
+    // cross-version safe (works in BOTH envs).
+    //
+    // This L#19 tripwire is a static-analysis guard: it reads the file and
+    // verifies the cast pattern is the safer double-assertion form. If
+    // someone reverts to single-assertion, this test fails.
+    //
+    // PR #5483 introduced the original cast (2026-06-04 12:20:45Z, commit
+    // b0bd47d6). PR (this) replaces it with the cross-version safe form.
+    const thisFile = join(import.meta.dirname, 'error-logging.test.ts');
+    const selfContent = readFileSync(thisFile, 'utf8');
+    const castLine = selfContent
+      .split('\n')
+      .find((l) => l.includes('mockedForgeDebug.mock.calls[0]?.[0]') && l.includes('as'));
+    expect(castLine, 'expected the mock call cast line to exist in error-logging.test.ts').toBeDefined();
+    expect(
+      castLine,
+      'expected the mock call cast to use double-assertion `as unknown as { context: ... }` for cross-version safety (L#18 N/10/14b mitigation, see L#NN family 14ab sub-mode split). Single-assertion `as { context: ... }` triggers TS2352 in Kaelen env (zod 4.3.6).'
+    ).toMatch(/as\s+unknown\s+as\s+\{ context: Record<string, unknown> \}/);
   });
 });
 
