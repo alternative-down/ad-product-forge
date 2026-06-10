@@ -42,6 +42,15 @@ Issue/PR tracking: <ref>
 - **TSC count command**: `<exact command>` (cite o PR head SHA)
 - **TSC count PR-introduced**: <count> (must be 0 for green)
 - **TSC count pre-existing baseline**: <count> (cite develop HEAD SHA + grep output)
+- **Zod version (L#34 SCOPE v2 v2 — env artifact detection)**: declare local zod vs CI zod to catch env-drift type-check divergence (Kaelen #5646: zod 3.25.76 local vs zod 4.3.6 CI; bare `as` casts fail cross-version, `as unknown as` is safe per L#18 N=14b).
+
+<!--
+L#34 SCOPE v2 v2 (NEW Day 8 Jun 10): zod version explicit.
+Kaelen #5646 (Day 7+ AM Jun 9) showed zod 3.25.76 local vs zod 4.3.6 CI
+causes real type-check divergence (flattenError resolution + TS2352).
+Bare `as` casts fail cross-version; `as unknown as` is safe (L#18 N=14b).
+-->
+
 
 <!--
 Por que importa (L#34 SCOPE v2):
