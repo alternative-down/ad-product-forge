@@ -119,9 +119,20 @@ describe('L#18 N=12 sub-pattern 3b tripwire (regression for #5627 + #5632 + #563
     // The line-level check filters out single negations like if (!isValid)
     // that have no compound boolean on the line.
     //
-    // Regex: preceded by [&|! or (], then !identifier(.property)*, then
-    // followed by [);,\n|&] (excludes method calls where next char is ().
-    const pattern = /(?:[!&|]\()\s*!\s*[a-zA-Z_][a-zA-Z0-9_.]*(?=\s*[);,\n|&])/;
+    // Regex: matches !identifier(.property)* on a line that has && or ||
+    // (compound boolean context). The compound line filter (below) handles
+    // the "preceded by operator" requirement, so the regex itself is just a
+    // "find !identifier" check. The lookahead on [);,\n|&] excludes method
+    // calls where next char is (.
+    //
+    // L2 anti-pattern example (PR #5664 wake-content.ts):
+    //   if (a === b && !input.cronExpression)  -> tripwire catches `!input.cronExpression`
+    //   if (a === b && !description)            -> tripwire catches `!description`
+    //
+    // L4 canonical (no tripwire trigger):
+    //   if (a === b && (input.cronExpression == null || input.cronExpression === ""))  -> OK
+    //   if (!isValid)                                                                  -> OK (no && or || on line)
+    const pattern = /\s*!\s*[a-zA-Z_][a-zA-Z0-9_.]*(?=\s*[);,\n|&])/;
     const compoundLineFilter = (line: string) => /&&|\|\|/.test(line);
     const violations = findViolations(pattern, compoundLineFilter);
     // The tripwire currently passes (canonical L4 form in place post-PR #5664).
