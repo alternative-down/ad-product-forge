@@ -5,6 +5,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// TODO(#5677): L#NN-16 sibling bug. Same class as migrate.ts:18 — hardcoded
+// relative path in candidateRoots assumes source layout. In bundled
+// dist/agents/, none of the candidates resolve correctly. Walk-up
+// search fix deferred to #5677 [P3 latent].
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 export const BUNDLED_SKILL_DIRECTORY_NAMES = [
   'github-api',
