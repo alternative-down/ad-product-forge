@@ -91,7 +91,7 @@ export async function queryAgents(db: Database, input: {
     return await db.query.agents.findMany({
       where: (agent, { and, eq }) => {
         const filters = [];
-        if (input.agentId !== null && input.agentId !== undefined) {
+        if (input.agentId != null) {
           filters.push(eq(agent.id, input.agentId));
         }
         if (input.executionState) {

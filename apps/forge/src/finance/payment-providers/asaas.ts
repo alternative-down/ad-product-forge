@@ -32,7 +32,7 @@ export function verifyAsaasWebhookRequest(
   apiKey: string,
   authHeader: string | null,
 ): AsaasWebhookPayload {
-  if (authHeader === null || authHeader === undefined || !authHeader.startsWith('Bearer ')) {
+  if (authHeader === null || !authHeader.startsWith('Bearer ')) {
     forgeDebug({
       scope: 'asaas',
       level: 'warn',
