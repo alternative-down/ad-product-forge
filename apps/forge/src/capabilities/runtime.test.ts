@@ -216,7 +216,7 @@ describe('capabilities/runtime', () => {
   describe('changeAgentRole', () => {
     it('throws when actor agent is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn().mockResolvedValue(null);
+      db.query.agents.findFirst = vi.fn().mockResolvedValue(undefined);
 
       await expect(
         changeAgentRole({
@@ -234,7 +234,7 @@ describe('capabilities/runtime', () => {
       db.query.agents.findFirst = vi
         .fn()
         .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
-        .mockResolvedValueOnce(null);
+        .mockResolvedValueOnce(undefined);
 
       await expect(
         changeAgentRole({
@@ -253,7 +253,7 @@ describe('capabilities/runtime', () => {
         .fn()
         .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
         .mockResolvedValueOnce(makeAgent('ag_target', 'Target'))
-        .mockResolvedValueOnce(null);
+        .mockResolvedValueOnce(undefined);
 
       await expect(
         changeAgentRole({
@@ -350,7 +350,7 @@ describe('capabilities/runtime', () => {
   describe('changeAgentRoleFromAdmin', () => {
     it('throws when target agent is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+      db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
 
       await expect(
         changeAgentRoleFromAdmin({
