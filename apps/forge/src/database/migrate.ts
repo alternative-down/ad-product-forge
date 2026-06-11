@@ -1,21 +1,39 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 import 'node:process';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
 
+/**
+ * Walk up from start directory until a migrations/meta/_journal.json is found.
+ * Handles both dev (src/database/ -> apps/forge/migrations/) and bundled
+ * (dist/database/ -> dist/migrations/) layouts, as well as any future layout
+ * drift. Pure runtime, no build-config coupling. (Refs #5674)
+ */
+export function findMigrationsFolder(start: string): string {
+  let dir = start;
+  for (let i = 0; i < 5; i++) {
+    const candidate = join(dir, 'migrations', 'meta', '_journal.json');
+    if (existsSync(candidate)) return join(dir, 'migrations');
+    dir = dirname(dir);
+  }
+  throw new Error(`migrations/meta/_journal.json not found above ${start} (walked 5 levels)`);
+}
+
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   // Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the
 // path resolves correctly regardless of the cwd from which the app is launched.
-// The file lives at apps/forge/src/database/, so ../../migrations points to
-// apps/forge/migrations. This fixes a latent production bug where launching
-// the app from any directory other than apps/forge/ caused ENOENT on
-// the migrations folder (see #5493).
-const migrationsFolder = join(import.meta.dirname, '..', '..', 'migrations');
+  // Use findMigrationsFolder(import.meta.dirname) to walk up from this file to
+  // the migrations folder. Works in dev (src/database/ -> apps/forge/migrations/
+  // in 2 levels) and bundled (dist/database/ -> dist/migrations/ in 1 level).
+  // Replaces the previous hardcoded .., .. which only worked in dev and was
+  // exposed as a production bug by tsup bundling (see #5674 P0).
+const migrationsFolder = findMigrationsFolder(import.meta.dirname);
   const databasePath = getAppDatabasePath();
 
   try {
