@@ -75,7 +75,7 @@ export function createAgentNotificationStore(db: Database) {
       rows = await db.query.agentNotifications.findMany({
         where: and(
           eq(agentNotifications.agentId, input.agentId),
-          input.unreadOnly !== null && input.unreadOnly !== undefined
+          input.unreadOnly != null
             ? isNull(agentNotifications.readAt)
             : undefined,
         ),
@@ -144,7 +144,7 @@ export function createAgentNotificationStore(db: Database) {
       return null;
     }
 
-    if (row === null || row === undefined) {
+    if (row == null) {
       return null;
     }
 

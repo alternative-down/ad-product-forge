@@ -8,7 +8,7 @@ export function parseScheduleDate(value: string) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
-      message: 'parseScheduledDate: invalid date',
+      message: 'parseScheduleDate: invalid date',
       context: { scheduledDate: value },
     });
     throw new Error(`Invalid scheduledDate: ${value}`);
@@ -22,27 +22,27 @@ export function validateScheduleShape(input: {
   cronExpression?: string;
   scheduledDate?: number;
 }) {
-  if (input.scheduleType === 'cron' && (input.cronExpression ?? '') === '') {
+  if (input.scheduleType === 'cron' && !input.cronExpression) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
-      message: 'parseScheduleInput: cronExpression required for cron',
+      message: 'validateScheduleShape: cronExpression required for cron',
     });
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
-  if (input.scheduleType === 'date' && (input.scheduledDate ?? 0) === 0) {
+  if (input.scheduleType === 'date' && !input.scheduledDate) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
-      message: 'parseScheduleInput: scheduledDate required for date',
+      message: 'validateScheduleShape: scheduledDate required for date',
     });
     throw new Error('scheduledDate is required when scheduleType is date');
   }
 }
 
 export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?: number) {
-  if (scheduleType !== 'date' || (scheduledDate ?? 0) === 0) {
+  if (scheduleType !== 'date' || !scheduledDate) {
     return;
   }
 
@@ -50,7 +50,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
-      message: 'parseScheduledDate: must be in future',
+      message: 'assertFutureScheduledDate: must be in future',
       context: { scheduledDate },
     });
     throw new Error('scheduledDate must be in the future');
@@ -74,7 +74,7 @@ export function createNotificationContent(input: {
   const description = input.description?.trim();
   const content = input.content.trim();
 
-  if (description !== undefined && description !== '') {
+  if (description) {
     sections.push(`Description: ${description}`);
   }
 

@@ -43,7 +43,7 @@ export function createCapabilityStore(db: Database) {
 
   async function getRole(roleId: string) {
     const row = await queryRole(db, roleId);
-    if (row === null || row === undefined) {
+    if (row == null) {
       return null;
     }
     return {
@@ -94,7 +94,7 @@ export function createCapabilityStore(db: Database) {
 
   async function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
     const existing = await queryRole(db, input.roleId);
-    if (existing === null || existing === undefined) {
+    if (existing == null) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'warn',
@@ -137,7 +137,7 @@ export function createCapabilityStore(db: Database) {
         columns: { id: true },
       });
 
-      if (assigned !== null && assigned !== undefined) {
+      if (assigned != null) {
         forgeDebug({
           scope: 'capabilities-store',
           level: 'warn',
@@ -371,7 +371,7 @@ export function createCapabilityStore(db: Database) {
     description?: string | null;
   }) {
     if (input.action === 'create') {
-      if (input.name === null || input.name === undefined || !input.name.trim()) {
+      if (input.name == null || !input.name.trim()) {
         forgeDebug({
           scope: 'capabilities-store',
           level: 'warn',
@@ -383,14 +383,14 @@ export function createCapabilityStore(db: Database) {
       return await createRole({
         name: input.name.trim(),
         description:
-          input.description !== null && input.description !== undefined && input.description.trim()
+          input.description != null && input.description.trim()
             ? input.description.trim()
             : undefined,
       });
     }
 
     if (input.action === 'delete') {
-      if (input.roleId === null || input.roleId === undefined) {
+      if (input.roleId == null) {
         forgeDebug({
           scope: 'capabilities-store',
           level: 'warn',
@@ -402,7 +402,7 @@ export function createCapabilityStore(db: Database) {
       return await deleteRole(input.roleId);
     }
 
-    if (input.roleId === null || input.roleId === undefined) {
+    if (input.roleId == null) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'warn',
@@ -411,7 +411,7 @@ export function createCapabilityStore(db: Database) {
       throw new Error('roleId is required.');
     }
 
-    if ((input.name === null || input.name === undefined) && input.description === undefined) {
+    if (input.name == null && input.description === undefined) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'warn',
@@ -424,7 +424,7 @@ export function createCapabilityStore(db: Database) {
       roleId: input.roleId,
       name: input.name?.trim(),
       description:
-        input.description !== null && input.description !== undefined
+        input.description != null
           ? input.description.trim() || null
           : undefined,
     });
@@ -453,7 +453,7 @@ export function createCapabilityStore(db: Database) {
   async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
     const agent = await queryAgent(db, agentId);
 
-    if (agent === null || agent === undefined) {
+    if (agent == null) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'warn',
@@ -463,7 +463,7 @@ export function createCapabilityStore(db: Database) {
       throw new Error(`Agent not found: ${agentId}`);
     }
 
-    if (agent.roleId === null || agent.roleId === undefined) {
+    if (agent.roleId == null) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'warn',
