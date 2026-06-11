@@ -22,7 +22,7 @@ export function validateScheduleShape(input: {
   cronExpression?: string;
   scheduledDate?: number;
 }) {
-  if (input.scheduleType === 'cron' && !input.cronExpression) {
+  if (input.scheduleType === 'cron' && (input.cronExpression == null || input.cronExpression === '')) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
@@ -31,7 +31,7 @@ export function validateScheduleShape(input: {
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
-  if (input.scheduleType === 'date' && !input.scheduledDate) {
+  if (input.scheduleType === 'date' && (input.scheduledDate == null || input.scheduledDate === 0)) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
@@ -42,7 +42,7 @@ export function validateScheduleShape(input: {
 }
 
 export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?: number) {
-  if (scheduleType !== 'date' || !scheduledDate) {
+  if (scheduleType !== 'date' || scheduledDate == null || scheduledDate === 0) {
     return;
   }
 
@@ -74,7 +74,7 @@ export function createNotificationContent(input: {
   const description = input.description?.trim();
   const content = input.content.trim();
 
-  if (description) {
+  if (description != null && description !== '') {
     sections.push(`Description: ${description}`);
   }
 
