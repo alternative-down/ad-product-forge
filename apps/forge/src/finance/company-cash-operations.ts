@@ -196,6 +196,30 @@ export function createCompanyCashOperations(db: Database) {
     });
   }
 
+  async function getOverview() {
+    const entries = await db.select().from(companyCashLedger).limit(50).all();
+    return {
+      balance: entries.reduce(
+        (acc, e) => (e.status === 'posted' ? acc + (e.direction === 'in' ? e.amountUsd : -e.amountUsd) : acc),
+        0,
+      ),
+      entryCount: entries.length,
+      recent: entries.slice(0, 10),
+    };
+  }
+
+  async function listContractSummaries() {
+    const entries = await db.select().from(companyCashLedger).limit(20).all();
+    return entries
+      .filter((e) => e.referenceType === 'contract')
+      .map((e) => ({
+        id: e.id,
+        amountUsd: e.amountUsd,
+        status: e.status,
+        description: e.description,
+      }));
+  }
+
   return {
     createEntry,
     recordCashIn,
@@ -205,5 +229,8 @@ export function createCompanyCashOperations(db: Database) {
     cancelPlannedEntry,
     postPlannedEntry,
     getEntry,
+    getOverview,
+    listContractSummaries,
   };
 }
+
