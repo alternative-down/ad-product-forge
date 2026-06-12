@@ -78,7 +78,7 @@ import {
   deleteRoleSchema as _deleteRoleSchema,
   roleCapabilitySchema as _roleCapabilitySchema,
 } from './routes/schemas/roles';
-import { registerInternalChatRoutes as _registerInternalChatRoutes } from './routes/internal-chat/index';
+import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import {
   registerAgentBaseRoutes,
   registerAgentStepsRoutes,
@@ -256,6 +256,9 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     companyCash,
     companyPayables,
   });
+
+  // Internal chat routes (extracted to ./routes/internal-chat/index.ts)
+  registerInternalChatRoutes(input.httpServer, input.internalChat);
 
   registerAdminWebhooks({
     httpServer: input.httpServer,
