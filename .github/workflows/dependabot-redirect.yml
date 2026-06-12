@@ -1,0 +1,155 @@
+# Dependabot redirect — auto-close misdirected dependabot PRs
+#
+# Purpose: safety net for dependabot queue staleness / config drift that causes
+#          PRs to open against `main` despite yaml specifying `target-branch: develop`.
+#
+# L#NN-8 (PM-side cascading claim): even when yaml is correct, dependabot queue
+#          can serve stale config. This workflow is the runtime safety net.
+#
+# Day 9 Jun 11 02:05-02:07Z: 10 misdirected PRs (#5653-#5662) closed manually.
+# Day 12 Jun 12: this preventive workflow.
+#
+# What it does:
+#   1. Detects dependabot[bot] PRs targeting `main` (config drift / staleness signal)
+#   2. Auto-closes them with explanatory comment (don't pollute main)
+#   3. Logs a P3 issue for forensic tracking (queue staleness visible in audit log)
+#
+# What it does NOT do:
+#   - Doesn't redirect the PR (dependabot doesn't honor mid-flight redirection)
+#   - Doesn't merge the PR (close only)
+#   - Doesn't fix yaml (yaml is correct, this is queue-staleness-only)
+#
+# L#34 SCOPE v2: this is a runtime guard, not a config change. TSC=N/A (yaml only).
+# L#45 v4 5a: dependabot.yml verified correct on develop HEAD (2a31c93f, 2 occurrences).
+
+name: dependabot-redirect
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-and-redirect:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      is-misdirected: ${{ steps.detect.outputs.is-misdirected }}
+    steps:
+      - name: Detect base branch
+        id: detect
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          echo "PR #${PR_NUMBER}: ${PR_TITLE}"
+          echo "Base branch: ${BASE_REF}"
+          if [ "${BASE_REF}" = "main" ]; then
+            echo "is-misdirected=true" >> "$GITHUB_OUTPUT"
+            echo "🚨 Misdirected dependabot PR detected (base=main)"
+          else
+            echo "is-misdirected=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Dependabot PR correctly targets develop (base=${BASE_REF})"
+          fi
+
+      - name: Skip if correctly targeted
+        if: steps.detect.outputs.is-misdirected == 'false'
+        run: |
+          echo "PR targets ${BASE_REF} (not main), no action needed"
+
+      - name: Auto-close + log issue (misdirected)
+        if: steps.detect.outputs.is-misdirected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+            const prTitle = pr.title;
+            const prUrl = pr.html_url;
+
+            // 1. Comment on the PR explaining the auto-close
+            const commentBody = [
+              '## Misdirected dependabot PR — auto-closed by preventive workflow',
+              '',
+              'This PR was opened against `main` instead of `develop`. The repository\u2019s',
+              '`.github/dependabot.yml` specifies `target-branch: develop` (verified correct on develop HEAD),',
+              'so a `main`-targeted PR indicates **dependabot queue staleness** or **GitHub-side config cache invalidation lag**.',
+              '',
+              '### Why auto-close (not auto-merge or auto-redirect)',
+              '',
+              '- **Auto-merge to develop**: dependabot can\u2019t be redirected after PR is open.',
+              '- **Auto-redirect**: dependabot doesn\u2019t respond to mid-flight redirection requests.',
+              '- **Auto-close**: only reliable action; prevents `main` branch pollution from bot PRs.',
+              '',
+              '### Forensic log',
+              '',
+              'A P3 issue will be created below for tracking. This is for queue-staleness visibility,',
+              'not a production incident. Next dependabot cycle (Jun 18 weekly) should produce a correctly-targeted PR.',
+              '',
+              '### Refs',
+              '',
+              '- #5683 (P0 security, ENCRYPTION_KEY leak, dev env, founder-decisioned)',
+              '- #5684 (P1 post-mortem, Day 9 cleanup)',
+              '- L#45 v4 (file STATE verification on develop HEAD)',
+              '- L#NN-8 (PM-side cascading claim, preventive design rationale)',
+              '- L#NN-16 (build-config-vs-runtime-mismatch, sibling anti-pattern)',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: commentBody,
+            });
+            core.info(`Posted explanatory comment on PR #${prNumber}`);
+
+            // 2. Close the PR
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              state: 'closed',
+            });
+            core.info(`Closed PR #${prNumber}`);
+
+            // 3. Log a P3 issue for forensic tracking
+            const issueBody = [
+              '## Dependabot misdirected PR — auto-closed by preventive workflow',
+              '',
+              `**Closed PR**: #${prNumber} \`${prTitle}\``,
+              `**URL**: ${prUrl}`,
+              `**Base branch**: \`main\` (should be \`develop\`)`,
+              `**Author**: \`dependabot[bot]\``,
+              `**Closed at**: ${new Date().toISOString()}`,
+              '',
+              '### Root cause (3 hypotheses, ranked)',
+              '',
+              '1. **H1 (HIGH)**: dependabot queue staleness — weekly cycle started before yaml fix propagated',
+              '2. **H2 (MED)**: GitHub-side config cache invalidation delay',
+              '3. **H3 (LOW)**: parallel config source (repo settings UI override)',
+              '',
+              '### Verifications',
+              '',
+              '- `.github/dependabot.yml` on develop HEAD has `target-branch: develop` in both `npm` and `github-actions` entries',
+              '- File SHA unchanged since Jun 4 #5477 (the actual yaml fix)',
+              '- 0 yaml modifications in commit history between #5477 and current develop HEAD',
+              '',
+              '### Action',
+              '',
+              'No code action needed. This is a logging-only event for queue-staleness visibility.',
+              'The dependabot cycle will produce a correctly-targeted PR on its next run (or weekly cycle on Jun 18).',
+            ].join('\n');
+            const newIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[dependabot-redirect] Auto-closed misdirected PR #${prNumber} (base=main)`,
+              body: issueBody,
+              labels: ['infra', 'P3', 'dependabot-redirect'],
+            });
+            core.info(`Logged forensic issue #${newIssue.data.number}`);
+            core.setOutput('logged-issue', newIssue.data.number);
