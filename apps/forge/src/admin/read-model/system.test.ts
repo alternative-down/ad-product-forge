@@ -60,9 +60,17 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
 }));
 
-vi.mock('node:path', () => ({
-  resolve: vi.fn().mockReturnValue('/migrations/meta/_journal.json'),
+vi.mock('../../database/migrate', () => ({
+  findMigrationsFolder: vi.fn().mockReturnValue('/migrations'),
 }));
+
+vi.mock('node:path', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:path')>();
+  return {
+    ...actual,
+    resolve: vi.fn().mockReturnValue('/migrations/meta/_journal.json'),
+  };
+});
 
 import { createSystemReadModel } from './system';
 
