@@ -8,6 +8,7 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 import type { SystemIntegration } from '@/lib/admin-api/index';
 import { buildCoolifyFormValues, type CoolifyFormValues } from './coolify-form-state';
 
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 export const Route = createFileRoute('/settings/coolify/')({
   component: SettingsCoolifyRoute,
 });
