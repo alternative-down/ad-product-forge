@@ -69,7 +69,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     }
 
     const creatorAccount = await deps.getRequiredExternalAccount(input.accountId);
-    const now = vi.hoisted(() => Date.now());
+    const now = Date.now();
 
     await db.insert(internalChatConversations).values({
       id: input.conversationKey,
@@ -128,7 +128,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
       input.memberAccountIds.map((id) => deps.getRequiredAccount(id)),
     );
 
-    const now = vi.hoisted(() => Date.now());
+    const now = Date.now();
     const groupMembers = await db.transaction(async (tx) => {
       // Insert group
       await tx.insert(internalChatConversations).values({
@@ -234,7 +234,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
       });
     }
 
-    const now = vi.hoisted(() => Date.now());
+    const now = Date.now();
     await db.insert(internalChatConversationMembers).values({
       conversationId: group.id,
       accountId: participant.id,
@@ -298,7 +298,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     conversationKey?: string;
   }) {
     const group = await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
-    const now = vi.hoisted(() => Date.now());
+    const now = Date.now();
     await db
       .update(internalChatConversations)
       .set({ name: input.name ?? group.name, updatedAt: now })
