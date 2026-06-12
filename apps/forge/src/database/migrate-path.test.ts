@@ -72,8 +72,8 @@ function readFileSource(): string {
   return readFileSync(sourcePath, 'utf-8');
 }
 
-describe('L#NN-16 sibling audit (latent site TODO coverage for #5677)', () => {
-  test('bundled-workspace-skills.ts has TODO(#5677) marker (latent fix tracking)', () => {
+describe('L#NN-16 sibling audit (fixed in #5686, walk-up search applied)', () => {
+  test('bundled-workspace-skills.ts uses findSkillsFolder walk-up (L#NN-16 fix #5686)', () => {
     const fs = require('node:fs') as typeof import('node:fs');
     const pathMod = require('node:path') as typeof import('node:path');
     const filePath = pathMod.resolve(
@@ -83,13 +83,11 @@ describe('L#NN-16 sibling audit (latent site TODO coverage for #5677)', () => {
       'bundled-workspace-skills.ts',
     );
     const source = fs.readFileSync(filePath, 'utf-8');
-    // The TODO marker ensures the latent bug is tracked. If this assertion
-    // ever fails, either (a) someone removed the TODO without fixing the
-    // bug (silent regression), or (b) the bug was fixed in #5677 and the
-    // TODO can be removed safely.
-    expect(source).toMatch(/TODO\(#5677\)/);
-    // Sanity: the latent pattern is still present (i.e., the fix wasn't
-    // accidentally shipped without updating the test).
-    expect(source).toMatch(/fileURLToPath\(import\.meta\.url\)/);
+    // Fixed in #5686: walk-up search replaces the hardcoded candidate roots.
+    // The file should now use findSkillsFolder(MODULE_DIRECTORY) and should
+    // NOT have the TODO marker or the candidateRoots array (L#NN-16 anti-pattern).
+    expect(source).toMatch(/findSkillsFolder\(MODULE_DIRECTORY\)/);
+    expect(source).not.toMatch(/TODO\(#5677\)/);
+    expect(source).not.toMatch(/candidateRoots/);
   });
 });

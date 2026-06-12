@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import path from 'node:path';
 type ReaddirEntry = { name: string; isDirectory: () => boolean; isFile: () => boolean };
 import { copyDirectoryContents } from './bundled-workspace-skills';
 import * as bundledWorkspaceSkills from './bundled-workspace-skills';
@@ -121,41 +122,99 @@ describe('parseSkillName error cases', () => {
 });
 
 // ─── resolveBundledSkillRoot ──────────────────────────────────────────────────
-describe('resolveBundledSkillRoot', () => {
-  it('returns first accessible candidate root', async () => {
+describe('resolveBundledSkillRoot (walk-up search, L#NN-16 fix #5686)', () => {
+  it('resolves skill root from walk-up search (1 access call)', async () => {
     pushReplies({ access: [null as any] });
     const root = await bundledWorkspaceSkills.resolveBundledSkillRoot('github-api');
     expect(fsMocks.access).toHaveBeenCalledOnce();
     expect(root).toContain('github-api');
   });
 
-  it('falls through inaccessible candidates until one succeeds', async () => {
-    pushReplies({ access: [new Error('ENOENT'), new Error('ENOENT'), null as any] });
-    const root = await bundledWorkspaceSkills.resolveBundledSkillRoot('github-api');
-    expect(fsMocks.access).toHaveBeenCalledTimes(3);
-    expect(root).toContain('github-api');
-  });
-
-  it('throws when no candidate root is accessible', async () => {
-    pushReplies({
-      access: [new Error('ENOENT'), new Error('ENOENT'), new Error('ENOENT')],
-    });
+  it('throws when specific skill not found in resolved skills folder', async () => {
+    pushReplies({ access: [new Error('ENOENT')] });
     await expect(bundledWorkspaceSkills.resolveBundledSkillRoot('github-api')).rejects.toThrow(
       'Bundled skill source not found',
     );
-    expect(fsMocks.access).toHaveBeenCalledTimes(3);
+    expect(fsMocks.access).toHaveBeenCalledOnce();
   });
 
   it('calls forgeDebug on ENOENT failures', async () => {
     const { forgeDebug } = await import('@forge-runtime/core');
-    pushReplies({
-      access: [new Error('ENOENT'), new Error('ENOENT'), new Error('ENOENT')],
-    });
+    pushReplies({ access: [new Error('ENOENT')] });
     await expect(bundledWorkspaceSkills.resolveBundledSkillRoot('github-api')).rejects.toThrow();
     expect(forgeDebug).toHaveBeenCalled();
   });
 });
 
+// ─── findSkillsFolder (L#19 tripwire for #5686) ─────────────────────────────
+import { findSkillsFolder } from './bundled-workspace-skills';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+
+describe('findSkillsFolder (L#19 tripwire for #5686 L#NN-16 fix)', () => {
+  test('finds skills folder in dev layout (1 level up from src/agents/)', () => {
+    // Resolve from the test file's location, simulating the SOURCE layout
+    const devStart = path.dirname(new URL(import.meta.url).pathname);
+    const result = findSkillsFolder(devStart);
+    // Dev: src/agents/bundled-workspace-skills.test.ts -> src/agents/skills/ (1 level up)
+    expect(result.endsWith('skills')).toBe(true);
+    expect(result.endsWith('src/agents/skills')).toBe(true);
+  });
+
+  test('finds skills folder in bundled layout (walk-up from dist/agents/)', () => {
+    const tmp = mkdtempSync(path.join(tmpdir(), 'forge-skills-test-'));
+    try {
+      // Create fake bundled layout: tmp/dist/agents/ + tmp/dist/agents/skills/github-api/SKILL.md
+      const fakeAgentsDir = path.join(tmp, 'dist', 'agents');
+      const fakeSkillsDir = path.join(fakeAgentsDir, 'skills');
+      const fakeGithubApiDir = path.join(fakeSkillsDir, 'github-api');
+      const fsSync = require('node:fs') as typeof import('node:fs');
+      fsSync.mkdirSync(fakeGithubApiDir, { recursive: true });
+      fsSync.writeFileSync(path.join(fakeGithubApiDir, 'SKILL.md'), '---\nname: github-api\n---');
+
+      const result = findSkillsFolder(fakeAgentsDir);
+      // Should find tmp/dist/agents/skills
+      expect(result).toBe(fakeSkillsDir);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('throws when skills folder not found within 5 levels', () => {
+    const tmp = mkdtempSync(path.join(tmpdir(), 'forge-skills-empty-'));
+    try {
+      // Empty temp dir with no skills/ anywhere
+      expect(() => findSkillsFolder(tmp)).toThrow(
+        /skills\/github-api\/SKILL\.md not found/,
+      );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('does NOT use hardcoded .. .. path (L#NN-16 regression guard)', () => {
+    // Negative test: if someone reverts to the buggy
+    // `join(import.meta.dirname, '..', '..', 'skills')`, the bundled
+    // layout test (above) would fail because dist/agents/ + ../../skills
+    // would point to <grandparent>/skills (NOT dist/agents/skills/).
+    const source = readFileSource();
+    expect(source).not.toMatch(
+      /join\(import\.meta\.dirname,\s*['"]\.\.['"],\s*['"]\.\.['"],\s*['"]skills['"]\)/,
+    );
+    expect(source).toMatch(/findSkillsFolder\(MODULE_DIRECTORY\)/);
+  });
+});
+
+// Helper to read the source of bundled-workspace-skills.ts for negative assertions
+function readFileSource(): string {
+  const fsSync = require('node:fs') as typeof import('node:fs');
+  const pathMod = require('node:path') as typeof import('node:path');
+  const sourcePath = pathMod.resolve(
+    path.dirname(new URL(import.meta.url).pathname),
+    'bundled-workspace-skills.ts',
+  );
+  return fsSync.readFileSync(sourcePath, 'utf-8');
+}
 // ─── copyDirectoryContents ────────────────────────────────────────────────────
 describe('copyDirectoryContents', () => {
   it('creates target directory recursively', async () => {
