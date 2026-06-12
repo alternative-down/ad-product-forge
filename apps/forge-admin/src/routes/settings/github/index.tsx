@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 export const Route = createFileRoute('/settings/github/')({
   component: SettingsGithubRoute,
 });
