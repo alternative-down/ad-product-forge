@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import 'node:process';
-import { resolve } from 'node:path';
+// L#NN-16 fix #5688: process.cwd() removed, use findMigrationsFolder
+import { join } from 'node:path';
+import { findMigrationsFolder } from '../../database/migrate';
 import { sql } from 'drizzle-orm';
 import { createCapabilityStore } from '../../capabilities/store';
 import type { SystemIntegrationSummary } from '../../system-integrations/store';
@@ -128,7 +129,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
 
   async function getApplicationMigrations() {
     return await withErrorScope('getApplicationMigrations', async () => {
-      const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
+      const journalPath = join(findMigrationsFolder(import.meta.dirname), 'meta/_journal.json');
       const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
         entries: Array<{
           idx: number;

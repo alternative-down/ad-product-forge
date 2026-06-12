@@ -93,3 +93,36 @@ describe('L#NN-16 sibling audit (latent site TODO coverage for #5677)', () => {
     expect(source).toMatch(/fileURLToPath\(import\.meta\.url\)/);
   });
 });
+
+describe('L#NN-16 sibling audit (fixed in #5687 + #5688, process.cwd() replaced)', () => {
+  test('admin/read-model.ts uses findMigrationsFolder walk-up (L#NN-16 fix #5687)', () => {
+    const fs = require('node:fs') as typeof import('node:fs');
+    const pathMod = require('node:path') as typeof import('node:path');
+    const filePath = pathMod.resolve(
+      dirname(new URL(import.meta.url).pathname),
+      '..',
+      'admin',
+      'read-model.ts',
+    );
+    const source = fs.readFileSync(filePath, 'utf-8');
+    // Fixed in #5687: process.cwd() replaced with findMigrationsFolder(import.meta.dirname).
+    expect(source).toMatch(/findMigrationsFolder\(import\.meta\.dirname\)/);
+    expect(source).not.toMatch(/resolve\(process\.cwd\(\),\s*['"]migrations/);
+  });
+
+  test('admin/read-model/system.ts uses findMigrationsFolder walk-up (L#NN-16 fix #5688)', () => {
+    const fs = require('node:fs') as typeof import('node:fs');
+    const pathMod = require('node:path') as typeof import('node:path');
+    const filePath = pathMod.resolve(
+      dirname(new URL(import.meta.url).pathname),
+      '..',
+      'admin',
+      'read-model',
+      'system.ts',
+    );
+    const source = fs.readFileSync(filePath, 'utf-8');
+    // Fixed in #5688: process.cwd() replaced with findMigrationsFolder(import.meta.dirname).
+    expect(source).toMatch(/findMigrationsFolder\(import\.meta\.dirname\)/);
+    expect(source).not.toMatch(/resolve\(process\.cwd\(\),\s*['"]migrations/);
+  });
+});
