@@ -19,6 +19,8 @@ import {
   updateLlmDefaultsSchema,
 } from '../schemas/llm';
 import { syncOauthSchema } from '../schemas/oauth';
+import { factoryResetSchema } from '../schemas/system';
+import { performFactoryReset } from './reset';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { installGlobalSkillsFromZip, deleteGlobalSkill } from '../../../agents/global-skills';
@@ -426,4 +428,38 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
       }
     },
   });
+
+  // ==========================================================================
+  // FACTORY RESET (#5679 PR-A)
+  // ==========================================================================
+  //
+  // POST /admin/system/reset
+  //   Body: { "confirm": "FACTORY_RESET" }
+  //   Auth: x-forge-admin-api-key header (enforced by HTTP middleware)
+  //   Effect: backup DB to /tmp/forge-factory-reset-{ISO}.db, then wipe
+  //           all user-data tables (LLM, agents, settings, schedules,
+  //           internal-chat, webhooks). Schema preserved.
+  //   Audit: forgeDebug log level=info with backupPath + wipedTables.
+  // ==========================================================================
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/reset',
+    handler: async (request) => {
+      try {
+        const { confirm: _confirm } = parseJsonBody(request.bodyText, factoryResetSchema);
+        // _confirm === "FACTORY_RESET" guaranteed by z.literal
+        const result = await performFactoryReset();
+        return jsonResponse(result);
+      } catch (err) {
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/reset',
+          context: { error: errorMsg(err) },
+        });
+        return jsonResponse({ error: errorMsg(err) }, 500);
+      }
+    },
+  });
+
 }
