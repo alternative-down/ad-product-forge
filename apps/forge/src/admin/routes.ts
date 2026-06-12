@@ -213,7 +213,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
-  registerFinanceReadRoutes(input.httpServer, input.db);
+  registerFinanceReadRoutes(input.httpServer, input.db, { companyCash });
 
   // Fragmented agent detail routes (#1587) — stores created directly in route files (#1574)
   registerAgentBaseRoutes(input.httpServer, readModel.getAgent);
