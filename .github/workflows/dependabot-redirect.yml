@@ -94,7 +94,7 @@ jobs:
               '',
               '### Refs',
               '',
-              '- #5683 (P0 security, ENCRYPTION_KEY leak, dev env, founder-decisioned)',
+              '- #5683 (P0 security: ENCRYPTION_KEY environment variable disclosed via internal-chat; dev env, founder-decisioned as dev-env-only)',
               '- #5684 (P1 post-mortem, Day 9 cleanup)',
               '- L#45 v4 (file STATE verification on develop HEAD)',
               '- L#NN-8 (PM-side cascading claim, preventive design rationale)',
