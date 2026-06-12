@@ -6,7 +6,7 @@
 import { ZodError } from 'zod';
 import { errorMsg } from '../../../agents/error-formatting';
 import { forgeDebug } from '../debug';
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter } from '../../../http/server';
 import { jsonResponse } from '../index';
 import {
   agentIdQuerySchema,
@@ -50,9 +50,7 @@ interface ReadModel {
 }
 
 export function registerAgentReadRoutes(
-  httpServer: {
-    registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void;
-  },
+  httpServer: ForgeHttpServerAdapter,
   readModel: ReadModel,
 ) {
   // GET /admin/agents

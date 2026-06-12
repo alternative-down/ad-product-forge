@@ -91,7 +91,7 @@ import {
   registerAgentNotificationsRoutes,
 } from './routes/agents/detail-read';
 import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
-import { registerAgentReadRoutes as _registerAgentReadRoutes } from './routes/agents/read';
+import { registerAgentReadRoutes } from './routes/agents/read';
 import { registerAgentWriteRoutes as _registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
 import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops';
@@ -217,6 +217,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Fragmented agent detail routes (#1587) — stores created directly in route files (#1574)
   registerAgentBaseRoutes(input.httpServer, readModel.getAgent);
+  registerAgentReadRoutes(input.httpServer, readModel);
   registerAgentStepsRoutes(input.httpServer, input.db);
   registerAgentConversationsRoutes(input.httpServer, readModel.listAgentRecentConversations);
   registerAgentMemoryRoutes(input.httpServer, {
