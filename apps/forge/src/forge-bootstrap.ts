@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from './agents/error-formatting';
 import { z } from 'zod';
 
 import { getDatabase } from './database/client';
@@ -57,20 +56,15 @@ const envSchema = z.object({
 function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
   if (rawValue === undefined || rawValue === null) return undefined;
 
-  try {
-    const trimmed = rawValue.trim();
-    if (trimmed === '') return undefined;
+  const trimmed = rawValue.trim();
+  if (trimmed === '') return undefined;
 
-    if (/^[A-Za-z0-9+/]+=*$/.test(trimmed)) {
-      const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
+  if (/^[A-Za-z0-9+/]+=*$/.test(trimmed)) {
+    const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
 
-      if (/^[\x20-\x7E]*$/.test(decoded)) {
-        return decoded;
-      }
+    if (/^[\x20-\x7E]*$/.test(decoded)) {
+      return decoded;
     }
-  } catch (err) {
-    forgeDebug({ scope: 'main', level: 'debug', message: 'readFile failed: ' + errorMsg(err) });
-    // Fall through to raw value
   }
 
   return rawValue;
