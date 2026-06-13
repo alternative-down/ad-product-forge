@@ -48,7 +48,7 @@ export const ticketMessages = sqliteTable(
   (table) => ({
     ticketMessagesTicketIdx: index('forge_ticket_messages_ticket_idx').on(table.ticketId),
     ticketMessagesCreatedAtIdx: index('forge_ticket_messages_created_at_idx').on(table.createdAt),
-    ticketMessagesUpdatedAtIdx: index('ticket_messages_updated_at_idx').on(table.updatedAt),
+    ticketMessagesUpdatedAtIdx: index('forge_ticket_messages_updated_at_idx').on(table.updatedAt),
   }),
 );
 

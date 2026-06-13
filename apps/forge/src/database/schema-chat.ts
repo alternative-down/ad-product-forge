@@ -112,7 +112,7 @@ export const internalChatMessages = sqliteTable(
     internalChatMessagesCreatedAtIdx: index('forge_internal_chat_messages_created_at_idx').on(
       table.createdAt,
     ),
-    internalChatMessagesUpdatedAtIdx: index('internal_chat_messages_updated_at_idx').on(
+    internalChatMessagesUpdatedAtIdx: index('forge_internal_chat_messages_updated_at_idx').on(
       table.updatedAt,
     ),
     internalChatMessagesAuthorAccountIdIdx: index(
