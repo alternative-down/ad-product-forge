@@ -94,7 +94,7 @@ export interface ForgeHttpServer {
     handler: HttpHandler;
   }) => () => void;
   start: () => Promise<void>;
-  stop: () => Promise<void>;
+  stop: (options?: { forceTimeoutMs?: number }) => Promise<void>;
   readonly port: number;
 }
 
