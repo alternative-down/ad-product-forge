@@ -94,7 +94,7 @@ export interface ForgeHttpServer {
     handler: HttpHandler;
   }) => () => void;
   start: () => Promise<void>;
-  stop: () => Promise<void>;
+  stop: (options?: { forceTimeoutMs?: number }) => Promise<void>;
   readonly port: number;
 }
 
@@ -342,15 +342,29 @@ export function createForgeHttpServer(
     });
   }
 
-  async function stop() {
+  async function stop(options: { forceTimeoutMs?: number } = {}): Promise<void> {
+    const forceTimeoutMs = options.forceTimeoutMs ?? 10_000;
+
+    // Force-close all existing connections after timeout (graceful shutdown
+    // with a hard ceiling). server.close() waits for active connections to
+    // drain naturally, which can hang indefinitely if a handler is slow or
+    // a client keeps an SSE connection open. The timer + closeAllConnections
+    // pattern is the canonical fix (Node 18.2+, forge targets node22).
+    const forceTimer = setTimeout(() => {
+      forgeDebug({
+        scope: 'http-server',
+        level: 'warn',
+        message: 'Graceful shutdown timeout, force-closing connections',
+      });
+      server.closeAllConnections?.();
+    }, forceTimeoutMs);
+    forceTimer.unref();
+
     await new Promise<void>((resolve, reject) => {
       server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolve();
+        clearTimeout(forceTimer);
+        if (error) reject(error);
+        else resolve();
       });
     });
   }

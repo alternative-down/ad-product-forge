@@ -653,6 +653,67 @@ describe('createForgeHttpServer', () => {
       expect(typeof server.stop).toBe('function');
     });
   });
+  describe('stop() with timeout (#5449)', () => {
+    let timeoutServer: Awaited<ReturnType<typeof createForgeHttpServer>>;
+
+    beforeEach(async () => {
+      timeoutServer = createForgeHttpServer({ port: 0 });
+      await timeoutServer.start();
+    });
+
+    afterEach(async () => {
+      // Idempotent: server may already be stopped by the test
+      await timeoutServer.stop({ forceTimeoutMs: 50 }).catch(() => undefined);
+    });
+
+    it('stops within forceTimeoutMs even with hanging connections', async () => {
+      timeoutServer.registerRoute({
+        method: 'GET',
+        path: '/hang',
+        handler: async () => {
+          // Never resolves, simulating a hung handler
+          await new Promise(() => undefined);
+          return { status: 200, body: 'never' };
+        },
+      });
+
+      // Open a request that will hang. Don't await.
+      const hangingReq = makeRawRequest(
+        'GET',
+        '/hang',
+        undefined,
+        undefined,
+        timeoutServer.port as number,
+      ).catch(() => 'closed');
+
+      // Give the connection time to establish
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Stop with short timeout
+      const start = Date.now();
+      await timeoutServer.stop({ forceTimeoutMs: 100 });
+      const elapsed = Date.now() - start;
+
+      // Should have force-closed within 100ms + buffer
+      expect(elapsed).toBeLessThan(300);
+
+      // The hanging request should have been closed
+      await hangingReq;
+    });
+
+    it('default timeout (10s) does not fire on a fast-stopping server', async () => {
+      // No hanging connections, so default 10s timeout should not fire.
+      // stop() should resolve quickly because server.close() has nothing to wait for.
+      const start = Date.now();
+      await timeoutServer.stop();
+      const elapsed = Date.now() - start;
+
+      // Should resolve almost immediately (< 1s) since no connections to drain
+      expect(elapsed).toBeLessThan(1000);
+    });
+  });
+
+
 
   describe('admin authentication', () => {
     const ADMIN_KEY = 'test-admin-key-123';
