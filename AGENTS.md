@@ -36,3 +36,31 @@
 - Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
 - Prefer using existing `shadcn/ui` components whenever possible.
 - Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.
+
+## Tripwire Standards (L#NN-13 + L#NN-26)
+
+When creating a new L#NN-13 source-level regex tripwire (e.g., to prevent a specific bug class from regressing):
+
+1. **Tripwire structure**: use `readFileSync` + regex, not function-level mocks. See `memory/patterns/lnn-13-tripwire-template-2026-06-12.md` for the 4-component template (N=2 verified Day 12).
+
+2. **L#NN-26 mutation verification** (REQUIRED for new tripwires):
+   - **v1 (false-negative)**: revert-fix → expect tripwire FAIL → restore → expect tripwire PASS
+   - **v2 (false-positive)**: mutate-non-bug (rename, comment, whitespace) → expect tripwire PASS → restore → expect tripwire PASS
+   - See `skills/lnn-26-mutation-protocol/SKILL.md` for full protocol and a meta-test at `apps/forge/src/__lnn-26-mutation-protocol.test.ts`
+
+3. **Citation format in test header**:
+   ```typescript
+   /**
+    * L#NN-13 tripwire for #NNNN: <one-line description>
+    * L#NN-26 verification: v1 ✅, v2 ✅
+    * Mutations tested: <mutation A>, <mutation B>
+    */
+   ```
+
+4. **Reviewer checklist**: when reviewing a tripwire PR, verify L#NN-26 v1 + v2 (if high-stakes) are cited in the test header AND verified in the test file.
+
+5. **When to skip v2**: simple readFileSync + equality check, low-stakes area (UI typo, comment), or P0 time pressure.
+
+## L#NN-13 family (tripwire template)
+
+For the tripwire template itself (regex design rules, structural vs value assertions, when to relax regex), see `memory/patterns/lnn-13-tripwire-template-2026-06-12.md`.
