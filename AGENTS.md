@@ -64,3 +64,35 @@ When creating a new L#NN-13 source-level regex tripwire (e.g., to prevent a spec
 ## L#NN-13 family (tripwire template)
 
 For the tripwire template itself (regex design rules, structural vs value assertions, when to relax regex), see `memory/patterns/lnn-13-tripwire-template-2026-06-12.md`.
+
+## Recovery Protocol (L#45 v6.1 — 5m + 6th probe)
+
+After any P0/P1 fix is deployed, run the L#45 v6.1 5m protocol before standing down. See `skills/lnn-45-recovery-protocol/SKILL.md` for the full protocol and worked examples.
+
+### 5 probes (MANDATORY)
+
+1. **Issue state**: closed (not reopened) — `GET /repos/.../issues/{n}` + events check
+2. **Service health**: HTTP 200 — `curl /health`
+3. **No Fatal logs**: 0 in 15min — `grep -i fatal /var/log/forge-15min.log`
+4. **CI green**: all `conclusion=success` — `GET /repos/.../commits/{sha}/check-runs`
+5. **Deploy confirm**: explicit human ACK (Nicolas DM or web UI)
+
+### 6th probe (L#NN-8 8n tripwire — self-claim verification)
+
+Before standing down, scan your own last 20 outgoing messages for over-generalization patterns:
+- `\b(FULLY|NEVER|ALWAYS|0 drift|all idle|no impact|100%|completely|entirely|every single)\b`
+- Unqualified "X is Y" claims (no "except when" / "but" / "unless")
+
+If hit: STOP stand-down, re-verify with API, qualify claim with N=observed, re-run probe.
+
+### False stand-down recovery
+
+If 5m is later discovered to be false (e.g., Day 11 #5675 case):
+1. REOPEN the issue
+2. Document the false stand-down in the issue body
+3. Investigate what 5m missed
+4. Patch the protocol (e.g., add 6th probe)
+5. File L#NN family perene for the lesson
+6. Cross-link in the perene parent
+
+See `memory/patterns/lnn-45-v6-5m-6th-probe-2026-06-12.md` for N=2 evidence (Day 12 #5674 pass + #5675 false stand-down).
