@@ -7,6 +7,9 @@ import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api/
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/layout/page-header';
+import { AdminInput } from '@/components/admin/forms/admin-input';
+import { AdminButton } from '@/components/admin/forms/admin-button';
 export const Route = createFileRoute('/settings/github/')({
   component: SettingsGithubRoute,
 });

@@ -9,6 +9,9 @@ import type { SystemIntegration } from '@/lib/admin-api/index';
 import { buildCoolifyFormValues, type CoolifyFormValues } from './coolify-form-state';
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/layout/page-header';
+import { AdminInput } from '@/components/admin/forms/admin-input';
+import { AdminButton } from '@/components/admin/forms/admin-button';
 export const Route = createFileRoute('/settings/coolify/')({
   component: SettingsCoolifyRoute,
 });
