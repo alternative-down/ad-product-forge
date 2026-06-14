@@ -239,8 +239,10 @@ describe('stripe adapter', () => {
       const url = await import('url');
       const stripePath = url.fileURLToPath(new URL('./stripe.ts', import.meta.url));
       const source = fsModule.readFileSync(stripePath, 'utf8');
-      // The pattern: customerId defaulting to empty string (the L#19 risk)
-      const defaultEmpty = new RegExp("customerId:[^,]*: ''", 'g').test(source);
+      // The pattern: customerId defaulting to empty string (the L#19 risk).
+      // We check for the assignment pattern "customerId: ... : ''" anywhere in source.
+      // String-based check is more semantic and lint-clean than regex.
+      const defaultEmpty = /customerId:[^\n]*: ''/.test(source);
       expect(defaultEmpty).toBe(false);
     });
 
@@ -249,9 +251,14 @@ describe('stripe adapter', () => {
       const url = await import('url');
       const stripePath = url.fileURLToPath(new URL('./stripe.ts', import.meta.url));
       const source = fsModule.readFileSync(stripePath, 'utf8');
-      // The pattern: amount defaulting to literal 0 (the amount:0 risk)
-      const defaultZero = new RegExp("typeof obj\\.amount\\w* === 'number' \? obj\\.amount\\w* : 0", 'g').test(source);
-      expect(defaultZero).toBe(false);
+      // The pattern: amount defaulting to literal 0 in the typeof-amount === 'number' ?: 0 ternary.
+      // We check for the typeof-amount + : 0 substrings within 80 chars of each other.
+      const idx0 = source.indexOf(': 0');
+      const idxTypeof = source.indexOf("typeof obj.amount");
+      // Both must be present, and the ': 0' must be within 80 chars of the typeof-amount ternary
+      const hasDefaultZero = idx0 !== -1 && idxTypeof !== -1
+        && Math.abs(idx0 - idxTypeof) < 80;
+      expect(hasDefaultZero).toBe(false);
     });
   });
 });
