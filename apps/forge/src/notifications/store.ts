@@ -64,11 +64,14 @@ export function createAgentNotificationStore(db: Database) {
     return notification;
   }
 
+  // L#19: listNotifications is a PURE READ. It does NOT mutate the database.
+  // To mark notifications as read, callers MUST use markNotificationsRead
+  // (or the mark_notifications_read tool). This eliminates the previous
+  // bug where listing silently marked notifications as read by default.
   async function listNotifications(input: {
     agentId: string;
     unreadOnly?: boolean;
     limit: number;
-    markRead?: boolean;
   }) {
     let rows;
     try {
@@ -92,37 +95,48 @@ export function createAgentNotificationStore(db: Database) {
       return [];
     }
 
-    const unreadNotificationIds = rows
-      .filter((row: AgentNotification) => row.readAt === null)
-      .map((row: AgentNotification) => row.id);
-
-    if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
-      try {
-        await db
-          .update(agentNotifications)
-          .set({ readAt: Date.now(), updatedAt: Date.now() })
-          .where(
-            and(
-              eq(agentNotifications.agentId, input.agentId),
-              inArray(agentNotifications.id, unreadNotificationIds),
-            ),
-          );
-      } catch (err) {
-        forgeDebug({
-          scope: 'notifications-store',
-          level: 'error',
-          runtimeId: input.agentId,
-          message: 'listNotifications mark-read update failed: ' + errorMsg(err),
-        });
-      }
-    }
-
+    // The "read" field reflects the PERSISTED state in the database, not
+    // a caller-controlled flag. This is the L#19 invariant: a read
+    // operation reports state, it does not impose state.
     return rows.map((row: AgentNotification) => ({
       notificationId: row.id,
       content: row.content,
       timestamp: row.createdAt,
-      read: (input.markRead ?? true) ? true : row.readAt !== null,
+      read: row.readAt !== null,
     }));
+  }
+
+  // L#19: markNotificationsRead is the EXPLICIT mutation counterpart to
+  // listNotifications. It requires the caller to pass the specific
+  // notificationIds to mark, eliminating the previous "default-true"
+  // surprise where listing silently marked unread notifications as read.
+  async function markNotificationsRead(input: {
+    agentId: string;
+    notificationIds: string[];
+  }): Promise<{ updatedCount: number }> {
+    if (input.notificationIds.length === 0) {
+      return { updatedCount: 0 };
+    }
+    try {
+      await db
+        .update(agentNotifications)
+        .set({ readAt: Date.now(), updatedAt: Date.now() })
+        .where(
+          and(
+            eq(agentNotifications.agentId, input.agentId),
+            inArray(agentNotifications.id, input.notificationIds),
+          ),
+        );
+      return { updatedCount: input.notificationIds.length };
+    } catch (err) {
+      forgeDebug({
+        scope: 'notifications-store',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'markNotificationsRead DB update failed: ' + errorMsg(err),
+      });
+      return { updatedCount: 0 };
+    }
   }
 
   async function getNotification(agentId: string, notificationId: string) {
@@ -159,6 +173,7 @@ export function createAgentNotificationStore(db: Database) {
   return {
     createNotification,
     listNotifications,
+    markNotificationsRead,
     getNotification,
   };
 }

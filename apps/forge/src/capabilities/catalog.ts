@@ -12,6 +12,7 @@ export const forgeCustomToolIds = [
   'list_internal_agent_contracts',
   'adjust_agent_contract_budget',
   'list_agent_notifications',
+  'mark_notifications_read',
   'get_github_git_credentials',
   'get_github_provisioning_status',
   'start_github_app_provisioning',

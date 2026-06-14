@@ -278,7 +278,7 @@ describe('createAgentNotificationStore', () => {
       expect(result[0].content).toBe('Unread');
     });
 
-    test('returns read:true when markRead is true (default)', async () => {
+    test('returns read:false when readAt is null in DB (L#19 pure read)', async () => {
       const ts = 1700000000000;
       mock = createMockDb([
         { id: 'n1', agentId: 'agent_1', content: 'Unread', createdAt: ts, readAt: null },
@@ -287,23 +287,19 @@ describe('createAgentNotificationStore', () => {
 
       const result = await store.listNotifications({ agentId: 'agent_1', limit: 10 });
 
-      expect(result[0].read).toBe(true);
+      expect(result[0].read).toBe(false);
     });
 
-    test('returns read:false when markRead is false', async () => {
+    test('returns read:true when readAt is set in DB', async () => {
       const ts = 1700000000000;
       mock = createMockDb([
-        { id: 'n1', agentId: 'agent_1', content: 'Unread', createdAt: ts, readAt: null },
+        { id: 'n1', agentId: 'agent_1', content: 'Read', createdAt: ts, readAt: ts + 1000 },
       ]);
       store = createAgentNotificationStore(mock.db);
 
-      const result = await store.listNotifications({
-        agentId: 'agent_1',
-        limit: 10,
-        markRead: false,
-      });
+      const result = await store.listNotifications({ agentId: 'agent_1', limit: 10 });
 
-      expect(result[0].read).toBe(false);
+      expect(result[0].read).toBe(true);
     });
 
     test('maps fields correctly to notification shape', async () => {
@@ -319,8 +315,136 @@ describe('createAgentNotificationStore', () => {
         notificationId: 'n1',
         content: 'Test content',
         timestamp: ts,
-        read: true,
+        read: false,
       });
+    });
+
+    test('L#19: does NOT call db.update (pure read invariant)', async () => {
+      const ts = 1700000000000;
+      mock = createMockDb([
+        { id: 'n1', agentId: 'agent_1', content: 'Unread', createdAt: ts, readAt: null },
+        { id: 'n2', agentId: 'agent_1', content: 'Unread 2', createdAt: ts + 1000, readAt: null },
+      ]);
+      store = createAgentNotificationStore(mock.db);
+
+      const updateSpy = vi.mocked(mock.db.update);
+      await store.listNotifications({ agentId: 'agent_1', limit: 10 });
+
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    test('L#19: does NOT call db.insert (pure read invariant)', async () => {
+      const ts = 1700000000000;
+      mock = createMockDb([
+        { id: 'n1', agentId: 'agent_1', content: 'Unread', createdAt: ts, readAt: null },
+      ]);
+      store = createAgentNotificationStore(mock.db);
+
+      const insertSpy = vi.mocked(mock.db.insert);
+      await store.listNotifications({ agentId: 'agent_1', limit: 10 });
+
+      expect(insertSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── L#19: markNotificationsRead (explicit mutation counterpart to listNotifications) ──
+  describe('markNotificationsRead', () => {
+    test('calls db.update with readAt and updatedAt set to current time', async () => {
+      mock = createMockDb([]);
+      store = createAgentNotificationStore(mock.db);
+
+      const updateSpy = vi.mocked(mock.db.update);
+      await store.markNotificationsRead({
+        agentId: 'agent_1',
+        notificationIds: ['n1', 'n2'],
+      });
+
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('returns updatedCount equal to the number of notificationIds passed', async () => {
+      mock = createMockDb([]);
+      store = createAgentNotificationStore(mock.db);
+
+      const result = await store.markNotificationsRead({
+        agentId: 'agent_1',
+        notificationIds: ['n1', 'n2', 'n3'],
+      });
+
+      expect(result).toEqual({ updatedCount: 3 });
+    });
+
+    test('returns updatedCount: 0 for empty notificationIds array (no DB call)', async () => {
+      mock = createMockDb([]);
+      store = createAgentNotificationStore(mock.db);
+
+      const updateSpy = vi.mocked(mock.db.update);
+      const result = await store.markNotificationsRead({
+        agentId: 'agent_1',
+        notificationIds: [],
+      });
+
+      expect(result).toEqual({ updatedCount: 0 });
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    test('returns updatedCount: 0 on DB error (does not throw)', async () => {
+      mock = createMockDb([]);
+      store = createAgentNotificationStore(mock.db);
+
+      // Make the update chain throw
+      vi.mocked(mock.db.update).mockImplementationOnce(() => {
+        throw new Error('boom');
+      });
+
+      const result = await store.markNotificationsRead({
+        agentId: 'agent_1',
+        notificationIds: ['n1'],
+      });
+
+      expect(result).toEqual({ updatedCount: 0 });
+    });
+  });
+
+  // ── L#19 tripwire: source-level guarantees (catches re-introduction of bug class) ──
+  describe('L#19 tripwire: source-level invariants for #5623', () => {
+    test('source: listNotifications input has NO markRead parameter (use indexOf)', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      // Slice from listNotifications signature to next function declaration
+      const fnStart = source.indexOf('async function listNotifications');
+      const fnEnd = source.indexOf('async function ', fnStart + 1);
+      const fnSig = source.slice(fnStart, fnEnd);
+      expect(fnSig).not.toMatch(/markRead/);
+    });
+
+    test('source: listNotifications function body does NOT contain db.update', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      // Find the listNotifications function body (between async function listNotifications and the next async function)
+      const fnStart = source.indexOf('async function listNotifications');
+      expect(fnStart).toBeGreaterThan(-1);
+      const fnEnd = source.indexOf('async function ', fnStart + 1);
+      const fnBody = source.slice(fnStart, fnEnd);
+      expect(fnBody).not.toMatch(/db.update|db.insert/);
+    });
+
+    test('source: listNotifications returns read: row.readAt !== null (DB state)', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      expect(source).toMatch(/read:\s*row\.readAt\s*!==\s*null/);
+    });
+
+    test('source: markNotificationsRead is a separate exported function in factory return', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      expect(source).toMatch(/async function markNotificationsRead\(/);
+      // Verify the FACTORY return object (the LAST return block, near end of file)
+      const factoryReturnIdx = source.lastIndexOf('return {');
+      expect(factoryReturnIdx).toBeGreaterThan(-1);
+      const factoryReturn = source.slice(factoryReturnIdx);
+      expect(factoryReturn).toMatch(/markNotificationsRead/);
+    });
+
+    test('source: no occurrence of "markRead ?? true" anywhere (bug pattern eliminated)', () => {
+      const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
+      expect(source).not.toMatch(/markRead\s*\?\?\s*true/);
     });
   });
 
