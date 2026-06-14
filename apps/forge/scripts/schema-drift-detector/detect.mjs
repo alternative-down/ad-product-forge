@@ -222,6 +222,16 @@ function detect() {
   }
 
   lines.push('');
+  if (newDriftCount > 0 && !NO_FAIL) {
+    lines.push('');
+    lines.push('REMEDIATION:');
+    lines.push('  New drift detected and CI is in BLOCKING mode. To resolve, either:');
+    lines.push('  1. Add the missing migration in the SAME PR (preferred), OR');
+    lines.push('  2. Add a baseline entry in apps/forge/scripts/schema-drift-detector/known-drift.json');
+    lines.push('     with a follow-up issue to track the schema-vs-migration fix.');
+    lines.push('  See issue #5489 for the rollout plan.');
+    lines.push('');
+  }
   lines.push(
     `Summary: ${newDriftCount} new drift (CI fail unless --no-fail) | ${knownDriftCount} known drift (baseline) | ${harmlessCount} harmless extras across ${Object.keys(schemas).length} schema tables`,
   );

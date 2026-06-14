@@ -284,6 +284,61 @@ describe('schema-drift-detector', () => {
       assert.match(output, /informational only/);
       cleanupTmpRepo();
     });
+
+    it('--fail mode (default) exits 1 with new drift and includes REMEDIATION', () => {
+      TMP_ROOT = setupTmpRepo();
+      copyScriptTo(TMP_ROOT);
+      copyBaselineTo(TMP_ROOT, { version: 1, entries: [] });
+      // Schema has a column not in any migration
+      writeMigration(
+        TMP_ROOT,
+        '0000_test.sql',
+        'CREATE TABLE `agents` (`id` text NOT NULL);',
+      );
+      writeSchema(
+        TMP_ROOT,
+        'schema-test.ts',
+        "import { sqliteTable, text } from 'drizzle-orm/sqlite-core';" +
+          "export const agents = sqliteTable('agents', {" +
+          "  id: text('id').primaryKey()," +
+          "  newCol: text('new_col').notNull()," +
+          '});',
+      );
+      // --fail is the default; run with no args to confirm blocking behavior
+      const { code, output } = runDetect(TMP_ROOT);
+      assert.equal(code, 1, 'default (--fail) mode should exit 1 with new drift');
+      assert.match(output, /NEW/, 'should report NEW drift');
+      assert.match(output, /REMEDIATION/, 'should include REMEDIATION block in --fail mode');
+      assert.match(output, /issue #5489/, 'REMEDIATION should reference issue #5489');
+      cleanupTmpRepo();
+    });
+
+    it('--fail mode exits 0 when there is no new drift', () => {
+      TMP_ROOT = setupTmpRepo();
+      copyScriptTo(TMP_ROOT);
+      copyBaselineTo(TMP_ROOT, { version: 1, entries: [] });
+      // Schema and migration match exactly
+      writeMigration(
+        TMP_ROOT,
+        '0000_test.sql',
+        'CREATE TABLE `agents` (`id` text NOT NULL, `name` text NOT NULL);',
+      );
+      writeSchema(
+        TMP_ROOT,
+        'schema-test.ts',
+        "import { sqliteTable, text } from 'drizzle-orm/sqlite-core';" +
+          "export const agents = sqliteTable('agents', {" +
+          "  id: text('id').primaryKey()," +
+          "  name: text('name').notNull()," +
+          '});',
+      );
+      const { code, output } = runDetect(TMP_ROOT);
+      assert.equal(code, 0, '--fail mode should exit 0 when no new drift');
+      assert.match(output, /0 new drift/);
+      // REMEDIATION should NOT appear when there is no drift
+      assert.doesNotMatch(output, /REMEDIATION/, 'should not include REMEDIATION when no drift');
+      cleanupTmpRepo();
+    });
   });
 
   describe('regression: real repo baseline', () => {
