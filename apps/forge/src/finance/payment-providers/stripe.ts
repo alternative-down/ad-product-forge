@@ -23,13 +23,14 @@ export function parseStripePaymentSucceeded(event: StripeWebhookPayload): {
 } | null {
   if (event.type !== 'payment_intent.succeeded') return null;
   const obj = event.data.object as Record<string, unknown>;
-  const amount = typeof obj.amount === 'number' ? obj.amount : 0;
+  if (typeof obj.customer !== 'string') return null;
+  if (typeof obj.amount !== 'number') return null;
   return {
     provider: 'stripe',
     providerPaymentId: event.id,
     subscriptionId: typeof obj.subscription === 'string' ? obj.subscription : undefined,
-    customerId: typeof obj.customer === 'string' ? obj.customer : '',
-    amountUsd: amount / 100,
+    customerId: obj.customer,
+    amountUsd: obj.amount / 100,
     currency: String(obj.currency ?? 'usd'),
     status: 'completed',
   };
@@ -48,14 +49,15 @@ export function parseStripePaymentFailed(event: StripeWebhookPayload): {
 } | null {
   if (event.type !== 'payment_intent.payment_failed') return null;
   const obj = event.data.object as Record<string, unknown>;
-  const amount = typeof obj.amount === 'number' ? obj.amount : 0;
+  if (typeof obj.customer !== 'string') return null;
+  if (typeof obj.amount !== 'number') return null;
   const lastError = (obj.last_payment_error as Record<string, unknown>) ?? {};
   return {
     provider: 'stripe',
     providerPaymentId: event.id,
     subscriptionId: typeof obj.subscription === 'string' ? obj.subscription : undefined,
-    customerId: typeof obj.customer === 'string' ? obj.customer : '',
-    amountUsd: amount / 100,
+    customerId: obj.customer,
+    amountUsd: obj.amount / 100,
     currency: String(obj.currency ?? 'usd'),
     status: 'failed',
     failureReason: typeof lastError.message === 'string' ? lastError.message : undefined,
@@ -74,19 +76,20 @@ export function parseStripeCheckoutCompleted(event: StripeWebhookPayload): {
 } | null {
   if (event.type !== 'checkout.session.completed') return null;
   const obj = event.data.object as Record<string, unknown>;
-  const amount = typeof obj.amount_total === 'number' ? obj.amount_total : 0;
+  if (typeof obj.customer !== 'string') return null;
+  if (typeof obj.amount_total !== 'number') return null;
   return {
     provider: 'stripe',
     providerPaymentId: event.id,
     subscriptionId: typeof obj.subscription === 'string' ? obj.subscription : undefined,
-    customerId: typeof obj.customer === 'string' ? obj.customer : '',
-    amountUsd: amount / 100,
+    customerId: obj.customer,
+    amountUsd: obj.amount_total / 100,
     currency: String(obj.currency ?? 'usd'),
     status: 'completed',
   };
 }
 
-/** Map any Stripe webhook event to a normalized payment status. */
+
 export function normalizeStripeEvent(event: StripeWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
@@ -98,6 +101,7 @@ export function normalizeStripeEvent(event: StripeWebhookPayload): {
   failureReason?: string;
   rawEventJson: string;
 } | null {
+  // Each parse function returns null early if customer or amount is missing (#5635).
   const succeeded = parseStripePaymentSucceeded(event);
   if (succeeded) {
     return { ...succeeded, currency: succeeded.currency, rawEventJson: JSON.stringify(event) };
@@ -132,14 +136,19 @@ export function parseStripePaymentRefunded(event: StripeWebhookPayload): {
 } | null {
   if (event.type !== 'charge.refunded' && event.type !== 'payment_intent.refunded') return null;
   const obj = event.data.object as Record<string, unknown>;
-  const amount = typeof obj.amount === 'number' ? obj.amount
-    : typeof obj.amount_refunded === 'number' ? obj.amount_refunded : 0;
+  if (typeof obj.customer !== 'string') return null;
+  const amount = typeof obj.amount === 'number'
+    ? obj.amount
+    : typeof obj.amount_refunded === 'number'
+      ? obj.amount_refunded
+      : null;
+  if (amount === null) return null;
   const currency = String(obj.currency ?? 'usd');
   return {
     provider: 'stripe',
     providerPaymentId: event.id,
     subscriptionId: typeof obj.subscription === 'string' ? obj.subscription : undefined,
-    customerId: typeof obj.customer === 'string' ? obj.customer : '',
+    customerId: obj.customer,
     amountUsd: amount / 100,
     currency,
     status: 'refunded',
