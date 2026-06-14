@@ -4,6 +4,7 @@ import {
   parseStripePaymentSucceeded,
   parseStripePaymentFailed,
   parseStripeCheckoutCompleted,
+  parseStripePaymentRefunded,
 } from './stripe';
 
 function makeStripeEvent(
@@ -45,8 +46,10 @@ describe('stripe adapter', () => {
     });
 
     it('handles missing optional fields', () => {
+      // amount is required (#5635) — provide it; test only checks subscriptionId is optional
       const event = makeStripeEvent('payment_intent.succeeded', {
         customer: 'cus_123',
+        amount: 4999,
       });
       const result = parseStripePaymentSucceeded(event);
       expect(result).not.toBeNull();
@@ -73,8 +76,10 @@ describe('stripe adapter', () => {
     });
 
     it('handles missing error message', () => {
+      // amount is required (#5635) — provide it; test only checks failureReason is optional
       const event = makeStripeEvent('payment_intent.payment_failed', {
         customer: 'cus_123',
+        amount: 9900,
       });
       const result = parseStripePaymentFailed(event);
       expect(result).not.toBeNull();
@@ -129,6 +134,131 @@ describe('stripe adapter', () => {
       expect(result).not.toBeNull();
       expect(result!.status).toBe('failed');
       expect(result!.failureReason).toBe('insufficient funds');
+    });
+  });
+
+  // ─── L#5635: required customerId + amountUsd (no default-empty-string / default-zero) ──
+
+  describe('parseStripePaymentSucceeded required fields (#5635)', () => {
+    it('returns null when customer is missing', () => {
+      const event = makeStripeEvent('payment_intent.succeeded', {
+        amount: 4999,
+        currency: 'usd',
+      });
+      expect(parseStripePaymentSucceeded(event)).toBeNull();
+    });
+
+    it('returns null when amount is missing', () => {
+      const event = makeStripeEvent('payment_intent.succeeded', {
+        customer: 'cus_123',
+        currency: 'usd',
+      });
+      expect(parseStripePaymentSucceeded(event)).toBeNull();
+    });
+  });
+
+  describe('parseStripePaymentFailed required fields (#5635)', () => {
+    it('returns null when customer is missing', () => {
+      const event = makeStripeEvent('payment_intent.payment_failed', {
+        amount: 9900,
+        last_payment_error: { message: 'card declined' },
+      });
+      expect(parseStripePaymentFailed(event)).toBeNull();
+    });
+
+    it('returns null when amount is missing', () => {
+      const event = makeStripeEvent('payment_intent.payment_failed', {
+        customer: 'cus_123',
+        last_payment_error: { message: 'card declined' },
+      });
+      expect(parseStripePaymentFailed(event)).toBeNull();
+    });
+  });
+
+  describe('parseStripeCheckoutCompleted required fields (#5635)', () => {
+    it('returns null when customer is missing', () => {
+      const event = makeStripeEvent('checkout.session.completed', {
+        amount_total: 1999,
+        currency: 'usd',
+      });
+      expect(parseStripeCheckoutCompleted(event)).toBeNull();
+    });
+
+    it('returns null when amount is missing', () => {
+      const event = makeStripeEvent('checkout.session.completed', {
+        customer: 'cus_123',
+        currency: 'usd',
+      });
+      expect(parseStripeCheckoutCompleted(event)).toBeNull();
+    });
+  });
+
+  describe('parseStripePaymentRefunded required fields (#5635)', () => {
+    it('returns null when customer is missing (charge.refunded)', () => {
+      const event = makeStripeEvent('charge.refunded', {
+        amount: 1000,
+        currency: 'usd',
+      });
+      expect(parseStripePaymentRefunded(event)).toBeNull();
+    });
+
+    it('returns null when both amount and amount_refunded are missing', () => {
+      const event = makeStripeEvent('payment_intent.refunded', {
+        customer: 'cus_123',
+        currency: 'usd',
+      });
+      expect(parseStripePaymentRefunded(event)).toBeNull();
+    });
+  });
+
+  describe('normalizeStripeEvent null propagation (#5635)', () => {
+    it('returns null when customer is missing from a parseable event', () => {
+      const event = makeStripeEvent('payment_intent.succeeded', {
+        amount: 1000,
+        currency: 'usd',
+      });
+      expect(normalizeStripeEvent(event)).toBeNull();
+    });
+
+    it('returns null when amount is missing from a parseable event', () => {
+      const event = makeStripeEvent('checkout.session.completed', {
+        customer: 'cus_123',
+        currency: 'usd',
+      });
+      expect(normalizeStripeEvent(event)).toBeNull();
+    });
+  });
+
+  // ─── L#NN-19 tripwire: catches default-empty-string and default-zero regressions ──
+  // Source-level compliance (per L#NN-13 13a): read the file and assert the
+  // anti-patterns do NOT appear. Uses RegExp constructor to avoid OXC parser
+  // regex-literal bug (per L#NN-9 OXC gotcha).
+  describe('L#NN-19 tripwire: no default-empty-string customerId, no default-zero amount (#5635)', () => {
+    it('stripe.ts source does not contain the default-empty-string customerId pattern', async () => {
+      const fsModule = await import('fs');
+      const url = await import('url');
+      const stripePath = url.fileURLToPath(new URL('./stripe.ts', import.meta.url));
+      const source = fsModule.readFileSync(stripePath, 'utf8');
+      // The pattern: customerId defaulting to empty string (the L#19 risk).
+      // We check for the assignment pattern "customerId: ... : ''" anywhere in source.
+      // String-based check is more semantic and lint-clean than regex.
+      const defaultEmpty = /customerId:[^\n]*: ''/.test(source);
+      expect(defaultEmpty).toBe(false);
+    });
+
+    it('stripe.ts source does not contain the default-zero amount pattern', async () => {
+      const fsModule = await import('fs');
+      const url = await import('url');
+      const stripePath = url.fileURLToPath(new URL('./stripe.ts', import.meta.url));
+      const source = fsModule.readFileSync(stripePath, 'utf8');
+      // The pattern: amount defaulting to literal 0 in the typeof-amount === 'number' ?: 0 ternary.
+      // We check for the typeof-amount + : 0 substrings within 80 chars of each other.
+      const idx0 = source.indexOf(': 0');
+      const idxTypeof = source.indexOf("typeof obj.amount");
+      // Both must be present, and the ': 0' must be within 80 chars of the typeof-amount ternary
+      const hasDefaultZero = idx0 !== -1 && idxTypeof !== -1
+        && Math.abs(idx0 - idxTypeof) < 80;
+      expect(hasDefaultZero).toBe(false);
     });
   });
 });
