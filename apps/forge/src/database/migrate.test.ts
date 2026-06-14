@@ -15,10 +15,6 @@ vi.mock('drizzle-orm/migrator', () => ({
   readMigrationFiles: readMigrationFilesMock,
 }));
 
-vi.mock('node:path', () => ({
-  join: vi.fn().mockReturnValue('/migrations'),
-}));
-
 vi.mock('../database/config', () => ({
   getAppDatabasePath: vi.fn().mockReturnValue('/data/app.db'),
 }));
@@ -57,7 +53,7 @@ describe('runMigrations', () => {
     await runMigrations(mockDb);
 
     expect(readMigrationFilesMock).toHaveBeenCalledWith({
-      migrationsFolder: '/migrations',
+      migrationsFolder: expect.stringContaining('migrations'),
     });
   });
 
