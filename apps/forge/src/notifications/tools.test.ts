@@ -13,9 +13,11 @@ vi.mock('@forge-runtime/core', () => ({
 
 // Mock the notifications store
 const mockListNotifications = vi.fn();
+const mockMarkNotificationsRead = vi.fn();
 vi.mock('./store', () => ({
   createAgentNotificationStore: vi.fn(() => ({
     listNotifications: mockListNotifications,
+    markNotificationsRead: mockMarkNotificationsRead,
     createNotification: vi.fn(),
     getNotification: vi.fn(),
   })),
@@ -133,6 +135,94 @@ describe('createAgentNotificationTools', () => {
       tools.list_agent_notifications as unknown as { execute: (input: unknown) => Promise<unknown> }
     ).execute;
     const result = await execute({});
+    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error') });
+  });
+
+  // ── L#19: list_agent_notifications description (no hidden side effect) ────────────────
+  it('L#19: list_agent_notifications description explicitly states it does NOT mark as read', () => {
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['list_agent_notifications']),
+    );
+    const desc = (tools.list_agent_notifications as { description: string }).description;
+    // The NEW description must affirmatively say the tool does NOT mark as read
+    expect(desc.toLowerCase()).toMatch(/does\s+not\s+mark\s+them/);
+    // And the OLD hidden-side-effect language ("listing them marks") must be absent
+    expect(desc).not.toMatch(/listing them marks/i);
+  });
+});
+
+describe('createAgentNotificationTools (mark_notifications_read, #5623)', () => {
+  it('returns mark_notifications_read when permission is granted', () => {
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['mark_notifications_read']),
+    );
+    expect(Object.keys(tools)).toContain('mark_notifications_read');
+  });
+
+  it('does NOT include mark_notifications_read when permission is not granted', () => {
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['list_agent_notifications']),
+    );
+    expect(Object.keys(tools)).not.toContain('mark_notifications_read');
+  });
+
+  it('mark_notifications_read has correct id', () => {
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['mark_notifications_read']),
+    );
+    expect(tools.mark_notifications_read.id).toBe('mark_notifications_read');
+  });
+
+  it('mark_notifications_read tool execute calls store.markNotificationsRead with agentId and notificationIds', async () => {
+    mockMarkNotificationsRead.mockResolvedValue({ updatedCount: 2 });
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-abc',
+      new Set(['mark_notifications_read']),
+    );
+    const execute = (
+      tools.mark_notifications_read as unknown as { execute: (input: unknown) => Promise<unknown> }
+    ).execute;
+    await execute({ notificationIds: ['n1', 'n2'] });
+    expect(mockMarkNotificationsRead).toHaveBeenCalledWith({
+      agentId: 'agent-abc',
+      notificationIds: ['n1', 'n2'],
+    });
+  });
+
+  it('mark_notifications_read tool execute returns store result on success', async () => {
+    mockMarkNotificationsRead.mockResolvedValue({ updatedCount: 3 });
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['mark_notifications_read']),
+    );
+    const execute = (
+      tools.mark_notifications_read as unknown as { execute: (input: unknown) => Promise<unknown> }
+    ).execute;
+    const result = await execute({ notificationIds: ['n1', 'n2', 'n3'] });
+    expect(result).toEqual({ updatedCount: 3 });
+  });
+
+  it('mark_notifications_read tool execute returns valid:false error object on exception', async () => {
+    mockMarkNotificationsRead.mockRejectedValue(new Error('DB error'));
+    const tools = createAgentNotificationTools(
+      {} as any,
+      'agent-123',
+      new Set(['mark_notifications_read']),
+    );
+    const execute = (
+      tools.mark_notifications_read as unknown as { execute: (input: unknown) => Promise<unknown> }
+    ).execute;
+    const result = await execute({ notificationIds: ['n1'] });
     expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error') });
   });
 });
