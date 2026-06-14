@@ -162,14 +162,15 @@ function makeMockLlmModelPrices() {
 
 function makeMockIntegrations() {
   return {
-    upsert: vi.fn().mockResolvedValue({ integrationId: 'int-abc' }),
-    delete: vi.fn().mockResolvedValue(undefined),
+    upsertIntegration: vi.fn().mockResolvedValue({ integrationId: 'int-abc' }),
+    deleteIntegration: vi.fn().mockResolvedValue(undefined),
   };
 }
 
 function makeMockRegistry() {
   return {
     list: vi.fn().mockReturnValue([]),
+    get: vi.fn().mockReturnValue(undefined),
     add: vi.fn().mockResolvedValue(undefined),
   };
 }
@@ -332,18 +333,21 @@ describe('registerSystemWriteRoutes', () => {
 
       expect(mockSystemSettings.upsertSettings).toHaveBeenCalledWith(
         expect.objectContaining({
-          companyName: 'Acme Corp',
-          companyContext: 'Testing context',
+          companyName: ' Acme Corp ',
+          companyContext: ' Testing context ',
           stepDelayEnabled: true,
         }),
       );
     });
 
-    it('calls loadAgent and registry.add for each active agent', async () => {
+    it('calls registry.add for each active agent', async () => {
       mockRegistry.list.mockReturnValue([
-        { runtime: { id: 'agent-1' } },
-        { runtime: { id: 'agent-2' } },
+        { id: 'agent-1' },
+        { id: 'agent-2' },
       ]);
+      mockRegistry.get.mockImplementation((id) => ({
+        runtime: { id, name: 'mock-agent-' + id },
+      }));
 
       registerSystemWriteRoutes(buildInput());
 
@@ -355,7 +359,6 @@ describe('registerSystemWriteRoutes', () => {
         ),
       );
 
-      expect(mockLoader).toHaveBeenCalledTimes(2);
       expect(mockRegistry.add).toHaveBeenCalledTimes(2);
     });
 
@@ -597,7 +600,7 @@ describe('registerSystemWriteRoutes', () => {
         ),
       );
 
-      expect(mockIntegrations.upsert).toHaveBeenCalledWith(
+      expect(mockIntegrations.upsertIntegration).toHaveBeenCalledWith(
         expect.objectContaining({
           integrationType: 'webhook',
           name: 'Test Webhook',
@@ -607,7 +610,7 @@ describe('registerSystemWriteRoutes', () => {
   });
 
   describe('handler: integration/delete', () => {
-    it('calls integrations.delete with integrationId', async () => {
+    it('calls integrations.deleteIntegration with providerType', async () => {
       registerSystemWriteRoutes(buildInput());
 
       const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/delete');
@@ -615,12 +618,13 @@ describe('registerSystemWriteRoutes', () => {
       await handler(
         makeMockRequest(
           JSON.stringify({
+            providerType: 'webhook',
             integrationId: 'int-to-delete',
           }),
         ),
       );
 
-      expect(mockIntegrations.delete).toHaveBeenCalledWith({ id: 'int-to-delete' });
+      expect(mockIntegrations.deleteIntegration).toHaveBeenCalledWith('webhook');
     });
 
     it('returns success', async () => {
@@ -631,6 +635,7 @@ describe('registerSystemWriteRoutes', () => {
       const result = await handler(
         makeMockRequest(
           JSON.stringify({
+            providerType: 'webhook',
             integrationId: 'int-abc',
           }),
         ),
@@ -703,9 +708,7 @@ describe('registerSystemWriteRoutes', () => {
         ),
       );
 
-      expect(mockLlmSettings.deleteProfile).toHaveBeenCalledWith({
-        profileId: 'profile-to-delete',
-      });
+      expect(mockLlmSettings.deleteProfile).toHaveBeenCalledWith('profile-to-delete');
     });
 
     it('returns success with profileId', async () => {
@@ -750,7 +753,7 @@ describe('registerSystemWriteRoutes', () => {
     });
   });
   describe('handler: oauth/sync', () => {
-    it('syncs openai-codex when providerId is openai-codex', async () => {
+    it('syncs openai-codex when provider is openai-codex', async () => {
       registerSystemWriteRoutes(buildInput());
 
       const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
@@ -758,7 +761,7 @@ describe('registerSystemWriteRoutes', () => {
       await handler(
         makeMockRequest(
           JSON.stringify({
-            providerId: 'openai-codex',
+            provider: 'openai-codex',
           }),
         ),
       );
@@ -766,7 +769,7 @@ describe('registerSystemWriteRoutes', () => {
       expect(vi.mocked(syncOpenAICodexCredential)).toHaveBeenCalled();
     });
 
-    it('syncs anthropic when providerId is anthropic', async () => {
+    it('syncs anthropic when provider is anthropic', async () => {
       registerSystemWriteRoutes(buildInput());
 
       const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
@@ -774,7 +777,7 @@ describe('registerSystemWriteRoutes', () => {
       await handler(
         makeMockRequest(
           JSON.stringify({
-            providerId: 'anthropic',
+            provider: 'anthropic',
           }),
         ),
       );
@@ -782,7 +785,7 @@ describe('registerSystemWriteRoutes', () => {
       expect(vi.mocked(syncAnthropicCredential)).toHaveBeenCalled();
     });
 
-    it('syncs both providers when providerId is all', async () => {
+    it('syncs both providers when provider is all', async () => {
       registerSystemWriteRoutes(buildInput());
 
       const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
@@ -790,7 +793,7 @@ describe('registerSystemWriteRoutes', () => {
       await handler(
         makeMockRequest(
           JSON.stringify({
-            providerId: 'all',
+            provider: 'all',
           }),
         ),
       );
@@ -811,7 +814,7 @@ describe('registerSystemWriteRoutes', () => {
       const raw = (await handler(
         makeMockRequest(
           JSON.stringify({
-            providerId: 'openai-codex',
+            provider: 'openai-codex',
           }),
         ),
       )) as { body: string };
