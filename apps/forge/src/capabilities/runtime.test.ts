@@ -165,7 +165,7 @@ describe('capabilities/runtime', () => {
     it('loads and re-adds the agent when it is in the registry', async () => {
       registryState.set('ag_001', { id: 'ag_001', runner: vi.fn() });
       const { loadAgent } = await import('../agents/agent-loader');
-      (loadAgent as any).mockResolvedValue({
+      vi.mocked(loadAgent).mockResolvedValue({
         id: 'ag_001',
         name: 'Test',
         dispose: vi.fn(),
@@ -190,7 +190,7 @@ describe('capabilities/runtime', () => {
       registryState.set('ag_002', { id: 'ag_002', runner: vi.fn() });
 
       const { loadAgent } = await import('../agents/agent-loader');
-      (loadAgent as any).mockResolvedValue({ id: '', name: 'Test', dispose: vi.fn() } as never);
+      vi.mocked(loadAgent).mockResolvedValue({ id: '', name: 'Test', dispose: vi.fn() } as never);
 
       await reloadAgentsForRole(db, makeConfig(), 'role_dev');
 
@@ -286,7 +286,7 @@ describe('capabilities/runtime', () => {
       const { loadAgent } = await import('../agents/agent-loader');
       const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
-      (loadAgent as any).mockResolvedValue(undefined);
+      vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
       const result = await changeAgentRole({
         db,
@@ -328,7 +328,7 @@ describe('capabilities/runtime', () => {
       const { loadAgent } = await import('../agents/agent-loader');
       const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_self', { id: 'ag_self', runner: mockRunner });
-      (loadAgent as any).mockResolvedValue(undefined);
+      vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
       await changeAgentRole({
         db,
@@ -393,7 +393,7 @@ describe('capabilities/runtime', () => {
       const { loadAgent } = await import('../agents/agent-loader');
       const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
-      (loadAgent as any).mockResolvedValue(undefined);
+      vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
       const result = await changeAgentRoleFromAdmin({
         db,
