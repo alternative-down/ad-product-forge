@@ -5,7 +5,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 
 // Track runner instances keyed by runtime id
-const mockRunnerInstances = new Map<string, any>();
+const mockRunnerInstances = new Map<string, MockedAgentRunner>();
 
 vi.mock('../agents/agent-runner', () => ({
   createAgentRunner: vi.fn((_db, runtime) => {
@@ -16,7 +16,7 @@ vi.mock('../agents/agent-runner', () => ({
       forceIdle: vi.fn(),
       getSnapshot: vi.fn().mockReturnValue({ wake: { events: [] }, pendingRunEvents: [] }),
     };
-    mockRunnerInstances.set(runtime.id, runner as any as any);
+    mockRunnerInstances.set(runtime.id, runner as unknown as MockedAgentRunner);
     return runner;
   }),
 }));
@@ -27,7 +27,7 @@ vi.mock('../agents/agent-loader', () => ({
 }));
 
 // Shared registry state — same object across all calls to getInternalAgentRegistry()
-const registryState = new Map<string, { id: string; runner: ReturnType<typeof vi.fn> }>();
+const registryState = new Map<string, { id: string; runner: MockedAgentRunner }>();
 const registry = {
   get: vi.fn((id: string) => registryState.get(id)),
   add: vi.fn(async (_db: unknown, runtime: { id: string } | undefined) => {
@@ -66,6 +66,21 @@ import {
 } from './runtime';
 import type { Database } from '../database/client';
 import type { InternalChatService } from '../communication/internal-chat-service';
+import type { InternalChatService } from '../communication/internal-chat-service';
+
+// L#NN-9 9f.3 follow-up (#5633 PR 2): type tightening for test mocks.
+// MockedAgentRunner -- the test-only subset of AgentRunner methods exercised.
+// Includes both the factory's full 5-method mock (start/stop/notifyExternalEvent/
+// forceIdle/getSnapshot) and the inline 2-method mocks (notifyExternalEvent/run).
+type MockedAgentRunner = {
+  start?: ReturnType<typeof vi.fn>;
+  stop?: ReturnType<typeof vi.fn>;
+  notifyExternalEvent: ReturnType<typeof vi.fn>;
+  forceIdle?: ReturnType<typeof vi.fn>;
+  getSnapshot?: ReturnType<typeof vi.fn>;
+  run?: ReturnType<typeof vi.fn>;
+};
+
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +98,7 @@ function makeMinimalInternalChat(): InternalChatService {
     onCapabilityEvent: vi.fn(),
     onAgentRoleChange: vi.fn(),
   } as unknown as InternalChatService;
+  // L#NN-9 9f.3 (#5633 PR 2): double cast is intentional -- mock is partial subset of InternalChatService (11 of N methods used by tests). Single cast `as InternalChatService` fails structural check.
 }
 
 function makeConfig() {
@@ -91,7 +107,7 @@ function makeConfig() {
     githubApps: {} as import('../github/manager').GitHubAppManager,
     emailMailboxes: null,
     coolify: null,
-    schedules: {} as any,
+    schedules: {},
     internalChat: makeMinimalInternalChat(),
   };
 }
@@ -116,6 +132,7 @@ function makeDb(overrides: Partial<Database> = {}): Database {
     delete: vi.fn(),
     ...overrides,
   } as unknown as Database;
+  // L#NN-9 9f.3 (#5633 PR 2): double cast is intentional -- Database is LibSQLDatabase<typeof schema> (Drizzle typed), mock is partial subset. Single cast `as Database` fails structural check.
 }
 
 function makeAgent(id: string, name: string, roleId?: string) {
@@ -195,7 +212,7 @@ describe('capabilities/runtime', () => {
       await reloadAgentsForRole(db, makeConfig(), 'role_dev');
 
       expect(db.query.agents.findMany).toHaveBeenCalled();
-      const findManyCall = vi.mocked(db.query.agents.findMany).mock.calls[0]![0] as any;
+      const findManyCall = vi.mocked(db.query.agents.findMany).mock.calls[0]![0] as { columns?: { id?: boolean } };
       expect(findManyCall.columns).toEqual({ id: true });
       expect(loadAgent).toHaveBeenCalledTimes(2);
     });
@@ -284,7 +301,7 @@ describe('capabilities/runtime', () => {
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
+      const mockRunner: MockedAgentRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
       vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
@@ -326,7 +343,7 @@ describe('capabilities/runtime', () => {
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
+      const mockRunner: MockedAgentRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
       registryState.set('ag_self', { id: 'ag_self', runner: mockRunner });
       vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
@@ -391,7 +408,7 @@ describe('capabilities/runtime', () => {
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
+      const mockRunner: MockedAgentRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
       vi.mocked(loadAgent).mockResolvedValue(undefined as never);
 
