@@ -484,4 +484,89 @@ describe('createPaymentReceivablesStore', () => {
       expect(captured?.name).toBe('Old Name');
     });
   });
+
+  describe('upsertProvider (L#19 fix #5637)', () => {
+    it('updates existing provider apiKeyEncrypted on second call (was silently dropped before fix)', async () => {
+      // Arrange: pre-existing provider with stale apiKeyEncrypted
+      const existing = {
+        id: 'prov-1',
+        provider: 'stripe',
+        apiKeyEncrypted: 'old-key',
+        webhookSecretEncrypted: 'old-secret',
+        isActive: 1,
+        configJson: null,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      db.select = vi.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            all: () => Promise.resolve([existing]),
+          }),
+        }),
+      });
+      let captured: Record<string, unknown> | undefined;
+      db.update = vi.fn().mockReturnValue({
+        set: (vals: Record<string, unknown>) => {
+          captured = vals;
+          return { where: () => Promise.resolve({ rowCount: 1 }) };
+        },
+      });
+
+      // Act: call upsertProvider with a new apiKeyEncrypted (e.g., key rotation)
+      const result = await store.upsertProvider({
+        provider: 'stripe',
+        apiKeyEncrypted: 'new-key',
+        webhookSecretEncrypted: 'new-secret',
+        isActive: true,
+        configJson: { region: 'us-east-1' },
+      });
+
+      // Assert: existing id returned (not a new insert), UPDATE was called with NEW values
+      expect(result).toBe('prov-1');
+      expect(captured?.apiKeyEncrypted).toBe('new-key');
+      expect(captured?.webhookSecretEncrypted).toBe('new-secret');
+      // Coercion: input boolean → DB integer, input Record → JSON string
+      expect(captured?.isActive).toBe(1);
+      expect(captured?.configJson).toBe('{"region":"us-east-1"}');
+      expect(captured?.updatedAt).toBeDefined();
+    });
+
+    it('inserts a new provider when none exists', async () => {
+      // Arrange: no pre-existing provider
+      db.select = vi.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            all: () => Promise.resolve([]),
+          }),
+        }),
+      });
+      let inserted: Record<string, unknown> | undefined;
+      db.insert = vi.fn().mockReturnValue({
+        values: (vals: Record<string, unknown>) => {
+          inserted = vals;
+          return Promise.resolve(undefined);
+        },
+      });
+
+      // Act
+      const result = await store.upsertProvider({
+        provider: 'asaas',
+        apiKeyEncrypted: 'asaas-key',
+        webhookSecretEncrypted: 'asaas-secret',
+        isActive: true,
+      });
+
+      // Assert: new id returned, INSERT was called (not UPDATE)
+      // Note: INSERT path uses the InsertBuilder type-lie cast, so the
+      // captured isActive is still boolean (not coerced to 1 in JS).
+      // SQLite coerces to 0/1 at the SQL level.
+      expect(result).toBeDefined();
+      expect(inserted?.id).toBe(result);
+      expect(inserted?.provider).toBe('asaas');
+      expect(inserted?.apiKeyEncrypted).toBe('asaas-key');
+      expect(inserted?.isActive).toBe(true);
+    });
+  });
+
 });
