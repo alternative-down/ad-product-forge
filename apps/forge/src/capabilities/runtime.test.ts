@@ -300,7 +300,7 @@ describe('capabilities/runtime', () => {
       db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
-      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(null) };
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(null);
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
@@ -457,7 +457,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(provider);
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 
       const { decryptSecret, encryptSecret } = await import('../encryption/crypto');
@@ -484,7 +484,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(provider);
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 
       const { encryptSecret } = await import('../encryption/crypto');
@@ -503,7 +503,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', 'encrypted');
 
       const db = makeDb();
-      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(provider);
 
       const { decryptSecret } = await import('../encryption/crypto');
       vi.mocked(decryptSecret).mockImplementationOnce(() => {
@@ -524,7 +524,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(provider);
 
       const updateChain = {
         set: vi.fn().mockReturnThis(),
