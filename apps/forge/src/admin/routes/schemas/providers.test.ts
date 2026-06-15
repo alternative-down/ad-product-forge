@@ -192,13 +192,13 @@ describe('upsertSystemIntegrationSchema — invalid provider', () => {
 
 describe('deleteSystemIntegrationSchema', () => {
   it('parses valid input', () => {
-    expect(deleteSystemIntegrationSchema.parse({ providerType: 'migadu' })).toMatchObject({
+    expect(deleteSystemIntegrationSchema.parse({ providerType: 'migadu', integrationId: 'int-1' })).toMatchObject({
       providerType: 'migadu',
     });
   });
 
   it('parses valid input for coolify', () => {
-    expect(deleteSystemIntegrationSchema.parse({ providerType: 'coolify' })).toMatchObject({
+    expect(deleteSystemIntegrationSchema.parse({ providerType: 'coolify', integrationId: 'int-1' })).toMatchObject({
       providerType: 'coolify',
     });
   });
@@ -245,7 +245,7 @@ describe('schema.safeParse', () => {
   });
 
   it('deleteSystemIntegrationSchema safeParse returns success true for valid github', () => {
-    const result = deleteSystemIntegrationSchema.safeParse({ providerType: 'github' });
+    const result = deleteSystemIntegrationSchema.safeParse({ providerType: 'github', integrationId: 'int-1' });
     expect(result.success).toBe(true);
   });
 });

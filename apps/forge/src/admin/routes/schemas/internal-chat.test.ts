@@ -340,6 +340,7 @@ describe('createInternalChatConversationSchema', () => {
 describe('sendInternalChatConversationMessageSchema', () => {
   it('parses minimal valid input', () => {
     const result = sendInternalChatConversationMessageSchema.parse({
+      accountId: 'acc-1',
       conversationId: 'conv-1',
       content: 'Hello there',
     });
@@ -349,6 +350,7 @@ describe('sendInternalChatConversationMessageSchema', () => {
 
   it('parses with optional parentMessageId', () => {
     const result = sendInternalChatConversationMessageSchema.parse({
+      accountId: 'acc-1',
       conversationId: 'c',
       content: 'msg',
       parentMessageId: 'parent-1',
@@ -374,12 +376,13 @@ describe('sendInternalChatConversationMessageSchema', () => {
 
 describe('updateInternalChatConversationSchema', () => {
   it('parses minimal valid input (conversationId only)', () => {
-    const result = updateInternalChatConversationSchema.parse({ conversationId: 'conv-1' });
+    const result = updateInternalChatConversationSchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' });
     expect(result.conversationId).toBe('conv-1');
   });
 
   it('parses with optional name', () => {
     const result = updateInternalChatConversationSchema.parse({
+      accountId: 'acc-1',
       conversationId: 'c',
       name: 'New Name',
     });
@@ -388,6 +391,7 @@ describe('updateInternalChatConversationSchema', () => {
 
   it('parses with optional archive flag', () => {
     const result = updateInternalChatConversationSchema.parse({
+      accountId: 'acc-1',
       conversationId: 'c',
       archive: true,
     });
@@ -403,7 +407,7 @@ describe('updateInternalChatConversationSchema', () => {
 
 describe('archiveInternalChatConversationSchema', () => {
   it('parses with conversationId', () => {
-    expect(archiveInternalChatConversationSchema.parse({ conversationId: 'conv-1' })).toMatchObject(
+    expect(archiveInternalChatConversationSchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' })).toMatchObject(
       { conversationId: 'conv-1' },
     );
   });
@@ -543,6 +547,7 @@ describe('schema.safeParse', () => {
 
   it('sendInternalChatConversationMessageSchema safeParse returns success true for valid input', () => {
     const result = sendInternalChatConversationMessageSchema.safeParse({
+      accountId: 'acc-1',
       conversationId: 'c',
       content: 'Hello',
     });
