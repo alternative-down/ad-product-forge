@@ -22,6 +22,15 @@
 # L#34 SCOPE v2: this is a runtime guard, not a config change. TSC=N/A (yaml only).
 # L#45 v4 5a: dependabot.yml verified correct on develop HEAD (2a31c93f, 2 occurrences).
 
+# Test design (Day 15, L#NN-21 v2):
+#   The workflow intentionally ONLY processes dependabot[bot] PRs.
+#   Non-dependabot PRs (including author=varek-iemmpd[bot]) are correctly SKIPPED.
+#   Test PR #5697 (Test 1 of dependabot-redirect workflow validation):
+#     - Author: varek-iemmpd[bot] (not dependabot[bot])
+#     - Expected: SKIP (workflow condition is dependabot[bot] only)
+#     - Result: SKIP (workflow ran but check-and-redirect job was skipped per if:)
+#   This is BY DESIGN - the safety property depends on this filter.
+#
 name: dependabot-redirect
 
 on:
