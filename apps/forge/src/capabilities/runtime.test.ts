@@ -66,7 +66,7 @@ import {
 } from './runtime';
 import type { Database } from '../database/client';
 import type { InternalChatService } from '../communication/internal-chat-service';
-import type { InternalChatService } from '../communication/internal-chat-service';
+
 
 // L#NN-9 9f.3 follow-up (#5633 PR 2): type tightening for test mocks.
 // MockedAgentRunner -- the test-only subset of AgentRunner methods exercised.
