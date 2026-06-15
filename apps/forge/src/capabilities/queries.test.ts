@@ -13,6 +13,8 @@ import {
   queryAgentsByRoleId,
   queryAgent,
   queryAgents,
+  queryToolPermissionsBatch,
+  queryWorkflowPermissionsBatch,
 } from './queries';
 
 vi.mock('@forge-runtime/core', () => ({
@@ -308,5 +310,84 @@ describe('queryAgents', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].role).toBeDefined();
+  });
+});
+// ─── queryToolPermissionsBatch ────────────────────────────────────────────
+
+describe('queryToolPermissionsBatch', () => {
+  it('should return empty array for empty roleIds input (no DB call)', async () => {
+    const roleToolPermissions = createPermissionsMock();
+    const db = createDb({ roleToolPermissions });
+
+    const result = await queryToolPermissionsBatch(db, []);
+
+    expect(result).toEqual([]);
+    expect(roleToolPermissions.findMany).not.toHaveBeenCalled();
+  });
+
+  it('should return batched tool permissions for multiple role ids', async () => {
+    const permissions = [
+      { roleId: 'role-1', toolId: 'tool-a' },
+      { roleId: 'role-2', toolId: 'tool-b' },
+    ];
+    const roleToolPermissions = createPermissionsMock();
+    roleToolPermissions.findMany.mockResolvedValue(permissions);
+    const db = createDb({ roleToolPermissions });
+
+    const result = await queryToolPermissionsBatch(db, ['role-1', 'role-2']);
+
+    expect(roleToolPermissions.findMany).toHaveBeenCalledWith({
+      where: expect.anything(),
+      orderBy: expect.anything(),
+    });
+    expect(result).toEqual(permissions);
+  });
+
+  it('should rethrow on error (not swallow it)', async () => {
+    const roleToolPermissions = createPermissionsMock();
+    roleToolPermissions.findMany.mockRejectedValue(new Error('DB error'));
+    const db = createDb({ roleToolPermissions });
+
+    await expect(queryToolPermissionsBatch(db, ['role-1'])).rejects.toThrow('DB error');
+  });
+});
+
+// ─── queryWorkflowPermissionsBatch ────────────────────────────────────────
+
+describe('queryWorkflowPermissionsBatch', () => {
+  it('should return empty array for empty roleIds input (no DB call)', async () => {
+    const roleWorkflowPermissions = createPermissionsMock();
+    const db = createDb({ roleWorkflowPermissions });
+
+    const result = await queryWorkflowPermissionsBatch(db, []);
+
+    expect(result).toEqual([]);
+    expect(roleWorkflowPermissions.findMany).not.toHaveBeenCalled();
+  });
+
+  it('should return batched workflow permissions for multiple role ids', async () => {
+    const permissions = [
+      { roleId: 'role-1', workflowId: 'wf-1' },
+      { roleId: 'role-2', workflowId: 'wf-2' },
+    ];
+    const roleWorkflowPermissions = createPermissionsMock();
+    roleWorkflowPermissions.findMany.mockResolvedValue(permissions);
+    const db = createDb({ roleWorkflowPermissions });
+
+    const result = await queryWorkflowPermissionsBatch(db, ['role-1', 'role-2']);
+
+    expect(roleWorkflowPermissions.findMany).toHaveBeenCalledWith({
+      where: expect.anything(),
+      orderBy: expect.anything(),
+    });
+    expect(result).toEqual(permissions);
+  });
+
+  it('should rethrow on error (not swallow it)', async () => {
+    const roleWorkflowPermissions = createPermissionsMock();
+    roleWorkflowPermissions.findMany.mockRejectedValue(new Error('DB error'));
+    const db = createDb({ roleWorkflowPermissions });
+
+    await expect(queryWorkflowPermissionsBatch(db, ['role-1'])).rejects.toThrow('DB error');
   });
 });

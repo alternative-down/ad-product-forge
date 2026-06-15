@@ -14,81 +14,107 @@ function debug(scope: string, level: 'error' | 'warn' | 'info', message: string,
   forgeDebug({ scope, level, message, context });
 }
 
-export async function queryRoles(db: Database) {
+// L#19 invariant (queries.ts): every exported query function MUST go through
+// `safeQuery`. The 8 pre-existing functions all wrapped raw try/catch with 3
+// inconsistent error patterns (return [] / return null / rethrow), so the
+// caller could not predict behavior. After #5630, safeQuery is the ONLY
+// allowed wrapper. Direct try/catch in queries.ts is BANNED — enforced by
+// `queries.lnn-13-tripwire.test.ts`.
+async function safeQuery<T>(
+  scope: string,
+  queryName: string,
+  fn: () => Promise<T>,
+  fallback: T | (() => T),
+  onError: 'return-fallback' | 'throw' = 'return-fallback',
+): Promise<T> {
   try {
-    return await db.query.agentRoles.findMany({
-      orderBy: [asc(agentRoles.name)],
-    });
+    return await fn();
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryRoles failed: ' + errorMsg(err));
-    return [];
+    debug(scope, 'error', `${queryName} failed: ` + errorMsg(err));
+    if (onError === 'throw') throw err;
+    return typeof fallback === 'function' ? (fallback as () => T)() : fallback;
   }
+}
+
+export async function queryRoles(db: Database) {
+  return await safeQuery(
+    'capabilities-queries',
+    'queryRoles',
+    () => db.query.agentRoles.findMany({
+      orderBy: [asc(agentRoles.name)],
+    }),
+    [],
+  );
 }
 
 export async function queryRole(db: Database, roleId: string) {
-  try {
-    return await db.query.agentRoles.findFirst({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryRole',
+    () => db.query.agentRoles.findFirst({
       where: eq(agentRoles.id, roleId),
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryRole failed: ' + errorMsg(err));
-    return null;
-  }
+    }),
+    null,
+  );
 }
 
 export async function queryToolPermissions(db: Database, roleId: string) {
-  try {
-    return await db.query.roleToolPermissions.findMany({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryToolPermissions',
+    () => db.query.roleToolPermissions.findMany({
       where: eq(roleToolPermissions.roleId, roleId),
       orderBy: [asc(roleToolPermissions.toolId)],
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryToolPermissions failed: ' + errorMsg(err));
-    return [];
-  }
+    }),
+    [],
+  );
 }
 
 export async function queryWorkflowPermissions(db: Database, roleId: string) {
-  try {
-    return await db.query.roleWorkflowPermissions.findMany({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryWorkflowPermissions',
+    () => db.query.roleWorkflowPermissions.findMany({
       where: eq(roleWorkflowPermissions.roleId, roleId),
       orderBy: [asc(roleWorkflowPermissions.workflowId)],
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryWorkflowPermissions failed: ' + errorMsg(err));
-    return [];
-  }
+    }),
+    [],
+  );
 }
 
 export async function queryAgentsByRoleId(db: Database, roleId: string) {
-  try {
-    return await db.query.agents.findFirst({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryAgentsByRoleId',
+    () => db.query.agents.findFirst({
       where: eq(agents.roleId, roleId),
       columns: { id: true },
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgentsByRoleId failed: ' + errorMsg(err));
-    throw err;
-  }
+    }),
+    null,
+    'throw',
+  );
 }
 
 export async function queryAgent(db: Database, agentId: string) {
-  try {
-    return await db.query.agents.findFirst({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryAgent',
+    () => db.query.agents.findFirst({
       where: eq(agents.id, agentId),
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgent failed: ' + errorMsg(err));
-    throw err;
-  }
+    }),
+    null,
+    'throw',
+  );
 }
 
 export async function queryAgents(db: Database, input: {
   agentId?: string | null;
   executionState?: 'idle' | 'running' | 'absent';
 }) {
-  try {
-    return await db.query.agents.findMany({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryAgents',
+    () => db.query.agents.findMany({
       where: (agent, { and, eq }) => {
         const filters = [];
         if (input.agentId != null) {
@@ -111,35 +137,35 @@ export async function queryAgents(db: Database, input: {
           },
         },
       },
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgents failed: ' + errorMsg(err));
-    return [];
-  }
+    }),
+    [],
+  );
 }
 
 export async function queryToolPermissionsBatch(db: Database, roleIds: string[]) {
   if (roleIds.length === 0) return [];
-  try {
-    return await db.query.roleToolPermissions.findMany({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryToolPermissionsBatch',
+    () => db.query.roleToolPermissions.findMany({
       where: inArray(roleToolPermissions.roleId, roleIds),
       orderBy: [asc(roleToolPermissions.roleId), asc(roleToolPermissions.toolId)],
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryToolPermissionsBatch failed: ' + errorMsg(err));
-    throw err;
-  }
+    }),
+    [],
+    'throw',
+  );
 }
 
 export async function queryWorkflowPermissionsBatch(db: Database, roleIds: string[]) {
   if (roleIds.length === 0) return [];
-  try {
-    return await db.query.roleWorkflowPermissions.findMany({
+  return await safeQuery(
+    'capabilities-queries',
+    'queryWorkflowPermissionsBatch',
+    () => db.query.roleWorkflowPermissions.findMany({
       where: inArray(roleWorkflowPermissions.roleId, roleIds),
       orderBy: [asc(roleWorkflowPermissions.roleId), asc(roleWorkflowPermissions.workflowId)],
-    });
-  } catch (err) {
-    debug('capabilities-queries', 'error', 'queryWorkflowPermissionsBatch failed: ' + errorMsg(err));
-    throw err;
-  }
+    }),
+    [],
+    'throw',
+  );
 }
