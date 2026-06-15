@@ -27,14 +27,14 @@ vi.mock('../agents/agent-loader', () => ({
 }));
 
 // Shared registry state — same object across all calls to getInternalAgentRegistry()
-const registryState = new Map<string, { id: string; runner: MockedAgentRunner }>();
+const registryState = new Map<string, { id: string; runner: MockedAgentRunner | ReturnType<typeof vi.fn> }>();
 const registry = {
   get: vi.fn((id: string) => registryState.get(id)),
   add: vi.fn(async (_db: unknown, runtime: { id: string } | undefined) => {
     if (!runtime) return;
     registryState.set(runtime.id, {
       id: runtime.id,
-      runner: mockRunnerInstances.get(runtime.id) ?? vi.fn(),
+      runner: (mockRunnerInstances.get(runtime.id) ?? vi.fn()) as MockedAgentRunner,
     });
   }),
   delete: vi.fn((id: string) => registryState.delete(id)),
@@ -107,7 +107,10 @@ function makeConfig() {
     githubApps: {} as import('../github/manager').GitHubAppManager,
     emailMailboxes: null,
     coolify: null,
-    schedules: {},
+    // L#NN-9 9f.3 (#5633 PR 2): schedules is typed as Schedules in
+    // AgentLoaderConfig (15+ methods). Tests never exercise it. The `as any`
+    // is intentional -- a full stub would add 15+ LoC for no test value.
+    schedules: {} as any,
     internalChat: makeMinimalInternalChat(),
   };
 }
