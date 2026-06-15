@@ -47,34 +47,34 @@ function createMockRole(overrides = {}) {
 function createMockDb() {
   const makeInsertChain = () => {
     const chain: Record<string, unknown> = {};
-    const fn: any = vi.fn().mockImplementation((_table) => {
-      chain.values = vi.fn().mockImplementation((_vals) => {
+    const fn = Object.assign(
+      vi.fn().mockImplementation((_table: unknown) => {
+        chain.values = vi.fn().mockImplementation((_vals: unknown) => {
+          chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+          return chain;
+        });
         chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
         return chain;
-      });
-      chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-      return chain;
-    });
-    fn.values = vi.fn().mockImplementation((_vals) => {
-      chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-      return chain;
-    });
-    fn.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-    return fn as any;
+      }),
+      {
+        values: vi.fn().mockImplementation((_vals: unknown) => {
+          chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+          return chain;
+        }),
+        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+      },
+    );
+    return fn;
   };
   const makeDeleteChain = () => {
     const whereChain: Record<string, unknown> = { where: vi.fn().mockResolvedValue(undefined) };
-    const fn: any = vi.fn().mockImplementation((_table: any) => whereChain);
-    fn.mockImplementation((_table: any) => whereChain);
-    return fn as any;
+    return vi.fn().mockImplementation((_table: unknown) => whereChain);
   };
   const makeUpdateChain = () => {
     const whereChain = { returning: vi.fn().mockResolvedValue(undefined) };
     const setChain = { where: vi.fn().mockImplementation(() => whereChain) };
     const chain = { set: vi.fn().mockImplementation(() => setChain) };
-    const fn: any = vi.fn().mockImplementation((_table: any) => chain);
-    fn.mockImplementation((_table: any) => chain);
-    return fn as any;
+    return vi.fn().mockImplementation((_table: unknown) => chain);
   };
   const query = {
     agentRoles: { findMany: vi.fn(), findFirst: vi.fn() },
@@ -91,8 +91,8 @@ function createMockDb() {
     insert: makeInsertChain(),
     update: makeUpdateChain(),
     delete: makeDeleteChain(),
-    transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
-      return fn(tx as any);
+    transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      return fn(tx);
     }),
     query,
   } as any;
@@ -260,8 +260,8 @@ describe('capabilities/store', () => {
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
       await store.createRole({ name: 'Base Role' });
-      const insertCalls = db.insert.mock.calls;
-      const toolPermCalls = insertCalls.filter(([table]: any) => table === roleToolPermissions);
+      const insertCalls = (db.insert as any).mock.calls as unknown[][];
+      const toolPermCalls = insertCalls.filter(([table]: unknown[]) => table === roleToolPermissions);
       expect(toolPermCalls.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -328,7 +328,7 @@ describe('capabilities/store', () => {
     it('throws when agents are assigned to the role', async () => {
       const { db } = createMockDb();
       const assignedAgent = createMockAgent({ roleId: 'role-test' });
-      db.transaction.mockImplementationOnce(async (fn: any) => {
+      db.transaction.mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = { query: db.query, delete: db.delete };
         tx.query.agents.findFirst.mockResolvedValue(assignedAgent);
         return fn(tx);
@@ -340,7 +340,7 @@ describe('capabilities/store', () => {
     });
     it('deletes role when no agents assigned', async () => {
       const { db } = createMockDb();
-      db.transaction.mockImplementationOnce(async (fn: any) => {
+      db.transaction.mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = { query: db.query, delete: db.delete };
         tx.query.agents.findFirst.mockResolvedValue(null);
         return fn(tx);
