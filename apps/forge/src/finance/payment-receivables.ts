@@ -69,6 +69,21 @@ export function createPaymentReceivablesStore(db: Database) {
           .where(eq(paymentProviders.provider, input.provider))
           .all();
         if (rows.length > 0) {
+          // L#19 fix (closes #5637): the previous code returned the existing
+          // id without updating any fields, so callers rotating apiKeyEncrypted
+          // or toggling isActive saw their changes silently dropped. We now
+          // UPDATE all the upsertable fields, mirroring upsertCustomer's
+          // SELECT-then-UPDATE pattern.
+          await db
+            .update(paymentProviders)
+            .set({
+              apiKeyEncrypted: input.apiKeyEncrypted,
+              webhookSecretEncrypted: input.webhookSecretEncrypted,
+              isActive: input.isActive ? 1 : 0,
+              configJson: input.configJson ? JSON.stringify(input.configJson) : null,
+              updatedAt: now,
+            })
+            .where(eq(paymentProviders.id, rows[0].id));
           return rows[0].id;
         }
         const id = createId();
