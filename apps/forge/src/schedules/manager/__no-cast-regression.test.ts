@@ -26,11 +26,12 @@ describe('L#19 tripwire for #5608 cast removal', () => {
     expect(matches).toHaveLength(0);
   });
 
-  it('manager.ts has exactly 8 Cluster A casts (type compatibility requirement, deferred removal)', () => {
-    // Cluster A cast removal requires AgentSchedule shape change — out of scope for #5608 cascade.
-    // When that's done, update this expectation to 0 and add a second structural check.
+  it('manager.ts has 0 Cluster A casts (Lead 8 #5739 Phase 2 DONE: all 8 removed)', () => {
+    // Lead 8 #5739 Phase 2 fix: widened store._applyUpdate return type, exported toScheduleRecord,
+    // widened normalize.ExistingScheduleFields, removed all 8 `as unknown as ScheduleLifecycleRecord` casts.
+    // 6 register() calls wrap in toScheduleRecord(); 2 receive post-conversion ScheduleRecord directly.
     const matches = managerContent.match(/as unknown as ScheduleLifecycleRecord/g) ?? [];
-    expect(matches).toHaveLength(8);
+    expect(matches).toHaveLength(0);
   });
 
   it('manager.test.ts has ≤1 `as cron|date` cast in fixture (test fixture L124 KEEP)', () => {
@@ -42,13 +43,12 @@ describe('L#19 tripwire for #5608 cast removal', () => {
     expect(matches.length).toBeLessThanOrEqual(1);
   });
 
-  it('manager.ts register() calls all have the `as unknown as ScheduleLifecycleRecord` cast (L#25 defense)', () => {
-    // Spot-check: every getLifecycle().register() call has the cast.
-    // If the type contract changes (Cluster A removal becomes possible), this fails — that's the tripwire.
-    const registerCalls = managerContent.match(/getLifecycle\(\)\.register\([^)]+\)/g) ?? [];
-    const total = registerCalls.length;
-    const withCast = registerCalls.filter((c) => c.includes('as unknown as ScheduleLifecycleRecord')).length;
-    expect(withCast).toBe(total);
-    expect(total).toBe(8);
+  it('manager.ts register() calls are all safe (Lead 8 #5739 Phase 2: 6 use toScheduleRecord(), 2 receive post-conversion ScheduleRecord)', () => {
+    // Lead 8 #5739 Phase 2 contract: register() receives a structurally-compatible type.
+    // No `as unknown as` casts remain anywhere in manager.ts.
+    const unsafeCasts = managerContent.match(/as unknown as/g) ?? [];
+    expect(unsafeCasts).toHaveLength(0);
+    const registerCalls = managerContent.match(/getLifecycle\(\)\.register\(/g) ?? [];
+    expect(registerCalls.length).toBe(8);
   });
 });

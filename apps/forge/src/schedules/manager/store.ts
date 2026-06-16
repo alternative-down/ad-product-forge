@@ -26,7 +26,7 @@ type CreateAgentScheduleInput = {
 };
 
 export type UpdateAgentScheduleInput = {
-  name?: string;
+  name?: string | null;
   description?: string | null;
   scheduleType?: ScheduleType;
   cronExpression?: string | null;
@@ -37,8 +37,51 @@ export type UpdateAgentScheduleInput = {
   isActive?: boolean;
 };
 
+
+// --- Module-level helpers (exported for manager.ts, Lead 8 #5739 Phase 2) ---
+
+// --- helpers (now module-level) ---
+export function toScheduleBase(row: AgentSchedule, extra?: { lastTriggeredAt?: number | null; nextTriggerAt?: number | null; nextTriggerAt$set?: number | null }) {
+    const base = {
+    scheduleId: row.id,
+    agentId: row.agentId,
+    kind: row.kind as ScheduleKind,
+    name: row.name,
+    description: row.description ?? undefined,
+    scheduleType: row.scheduleType as ScheduleType,
+    cronExpression: row.cronExpression ?? undefined,
+    scheduledDate: row.scheduledDate ?? undefined,
+    timezone: row.timezone,
+    content: row.content,
+    wakeWhenRunning: row.wakeWhenRunning !== 0,
+    isActive: row.isActive === 1,
+    creatorId: row.creatorId ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    };
+    if (!extra) return base;
+    return {
+    ...base,
+    ...(extra.lastTriggeredAt !== undefined ? { lastTriggeredAt: extra.lastTriggeredAt ?? undefined } : {}),
+    ...(extra.nextTriggerAt !== undefined ? { nextTriggerAt: extra.nextTriggerAt ?? undefined } : {}),
+    ...(extra.nextTriggerAt$set !== undefined ? { nextTriggerAt$set: extra.nextTriggerAt$set } : {}),
+    };
+  }
+
+export function toScheduleRecord(row: AgentSchedule) {
+    return toScheduleBase(row, {
+    lastTriggeredAt: row.lastTriggeredAt,
+    nextTriggerAt: row.nextTriggerAt,
+    nextTriggerAt$set: row.nextTriggerAt,
+    });
+  }
+
+export function toScheduleSummary(row: AgentSchedule) {
+    return toScheduleBase(row);
+  }
+
 export function createAgentScheduleStore(db: Database) {
-  async function createSchedule(input: CreateAgentScheduleInput) {
+  async function createSchedule(input: CreateAgentScheduleInput): Promise<AgentSchedule &{ scheduleId: string }> {
     const now = Date.now();
     const record = {
       id: createId(),
@@ -75,7 +118,7 @@ export function createAgentScheduleStore(db: Database) {
     // Expose scheduleId as an alias for id — callers (including schedule-lifecycle)
     // expect a .scheduleId field on records returned from createSchedule.
     (record as Record<string, unknown>).scheduleId = record.id;
-    return record;
+    return record as AgentSchedule &{ scheduleId: string };
   }
 
   async function listAgentSchedules(agentId: string) {
@@ -202,7 +245,7 @@ export function createAgentScheduleStore(db: Database) {
     agentId: string,
     scheduleId: string,
     input: UpdateAgentScheduleInput,
-  ): Promise<AgentSchedule | null> {
+  ): Promise<(AgentSchedule & { scheduleId: string }) | null> {
     let existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
@@ -257,6 +300,7 @@ export function createAgentScheduleStore(db: Database) {
 
     return {
       ...existing,
+      scheduleId,
       name: input.name ?? existing.name,
       description: input.description === undefined ? existing.description : input.description,
       scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
@@ -402,45 +446,6 @@ export function createAgentScheduleStore(db: Database) {
 
   // StoredSchedule type removed to break circular reference
 
-  // --- helpers ---
-  function toScheduleBase(row: AgentSchedule, extra?: { lastTriggeredAt?: number | null; nextTriggerAt?: number | null; nextTriggerAt$set?: number | null }) {
-    const base = {
-      scheduleId: row.id,
-      agentId: row.agentId,
-      kind: row.kind as ScheduleKind,
-      name: row.name,
-      description: row.description ?? undefined,
-      scheduleType: row.scheduleType as ScheduleType,
-      cronExpression: row.cronExpression ?? undefined,
-      scheduledDate: row.scheduledDate ?? undefined,
-      timezone: row.timezone,
-      content: row.content,
-      wakeWhenRunning: row.wakeWhenRunning !== 0,
-      isActive: row.isActive === 1,
-      creatorId: row.creatorId ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
-    if (!extra) return base;
-    return {
-      ...base,
-      ...(extra.lastTriggeredAt !== undefined ? { lastTriggeredAt: extra.lastTriggeredAt ?? undefined } : {}),
-      ...(extra.nextTriggerAt !== undefined ? { nextTriggerAt: extra.nextTriggerAt ?? undefined } : {}),
-      ...(extra.nextTriggerAt$set !== undefined ? { nextTriggerAt$set: extra.nextTriggerAt$set } : {}),
-    };
-  }
-
-  function toScheduleRecord(row: AgentSchedule) {
-    return toScheduleBase(row, {
-      lastTriggeredAt: row.lastTriggeredAt,
-      nextTriggerAt: row.nextTriggerAt,
-      nextTriggerAt$set: row.nextTriggerAt,
-    });
-  }
-
-  function toScheduleSummary(row: AgentSchedule) {
-    return toScheduleBase(row);
-  }
 
   return {
     createSchedule,

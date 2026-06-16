@@ -3,8 +3,15 @@
  *
  * Heartbeat schedule creation.
  * Extracted from manager.ts (#4877) — heartbeat creation concern only.
+ *
+ * Refactor (Lead 8 #5739 Phase 2): the return type was `Promise<Record<string, unknown>>`
+ * (defensive escape hatch that hid the scheduleId alias from the createSchedule return).
+ * Narrowed to `Promise<AgentSchedule & { scheduleId: string }>` so callers in manager.ts
+ * can access `.scheduleId` and pass to `lifecycle.register()` without
+ * `as unknown as StoredSchedule` / `as unknown as ScheduleLifecycleRecord` casts.
  */
 import { HEARTBEAT_CRON_EXPRESSION, HEARTBEAT_TIMEZONE, HEARTBEAT_NAME } from './cron';
+import type { AgentSchedule } from '../../database/schema';
 
 export type CreateHeartbeatInput = {
   agentId: string;
@@ -20,7 +27,7 @@ export type CreateHeartbeatInput = {
       timezone: string;
       content: string;
       wakeWhenRunning: boolean;
-    }): Promise<Record<string, unknown>>;
+    }): Promise<AgentSchedule & { scheduleId: string }>;
   };
 };
 

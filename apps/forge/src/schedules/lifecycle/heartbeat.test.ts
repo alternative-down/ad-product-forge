@@ -10,7 +10,7 @@ function makeInput(overrides: Partial<CreateHeartbeatInput> = {}): CreateHeartbe
   return {
     agentId: 'ag_hb1',
     store: {
-      createSchedule: vi.fn().mockResolvedValue({ id: 'sch_hb' }),
+      createSchedule: vi.fn().mockResolvedValue({ id: 'sch_hb', scheduleId: 'sch_hb' }),
     },
     ...overrides,
   };
@@ -50,7 +50,7 @@ describe('createHeartbeatSchedule()', () => {
   it('returns the store result', async () => {
     const input = makeInput();
     const result = await createHeartbeatSchedule(input);
-    expect(result).toEqual({ id: 'sch_hb' });
+    expect(result).toEqual({ id: 'sch_hb', scheduleId: 'sch_hb' });
   });
 
   it('uses a fixed cron expression (no per-call override)', async () => {

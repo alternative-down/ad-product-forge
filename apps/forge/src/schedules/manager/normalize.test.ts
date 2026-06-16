@@ -162,8 +162,8 @@ describe('buildScheduleRollbackInput', () => {
   });
 
   it('converts string scheduledDate to null via existing.scheduledDate', () => {
-    const withDate = buildScheduleRollbackInput({ ...base, scheduledDate: '2024-11-15' });
-    expect(withDate.scheduledDate).toBe('2024-11-15');
+    const withDate = buildScheduleRollbackInput({ ...base, scheduledDate: 1731628800000 });
+    expect(withDate.scheduledDate).toBe(1731628800000);
   });
 
   it('converts null cronExpression to null', () => {
