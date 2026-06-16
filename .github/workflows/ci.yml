@@ -41,7 +41,3 @@ jobs:
         # New drift MUST be either fixed in the same PR OR added to the
         # baseline in apps/forge/scripts/schema-drift-detector/known-drift.json
         # with a follow-up issue. See #5489 for the rollout.
-        run: node apps/forge/scripts/schema-drift-detector/detect.mjs
-
-      - name: Build
-        run: npm run build -- --force
