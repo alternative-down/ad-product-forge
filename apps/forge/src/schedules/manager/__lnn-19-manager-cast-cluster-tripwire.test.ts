@@ -50,20 +50,21 @@ describe('L#NN-19 enhanced tripwire — manager.ts (Lead 8a, #5739) — type-saf
   const raw = readFileSync(MANAGER_TS, 'utf8');
   const src = stripComments(raw);
 
-  it('test #1: manager.ts must NOT add new `as unknown as` casts (cluster size <= 21)', () => {
-    // Captured baseline 2026-06-16 from origin/develop: 21 `as unknown as` sites.
-    // Tripwire prevents the cluster from growing. Lead 8a fix (proper type contract
-    // refactor) will reduce this number; that work is tracked in #5739.
+  it('test #1: manager.ts has 0 `as unknown as` casts (Lead 8 #5739 Phase 2 DONE: 21/21 removed)', () => {
+    // Lead 8 #5739 Phase 2 fix: store._applyUpdate widened to AgentSchedule & { scheduleId: string },
+    // normalize.ExistingScheduleFields widened, toScheduleRecord exported, all 21 casts removed.
+    // The only remaining `as` cast is a single internal `as ScheduleRecordForNotification` at the
+    // triggerSchedule function boundary (a structural-superset assertion, not a type lie).
     const matches = src.match(/as unknown as/g) ?? [];
-    expect(matches.length).toBeLessThanOrEqual(21);
+    expect(matches).toHaveLength(0);
   });
 
-  it('test #2: Cluster A `as unknown as ScheduleLifecycleRecord` count is still 8 (no new additions)', () => {
-    // The 8 Cluster A sites are required by the type contract bridge. Until
-    // heartbeat.ts + lifecycle.ts are fixed, the cluster size must stay at 8.
-    // When Lead 8a is properly implemented, this becomes 0.
+  it('test #2: Cluster A `as unknown as ScheduleLifecycleRecord` count is 0 (Lead 8 #5739 Phase 2 DONE)', () => {
+    // All 8 Cluster A casts removed. The 6 register() calls that received raw AgentSchedule now
+    // wrap in toScheduleRecord() to narrow the Drizzle-widened kind/scheduleType fields.
+    // The 2 register() calls that received post-conversion ScheduleRecord need no wrapping.
     const matches = src.match(/as unknown as ScheduleLifecycleRecord/g) ?? [];
-    expect(matches.length).toBeLessThanOrEqual(8);
+    expect(matches).toHaveLength(0);
   });
 
   it('test #3: Cluster B `scheduleType as cron|date` count is 0 (post-#5608 cascade)', () => {
@@ -105,8 +106,10 @@ describe('L#NN-19 enhanced tripwire — manager.ts (Lead 8a, #5739) — type-saf
   it('test #8 (FAIL case assertion): the regex pattern catches a known-bad pattern', () => {
     // Explicit assertion that the regex used in test #1 would catch a new
     // `as unknown as` injection. This proves the tripwire is not a no-op.
+    // Post-Lead 8 Phase 2: baseline is 0 `as unknown as` casts. Injecting 1 must
+    // fail test #1 (which now asserts exactly 0).
     const fakeSrc = src + '\nconst evil = (x as unknown as Foo);\n';
     const matches = fakeSrc.match(/as unknown as/g) ?? [];
-    expect(matches.length).toBeGreaterThan(21); // would fail test #1
+    expect(matches.length).toBeGreaterThan(0); // would fail test #1 (which now expects 0)
   });
 });

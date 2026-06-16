@@ -3,7 +3,7 @@ import { errorMsg } from '../../agents/error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../../database/client';
-import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
+import { createAgentScheduleStore, type UpdateAgentScheduleInput, toScheduleRecord } from './store';
 import { createScheduleLifecycle, type ScheduleLifecycleRecord } from '../lifecycle/lifecycle';
 import {
   parseScheduleDate,
@@ -23,7 +23,7 @@ import { createScheduleSchema,
   updateScheduleSchema,
 } from '../tools/schemas';
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from '../lifecycle/heartbeat';
-import { createScheduleNotifications } from '../notifications/notifications';
+import { createScheduleNotifications, type ScheduleRecordForNotification } from '../notifications/notifications';
 
 export type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 
@@ -64,7 +64,7 @@ export function createAgentScheduleManager(input: {
       lifecycle = createScheduleLifecycle({
         db: input.db,
         onFire: async (record, fireDate) => {
-          await triggerSchedule(record as StoredSchedule, fireDate, true);
+          await triggerSchedule(record, fireDate, true);
         },
       });
     }
@@ -91,8 +91,8 @@ export function createAgentScheduleManager(input: {
     await lifecycle.loadAll();
   }
 
-  function isActiveSchedule(s: StoredSchedule | { isActive: boolean }): boolean {
-    return s.isActive === true;
+  function isActiveSchedule(s: { isActive: boolean | number }): boolean {
+    return s.isActive === true || s.isActive === 1;
   }
 
   async function createHeartbeatSchedule(agentId: string) {
@@ -101,7 +101,7 @@ export function createAgentScheduleManager(input: {
       store,
     });
     try {
-      await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
+      await getLifecycle().register(toScheduleRecord(record));
     } catch (error) {
       forgeDebug({
         scope: 'schedules-manager',
@@ -109,14 +109,14 @@ export function createAgentScheduleManager(input: {
         message: 'createHeartbeatSchedule: registerSchedule failed',
         context: {
           agentId,
-          scheduleId: (record as unknown as StoredSchedule).scheduleId,
+          scheduleId: record.scheduleId,
           error: errorMsg(error),
         },
       });
       throw error;
     }
     return {
-      scheduleId: (record as unknown as StoredSchedule).scheduleId,
+      scheduleId: record.scheduleId,
     };
   }
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
@@ -142,7 +142,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
+      await getLifecycle().register(toScheduleRecord(record));
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({
@@ -154,7 +154,7 @@ export function createAgentScheduleManager(input: {
       throw error;
     }
 
-    return toToolOutput(record as unknown as StoredSchedule);
+    return toToolOutput(toScheduleRecord(record));
   }
 
   async function listSchedules(agentId: string) {
@@ -212,7 +212,7 @@ export function createAgentScheduleManager(input: {
 
     const normalized = normalizeScheduleUpdate(
       parsed,
-      existing as ExistingScheduleFields,
+      existing,
       parseScheduleDate,
     );
     const { scheduleType, cronExpression, scheduledDate } = normalized;
@@ -225,7 +225,7 @@ export function createAgentScheduleManager(input: {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
     const rollbackInput = buildScheduleRollbackInput(
-      existing as unknown as ExistingScheduleFields,
+      existing,
     ) as UpdateAgentScheduleInput;
     const updated = await store.updateAgentSchedule(
       agentId,
@@ -251,8 +251,8 @@ export function createAgentScheduleManager(input: {
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        await getLifecycle().register(updated as unknown as ScheduleLifecycleRecord);
+      if (updated !== null && isActiveSchedule(updated) === true) {
+        await getLifecycle().register(toScheduleRecord(updated));
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -269,10 +269,12 @@ export function createAgentScheduleManager(input: {
       getLifecycle().cancel(scheduleId);
 
       if (
-        isActiveSchedule(existing as unknown as StoredSchedule) === true &&
-        isActiveSchedule(restored as unknown as StoredSchedule) === true
+        existing !== null &&
+        restored !== null &&
+        isActiveSchedule(existing) === true &&
+        isActiveSchedule(restored) === true
       ) {
-        await getLifecycle().register(restored as unknown as ScheduleLifecycleRecord);
+        await getLifecycle().register(toScheduleRecord(restored));
       }
 
       throw error;
@@ -307,7 +309,7 @@ export function createAgentScheduleManager(input: {
 
     const normalized = normalizeScheduleUpdate(
       parsed,
-      existing as unknown as ExistingScheduleFields,
+      existing,
       parseScheduleDate,
     );
     const { scheduleType, cronExpression, scheduledDate } = normalized;
@@ -320,7 +322,7 @@ export function createAgentScheduleManager(input: {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
     const rollbackInput = buildScheduleRollbackInput(
-      existing as unknown as ExistingScheduleFields,
+      existing,
     ) as UpdateAgentScheduleInput;
     const updated = await store.updateAgentSchedule(
       agentId,
@@ -340,8 +342,8 @@ export function createAgentScheduleManager(input: {
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        await getLifecycle().register(updated as unknown as ScheduleLifecycleRecord);
+      if (updated !== null && isActiveSchedule(updated) === true) {
+        await getLifecycle().register(toScheduleRecord(updated));
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -359,10 +361,12 @@ export function createAgentScheduleManager(input: {
       getLifecycle().cancel(scheduleId);
 
       if (
-        isActiveSchedule(existing as unknown as StoredSchedule) === true &&
-        isActiveSchedule(restored as unknown as StoredSchedule) === true
+        existing !== null &&
+        restored !== null &&
+        isActiveSchedule(existing) === true &&
+        isActiveSchedule(restored) === true
       ) {
-        await getLifecycle().register(restored as unknown as ScheduleLifecycleRecord);
+        await getLifecycle().register(toScheduleRecord(restored));
       }
 
       throw error;
@@ -446,7 +450,7 @@ export function createAgentScheduleManager(input: {
     }
 
     try {
-      await getLifecycle().register(scheduleRecord as unknown as ScheduleLifecycleRecord);
+      await getLifecycle().register(scheduleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({
@@ -549,17 +553,22 @@ export function createAgentScheduleManager(input: {
   }
 
   async function __registerSchedule(record: StoredSchedule | null) {
-    if (isActiveSchedule(record as unknown as StoredSchedule) !== true) return;
+    if (record === null) return;
+    if (isActiveSchedule(record) !== true) return;
 
-    await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
+    await getLifecycle().register(record);
   }
 
   async function triggerSchedule(
-    scheduleRecord: StoredSchedule,
+    scheduleRecord: ScheduleLifecycleRecord | StoredSchedule,
     fireDate: Date,
     remainsActive: boolean,
     nextTriggerAt: number | null = null,
   ) {
+    // Internal cast: scheduleRecord is a structural superset of ScheduleRecordForNotification
+    // (both ScheduleLifecycleRecord and StoredSchedule have all the required fields — only
+    // the optionality differs). The cast is on the function-internal boundary, not a type lie.
+    const notif = scheduleRecord as ScheduleRecordForNotification;
     try {
       if (scheduleRecord.kind === 'heartbeat') {
         const executionState = await (input.getAgentExecutionState?.(scheduleRecord.agentId) ??
@@ -576,23 +585,7 @@ export function createAgentScheduleManager(input: {
         }
       }
 
-      await triggerNotification(
-        {
-          scheduleId: scheduleRecord.scheduleId,
-          name: scheduleRecord.name,
-          description: scheduleRecord.description,
-          kind: scheduleRecord.kind,
-          scheduleType: scheduleRecord.scheduleType,
-          cronExpression: scheduleRecord.cronExpression,
-          scheduledDate: scheduleRecord.scheduledDate,
-          timezone: scheduleRecord.timezone,
-          content: scheduleRecord.content,
-          wakeWhenRunning: scheduleRecord.wakeWhenRunning,
-          agentId: scheduleRecord.agentId,
-        },
-        fireDate,
-        nextTriggerAt,
-      );
+      await triggerNotification(notif, fireDate, nextTriggerAt);
 
       await store.markTriggered({
         scheduleId: scheduleRecord.scheduleId,

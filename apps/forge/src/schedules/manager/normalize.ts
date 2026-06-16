@@ -38,23 +38,23 @@ export type ScheduleUpdateInputParts = {
 /** Shape of the existing schedule record used as base/defaults. */
 export type ExistingScheduleFields = {
   name: string;
-  description: string | null;
+  description: string | null | undefined;
   scheduleType: ScheduleType;
   cronExpression: string | null | undefined;
-  scheduledDate: string | null | undefined;
-  timezone: string | null;
-  content: string | null;
+  scheduledDate: number | null | undefined;
+  timezone: string | null | undefined;
+  content: string | null | undefined;
   wakeWhenRunning: boolean;
   isActive: boolean;
   scheduleId?: string;
   agentId?: string;
-  creatorId?: string | null;
+  creatorId?: string | null | undefined;
   kind?: string;
   createdAt?: number;
   updatedAt?: number;
-  lastTriggeredAt?: number | null;
-  nextTriggerAt?: number | null;
-  nextTriggerAt$set?: number | null;
+  lastTriggeredAt?: number | null | undefined;
+  nextTriggerAt?: number | null | undefined;
+  nextTriggerAt$set?: number | null | undefined;
 };
 
 
@@ -69,7 +69,7 @@ export function normalizeScheduleUpdate(
   existing: {
     scheduleType: ScheduleType;
     cronExpression: string | null | undefined;
-    scheduledDate: string | null | undefined;
+    scheduledDate: number | null | undefined;
     wakeWhenRunning: boolean;
   },
   parseScheduleDate: (input: string) => number,
@@ -120,12 +120,12 @@ export function buildScheduleUpdateInput(
   },
 ): {
   name: string | null;
-  description: string | null;
+  description: string | null | undefined;
   scheduleType: ScheduleType;
   cronExpression: string | null | undefined;
   scheduledDate: number | null;
-  timezone: string | null;
-  content: string | null;
+  timezone: string | null | undefined;
+  content: string | null | undefined;
   wakeWhenRunning: boolean;
   isActive: boolean | undefined;
 } {
@@ -148,12 +148,12 @@ export function buildScheduleUpdateInput(
  */
 export function buildScheduleRollbackInput(existing: ExistingScheduleFields): {
   name: string;
-  description: string | null;
+  description: string | null | undefined;
   scheduleType: ScheduleType;
   cronExpression: string | null;
-  scheduledDate: string | null;
-  timezone: string | null;
-  content: string | null;
+  scheduledDate: number | null;
+  timezone: string | null | undefined;
+  content: string | null | undefined;
   wakeWhenRunning: boolean;
   isActive: boolean;
 } {

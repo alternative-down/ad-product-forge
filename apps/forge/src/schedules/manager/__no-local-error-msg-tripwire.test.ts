@@ -53,7 +53,7 @@ describe('L#19 tripwire — schedules/manager/ hygiene + #5605 defensive cancel'
       // Match the order: rolled-back log → cancel(scheduleId) → if (... isActiveSchedule ...) register(restored ...)
       // Use a single regex with lookaheads to assert ordering.
       const pattern =
-        /message:\s*'updateSchedule: update failed, rolled back'[\s\S]{0,400}?getLifecycle\(\)\.cancel\(scheduleId\)[\s\S]{0,400}?isActiveSchedule\(restored as unknown as StoredSchedule\)\s*===\s*true/;
+        /message:\s*'updateSchedule: update failed, rolled back'[\s\S]{0,800}?getLifecycle\(\)\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
       expect(managerSrc).toMatch(pattern);
     });
   });
