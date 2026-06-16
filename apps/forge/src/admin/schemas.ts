@@ -1,57 +1,68 @@
+/**
+ * Admin Schemas — Re-export shim (Day 16 #5740)
+ *
+ * Canonical definitions live in per-route files under `./routes/schemas/`.
+ * This file exists as a backward-compatibility shim for legacy imports
+ * (`import { ... } from '@/admin/schemas'`).
+ *
+ * Re-exported from per-route files (true duplicates):
+ *   - agentIdQuerySchema, agentExecutionStepsQuerySchema,
+ *     agentThreadMessagesQuerySchema, agentConversationMessagesQuerySchema
+ *     (from ./routes/schemas/agents)
+ *   - terminateAgentSchema, changeAgentRoleSchema
+ *     (from ./routes/schemas/agents)
+ *   - roleToolPermissionSchema, roleWorkflowPermissionSchema
+ *     (from ./routes/schemas/roles)
+ *
+ * Intentional drift (kept as definitions, marked `// INTENTIONAL DRIFT`):
+ *   - topUpAgentContractSchema — coerce version (`z.coerce.number()`) for
+ *     the legacy route (admin/routes.ts) that parses body as text. The
+ *     per-route version (z.number) in ./routes/schemas/agents is used
+ *     by the new contract-ops.ts which goes through parseJsonBody first.
+ *   - hireAgentSchema — same drift pattern as topUpAgentContractSchema.
+ *
+ * Unique (no per-route equivalent): upsertAgentProviderSchema,
+ * deleteAgentProviderSchema. These are agent-related but not tied to
+ * a specific route; they live here for backward compatibility.
+ *
+ * Tripwire: see apps/forge/src/__lnn-50-zod-dedup-tripwire.test.ts
+ */
+
+// Re-export everything from per-route files for backwards compatibility
+// (legacy `import { ... } from '@/admin/schemas'`).
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- backward-compat shim consolidating 8 true-duplicate Zod schemas (#5740); without this, legacy importers would break
+export {
+  agentIdQuerySchema,
+  agentExecutionStepsQuerySchema,
+  agentThreadMessagesQuerySchema,
+  agentConversationMessagesQuerySchema,
+  terminateAgentSchema,
+  changeAgentRoleSchema,
+} from './routes/schemas/agents';
+
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- backward-compat shim for 2 role schemas (#5740); legacy `admin/routes.ts` imports from here
+export {
+  roleToolPermissionSchema,
+  roleWorkflowPermissionSchema,
+} from './routes/schemas/roles';
+
 import { z } from 'zod';
-export const agentIdQuerySchema = z.object({
-  agentId: z.string().min(1),
-});
 
-export const agentExecutionStepsQuerySchema = z.object({
-  agentId: z.string().min(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-export const agentThreadMessagesQuerySchema = z.object({
-  agentId: z.string().min(1),
-  page: z.coerce.number().int().min(0).default(0),
-  perPage: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-export const agentConversationMessagesQuerySchema = z.object({
-  agentId: z.string().min(1),
-  provider: z.string().min(1),
-  targetKey: z.string().min(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-export const roleToolPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  toolId: z.string().min(1),
-});
-
-export const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  workflowId: z.string().min(1),
-});
-
-
+// INTENTIONAL DRIFT
+// Legacy route parses body as text (z.coerce.number).
+// Per-route version in ./routes/schemas/agents uses z.number (parseJsonBody).
 export const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
 });
 
+// INTENTIONAL DRIFT
+// Legacy route parses body as text (z.coerce.number).
+// Per-route version in ./routes/schemas/agents uses z.number (parseJsonBody).
 export const hireAgentSchema = z.object({
   hiringRequest: z.string().min(1),
   additionalContext: z.string().optional(),
   weeklyBudgetUsd: z.coerce.number().positive(),
-});
-
-export const terminateAgentSchema = z.object({
-  agentId: z.string().min(1),
-});
-
-export const changeAgentRoleSchema = z.object({
-  agentId: z.string().min(1),
-  roleId: z.string().min(1),
 });
 
 export const upsertAgentProviderSchema = z.object({
@@ -64,5 +75,3 @@ export const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
 });
-
-
