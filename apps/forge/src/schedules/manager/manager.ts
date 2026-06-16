@@ -1,3 +1,8 @@
+export function isActiveSchedule(s: { isActive: boolean | number }): boolean {
+  // DB stores isActive as integer 0|1; convert both forms to a real boolean check.
+  return s.isActive === true || s.isActive === 1;
+}
+
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { z } from 'zod';
@@ -15,7 +20,6 @@ import {
   normalizeScheduleUpdate,
   buildScheduleUpdateInput,
   buildScheduleRollbackInput,
-  type ExistingScheduleFields,
 } from './normalize';
 import { requireScheduleEditor, requireScheduleDeleter } from './auth';
 import { createScheduleSchema,
@@ -89,10 +93,6 @@ export function createAgentScheduleManager(input: {
   async function loadAll() {
     if (!lifecycle) return;
     await lifecycle.loadAll();
-  }
-
-  function isActiveSchedule(s: { isActive: boolean | number }): boolean {
-    return s.isActive === true || s.isActive === 1;
   }
 
   async function createHeartbeatSchedule(agentId: string) {
