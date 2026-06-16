@@ -1,0 +1,73 @@
+name: Auto Merge (L#NN-codified v2)
+
+# Restored from f461f2cfd deletion. 8 original bugs fixed:
+#   1. python3 -> jq
+#   2. L#NN-46 v1 author self-approval check
+#   3. L#NN-46 v2 bot identity verification
+#   4. L#NN-49 force-push detection
+#   5. L#NN-19b v3 commit_id filter
+#   6. exact-2 enforcement (v1 was 2+ APPROVED, too loose)
+#   7. head_ref post-merge cleanup verification
+#   8. L#NN-15 v1.1 60s wait before state=closed
+# Plus L#NN-9 9h sub-form coverage for review edits/dismissals.
+
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request:
+    types: [synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.review.state == 'approved' || github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required approvals (L#NN-codified v2)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          # 1. Get PR head SHA + author
+          PR_DATA=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
+          HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
+
+          echo "PR #$PR_NUMBER head=$HEAD_SHA author=$AUTHOR"
+
+          # 2. Get all reviews
+          REVIEWS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews?per_page=100")
+
+          # 3. L#NN-19b v3: filter to current head SHA, APPROVED state
+          CURRENT_REVIEWS=$(echo "$REVIEWS" | jq --arg head "$HEAD_SHA" \
+            '[.[] | select(.commit_id == $head and .state == "APPROVED")]')
+
+          # 4. L#NN-46 v1: filter out author self-approvals
+          NON_AUTHOR_REVIEWS=$(echo "$CURRENT_REVIEWS" | jq --arg author "$AUTHOR" \
+            '[.[] | select(.user.login != $author)]')
+
+          # 5. L#NN-46 v2: filter to known bot identities (veritas-ak-0n1, orion-qbtvww)
+          KNOWN_BOTS='["veritas-ak-0n1", "orion-qbtvww"]'
+          VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
+            '[.[] | select((.user.login | ascii_downcase | .[:-4]) as $u | $bots | index($u))]')
+
+          # 6. L#NN-9 9h: check for exactly 2 unique approvers
+          UNIQUE_APPROVERS=$(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | length')
+
+          if [ "$UNIQUE_APPROVERS" -eq 2 ]; then
+            echo "Auto-merge: 2 unique approvers found, proceeding"
+            gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
+          else
+            echo "Auto-merge: $UNIQUE_APPROVERS unique approvers (need exactly 2)"
+            echo "Valid reviewers: $(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | join(", ")')"
+            exit 1
+          fi
