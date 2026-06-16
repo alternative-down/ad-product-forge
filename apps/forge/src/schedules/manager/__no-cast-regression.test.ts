@@ -53,7 +53,7 @@ describe('L#19 tripwire for #5608 cast removal', () => {
     const allImplSrc = implFiles.map((f: string) => readFileSync(join(scanDir, f), 'utf8')).join('\n\n');
     const unsafeCasts = allImplSrc.match(/as unknown as/g) ?? [];
     expect(unsafeCasts).toHaveLength(0);
-    const registerCalls = allImplSrc.match(/getLifecycle\(\)\!?\.register\(/g) ?? [];
+    const registerCalls = allImplSrc.match(/getLifecycle\(\)!?\.register\(/g) ?? [];
     expect(registerCalls.length).toBeGreaterThanOrEqual(8);
   });
 });

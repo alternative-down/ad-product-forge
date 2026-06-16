@@ -53,7 +53,7 @@ describe('L#19 tripwire — schedules/manager/ hygiene + #5605 defensive cancel'
 
     it('manager/ contains a getLifecycle().cancel(scheduleId) call AFTER the "rolled back" log AND BEFORE the conditional re-register (defensive cancel — issue #5605)', () => {
       const pattern =
-        /message:\s*'updateSchedule: scheduler registration failed, DB rolled back'[\s\S]{0,800}?getLifecycle\(\)\!?\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
+        /message:\s*'updateSchedule: scheduler registration failed, DB rolled back'[\s\S]{0,800}?getLifecycle\(\)!?\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
       expect(allImplSrc).toMatch(pattern);
     });
   });
