@@ -192,3 +192,65 @@ describe('L#NN-19 shell-injection tripwire (#5717, Day 15 v1.2): L#26 sanity (re
     expect(content).toMatch(SAFE.printfSafe);
   });
 });
+
+// =============================================================================
+// L#NN-19 v1.3 (Day 16, Varek): file path false positive exclusion
+// =============================================================================
+//
+// v1.3 strips file paths from the body before pattern matching. The base64
+// pattern matches alphanumeric+slash of 32+ chars, which false-positives on
+// file paths like 'apps/forge/src/foo.ts' (47 chars). v1.3 excludes these
+// so that file paths in PR bodies do NOT trigger the detector.
+
+describe('L#NN-19 v1.3: file path false positive exclusion', () => {
+  // Re-read workflow to ensure v1.3 changes are present
+  const workflow = loadWorkflow();
+
+  it('v1.3: workflow contains file path exclusion regex', () => {
+    expect(workflow).toMatch(/filePathRegex/);
+    expect(workflow).toMatch(/sanitized/);
+  });
+
+  it('v1.3: file path regex pattern is correct', () => {
+    const regex = /[\w\-/]+\.[a-z]{1,5}\b/g;
+    // Should match file paths
+    expect('apps/forge/src/foo.ts'.match(regex)?.[0]).toBe('apps/forge/src/foo.ts');
+    expect('src/__lnn-50-test.ts'.match(regex)?.[0]).toBe('src/__lnn-50-test.ts');
+    expect('path/to/file.json'.match(regex)?.[0]).toBe('path/to/file.json');
+    // Should NOT match raw alphanumeric strings (secrets)
+    expect('aGVsbG93b3JsZGZvb2JhcmJhemxvbmdyYW5k'.match(regex)).toBeNull();
+    // Should NOT match a ghs_ token
+    expect('ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk'.match(regex)).toBeNull();
+  });
+
+  it('v1.3: stripped body preserves real secret detection', () => {
+    // Real ghs_ token should still be detected
+    const realToken = 'ghs_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijk';
+    const filePath = 'apps/forge/src/lifecycle/index.ts';
+    const body = filePath + ' ' + realToken;
+    const sanitized = body.replace(/[\w\-/]+\.[a-z]{1,5}\b/g, m => ' '.repeat(m.length));
+    // Sanitized should have spaces where the file path was
+    expect(sanitized).toContain(' '.repeat(filePath.length));
+    // But still contain the real token
+    expect(sanitized).toContain(realToken);
+  });
+
+  it('v1.3: file path alone should not match base64 pattern after stripping', () => {
+    // base64 pattern: /[A-Za-z0-9+/=]{32,}/ — the dot (.) is NOT in the char class,
+    // so the match stops at '.ts'. The match is the path MINUS the extension.
+    const base64Regex = /[A-Za-z0-9+/=]{32,}/;
+    const filePath = 'apps/forge/src/schedules/lifecycle/index.ts';
+    // Original (no v1.3): base64 pattern matches 'apps/forge/src/schedules/lifecycle/index' (44 chars)
+    expect(filePath.match(base64Regex)?.[0]).toBe('apps/forge/src/schedules/lifecycle/index');
+    // After v1.3 stripping: the path is replaced with spaces, so no match
+    const sanitized = filePath.replace(/[\w\-/]+\.[a-z]{1,5}\b/g, m => ' '.repeat(m.length));
+    expect(sanitized.match(base64Regex)).toBeNull();
+  });
+
+  it('v1.3: long base64 secret should still match', () => {
+    const base64Regex = /[A-Za-z0-9+/=]{32,}/;
+    const realSecret = 'aGVsbG93b3JsZGZvb2JhcmJhemxvbmdyYW5k'; // 40 chars, no .ext
+    const sanitized = realSecret.replace(/[\w\-/]+\.[a-z]{1,5}\b/g, m => ' '.repeat(m.length));
+    expect(sanitized.match(base64Regex)?.[0]).toBe(realSecret);
+  });
+});
