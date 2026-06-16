@@ -17,6 +17,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFile, stat } from 'node:fs/promises';
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import * as managerModule from './manager';
@@ -52,23 +54,33 @@ describe('schedules/manager barrel (#5611)', () => {
 });
 
 describe('schedules/manager scope consistency (#5612)', () => {
-  it('manager.ts has 0 occurrences of scope: \'schedules\' (regression: #5612)', async () => {
+  it("manager.ts has 0 occurrences of scope: 'schedules' (regression: #5612)", async () => {
     const content = await readFile(managerTsPath, 'utf8');
     const matches = content.match(/scope:\s*'schedules'/g) || [];
-    expect(matches, 'manager.ts should not have scope: \'schedules\' (use \'schedules-manager\')').toHaveLength(0);
+    expect(matches, "manager.ts should not have scope: 'schedules' (use 'schedules-manager')").toHaveLength(0);
   });
 
-  it('manager.ts uses scope: \'schedules-manager\' consistently', async () => {
-    const content = await readFile(managerTsPath, 'utf8');
-    const matches = content.match(/scope:\s*'schedules-manager'/g) || [];
-    expect(matches.length, 'manager.ts should have at least 10 scope: \'schedules-manager\' calls (was 18 after #5612)').toBeGreaterThanOrEqual(10);
+  it("manager/ uses scope: 'schedules-manager' consistently (split across sub-modules after #5737)", async () => {
+    // After #5737 refactor, the scope: 'schedules-manager' calls moved to
+    // queries.ts, mutations.ts, and lifecycle-ops.ts. The total across all
+    // manager/ impl files should be at least 10 (was 18 in manager.ts alone).
+    const dir = managerTsPath.replace(/manager\.ts$/, '');
+    const files = readdirSync(dir).filter((f) =>
+      f.endsWith('.ts') &&
+      !f.endsWith('.test.ts') &&
+      !f.startsWith('__') &&
+      statSync(join(dir, f)).isFile()
+    );
+    const allContent = (await Promise.all(files.map((f) => readFile(join(dir, f), 'utf8')))).join('\n\n');
+    const matches = allContent.match(/scope:\s*'schedules-manager'/g) || [];
+    expect(matches.length, "manager/ should have at least 10 scope: 'schedules-manager' calls across all impl files").toBeGreaterThanOrEqual(10);
   });
 
-  it('lifecycle.ts still uses its canonical scope: \'schedules\' (no collateral damage)', async () => {
+  it("lifecycle.ts still uses its canonical scope: 'schedules' (no collateral damage)", async () => {
     const lifecyclePath = `${schedulesDir}/lifecycle/lifecycle.ts`;
     const content = await readFile(lifecyclePath, 'utf8');
     const matches = content.match(/scope:\s*'schedules'/g) || [];
-    expect(matches.length, 'lifecycle.ts should retain scope: \'schedules\' as its canonical scope').toBeGreaterThanOrEqual(1);
+    expect(matches.length, "lifecycle.ts should retain scope: 'schedules' as its canonical scope").toBeGreaterThanOrEqual(1);
   });
 });
 

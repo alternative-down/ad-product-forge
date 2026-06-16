@@ -42,19 +42,19 @@ describe('L#19 tripwire — schedules/manager/ hygiene + #5605 defensive cancel'
     });
   }
 
-  describe('#5605 defensive cancel in updateSchedule catch block', () => {
-    const managerSrc = readFileSync(join(SCAN_DIR, 'manager.ts'), 'utf8');
+  describe('#5605 defensive cancel in updateSchedule catch block (split across sub-modules after #5737)', () => {
+    // After #5737 refactor, the updateSchedule logic moved to mutations.ts.
+    // The defensive cancel pattern must still exist somewhere in the manager/ directory.
+    const allImplSrc = files.map((f) => readFileSync(join(SCAN_DIR, f), 'utf8')).join('\n\n');
 
-    it('manager.ts contains the "updateSchedule: update failed, rolled back" forgeDebug', () => {
-      expect(managerSrc).toMatch(/message:\s*'updateSchedule: update failed, rolled back'/);
+    it('manager/ contains the "updateSchedule: scheduler registration failed, DB rolled back" forgeDebug', () => {
+      expect(allImplSrc).toMatch(/message:\s*'updateSchedule: scheduler registration failed, DB rolled back'/);
     });
 
-    it('manager.ts contains a getLifecycle().cancel(scheduleId) call AFTER the "rolled back" log AND BEFORE the conditional re-register (defensive cancel — issue #5605)', () => {
-      // Match the order: rolled-back log → cancel(scheduleId) → if (... isActiveSchedule ...) register(restored ...)
-      // Use a single regex with lookaheads to assert ordering.
+    it('manager/ contains a getLifecycle().cancel(scheduleId) call AFTER the "rolled back" log AND BEFORE the conditional re-register (defensive cancel — issue #5605)', () => {
       const pattern =
-        /message:\s*'updateSchedule: update failed, rolled back'[\s\S]{0,800}?getLifecycle\(\)\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
-      expect(managerSrc).toMatch(pattern);
+        /message:\s*'updateSchedule: scheduler registration failed, DB rolled back'[\s\S]{0,800}?getLifecycle\(\)\!?\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
+      expect(allImplSrc).toMatch(pattern);
     });
   });
 });
