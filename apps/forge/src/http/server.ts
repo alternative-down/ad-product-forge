@@ -61,6 +61,29 @@ function buildCorsHeaders(
   };
 }
 import { errorMsg } from '../agents/error-formatting';
+type ErrorResponseBody = { error: string; details?: unknown };
+
+/**
+ * Writes a JSON error response with consistent headers (content-type,
+ * cache-control: no-store). All error sites in the request handler must
+ * funnel through this helper so the response shape is uniform.
+ */
+function sendError(
+  res: http.ServerResponse,
+  corsHeaders: Record<string, string>,
+  status: number,
+  body: ErrorResponseBody,
+  extraHeaders: Record<string, string> = {},
+): void {
+  res.writeHead(status, {
+    ...corsHeaders,
+    ...extraHeaders,
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  res.end(JSON.stringify(body));
+}
+
 
 export type CreateForgeHttpServerConfig = {
   port: number;
@@ -154,9 +177,13 @@ export function createForgeHttpServer(
   const server = http.createServer(async (req, res) => {
     if (req.url === undefined || req.method === undefined) {
       const origin = getHeaderValue(req.headers['origin']) ?? getHeaderValue(req.headers['host']);
-      res
-        .writeHead(400, buildCorsHeaders(origin ?? null, allowedOrigins))
-        .end('Missing request data');
+      sendError(
+        res,
+        buildCorsHeaders(origin ?? null, allowedOrigins),
+        400,
+        { error: 'Missing request data' },
+      );
+      return;
       return;
     }
 
@@ -174,7 +201,7 @@ export function createForgeHttpServer(
     const handler = routes.get(key);
 
     if (!handler) {
-      res.writeHead(404, { ...corsHeaders, 'content-type': 'text/plain' }).end('Not found');
+      sendError(res, corsHeaders, 404, { error: 'Not found' });
       return;
     }
 
@@ -187,29 +214,17 @@ export function createForgeHttpServer(
               ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
           );
         } else {
-          res.writeHead(503, {
-            ...corsHeaders,
-            'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
+          sendError(res, corsHeaders, 503, {
+            error:
+              'Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect admin routes.',
           });
-          res.end(
-            JSON.stringify({
-              error:
-                'Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect admin routes.',
-            }),
-          );
           return;
         }
       } else {
         const providedKey = getHeaderValue(req.headers[ADMIN_API_KEY_HEADER]);
 
         if (providedKey !== config.adminApiKey) {
-          res.writeHead(401, {
-            ...corsHeaders,
-            'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
-          });
-          res.end(JSON.stringify({ error: 'Invalid admin API key' }));
+          sendError(res, corsHeaders, 401, { error: 'Invalid admin API key' });
           return;
         }
       }
@@ -220,14 +235,16 @@ export function createForgeHttpServer(
     // sliding window as getRateLimitHeaders() and prunes expired entries.
     if (isRateLimited()) {
       const rateLimitHeaders = getRateLimitHeaders();
-      res.writeHead(429, {
-        ...corsHeaders,
-        ...rateLimitHeaders,
-        'retry-after': String(Math.ceil(RATE_WINDOW_MS / 1000)),
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store',
-      });
-      res.end(JSON.stringify({ error: 'Too many requests' }));
+      sendError(
+        res,
+        corsHeaders,
+        429,
+        { error: 'Too many requests' },
+        {
+          ...rateLimitHeaders,
+          'retry-after': String(Math.ceil(RATE_WINDOW_MS / 1000)),
+        },
+      );
       return;
     }
 
@@ -235,13 +252,13 @@ export function createForgeHttpServer(
 
     if (bodyResult.isRejected) {
       const rateLimitHeaders = getRateLimitHeaders();
-      res.writeHead(413, {
-        ...corsHeaders,
-        ...rateLimitHeaders,
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store',
-      });
-      res.end(JSON.stringify({ error: 'Request body too large' }));
+      sendError(
+        res,
+        corsHeaders,
+        413,
+        { error: 'Request body too large' },
+        rateLimitHeaders,
+      );
       return;
     }
 
@@ -285,17 +302,15 @@ export function createForgeHttpServer(
     } catch (error) {
       if (error instanceof ZodError) {
         const rateLimitHeaders = getRateLimitHeaders();
-        res.writeHead(400, {
-          ...corsHeaders,
-          ...rateLimitHeaders,
-          'content-type': 'application/json; charset=utf-8',
-          'cache-control': 'no-store',
-        });
-        res.end(
-          JSON.stringify({
+        sendError(
+          res,
+          corsHeaders,
+          400,
+          {
             error: 'Invalid request',
             details: z.flattenError(error),
-          }),
+          },
+          rateLimitHeaders,
         );
         return;
       }
@@ -306,16 +321,7 @@ export function createForgeHttpServer(
         message: 'HTTP request failed',
         context: { method: req.method, pathname: url.pathname, error },
       });
-      res.writeHead(500, {
-        ...corsHeaders,
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store',
-      });
-      res.end(
-        JSON.stringify({
-          error: errorMsg(error),
-        }),
-      );
+      sendError(res, corsHeaders, 500, { error: errorMsg(error) });
     }
   });
 
