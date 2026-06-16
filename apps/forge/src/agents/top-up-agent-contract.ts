@@ -4,7 +4,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
 import { currentTimeMs } from '../utils/time';
-import { agentExecutionContracts } from '../database/schema';
+import { agentExecutionContracts, type AgentExecutionContract } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
@@ -19,7 +19,7 @@ export async function topUpActiveAgentContract(
   const companyCashOperations = createCompanyCashOperations(db);
   const now = currentTimeMs();
 
-  let activeContract: any = null;
+  let activeContract: AgentExecutionContract | null = null;
 
   try {
     activeContract = (await db.query.agentExecutionContracts.findFirst({
@@ -28,7 +28,7 @@ export async function topUpActiveAgentContract(
         lte(agentExecutionContracts.startsAt, now),
         gte(agentExecutionContracts.endsAt, now),
       ),
-    })) as any;
+    })) ?? null;
   } catch (err) {
     forgeDebug({
       scope: 'top-up-agent-contract',
@@ -48,6 +48,11 @@ export async function topUpActiveAgentContract(
     });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
+
+  // TS narrows activeContract to AgentExecutionContract here (non-null + non-undefined).
+  // Capture to a const so async-callback scope (line 81+ in original) inherits the narrowing
+  // without needing the '!' non-null assertion. L#19 invariant.
+  const contract = activeContract;
 
   let currentBalanceUsd: number;
 
@@ -80,15 +85,15 @@ export async function topUpActiveAgentContract(
           amountUsd: input.amountUsd,
           description: `Contract top-up for ${input.agentId}`,
           referenceType: 'agent-execution-contract',
-          referenceId: activeContract!.id,
+          referenceId: contract.id,
         },
         tx,
       );
 
       await tx
         .update(agentExecutionContracts)
-        .set({ budgetUsd: activeContract!.budgetUsd + input.amountUsd })
-        .where(eq(agentExecutionContracts.id, activeContract!.id));
+        .set({ budgetUsd: contract.budgetUsd + input.amountUsd })
+        .where(eq(agentExecutionContracts.id, contract.id));
     });
   } catch (err) {
     forgeDebug({
