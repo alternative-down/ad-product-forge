@@ -7,8 +7,6 @@
  */
 
 import { eq, desc, inArray } from 'drizzle-orm';
-import { errorMsg } from '../../../agents/error-formatting';
-import { forgeDebug } from '../debug';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
@@ -22,6 +20,7 @@ import {
   agentExecutionContracts,
 } from '../../../database/schema';
 import { jsonResponse } from '../index';
+import { adminRouteError } from './admin-route-error-helper';
 
 function extractAgentId(path: string): string {
   const match = path.match(/^\/admin\/agents\/([^/]+)/);
@@ -43,13 +42,7 @@ export function registerAgentBaseRoutes(httpServer: ForgeHttpServerAdapter, getA
           return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(agent);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId' });
       }
     },
   });
@@ -75,13 +68,7 @@ export function registerAgentStepsRoutes(httpServer: ForgeHttpServerAdapter, db:
         });
         return jsonResponse({ items: rows, hasMore: rows.length === limit });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/steps',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/steps' });
       }
     },
   });
@@ -102,13 +89,7 @@ export function registerAgentConversationsRoutes(
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         return jsonResponse(await listAgentRecentConversations(agentId));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/conversations',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/conversations' });
       }
     },
   });
@@ -129,13 +110,7 @@ export function registerAgentMemoryRoutes(
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         return jsonResponse(await getAgentRuntimeMemory(agentId));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/memory',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/memory' });
       }
     },
   });
@@ -159,13 +134,7 @@ export function registerAgentMetricsRoutes(httpServer: ForgeHttpServerAdapter, d
         });
         return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/metrics',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/metrics' });
       }
     },
   });
@@ -186,13 +155,7 @@ export function registerAgentContractRoutes(httpServer: ForgeHttpServerAdapter, 
         });
         return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/contracts',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/contracts' });
       }
     },
   });
@@ -239,13 +202,7 @@ export function registerAgentMcpRoutes(httpServer: ForgeHttpServerAdapter, db: D
           }),
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/mcp-servers',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/mcp-servers' });
       }
     },
   });
@@ -266,13 +223,7 @@ export function registerAgentSchedulesRoutes(httpServer: ForgeHttpServerAdapter,
         });
         return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/schedules',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/schedules' });
       }
     },
   });
@@ -303,13 +254,7 @@ export function registerAgentNotificationsRoutes(httpServer: ForgeHttpServerAdap
           })),
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agents/:agentId/notifications',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agents/:agentId/notifications' });
       }
     },
   });

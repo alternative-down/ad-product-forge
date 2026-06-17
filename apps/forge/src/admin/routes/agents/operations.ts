@@ -4,13 +4,12 @@
  */
 
 import { z } from 'zod';
-import { errorMsg } from '../../../agents/error-formatting';
 import type { CommunicationFile } from '@forge-runtime/core';
-import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
+import { adminRouteError } from './admin-route-error-helper';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.
@@ -112,13 +111,7 @@ export function registerAgentOperationRoutes(
         });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Agent wake route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Agent wake route' });
       }
     },
   });
@@ -147,13 +140,7 @@ export function registerAgentOperationRoutes(
           messageId: sent.messageId,
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Internal chat send route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Internal chat send route' });
       }
     },
   });
