@@ -56,4 +56,65 @@ describe('adminRouteError', () => {
       }),
     );
   });
+  describe('with path option (regression for #5457)', () => {
+    it('returns 500 when called with a path', () => {
+      const result = adminRouteError(new Error('boom'), { path: '/admin/agent/test' });
+      expect(result.status).toBe(500);
+    });
+
+    it('includes the path in the response body error', () => {
+      const result = adminRouteError(new Error('boom'), { path: '/admin/agent/test' });
+      expect(result.body).toEqual({ error: 'boom' });
+    });
+
+    it('calls forgeDebug with path-aware message and context', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      (forgeDebug as ReturnType<typeof vi.fn>).mockClear();
+      adminRouteError(new Error('debug path test'), { path: '/admin/agent/test' });
+      expect(forgeDebug).toHaveBeenCalledTimes(1);
+      expect(forgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/test route handler failed',
+          context: expect.objectContaining({
+            path: '/admin/agent/test',
+            error: 'debug path test',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('with label option (regression for #5457)', () => {
+    it('returns 500 when called with a label', () => {
+      const result = adminRouteError(new Error('boom'), { label: 'test-op' });
+      expect(result.status).toBe(500);
+    });
+
+    it('uses the label in the forgeDebug message', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      (forgeDebug as ReturnType<typeof vi.fn>).mockClear();
+      adminRouteError(new Error('label test'), { label: 'test-op' });
+      expect(forgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Admin test-op failed',
+        }),
+      );
+    });
+  });
+
+  describe('without options (legacy behavior, regression for #5457)', () => {
+    it('returns 500 with generic message when no opts provided', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      (forgeDebug as ReturnType<typeof vi.fn>).mockClear();
+      const result = adminRouteError(new Error('legacy test'));
+      expect(result.status).toBe(500);
+      expect(forgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Admin route failed',
+        }),
+      );
+    });
+  });
 });
