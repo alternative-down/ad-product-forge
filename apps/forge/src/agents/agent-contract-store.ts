@@ -17,6 +17,7 @@ import {
 } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import { findOrThrow } from '../database/find-or-throw';
 
 
 /**
@@ -190,25 +191,17 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
 
   async function getUsagePricing(input: { pricingModelKey: string; profileId: string }) {
     let priceRow;
-    let profile;
-
     try {
-      [priceRow, profile] = await Promise.all([
-        db.query.llmModelPrices.findFirst({
-          where: eq(llmModelPrices.modelKey, input.pricingModelKey),
-        }),
-        db.query.llmProfiles.findFirst({
-          where: eq(llmProfiles.id, input.profileId),
-        }),
-      ]);
+      priceRow = await db.query.llmModelPrices.findFirst({
+        where: eq(llmModelPrices.modelKey, input.pricingModelKey),
+      });
     } catch (err) {
       forgeDebug({
         scope: 'agent-contract-store',
         level: 'error',
-        message: 'getUsagePricing: parallel db read failed',
+        message: 'getUsagePricing: priceRow db read failed',
         context: {
           pricingModelKey: input.pricingModelKey,
-          profileId: input.profileId,
           error: errorMsg(err),
         },
       });
@@ -225,15 +218,17 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       return { modelPrice: null, contractCostMultiplier: 1 };
     }
 
-    if (!profile) {
-      forgeDebug({
+    const profile = await findOrThrow(
+      db.query.llmProfiles,
+      {
         scope: 'agent-contract-store',
-        level: 'warn',
-        message: 'getUsagePricing: LLM profile not found',
-        context: { profileId: input.profileId },
-      });
-      throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
-    }
+        entity: 'LLM profile',
+        op: 'getUsagePricing',
+        idValue: input.profileId,
+        idField: 'profileId',
+      },
+      { where: eq(llmProfiles.id, input.profileId) },
+    );
 
     return {
       modelPrice: priceRow,

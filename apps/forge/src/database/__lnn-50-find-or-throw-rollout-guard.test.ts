@@ -14,10 +14,10 @@
  *
  * Migrated files (issue #5469, Day 17):
  * - apps/forge/src/capabilities/runtime.ts — 5 sites (Phase 1, Day 17 #5469)
+ * - apps/forge/src/agents/agent-contract-store.ts — 1 site (Phase 2, getUsagePricing profile)
  *
- * Remaining files (issue #5469 backlog, 35+ sites in 19+ files):
+ * Remaining files (issue #5469 backlog, 34+ sites in 18+ files):
  * - communication/internal-chat-groups.ts (5 sites)
- * - agents/agent-contract-store.ts (5 sites)
  * - finance/company-payables.ts (4 sites)
  * - communication/internal-chat-account-ops.ts (3 sites)
  * - ... (15+ more files with 1-2 each)
@@ -39,8 +39,14 @@ interface FileMigration {
 const MIGRATED_FILES: FileMigration[] = [
   {
     path: 'capabilities/runtime.ts',
-    expectedFindOrThrowUsage: 5, // 5 throw-style sites migrated
+    expectedFindOrThrowUsage: 5, // 5 throw-style sites migrated (Phase 1, #5469 Day 17)
     manualFindOrThrowRemaining: 1, // 1 return-style site (provider, line 280) — different pattern
+    expectedConsistency: 0, // no missing forgeDebug drift
+  },
+  {
+    path: 'agents/agent-contract-store.ts',
+    expectedFindOrThrowUsage: 1, // 1 throw-style site migrated (getUsagePricing profile, Phase 2)
+    manualFindOrThrowRemaining: 0, // 0 remaining throw-style sites (4 other findFirst are return-style)
     expectedConsistency: 0, // no missing forgeDebug drift
   },
 ];
