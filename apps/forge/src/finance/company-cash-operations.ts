@@ -158,7 +158,7 @@ export function createCompanyCashOperations(db: Database) {
       forgeDebug({
         scope: 'company-cash-operations',
         level: 'warn',
-        message: 'cancelPlannedEntry: entry not found',
+        message: 'postPlannedEntry: entry not found',
         context: { entryId },
       });
       throw new Error(`Company cash entry not found: ${entryId}`);
