@@ -103,6 +103,18 @@ export interface ScheduleLifecycle {
   register(record: ScheduleLifecycleInput): Promise<void>;
 }
 
+/**
+ * Module-level warning logger for the schedules subsystem.
+ * Centralizes the scope and level so callers can supply just the
+ * per-site message + context (sub-pattern 3d: see issue #5594).
+ * L#NN-50 tripwire: any direct call with the schedules-scope + warn-level
+ * call outside this helper will fail the
+ * __no-direct-schedules-forgeDebug-tripwire.test.ts regression check.
+ */
+export function logScheduleWarning(message: string, context: Record<string, unknown>): void {
+  forgeDebug({ scope: 'schedules', level: 'warn', message, context });
+}
+
 function buildCronSpec(record: CronScheduleRecord): RecurrenceSpecDateRange {
   return { rule: record.cronExpression, tz: record.timezone };
 }
@@ -131,12 +143,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   /** Shared error log for register failures. Keeps both variants consistent. */
   function logRegisterFailure(kind: 'date' | 'cron', scheduleId: string, err: unknown): void {
-    forgeDebug({
-      scope: 'schedules',
-      level: 'warn',
-      message: `register: failed to schedule ${kind} job`,
-      context: { scheduleId, error: errorMsg(err) },
-    });
+    logScheduleWarning(`register: failed to schedule ${kind} job`, { scheduleId, error: errorMsg(err) });
   }
 
   /**
@@ -195,11 +202,9 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
           cancelJob(record.scheduleId);
           await register(record);
         } catch (err) {
-          forgeDebug({
-            scope: 'schedules',
-            level: 'warn',
-            message: 'loadAll: skipped schedule due to registration failure',
-            context: { scheduleId: record.scheduleId, error: errorMsg(err) },
+          logScheduleWarning('loadAll: skipped schedule due to registration failure', {
+            scheduleId: record.scheduleId,
+            error: errorMsg(err),
           });
           // Continue loading remaining schedules
         }
@@ -215,12 +220,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     try {
       await gracefulShutdown();
     } catch (err) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'warn',
-        message: 'stop: gracefulShutdown failed',
-        context: { error: errorMsg(err) },
-      });
+      logScheduleWarning('stop: gracefulShutdown failed', { error: errorMsg(err) });
     }
   }
 

@@ -45,7 +45,7 @@ import type {
   DateScheduleRecord,
   CronScheduleRecord,
 } from './lifecycle';
-import { createScheduleLifecycle } from './lifecycle';
+import { createScheduleLifecycle, logScheduleWarning } from './lifecycle';
 import type { AgentSchedule } from '../../database/schema';
 
 // Wrapper that converts a ScheduleLifecycleRecord (the narrow discriminated
@@ -438,6 +438,52 @@ describe('createScheduleLifecycle', () => {
       await expect(lifecycle.register(asDbRow(fakeRecord))).rejects.toThrow(
         /invalid scheduleType/,
       );
+    });
+  });
+});
+
+
+// ─── logScheduleWarning helper (#5594) ───────────────────────────────────────
+// Direct unit tests of the centralized warning logger. The 3 refactored
+// call sites (logRegisterFailure, loadAll catch, stop catch) all flow through
+// this helper; the existing tests already exercise the call shape via
+// mockForgeDebug assertions. These tests pin the helper's exact contract so
+// any future change to scope/level/message/context fields is caught here.
+describe('logScheduleWarning helper (#5594)', () => {
+  beforeEach(() => {
+    mockForgeDebug.mockReset();
+  });
+
+  it('forwards scope, level, message, and context verbatim to forgeDebug', () => {
+    logScheduleWarning('unit test message', { foo: 'bar', n: 42 });
+    expect(mockForgeDebug).toHaveBeenCalledTimes(1);
+    expect(mockForgeDebug).toHaveBeenCalledWith({
+      scope: 'schedules',
+      level: 'warn',
+      message: 'unit test message',
+      context: { foo: 'bar', n: 42 },
+    });
+  });
+
+  it('forwards an empty context object when none is provided', () => {
+    logScheduleWarning('msg-only', {});
+    expect(mockForgeDebug).toHaveBeenCalledWith({
+      scope: 'schedules',
+      level: 'warn',
+      message: 'msg-only',
+      context: {},
+    });
+  });
+
+  it('forwards error: errorMsg(err) when caller passes a serialized error string', () => {
+    // Mirrors the shape of the loadAll + stop catch sites (context.error is
+    // already errorMsg(err), not the raw unknown).
+    logScheduleWarning('op: failed', { scheduleId: 'sch_1', error: 'connection reset' });
+    expect(mockForgeDebug).toHaveBeenCalledWith({
+      scope: 'schedules',
+      level: 'warn',
+      message: 'op: failed',
+      context: { scheduleId: 'sch_1', error: 'connection reset' },
     });
   });
 });
