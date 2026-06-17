@@ -5,14 +5,12 @@
  */
 
 import { z } from 'zod';
-import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
-import { errorMsg } from '../../../../agents/error-formatting';
-
+import { adminRouteError } from '../admin-route-error-helper';
 
 export function registerLifecycleDelegateOps(
   httpServer: {
@@ -60,13 +58,7 @@ export function registerLifecycleDelegateOps(
         });
         return jsonResponse(result, 201);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/hire route handler failed',
-          context: { path: '/admin/agent/hire', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/hire' });
       }
     },
   });
@@ -90,13 +82,7 @@ export function registerLifecycleDelegateOps(
           }),
         );
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/terminate route handler failed',
-          context: { path: '/admin/agent/terminate', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/terminate' });
       }
     },
   });
@@ -117,13 +103,7 @@ export function registerLifecycleDelegateOps(
         });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/change-role route handler failed',
-          context: { path: '/admin/agent/change-role', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/change-role' });
       }
     },
   });

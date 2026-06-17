@@ -4,15 +4,13 @@
 
 import { z } from 'zod';
 import { createId } from '../../../../utils/id';
-import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import type { HttpHandler } from '../../../../http/server';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
 import type { Database } from '../../../../database/client';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
-import { errorMsg } from '../../../../agents/error-formatting';
-
+import { adminRouteError } from '../admin-route-error-helper';
 
 // ─── Request body schema ─────────────────────────────────────────────────────
 const mcpCreateBodySchema = z.object({
@@ -74,13 +72,7 @@ export function registerMcpOps(
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/agent/mcp/create',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/mcp/create' });
       }
     },
   });

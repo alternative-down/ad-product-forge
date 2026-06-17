@@ -39,6 +39,8 @@ const roleToolPermissionSchema = z
   .strict();
 
 import { errorMsg } from '../../../../agents/error-formatting';
+import { adminRouteError } from '../admin-route-error-helper';
+
 export function registerRoleOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -61,13 +63,7 @@ export function registerRoleOps(
         });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/roles/create route handler failed',
-          context: { path: '/admin/roles/create', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/roles/create' });
       }
     },
   });
@@ -86,13 +82,7 @@ export function registerRoleOps(
         });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/roles/update route handler failed',
-          context: { path: '/admin/roles/update', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/roles/update' });
       }
     },
   });
@@ -107,17 +97,16 @@ export function registerRoleOps(
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
-        const msg = errorMsg(err);
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/roles/delete route handler failed',
-          context: { path: '/admin/roles/delete', error: msg },
-        });
         if ((err as { code?: string }).code === 'ROLE_HAS_ASSIGNED_AGENTS') {
-          return jsonResponse({ error: msg }, 409);
+          forgeDebug({
+            scope: 'admin',
+            level: 'warn',
+            message: '/admin/roles/delete conflict (role has assigned agents)',
+            context: { path: '/admin/roles/delete', error: errorMsg(err) },
+          });
+          return jsonResponse({ error: errorMsg(err) }, 409);
         }
-        return jsonResponse({ error: msg }, 500);
+        return adminRouteError(err, { path: '/admin/roles/delete' });
       }
     },
   });
@@ -137,13 +126,7 @@ export function registerRoleOps(
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/roles/tool-permissions route handler failed',
-          context: { path: '/admin/roles/tool-permissions', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/roles/tool-permissions' });
       }
     },
   });

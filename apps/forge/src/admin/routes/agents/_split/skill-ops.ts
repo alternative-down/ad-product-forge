@@ -4,7 +4,6 @@
 
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
-import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import {
   installGlobalSkillsFromZip,
@@ -14,6 +13,8 @@ import {
 } from '../../../../agents/global-skills';
 import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
+
+import { adminRouteError } from '../admin-route-error-helper';
 
 const publishAgentSkillToGlobalSchema = z
   .object({
@@ -42,7 +43,6 @@ const deleteAgentSkillSchema = z
   })
   .strict();
 
-import { errorMsg } from '../../../../agents/error-formatting';
 export function registerSkillOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -77,16 +77,7 @@ export function registerSkillOps(
           skillName: body.skillName,
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/skills/publish-to-global route handler failed',
-          context: {
-            path: '/admin/agent/skills/publish-to-global',
-            error: errorMsg(err),
-          },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/skills/publish-to-global' });
       }
     },
   });
@@ -111,16 +102,7 @@ export function registerSkillOps(
         });
         return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/skills/install-global route handler failed',
-          context: {
-            path: '/admin/agent/skills/install-global',
-            error: errorMsg(err),
-          },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/skills/install-global' });
       }
     },
   });
@@ -138,13 +120,7 @@ export function registerSkillOps(
         });
         return jsonResponse({ success: true, skillNames: installedSkillNames });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/skills/upload route handler failed',
-          context: { path: '/admin/agent/skills/upload', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/skills/upload' });
       }
     },
   });
@@ -159,13 +135,7 @@ export function registerSkillOps(
         await deleteGlobalSkill({ workspaceBasePath, skillName: body.skillName });
         return jsonResponse({ success: true, skillName: body.skillName });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/skills/delete route handler failed',
-          context: { path: '/admin/agent/skills/delete', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/skills/delete' });
       }
     },
   });

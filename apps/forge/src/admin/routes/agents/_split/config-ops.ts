@@ -4,7 +4,6 @@
 
 import { z as _z } from 'zod';
 import { sql } from 'drizzle-orm';
-import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { reloadAgentIfLoaded } from '../../../../capabilities/runtime';
 import {
@@ -17,7 +16,8 @@ import type { Database } from '../../../../database/client';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../../github/manager';
 
-import { errorMsg } from '../../../../agents/error-formatting';
+import { adminRouteError } from '../admin-route-error-helper';
+
 export function registerConfigOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -44,16 +44,7 @@ export function registerConfigOps(
         });
         return jsonResponse({ success: true, agentId: body.agentId, provisioning });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/github-manifest-config/update route handler failed',
-          context: {
-            path: '/admin/agent/github-manifest-config/update',
-            error: errorMsg(err),
-          },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/github-manifest-config/update' });
       }
     },
   });
@@ -87,13 +78,7 @@ export function registerConfigOps(
         await reloadAgentIfLoaded(db, input.loaderConfig as any, body.agentId);
         return jsonResponse({ success: true, agentId: body.agentId });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: '/admin/agent/update-config route handler failed',
-          context: { path: '/admin/agent/update-config', error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent/update-config' });
       }
     },
   });
