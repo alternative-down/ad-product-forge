@@ -85,6 +85,28 @@ describe('CoolifyManager', () => {
         status: 200,
         body: { server: { uuid: 'server-001', wildcard_domain: 'wildcard.example.com' } },
       },
+      'GET /projects': {
+        status: 200,
+        body: { projects: [{ uuid: 'proj-001', name: 'forge-default' }] },
+      },
+      'GET /projects/proj-001/environments': {
+        status: 200,
+        body: { environments: [{ uuid: 'env-001', name: 'production' }] },
+      },
+      'POST /applications/private-github-app': {
+        status: 201,
+        body: {
+          application: {
+            uuid: 'app-new-001',
+            name: 'New Service',
+            fqdn: 'https://new.example.com',
+            status: 'running',
+            repository: 'org/repo',
+            git_branch: 'main',
+          },
+        },
+      },
+
     };
 
     mockFetch = vi
@@ -762,6 +784,184 @@ describe('CoolifyManager', () => {
         expect.stringContaining('/applications/app-001/restart'),
         expect.any(Object),
       );
+    });
+  });
+describe('createApplication', () => {
+    it('posts to /applications/private-github-app with name and default context only', async () => {
+      await manager.createApplication({ name: 'my-service' });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/private-github-app'),
+        expect.objectContaining({ method: 'POST', body: expect.any(String) }),
+      );
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      // Required field
+      expect(body.name).toBe('my-service');
+
+      // Default context fields
+      expect(body.projectUuid).toBe('proj-001');
+      expect(body.environmentUuid).toBe('env-001');
+      expect(body.serverUuid).toBe('server-001');
+      expect(body.destinationId).toBe('dest-001');
+
+      // Optional fields NOT sent
+      expect(body.github_app_uuid).toBeUndefined();
+      expect(body.build_command).toBeUndefined();
+      expect(body.publish_directory).toBeUndefined();
+      expect(body.branch).toBeUndefined();
+      expect(body.port).toBeUndefined();
+      expect(body.domain).toBeUndefined();
+    });
+
+    it('includes all optional fields with snake_case keys when provided', async () => {
+      await manager.createApplication({
+        name: 'full-service',
+        githubAppUuid: 'ga-001',
+        buildCommand: 'npm run build',
+        publishDirectory: 'dist',
+        branch: 'main',
+        port: 3000,
+        domain: 'custom.example.com',
+        environmentUuid: 'env-override',
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.name).toBe('full-service');
+      expect(body.github_app_uuid).toBe('ga-001');
+      expect(body.build_command).toBe('npm run build');
+      expect(body.publish_directory).toBe('dist');
+      expect(body.branch).toBe('main');
+      expect(body.port).toBe(3000);
+      expect(body.domain).toBe('custom.example.com');
+      // environment_uuid (override) wins over default context
+      expect(body.environment_uuid).toBe('env-override');
+      // environmentUuid from defaultContext is also present (camelCase)
+      expect(body.environmentUuid).toBe('env-001');
+    });
+
+    it('overrides default environmentUuid when input.environmentUuid is provided', async () => {
+      await manager.createApplication({
+        name: 'override-env',
+        environmentUuid: 'env-custom',
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.environment_uuid).toBe('env-custom');
+      // Other default context fields still present
+      expect(body.projectUuid).toBe('proj-001');
+      expect(body.serverUuid).toBe('server-001');
+    });
+
+    it('includes a subset of optional fields when only some are provided', async () => {
+      await manager.createApplication({
+        name: 'partial-service',
+        githubAppUuid: 'ga-002',
+        port: 8080,
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.name).toBe('partial-service');
+      expect(body.github_app_uuid).toBe('ga-002');
+      expect(body.port).toBe(8080);
+      // Other optional fields NOT included
+      expect(body.build_command).toBeUndefined();
+      expect(body.publish_directory).toBeUndefined();
+      expect(body.branch).toBeUndefined();
+      expect(body.domain).toBeUndefined();
+    });
+
+    it('returns application details from the created application', async () => {
+      const result = await manager.createApplication({ name: 'returned-app' });
+
+      expect(result).toEqual({
+        applicationUuid: 'app-new-001',
+        name: 'New Service',
+        fqdn: 'https://new.example.com',
+        status: 'running',
+        repository: 'org/repo',
+        branch: 'main',
+        port: null,
+      });
+    });
+  });
+
+  describe('buildApplicationDomain', () => {
+    it('uses provider config applicationsBaseDomain when set', async () => {
+      const result = await manager.buildApplicationDomain('my-slug');
+
+      expect(result).toBe('my-slug.app.example.com');
+      // No /servers/* call expected (config provided base domain directly)
+      const serverCalls = mockFetch.mock.calls.filter((call) => {
+        const url = call[0] as string;
+        return url.includes('/servers/');
+      });
+      expect(serverCalls).toHaveLength(0);
+    });
+
+    it('falls back to default server wildcard_domain when applicationsBaseDomain is null', async () => {
+      // Override integrations with null applicationsBaseDomain to force fallback
+      const fallbackIntegrations = createMockIntegrations({
+        ...MOCK_PROVIDER_CONFIG,
+        applicationsBaseDomain: null,
+      });
+      const fallbackManager = createCoolifyManager({ integrations: fallbackIntegrations } as any);
+
+      const result = await fallbackManager.buildApplicationDomain('fallback-slug');
+
+      expect(result).toBe('fallback-slug.wildcard.example.com');
+      // Should have called the default server endpoint
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/servers/server-001'),
+        expect.any(Object),
+      );
+    });
+
+    it('uses the provided serverUuid to resolve wildcard_domain when fallback triggers', async () => {
+      // Add a mock for /servers/server-002
+      responses['GET /servers/server-002'] = {
+        status: 200,
+        body: { server: { uuid: 'server-002', wildcard_domain: 'override.example.com' } },
+      };
+
+      const fallbackIntegrations = createMockIntegrations({
+        ...MOCK_PROVIDER_CONFIG,
+        applicationsBaseDomain: null,
+      });
+      const fallbackManager = createCoolifyManager({ integrations: fallbackIntegrations } as any);
+
+      const result = await fallbackManager.buildApplicationDomain('explicit-server', 'server-002');
+
+      expect(result).toBe('explicit-server.override.example.com');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/servers/server-002'),
+        expect.any(Object),
+      );
+    });
+
+    it('returns formatted slug.baseDomain for slug with hyphens', async () => {
+      const result = await manager.buildApplicationDomain('my-cool-app-v2');
+
+      expect(result).toBe('my-cool-app-v2.app.example.com');
     });
   });
 });
