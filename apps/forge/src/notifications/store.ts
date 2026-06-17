@@ -1,4 +1,5 @@
 import { createId } from '../utils/id';
+import { withDbErrorLogging } from '../database/error-logging';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
@@ -50,18 +51,17 @@ export function createAgentNotificationStore(db: Database) {
       readAt: null,
     };
 
-    try {
-      await db.insert(agentNotifications).values(notification);
-    } catch (err) {
-      forgeDebug({
-        scope: 'notifications-store',
-        level: 'error',
-        runtimeId: input.agentId,
-        message: 'createNotification DB insert failed: ' + errorMsg(err),
-      });
-      return null;
-    }
-    return notification;
+    return await withDbErrorLogging({
+      scope: 'notifications-store',
+      op: 'createNotification',
+      verb: 'write',
+      mode: 'return-null',
+      context: { runtimeId: input.agentId, id: notification.id },
+      fn: async () => {
+        await db.insert(agentNotifications).values(notification);
+        return notification;
+      },
+    });
   }
 
   // L#19: listNotifications is a PURE READ. It does NOT mutate the database.
@@ -73,27 +73,24 @@ export function createAgentNotificationStore(db: Database) {
     unreadOnly?: boolean;
     limit: number;
   }) {
-    let rows;
-    try {
-      rows = await db.query.agentNotifications.findMany({
-        where: and(
-          eq(agentNotifications.agentId, input.agentId),
-          input.unreadOnly != null
-            ? isNull(agentNotifications.readAt)
-            : undefined,
-        ),
-        orderBy: desc(agentNotifications.createdAt),
-        limit: input.limit,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'notifications-store',
-        level: 'error',
-        runtimeId: input.agentId,
-        message: 'listNotifications DB read failed: ' + errorMsg(err),
-      });
-      return [];
-    }
+    const rows = await withDbErrorLogging({
+      scope: 'notifications-store',
+      op: 'listNotifications',
+      verb: 'read',
+      mode: 'return-empty-array',
+      context: { runtimeId: input.agentId, limit: input.limit, unreadOnly: input.unreadOnly },
+      fn: () =>
+        db.query.agentNotifications.findMany({
+          where: and(
+            eq(agentNotifications.agentId, input.agentId),
+            input.unreadOnly != null
+              ? isNull(agentNotifications.readAt)
+              : undefined,
+          ),
+          orderBy: desc(agentNotifications.createdAt),
+          limit: input.limit,
+        }),
+    });
 
     // The "read" field reflects the PERSISTED state in the database, not
     // a caller-controlled flag. This is the L#19 invariant: a read
@@ -129,6 +126,10 @@ export function createAgentNotificationStore(db: Database) {
         );
       return { updatedCount: input.notificationIds.length };
     } catch (err) {
+      // markNotificationsRead has a unique return shape ({ updatedCount: 0 })
+      // that withDbErrorLogging's return-null mode cannot produce. Keep this
+      // site as a manual try/catch. Future enhancement: add a fallback param
+      // to withDbErrorLogging to generalize this case (tracked in #5468 follow-up).
       forgeDebug({
         scope: 'notifications-store',
         level: 'error',
@@ -140,23 +141,20 @@ export function createAgentNotificationStore(db: Database) {
   }
 
   async function getNotification(agentId: string, notificationId: string) {
-    let row;
-    try {
-      row = await db.query.agentNotifications.findFirst({
-        where: and(
-          eq(agentNotifications.agentId, agentId),
-          eq(agentNotifications.id, notificationId),
-        ),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'notifications-store',
-        level: 'error',
-        runtimeId: agentId,
-        message: 'getNotification DB read failed: ' + errorMsg(err),
-      });
-      return null;
-    }
+    const row = await withDbErrorLogging({
+      scope: 'notifications-store',
+      op: 'getNotification',
+      verb: 'read',
+      mode: 'return-null',
+      context: { runtimeId: agentId, notificationId },
+      fn: () =>
+        db.query.agentNotifications.findFirst({
+          where: and(
+            eq(agentNotifications.agentId, agentId),
+            eq(agentNotifications.id, notificationId),
+          ),
+        }),
+    });
 
     if (row == null) {
       return null;

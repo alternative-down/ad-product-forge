@@ -82,13 +82,30 @@ import { forgeDebug } from '@forge-runtime/core';
  *     fn: () => db.insert(webhookRoutes).values(route),
  *   });
  */
+/**
+ * Error handling mode for the helper.
+ *
+ * - 'throw' (default): re-throw the original error after logging. Use for
+ *   write operations where the caller must know about failures.
+ * - 'return-null': return null after logging. Use for read operations
+ *   that expect a single result (findFirst-style).
+ * - 'return-empty-array': return [] after logging. Use for read operations
+ *   that expect a list (findMany-style).
+ *
+ * Issue #5468: Generalize the helper to support read-vs-write + return-vs-throw
+ * variations across 7 store files (notifications, ltm, capabilities, etc.).
+ */
+export type ErrorLoggingMode = 'throw' | 'return-null' | 'return-empty-array';
+
 export async function withDbErrorLogging<T>(params: {
   scope: string;
   op: string;
   verb: 'read' | 'write';
-  context: Record<string, unknown>;
+  context?: Record<string, unknown>;
+  mode?: ErrorLoggingMode;
   fn: () => T | PromiseLike<T>;
 }): Promise<T> {
+  const mode = params.mode ?? 'throw';
   try {
     return await params.fn();
   } catch (err) {
@@ -96,8 +113,10 @@ export async function withDbErrorLogging<T>(params: {
       scope: params.scope,
       level: 'error',
       message: `${params.op} DB ${params.verb} failed`,
-      context: { ...params.context, error: errorMsg(err) },
+      context: { ...(params.context ?? {}), error: errorMsg(err) },
     });
+    if (mode === 'return-null') return null as T;
+    if (mode === 'return-empty-array') return [] as unknown as T;
     throw err;
   }
 }
