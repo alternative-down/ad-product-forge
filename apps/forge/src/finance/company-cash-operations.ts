@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
+import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -32,36 +32,33 @@ export function createCompanyCashOperations(db: Database) {
     const now = Date.now();
     const entryId = createId();
 
-    try {
-      await session.insert(companyCashLedger).values({
-        id: entryId,
+    await withDbErrorLogging({
+      scope: 'company-cash-operations',
+      op: 'createEntry',
+      verb: 'write',
+      context: {
+        entryId,
         type: input.type,
         direction: input.direction,
         amountUsd: input.amountUsd,
-        description: input.description,
-        referenceType: input.referenceType,
-        referenceId: input.referenceId,
-        status: input.status,
-        dueAt: input.dueAt ?? now,
-        effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'error',
-        message: 'createEntry DB insert failed',
-        context: {
-          error: errorMsg(err),
-          entryId,
+      },
+      fn: async () => {
+        await session.insert(companyCashLedger).values({
+          id: entryId,
           type: input.type,
           direction: input.direction,
           amountUsd: input.amountUsd,
-        },
-      });
-      throw err;
-    }
+          description: input.description,
+          referenceType: input.referenceType,
+          referenceId: input.referenceId,
+          status: input.status,
+          dueAt: input.dueAt ?? now,
+          effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
+          createdAt: now,
+          updatedAt: now,
+        });
+      },
+    });
 
     return { entryId };
   }
@@ -139,20 +136,18 @@ export function createCompanyCashOperations(db: Database) {
       throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
     }
 
-    try {
-      await db
-        .update(companyCashLedger)
-        .set({ status: 'canceled' })
-        .where(eq(companyCashLedger.id, entryId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'error',
-        message: 'cancelPlannedEntry',
-        context: { error: errorMsg(err), entryId },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'company-cash-operations',
+      op: 'cancelPlannedEntry',
+      verb: 'write',
+      context: { entryId },
+      fn: async () => {
+        await db
+          .update(companyCashLedger)
+          .set({ status: 'canceled' })
+          .where(eq(companyCashLedger.id, entryId));
+      },
+    });
 
     return { entryId, status: 'canceled' as const };
   }
@@ -172,20 +167,18 @@ export function createCompanyCashOperations(db: Database) {
       throw new Error(`Only planned company cash entries can be posted: ${entryId}`);
 
     const effectiveAt = input.effectiveAt ?? Date.now();
-    try {
-      await db
-        .update(companyCashLedger)
-        .set({ status: 'posted', effectiveAt })
-        .where(eq(companyCashLedger.id, entryId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'error',
-        message: 'postPlannedEntry',
-        context: { error: errorMsg(err), entryId, effectiveAt },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'company-cash-operations',
+      op: 'postPlannedEntry',
+      verb: 'write',
+      context: { entryId, effectiveAt },
+      fn: async () => {
+        await db
+          .update(companyCashLedger)
+          .set({ status: 'posted', effectiveAt })
+          .where(eq(companyCashLedger.id, entryId));
+      },
+    });
 
     return { entryId, status: 'posted' as const, effectiveAt };
   }
