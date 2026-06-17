@@ -6,15 +6,19 @@
  * Type-derivation family: L#NN-50 N=3 sub-family (file-scoped input-type check).
  * Sibling to: Zod schema coverage, duplicate-step, auto-merge.yml.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
 
-const HEARTBEAT_PATH = join(__dirname, 'heartbeat.ts');
+import { describe, expect, it } from 'vitest';
+import { readSource } from '../../tripwire-helpers';
+import { join } from 'node:path';
+
+// The test file lives next to heartbeat.ts, so resolve relative to this test file's
+// own directory (import.meta.dirname in ESM). The tripwire-helpers `relativeToHere`
+// resolves relative to the helpers' directory (src/), which is a different anchor.
+const HEARTBEAT_PATH = join(import.meta.dirname, 'heartbeat.ts');
 
 describe('heartbeat.ts must derive createSchedule input from store (regression for #5574)', () => {
   it('does not inline-declare the createSchedule input type', () => {
-    const src = readFileSync(HEARTBEAT_PATH, 'utf8');
+    const src = readSource(HEARTBEAT_PATH);
     // Anti-pattern: createSchedule(input: { (inline object type literal)
     const inlinePattern = /createSchedule\s*\(\s*input\s*:\s*\{/;
     expect(
@@ -24,7 +28,7 @@ describe('heartbeat.ts must derive createSchedule input from store (regression f
   });
 
   it('uses Parameters<> to derive the input type', () => {
-    const src = readFileSync(HEARTBEAT_PATH, 'utf8');
+    const src = readSource(HEARTBEAT_PATH);
     expect(
       src,
       'heartbeat.ts must use Parameters<> to derive the createSchedule input type. See #5574.',
@@ -34,7 +38,7 @@ describe('heartbeat.ts must derive createSchedule input from store (regression f
   it('does not pass redundant default fields in createSchedule call (regression for #5574)', () => {
     // Per #5574 cleanup: description/scheduledDate/wakeWhenRunning are optional in the
     // real type and have store defaults. Heartbeat.ts should not pass them explicitly.
-    const src = readFileSync(HEARTBEAT_PATH, 'utf8');
+    const src = readSource(HEARTBEAT_PATH);
     // The createSchedule call must not have description:, scheduledDate:, or wakeWhenRunning: as keys
     // (within the input.store.createSchedule({ ... }) block).
     expect(
