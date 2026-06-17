@@ -283,7 +283,7 @@ describe('capabilities/runtime', () => {
           targetAgentId: 'ag_target',
           roleId: 'role_missing',
         }),
-      ).rejects.toThrow('Role not found');
+      ).rejects.toThrow('Agent role not found');
     });
 
     it('updates agent role, notifies, reloads, and returns the result', async () => {
@@ -396,7 +396,7 @@ describe('capabilities/runtime', () => {
           targetAgentId: 'ag_001',
           roleId: 'role_missing',
         }),
-      ).rejects.toThrow('Role not found');
+      ).rejects.toThrow('Agent role not found');
     });
 
     it('updates agent role with admin label and returns correct shape', async () => {
