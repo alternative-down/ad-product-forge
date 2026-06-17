@@ -50,12 +50,12 @@ export function verifyAsaasWebhookRequest(
   }
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
-  } catch (error) {
+  } catch (err) {
     forgeDebug({
       scope: 'asaas',
       level: 'error',
       message: 'Asaas webhook JSON parse failed',
-      context: { error: errorMsg(error) },
+      context: { error: errorMsg(err) },
     });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }

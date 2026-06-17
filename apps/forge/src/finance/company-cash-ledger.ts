@@ -1,8 +1,6 @@
 import { and, eq, isNotNull, lte, sql } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
+import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
-
-import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
 import { companyCashLedger } from '../database/schema';
@@ -12,31 +10,28 @@ type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
 export function createCompanyCashLedger(db: Database) {
   interface BalanceTotalRow { total: number }
   async function getCurrentBalanceUsd(): Promise<number> {
-    try {
-      const rows = await db
-        .select({
-          total: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = 'in' then ${companyCashLedger.amountUsd} else -${companyCashLedger.amountUsd} end), 0)`,
-        })
-        .from(companyCashLedger)
-        .where(
-          and(
-            eq(companyCashLedger.status, 'posted'),
-            isNotNull(companyCashLedger.effectiveAt),
-            lte(companyCashLedger.effectiveAt, Date.now()),
-          ),
-        );
-
-      const r = rows as unknown as BalanceTotalRow[];
-      return r?.[0]?.total ?? 0;
-    } catch (error) {
-      forgeDebug({
-        scope: 'company-cash-ledger',
-        level: 'error',
-        message: 'getCurrentBalanceUsd failed',
-        context: { error: errorMsg(error) },
-      });
-      throw error;
-    }
+    return await withDbErrorLogging({
+      scope: 'company-cash-ledger',
+      op: 'getCurrentBalanceUsd',
+      verb: 'read',
+      context: {},
+      fn: async () => {
+        const rows = await db
+          .select({
+            total: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = 'in' then ${companyCashLedger.amountUsd} else -${companyCashLedger.amountUsd} end), 0)`,
+          })
+          .from(companyCashLedger)
+          .where(
+            and(
+              eq(companyCashLedger.status, 'posted'),
+              isNotNull(companyCashLedger.effectiveAt),
+              lte(companyCashLedger.effectiveAt, Date.now()),
+            ),
+          );
+        const r = rows as unknown as BalanceTotalRow[];
+        return r?.[0]?.total ?? 0;
+      },
+    });
   }
 
   async function postEntry(input: {
@@ -50,34 +45,33 @@ export function createCompanyCashLedger(db: Database) {
     dueAt?: number;
     effectiveAt?: number;
   }): Promise<void> {
-    try {
-      const now = Date.now();
-
-      await (db.insert(companyCashLedger) as any).values({
-        id: createId(),
+    await withDbErrorLogging({
+      scope: 'company-cash-ledger',
+      op: 'postEntry',
+      verb: 'write',
+      context: {
         type: input.type,
         direction: input.direction,
         amountUsd: input.amountUsd,
-        description: input.description,
-        referenceType: input.referenceType,
-        referenceId: input.referenceId,
-        status: input.status ?? 'posted',
-        dueAt: input.dueAt ?? now,
-        effectiveAt: input.effectiveAt ?? now,
-        createdAt: now,
-      });
-    } catch (error) {
-      forgeDebug({
-        scope: 'company-cash-ledger',
-        level: 'error',
-        message: 'postEntry failed',
-        context: {
-          error: errorMsg(error),
-          input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd },
-        },
-      });
-      throw error;
-    }
+      },
+      fn: async () => {
+        const now = Date.now();
+
+        await (db.insert(companyCashLedger) as any).values({
+          id: createId(),
+          type: input.type,
+          direction: input.direction,
+          amountUsd: input.amountUsd,
+          description: input.description,
+          referenceType: input.referenceType,
+          referenceId: input.referenceId,
+          status: input.status ?? 'posted',
+          dueAt: input.dueAt ?? now,
+          effectiveAt: input.effectiveAt ?? now,
+          createdAt: now,
+        });
+      },
+    });
   }
 
   return {
