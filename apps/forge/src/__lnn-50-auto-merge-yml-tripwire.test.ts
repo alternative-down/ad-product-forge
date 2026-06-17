@@ -55,10 +55,15 @@ describe('L#NN-50 Axis 1: L#NN contract coverage', () => {
     expect(workflow).toMatch(/\.user\.login\s*!=\s*\$author/);
   });
 
-  it('2. L#NN-46 v2: filters to known bot identities', () => {
+  it('2. L#NN-46 v2: filters to known bot identities (with correct bot suffix slice)', () => {
     expect(workflow).toMatch(/KNOWN_BOTS/);
     expect(workflow).toMatch(/veritas-ak-0n1/);
     expect(workflow).toMatch(/orion-qbtvww/);
+    // L#NN-46 v2.1 (Day 17): bot login format is '<name>[bot]' (5 chars suffix).
+    // Must slice .[:-5] to strip '[bot]' and match the base login.
+    // Regression: .[:-4] (Day 16 bug, caught by mutation 4 below).
+    expect(workflow).toMatch(/\.\[:-5\]/);
+    expect(workflow).not.toMatch(/\.\[:-4\]/);
   });
 
   it('3. L#NN-19b v3: filters reviews to current commit_id', () => {
@@ -135,4 +140,13 @@ describe('L#NN-50 mutation: regression catches', () => {
     const mutated = workflow.replace(/-eq\s+2/, '-ge 2');
     expect(mutated).toMatch(/-ge\s+2/);
   });
+
+  it('mutation 4: bot suffix slice .[:-5] -> .[:-4] should fail test #2 (Day 17 catch)', () => {
+    // L#NN-46 v2.1 (Day 17, N=1): changing slice from 5 to 4 leaves trailing '['
+    // which breaks the bot identity match for veritas/orion (and any future bot).
+    // Caught Day 17 via #5769 + #5770 auto-merge workflow failures.
+    const mutated = workflow.replace(/\.\[:-5\]/, '.[:-4]');
+    expect(mutated).toMatch(/\.\[:-4\]/);
+  });
+
 });
