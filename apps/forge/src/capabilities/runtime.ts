@@ -2,6 +2,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 
 import type { Database } from '../database/client';
+import { findOrThrow } from '../database/find-or-throw';
 import { and, eq } from 'drizzle-orm';
 
 import { agents, agentProviders, agentRoles } from '../database/schema';
@@ -66,41 +67,41 @@ export async function changeAgentRole(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  const actorAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.actorAgentId),
-  });
-
-  if (actorAgent === undefined) {
-    forgeDebug({
+  const actorAgent = await findOrThrow(
+    input.db.query.agents,
+    {
       scope: 'capabilities-runtime',
-      level: 'warn',
-      message: 'changeAgentRole: actor agent not found',
-      context: { actorAgentId: input.actorAgentId },
-    });
-    throw new Error(`Actor agent not found: ${input.actorAgentId}`);
-  }
+      entity: 'Actor agent',
+      op: 'changeAgentRole',
+      idValue: input.actorAgentId,
+      idField: 'actorAgentId',
+    },
+    { where: eq(agents.id, input.actorAgentId) },
+  );
 
-  const targetAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.targetAgentId),
-  });
-
-  if (targetAgent === undefined) {
-    forgeDebug({
+  const targetAgent = await findOrThrow(
+    input.db.query.agents,
+    {
       scope: 'capabilities-runtime',
-      level: 'warn',
-      message: 'changeAgentRole: target agent not found',
-      context: { targetAgentId: input.targetAgentId },
-    });
-    throw new Error(`Target agent not found: ${input.targetAgentId}`);
-  }
+      entity: 'Target agent',
+      op: 'changeAgentRole',
+      idValue: input.targetAgentId,
+      idField: 'targetAgentId',
+    },
+    { where: eq(agents.id, input.targetAgentId) },
+  );
 
-  const agentRole = await input.db.query.agentRoles.findFirst({
-    where: eq(agentRoles.id, input.roleId),
-  });
-
-  if (agentRole === undefined) {
-    throw new Error(`Role not found: ${input.roleId}`);
-  }
+  const agentRole = await findOrThrow(
+    input.db.query.agentRoles,
+    {
+      scope: 'capabilities-runtime',
+      entity: 'Agent role',
+      op: 'changeAgentRole',
+      idValue: input.roleId,
+      idField: 'roleId',
+    },
+    { where: eq(agentRoles.id, input.roleId) },
+  );
 
   await input.db
     .update(agents)
@@ -181,27 +182,29 @@ export async function changeAgentRoleFromAdmin(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  const targetAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.targetAgentId),
-  });
-
-  if (targetAgent === undefined) {
-    forgeDebug({
+  const targetAgent = await findOrThrow(
+    input.db.query.agents,
+    {
       scope: 'capabilities-runtime',
-      level: 'warn',
-      message: 'changeAgentRole: target agent not found',
-      context: { targetAgentId: input.targetAgentId },
-    });
-    throw new Error(`Target agent not found: ${input.targetAgentId}`);
-  }
+      entity: 'Target agent',
+      op: 'changeAgentRole',
+      idValue: input.targetAgentId,
+      idField: 'targetAgentId',
+    },
+    { where: eq(agents.id, input.targetAgentId) },
+  );
 
-  const agentRole = await input.db.query.agentRoles.findFirst({
-    where: eq(agentRoles.id, input.roleId),
-  });
-
-  if (agentRole === undefined) {
-    throw new Error(`Role not found: ${input.roleId}`);
-  }
+  const agentRole = await findOrThrow(
+    input.db.query.agentRoles,
+    {
+      scope: 'capabilities-runtime',
+      entity: 'Agent role',
+      op: 'changeAgentRole',
+      idValue: input.roleId,
+      idField: 'roleId',
+    },
+    { where: eq(agentRoles.id, input.roleId) },
+  );
 
   forgeDebug({
     scope: 'capabilities-runtime',
