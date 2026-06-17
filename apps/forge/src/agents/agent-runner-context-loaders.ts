@@ -14,8 +14,9 @@ import { agentSchedules } from '../database/schema';
 import type { Database } from '../database/client';
 import type { InternalAgentRuntime } from './runtime/types';
 import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
+import { FIVE_SECONDS_MS } from './time-constants';
 
-const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
+const CONTEXT_DECORATION_TIMEOUT_MS = FIVE_SECONDS_MS;
 
 export async function loadAgentContextInstructions(
   currentRuntime: InternalAgentRuntime,

@@ -14,8 +14,9 @@ import { chromium } from 'playwright';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { THIRTY_SECONDS_MS } from '../agents/time-constants';
 
-const DEFAULT_TIMEOUT_MS = 30_000; // 30 min // 5 min
+const DEFAULT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 
 export interface BrowserPageSession {
   pageId: string;

@@ -11,6 +11,7 @@
  * - getHealthcheckIntervalMs(): returns the configured interval in ms
  * - getHealthcheckTimer(): returns the raw timer reference
  */
+import { THIRTY_SECONDS_MS } from './time-constants';
 
 export type SchedulerHealthcheck = {
   startHealthcheck(): void;
@@ -24,7 +25,7 @@ export interface SchedulerHealthcheckDeps {
   runtimeId: string;
 }
 
-const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
+const RUNNER_HEALTHCHECK_INTERVAL_MS = THIRTY_SECONDS_MS;
 
 export function createSchedulerHealthcheck(_deps: SchedulerHealthcheckDeps): SchedulerHealthcheck {
   let healthcheckTimer: ReturnType<typeof setInterval> | null = null;

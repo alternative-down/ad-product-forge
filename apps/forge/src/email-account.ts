@@ -33,14 +33,15 @@ type EmailProviderConfig = {
   bcc?: string;
 };
 
-const CONNECTION_TIMEOUT_MS = 30_000;
+const CONNECTION_TIMEOUT_MS = THIRTY_SECONDS_MS;
 const RECENT_EMAIL_SCAN_LIMIT = 200;
-const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const OUTBOUND_CACHE_TTL_MS = ONE_DAY_MS;
 
 function buildProviderId(config: EmailProviderConfig): string {
   return config.id ?? 'email';
 }
 import { errorMsg } from './agents/error-formatting';
+import { ONE_DAY_MS, THIRTY_SECONDS_MS } from './agents/time-constants';
 
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
   const providerId = buildProviderId(config);

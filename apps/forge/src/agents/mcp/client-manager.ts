@@ -6,6 +6,7 @@ import {
 } from '@forge-runtime/core';
 
 import { getAgentMcpServers } from './store';
+import { FIVE_SECONDS_MS, ONE_MINUTE_MS } from '../time-constants';
 
 type AgentMcpRuntimeActionSource = {
   start(): void;
@@ -19,8 +20,8 @@ type ManagedMcpServer = {
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 };
 
-const MCP_RETRY_BASE_DELAY_MS = 5_000;
-const MCP_RETRY_MAX_DELAY_MS = 60_000;
+const MCP_RETRY_BASE_DELAY_MS = FIVE_SECONDS_MS;
+const MCP_RETRY_MAX_DELAY_MS = ONE_MINUTE_MS;
 
 export function createAgentMcpRuntimeActionSource(agentId: string): AgentMcpRuntimeActionSource {
   return new AgentMcpRuntimeActionSourceManager(agentId);

@@ -1,4 +1,5 @@
-const TYPING_INDICATOR_INTERVAL_MS = 8_000;
+import { EIGHT_SECONDS_MS } from '../agents/time-constants';
+const TYPING_INDICATOR_INTERVAL_MS = EIGHT_SECONDS_MS;
 
 export async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
   channel: T,
