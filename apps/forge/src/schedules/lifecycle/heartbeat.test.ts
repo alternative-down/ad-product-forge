@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, expectTypeOf, vi, beforeEach } from 'vitest';
 import { createHeartbeatSchedule, type CreateHeartbeatInput } from './heartbeat';
+import type { createAgentScheduleStore } from '../manager/store';
 import {
   HEARTBEAT_CRON_EXPRESSION,
   HEARTBEAT_NAME,
@@ -21,7 +22,7 @@ describe('createHeartbeatSchedule()', () => {
     vi.clearAllMocks();
   });
 
-  it('calls store.createSchedule with cron-type heartbeat params', async () => {
+  it('calls store.createSchedule with required heartbeat params', async () => {
     const input = makeInput();
     await createHeartbeatSchedule(input);
     expect(input.store.createSchedule).toHaveBeenCalledWith(
@@ -29,12 +30,10 @@ describe('createHeartbeatSchedule()', () => {
         agentId: 'ag_hb1',
         kind: 'heartbeat',
         name: HEARTBEAT_NAME,
-        description: null,
         scheduleType: 'cron',
         cronExpression: HEARTBEAT_CRON_EXPRESSION,
         timezone: HEARTBEAT_TIMEZONE,
         content: '',
-        wakeWhenRunning: false,
       }),
     );
   });
@@ -58,7 +57,26 @@ describe('createHeartbeatSchedule()', () => {
     await createHeartbeatSchedule(input);
     const call = (input.store.createSchedule as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
     expect(call.cronExpression).toBe('0 * * * *');
+  });
+
+  it('does NOT pass redundant defaults (regression for #5574)', async () => {
+    // After #5574 refactor: description/scheduledDate/wakeWhenRunning are removed
+    // from the call because they are optional in the real type with store defaults.
+    const input = makeInput();
+    await createHeartbeatSchedule(input);
+    const call = (input.store.createSchedule as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    // description/scheduledDate/wakeWhenRunning are optional and use store defaults.
+    expect(call.description).toBeUndefined();
     expect(call.scheduledDate).toBeUndefined();
+    expect(call.wakeWhenRunning).toBeUndefined();
+  });
+
+  it('CreateHeartbeatInput.store.createSchedule input type derives from store (regression for #5574)', () => {
+    // Compile-time check: the input parameter shape must be assignable from
+    // the real store input. If store.createSchedule changes, this breaks at compile time.
+    expectTypeOf<Parameters<CreateHeartbeatInput['store']['createSchedule']>[0]>().toEqualTypeOf<
+      Parameters<ReturnType<typeof createAgentScheduleStore>['createSchedule']>[0]
+    >();
   });
 });
 
