@@ -358,7 +358,7 @@ describe('database schema', () => {
         updatedAt: 0,
       } as unknown as Agent;
       expect(a.name).toBe('Test');
-      expect(a.description).toBeNull();
+      expect(a.description).toBeUndefined();
     });
 
     it('NewAgent type', () => {
