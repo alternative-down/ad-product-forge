@@ -27,7 +27,7 @@ import {
 
 // Re-exports from helpers for backward compatibility
 
-const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
+const OBSERVABILITY_READ_TIMEOUT_MS = FIVE_SECONDS_MS;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
@@ -106,6 +106,7 @@ export type AgentHomeMetricSnapshot = {
 };
 
 import { withTimeout } from '../utils/async';
+import { FIVE_SECONDS_MS } from './time-constants';
 
 export async function readAgentHomeMetricSnapshot(input: {
   db: Database;

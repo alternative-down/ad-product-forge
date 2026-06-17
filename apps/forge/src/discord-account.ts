@@ -33,7 +33,7 @@ export function createDiscordProvider(config: {
     respondToMentionsOnly: boolean;
   }>;
 }): CommunicationProvider {
-  const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
+  const OUTBOUND_ECHO_TTL_MS = 2 * ONE_MINUTE_MS;
   const client = createDiscordClient(config.token);
   const configuredChannels = new Map(
     (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
@@ -435,3 +435,4 @@ export function createDiscordProvider(config: {
 }
 
 import { errorMsg } from './agents/error-formatting';
+import { ONE_MINUTE_MS } from './agents/time-constants';

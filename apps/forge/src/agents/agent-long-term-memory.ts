@@ -47,10 +47,11 @@ import {
 } from './ltm/checkpoint-io';
 
 import { withTimeout } from '../utils/async';
+import { FIVE_MINUTES_MS } from './time-constants';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
-const GENERATE_TIMEOUT_MS = 5 * 60_000;
+const GENERATE_TIMEOUT_MS = FIVE_MINUTES_MS;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;

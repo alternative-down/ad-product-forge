@@ -15,11 +15,12 @@ import type { HttpHandler, HttpResponse } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatDeliveryMessage } from '../../../communication/internal-chat-connection';
 import { forgeDebug } from '../debug';
+import { TWENTY_FIVE_SECONDS_MS } from '../../../agents/time-constants';
 
 const SCOPE = 'admin-sse-events';
 
 /** Keep-alive comment sent every 25 s to prevent proxy connection timeouts. */
-const KEEPALIVE_INTERVAL_MS = 25_000;
+const KEEPALIVE_INTERVAL_MS = TWENTY_FIVE_SECONDS_MS;
 
 export function createInternalChatSseHandler(internalChat: InternalChatService): HttpHandler {
     // eslint-disable-next-line @typescript-eslint/require-await

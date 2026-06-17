@@ -12,6 +12,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
 import { withTimeout } from '../utils/async';
 import type { FlushManager } from './agent-runner-flush-manager';
+import { ONE_MINUTE_MS } from './time-constants';
 
 export interface BeginRunInput {
   reloadRuntime: boolean;
@@ -49,7 +50,7 @@ export type SchedulerSteps = {
   queueNextStep(): Promise<void>;
 };
 
-const RUNNER_AWAIT_TIMEOUT_MS = 60_000;
+const RUNNER_AWAIT_TIMEOUT_MS = ONE_MINUTE_MS;
 
 export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
   async function beginRun(runEpoch: number, input: BeginRunInput): Promise<void> {

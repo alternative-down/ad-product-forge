@@ -46,6 +46,7 @@ import {
 } from './agent-runner-feedback';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
+import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -57,9 +58,9 @@ import {
 } from './agent-runner-generate-timeout';
 
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
-const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
+const GENERATE_TIMEOUT_BACKOFF_MS = FIVE_SECONDS_MS;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-export const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
+export const RUNNER_AWAIT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 export const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 
 // ─── Dependencies interface ─────────────────────────────────────────────────────
