@@ -4,9 +4,7 @@
  */
 
 import type { ForgeHttpServerAdapter } from '../../../http/server';
-import { errorMsg } from '../../../agents/error-formatting';
 import type { AdminRouteContext } from '../../routes';
-import { forgeDebug } from '../debug';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { eq } from 'drizzle-orm';
 import {
@@ -25,6 +23,7 @@ import {
   deleteAgentSkillSchema,
   publishAgentSkillToGlobalSchema,
 } from '../schemas/skills';
+import { adminRouteError } from './admin-route-error-helper';
 
 export function registerAgentSkillsWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -66,13 +65,7 @@ export function registerAgentSkillsWriteRoutes(
           201,
         );
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/agent-skills/upload',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent-skills/upload' });
       }
     },
   });
@@ -106,13 +99,7 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/agent-skills/delete',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent-skills/delete' });
       }
     },
   });
@@ -146,13 +133,7 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/agent-skills/install-global',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent-skills/install-global' });
       }
     },
   });
@@ -186,13 +167,7 @@ export function registerAgentSkillsWriteRoutes(
           publishedSkillName,
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/agent-skills/publish-global',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/agent-skills/publish-global' });
       }
     },
   });

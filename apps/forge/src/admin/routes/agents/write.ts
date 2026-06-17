@@ -4,8 +4,6 @@
  */
 
 import { ZodError } from 'zod';
-import { errorMsg } from '../../../agents/error-formatting';
-import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
@@ -13,6 +11,7 @@ import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
+import { adminRouteError } from './admin-route-error-helper';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (
@@ -56,13 +55,7 @@ export function registerAgentWriteRoutes(
         });
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Agent clear-history route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Agent clear-history route' });
       }
     },
   });
@@ -81,13 +74,7 @@ export function registerAgentWriteRoutes(
         );
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Agent ltm-recall-search route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Agent ltm-recall-search route' });
       }
     },
   });

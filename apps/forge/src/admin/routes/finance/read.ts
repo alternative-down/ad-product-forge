@@ -4,11 +4,10 @@
  */
 
 import { z as _z } from 'zod';
-import { errorMsg } from '../../../agents/error-formatting';
-import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/index';
 import { jsonResponse } from '../index';
+import { adminRouteError } from '../agents/admin-route-error-helper';
 
 type CompanyCash = {
   getOverview: () => Promise<unknown>;
@@ -41,13 +40,7 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.getOverview());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance overview route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Finance overview route' });
       }
     },
   });
@@ -60,13 +53,7 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.listContractSummaries());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance contracts route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { label: 'Finance contracts route' });
       }
     },
   });
