@@ -7,18 +7,8 @@
  * and tripwire files) for direct forgeDebug({ scope: 'admin', level: 'error'
  * patterns within a 5-line window. If found, fail with file path and line.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-const SPLIT_DIR = join(__dirname);
-
-function findSplitFiles(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.startsWith('__'))
-    .map((f) => join(dir, f))
-    .filter((full) => statSync(full).isFile());
-}
+import { findSourceFiles, readSource } from '../../../../tripwire-helpers';
 
 /**
  * Find lines that begin a forgeDebug({ call followed within 5 lines by
@@ -39,7 +29,7 @@ function findHandRolledAdminError(src: string): number[] {
 }
 
 describe('no hand-rolled admin-error forgeDebug in _split/ (regression for #5457)', () => {
-  const files = findSplitFiles(SPLIT_DIR);
+  const files = findSourceFiles(__dirname);
 
   it('_split/ contains 7 non-test source files (sanity)', () => {
     expect(files).toHaveLength(7);
@@ -48,7 +38,7 @@ describe('no hand-rolled admin-error forgeDebug in _split/ (regression for #5457
   for (const filepath of files) {
     const filename = filepath.split('/').pop() ?? filepath;
     it(filename + ' must use adminRouteError instead of hand-rolled forgeDebug', () => {
-      const src = readFileSync(filepath, 'utf8');
+      const src = readSource(filepath);
       const violations = findHandRolledAdminError(src);
       expect(
         violations,

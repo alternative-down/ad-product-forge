@@ -1,6 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { findSourceFiles, readSource } from '../../../../tripwire-helpers';
 
 // Tripwire (regression for #5579): files in `admin/routes/agents/_split/` must
 // NOT re-declare a local `function errorMsg`. The canonical implementation lives
@@ -12,16 +11,8 @@ import { describe, expect, it } from 'vitest';
 // in 4 places, and any change to error-serialization had to be applied
 // 4 times. This tripwire catches any re-introduction of the antipattern.
 
-const SPLIT_DIR = join(__dirname);
-
 describe('error handler dedup tripwire (regression for #5579)', () => {
-  const splitFiles = readdirSync(SPLIT_DIR).filter((f) => {
-    if (!f.endsWith('.ts')) return false;
-    if (f.endsWith('.test.ts')) return false;
-    if (f.startsWith('__')) return false; // this tripwire file
-    const full = join(SPLIT_DIR, f);
-    return statSync(full).isFile();
-  });
+  const splitFiles = findSourceFiles(__dirname);
 
   it('_split/ contains 8 non-test .ts files (sanity)', () => {
     expect(splitFiles).toHaveLength(7);
@@ -29,7 +20,7 @@ describe('error handler dedup tripwire (regression for #5579)', () => {
 
   for (const filename of splitFiles) {
     it(`${filename} must not declare a local function errorMsg`, () => {
-      const src = readFileSync(join(SPLIT_DIR, filename), 'utf8');
+      const src = readSource(filename);
       expect(src).not.toMatch(/function\s+errorMsg\s*\(/);
     });
   }
