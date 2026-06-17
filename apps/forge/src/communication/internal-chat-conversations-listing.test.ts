@@ -260,12 +260,12 @@ describe('listConversations (#5738)', () => {
     expect(result[0]?.unreadCount).toBe(1);
   });
 
-  it('filters by unread=false (source treats unread=true and unread=false identically; both filter to unread only — bug, see follow-up)', async () => {
-    // SOURCE BUG: shouldInclude in the source is
-    //   input.unread !== null && input.unread !== undefined ? row.unread === 1 : true
-    // which evaluates to "row.unread === 1" for BOTH unread=true and unread=false.
-    // Expected behavior for unread=false would be row.unread === 0 (read only).
-    // This test pins the current (buggy) behavior; a follow-up issue will fix the source.
+  it('filters by unread=false (returns READ messages only — was source bug #5763)', async () => {
+    // FIXED: shouldInclude now correctly differentiates:
+    //   input.unread === undefined -> true (no filter)
+    //   input.unread === true     -> row.unread === 1 (unread only)
+    //   input.unread === false    -> row.unread === 0 (read only)
+    // See issue #5763 (discovered via #5762 Aldric test coverage expansion).
     const conv = makeConversationRow('conv-1', null);
     mockAll.mockResolvedValueOnce([conv]);
     mockAll.mockResolvedValueOnce([
@@ -275,8 +275,7 @@ describe('listConversations (#5738)', () => {
     mockFindMany.mockResolvedValueOnce([makeMemberRow('conv-1', 'agent-acct-1', 'A', 'agent-1')]);
     const { listConversations } = makeListing();
     const result = await listConversations({ agentId: 'agent-1', unread: false, limit: 10 });
-    // Current source behavior: unread=false still returns only unread messages
-    expect(result[0]?.messages.map((m) => m.messageId)).toEqual(['m1']);
+    expect(result[0]?.messages.map((m) => m.messageId)).toEqual(['m2']);
   });
 
   it('includes all messages when unread filter is undefined', async () => {

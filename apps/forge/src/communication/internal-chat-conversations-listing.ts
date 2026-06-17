@@ -156,7 +156,9 @@ export function createInternalChatConversationListing(
       );
       const existing = messagesByConversationId.get(row.conversationId) ?? [];
       const shouldInclude =
-        input.unread !== null && input.unread !== undefined ? row.unread === 1 : true;
+        input.unread === undefined ? true :
+        input.unread === true ? row.unread === 1 :
+        row.unread === 0;
       if (shouldInclude && existing.length < 5) {
         existing.push({
           messageId: row.messageId,
