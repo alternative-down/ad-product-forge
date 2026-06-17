@@ -1,3 +1,8 @@
+import type {
+  DiscordProviderCredentials,
+  EmailProviderCredentials,
+} from './agent-credentials';
+
 export type AgentDetail = {
   agentId: string;
 
@@ -49,15 +54,26 @@ export type AgentDetail = {
 
   runner: AgentListItem['runner'];
 
-  providers: Array<{
-    providerType: string;
+  providers: Array<
+    | {
+        providerType: 'discord';
 
-    createdAt: number;
+        createdAt: number;
 
-    editable: boolean;
+        editable: boolean;
 
-    credentials: unknown;
-  }>;
+        credentials: DiscordProviderCredentials;
+      }
+    | {
+        providerType: 'email';
+
+        createdAt: number;
+
+        editable: boolean;
+
+        credentials: EmailProviderCredentials;
+      }
+  >;
 
   mcpServers: Array<{
     configId: string;
