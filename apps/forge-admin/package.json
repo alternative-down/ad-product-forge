@@ -75,7 +75,7 @@
     "optionator": "^0.9.4",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
-    "typescript-eslint": "^8.58.1",
+    "typescript-eslint": "^8.61.1",
     "vite": "^8.0.8"
   }
 }
