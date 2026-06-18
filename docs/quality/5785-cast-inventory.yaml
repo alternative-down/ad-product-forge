@@ -1,0 +1,181 @@
+# `as` cast inventory — apps/forge/src
+# Phase 1 audit for #5785 — categorical + per-file counts
+# Excludes `*.test.ts`, `as const`, and import aliases
+# Generated 2026-06-18 12:42Z
+
+meta:
+  issue: 5785
+  phase: 1
+  branch_base_sha: 8d1d3538ab54
+  total_casts_excluding_as_const: 677
+  total_files_with_casts: 139
+  as_const_count: 230
+  as_parameters_count: 15
+  as_unknown_as_count: 63
+  literal_array_count: 1
+  as_never_count: 6
+
+buckets:
+  b1_cross_function_narrowing:
+    description: as Parameters<typeof X>[0>
+    count: 15
+    dominant_file: apps/forge/src/github/manager.ts
+    dominant_file_count: 8
+    risk: medium
+  b2_double_cast_escape:
+    description: as unknown as X
+    count: 63
+    dominant_files:
+      - apps/forge/src/github/manager.ts: 3
+      - apps/forge/src/micro-erp/read-model.ts: 6
+      - apps/forge/src/admin/routes/agents/provider-mcp.ts: 6
+      - apps/forge/src/minimax/tools.ts: 4
+      - apps/forge/src/finance/payment-receivables.ts: 4
+      - apps/forge/src/communication/internal-chat-groups.ts: 4
+    risk: high
+    sub_patterns:
+      json_parse_narrowing: 30
+      partial_context_binding: 5
+      octokit_escape: 1
+      helper_return_narrowing: 3
+  b3_interface_narrowing:
+    description: (x as Y) structural/return-type narrowing
+    count_estimate: 250
+    risk: medium
+    dominant_files:
+      - apps/forge/src/communication/internal-chat-service.ts
+      - apps/forge/src/agents/hiring-requests-handler.ts
+      - apps/forge/src/admin/read-model/agents-list.ts
+  b4_literal_array_narrowing:
+    description: [] as Array<...>
+    count: 1
+    risk: low
+  b5a_facade_narrowing:
+    description: as Foo direct return-type cast in composition
+    count_estimate: 250
+    risk: medium
+    note: often overlaps with b3 by file but not by line
+  b5b_as_never:
+    description: as never escape hatch
+    count: 6
+    risk: high
+    sites:
+      - apps/forge/src/github/manager.ts: 142
+      - apps/forge/src/github/manager.ts: 143
+      - apps/forge/src/github/manager.ts: 151
+      - apps/forge/src/github/manager.ts: 165
+      - apps/forge/src/github/manager.ts: 175
+      - apps/forge/src/github/manager.ts: 177
+
+top20_files_by_raw_cast_count:
+  - file: apps/forge/src/admin/routes.ts
+    casts: 48
+    out_of_scope_for_refactor: false
+    primary_buckets: [b3, b5a]
+  - file: apps/forge/src/communication/internal-chat-service.ts
+    casts: 45
+    primary_buckets: [b3]
+  - file: apps/forge/src/admin/read-model/agents-list.ts
+    casts: 19
+    out_of_scope_for_refactor: true
+    primary_buckets: [b3, b5a]
+  - file: apps/forge/src/github/manager.ts
+    casts: 18
+    primary_buckets: [b1, b2, b5a, b5b]
+    note: microcosm of all patterns
+  - file: apps/forge/src/agents/hiring-requests-handler.ts
+    casts: 17
+    primary_buckets: [b3]
+  - file: apps/forge/src/admin/read-model/agents-runtime-memory.ts
+    casts: 16
+    out_of_scope_for_refactor: true
+  - file: apps/forge/src/admin/read-model/helpers.ts
+    casts: 15
+    out_of_scope_for_refactor: true
+  - file: apps/forge/src/minimax/manager.ts
+    casts: 12
+    primary_buckets: [b2, b5a, b5b]
+    note: worst pattern density per file
+  - file: apps/forge/src/communication/internal-chat-participants.ts
+    casts: 11
+  - file: apps/forge/src/agents/runtime/prompt.ts
+    casts: 11
+  - file: apps/forge/src/admin/routes/internal-chat/internal-chat-account-routes.ts
+    casts: 11
+  - file: apps/forge/src/webhooks/store.ts
+    casts: 10
+    primary_buckets: [b2, b3]
+  - file: apps/forge/src/schedules/manager/mutations.ts
+    casts: 10
+    primary_buckets: [b3, b5b]
+  - file: apps/forge/src/agents/create-forge-agent.ts
+    casts: 10
+  - file: apps/forge/src/agents/agent-runner-generate.ts
+    casts: 10
+  - file: apps/forge/src/system-integrations/store.ts
+    casts: 9
+    primary_buckets: [b3]
+  - file: apps/forge/src/communication/internal-chat-listing-types.ts
+    casts: 9
+    primary_buckets: [b5a]
+    note: type-only file; largely justifiable
+  - file: apps/forge/src/github/ops/routing.ts
+    casts: 8
+    primary_buckets: [b2, b5b]
+  - file: apps/forge/src/database/migrate.ts
+    casts: 8
+    primary_buckets: [b3]
+  - file: apps/forge/src/communication/internal-chat-groups.ts
+    casts: 8
+    primary_buckets: [b2, b3]
+
+elimination_potential:
+  b1_count: 15
+  b2_count: 39
+  b3_count_estimate: 100
+  b5a_count_estimate: 150
+  b5b_count: 6
+  total_realistic: 310
+  pct_of_677: 46
+  estimated_phase2_hours: 50
+  estimated_phase2_prs: 6
+
+phase3_tripwire_candidates:
+  - name: __no-as-unknown-as-tripwire
+    description: fail if any non-allowlisted file uses `as unknown as`
+    estimated_sites_to_allowlist: 30
+  - name: __as-cast-count-tripwire
+    description: fail if any file exceeds N casts (configurable threshold)
+    default_threshold: 20
+    files_exceeding: 3
+  - name: __no-as-never-tripwire
+    description: fail if any non-allowlisted file uses `as never`
+    estimated_sites_to_allowlist: 3
+
+lnn_family_candidates:
+  - L-NN-50-11: no-as-unknown-as-pattern
+  - L-NN-52: record-with-undefined-runtime (overlap with #5808 Varek)
+
+sample_github_manager_ts_casts:
+  - line: 111
+    snippet: "forgeDebug(opts as Parameters<typeof forgeDebug>[0])"
+    bucket: b1
+  - line: 142
+    snippet: "toIssueSummary(p as Parameters<typeof toIssueSummary>[0]) as never"
+    buckets: [b1, b5b]
+  - line: 151
+    snippet: "createAppName(payload as never) as string"
+    buckets: [b5b, b3]
+  - line: 165
+    snippet: "isGitHubSelfEvent(payload as never) as boolean"
+    buckets: [b5b, b3]
+  - line: 174
+    snippet: "r as Parameters<typeof normalizeGitHubAppCredentials>[0]) as never"
+    buckets: [b1, b5b]
+  - line: 178
+    snippet: "null as unknown as ReturnType<typeof createRoutingOps>"
+    buckets: [b2, b5a]
+  - line: 212
+    snippet: "opsCtx as unknown as OpsContext"
+    bucket: b2
+    sub_pattern: partial_context_binding
