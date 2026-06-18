@@ -1,9 +1,9 @@
-import { errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import { agents, agentProviders } from '../database/schema';
+import { withDbErrorLogging } from '../database/error-logging';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
@@ -64,31 +64,27 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       continue;
     }
 
-    let decrypted: string;
-    try {
-      decrypted = decryptSecret(providerConfig.encryptedCredentials);
-    } catch (error) {
-      forgeDebug({
-        scope: 'agent-loader-data',
-        level: 'error',
-        message: 'Failed to decrypt credentials for agent ' + config.agentId,
-        context: { provider: providerConfig.providerType, error: errorMsg(error) },
-      });
-      throw error;
-    }
+    const decrypted = await withDbErrorLogging({
+      scope: 'agent-loader-data',
+      op: 'decryptCredentials',
+      verb: 'read',
+      context: {
+        provider: providerConfig.providerType,
+        agentId: config.agentId,
+      },
+      fn: () => decryptSecret(providerConfig.encryptedCredentials),
+    });
 
-    let credentials: unknown;
-    try {
-      credentials = JSON.parse(decrypted);
-    } catch (error) {
-      forgeDebug({
-        scope: 'agent-loader-data',
-        level: 'error',
-        message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId,
-        context: { provider: providerConfig.providerType, error: errorMsg(error) },
-      });
-      throw error;
-    }
+    const credentials = await withDbErrorLogging({
+      scope: 'agent-loader-data',
+      op: 'parseCredentials',
+      verb: 'read',
+      context: {
+        provider: providerConfig.providerType,
+        agentId: config.agentId,
+      },
+      fn: () => JSON.parse(decrypted),
+    });
 
     // Schema gap: credentials is parsed from JSON at runtime and matches
     // the per-provider shape validated by Zod above, but the static union
