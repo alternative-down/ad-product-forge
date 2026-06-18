@@ -1,8 +1,13 @@
 /**
  * Asaas payment provider adapter.
  * Handles event parsing for Asaas webhook notifications.
+ *
+ * Refactor (Day 18 #5538): 4 nearly-identical normalize functions replaced
+ * by a single dispatch table (ASAAS_EVENT_HANDLERS) keyed by payload.event.
+ * Each normalizeAsaasXxx export is now a thin wrapper that checks the
+ * event name and delegates to dispatchAsaasEvent.
+ * currency is now centralized as the default constant.
  */
-
 import type { PaymentProviderType } from '../payment-schema';
 import { errorMsg } from '../../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
@@ -25,6 +30,19 @@ export type AsaasWebhookPayload = {
     invoiceId?: string;
   };
 };
+
+type NormalizedAsaasPayment = {
+  provider: PaymentProviderType;
+  providerPaymentId: string;
+  subscriptionId?: string;
+  customerId: string;
+  amountUsd: number;
+  currency: string;
+  status: 'completed' | 'failed' | 'refunded';
+  rawEventJson: string;
+};
+
+const ASAAS_DEFAULT_CURRENCY = 'brl' as const;
 
 /** Verify an Asaas webhook signature using the API key as Bearer token. */
 export function verifyAsaasWebhookRequest(
@@ -61,17 +79,7 @@ export function verifyAsaasWebhookRequest(
   }
 }
 
-/** Normalize an Asaas PAYMENT_RECEIVED event. */
-export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): {
-  provider: PaymentProviderType;
-  providerPaymentId: string;
-  subscriptionId?: string;
-  customerId: string;
-  amountUsd: number;
-  currency: string;
-  status: 'completed';
-  rawEventJson: string;
-} | null {
+function handleReceived(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
   if (payload.event !== 'PAYMENT_RECEIVED') return null;
   const p = payload.payment;
   return {
@@ -80,23 +88,13 @@ export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): {
     subscriptionId: p.subscription,
     customerId: p.customer,
     amountUsd: p.value,
-    currency: p.billingType === 'CREDIT_CARD' ? 'usd' : 'brl',
+    currency: p.billingType === 'CREDIT_CARD' ? 'usd' : ASAAS_DEFAULT_CURRENCY,
     status: 'completed',
     rawEventJson: JSON.stringify(payload),
   };
 }
 
-/** Normalize an Asaas PAYMENT_CONFIRMED event. */
-export function normalizeAsaasPaymentConfirmed(payload: AsaasWebhookPayload): {
-  provider: PaymentProviderType;
-  providerPaymentId: string;
-  subscriptionId?: string;
-  customerId: string;
-  amountUsd: number;
-  currency: string;
-  status: 'completed';
-  rawEventJson: string;
-} | null {
+function handleConfirmed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
   if (payload.event !== 'PAYMENT_CONFIRMED') return null;
   const p = payload.payment;
   return {
@@ -105,25 +103,14 @@ export function normalizeAsaasPaymentConfirmed(payload: AsaasWebhookPayload): {
     subscriptionId: p.subscription,
     customerId: p.customer,
     amountUsd: p.value,
-    currency: 'brl',
+    currency: ASAAS_DEFAULT_CURRENCY,
     status: 'completed',
     rawEventJson: JSON.stringify(payload),
   };
 }
 
-/** Normalize an Asaas PAYMENT_CONFIRMED event. */
-export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): {
-  provider: PaymentProviderType;
-  providerPaymentId: string;
-  subscriptionId?: string;
-  customerId: string;
-  amountUsd: number;
-  currency: string;
-  status: 'failed';
-  rawEventJson: string;
-} | null {
-  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED')
-    return null;
+function handleFailed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED') return null;
   const p = payload.payment;
   return {
     provider: 'asaas',
@@ -131,23 +118,13 @@ export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): {
     subscriptionId: p.subscription,
     customerId: p.customer,
     amountUsd: p.value,
-    currency: 'brl',
+    currency: ASAAS_DEFAULT_CURRENCY,
     status: 'failed',
     rawEventJson: JSON.stringify(payload),
   };
 }
 
-/** Normalize an Asaas PAYMENT_REFUNDED event. */
-export function normalizeAsaasPaymentRefunded(payload: AsaasWebhookPayload): {
-  provider: PaymentProviderType;
-  providerPaymentId: string;
-  subscriptionId?: string;
-  customerId: string;
-  amountUsd: number;
-  currency: string;
-  status: 'refunded';
-  rawEventJson: string;
-} | null {
+function handleRefunded(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
   if (payload.event !== 'PAYMENT_REFUNDED') return null;
   const p = payload.payment;
   return {
@@ -156,15 +133,27 @@ export function normalizeAsaasPaymentRefunded(payload: AsaasWebhookPayload): {
     subscriptionId: p.subscription,
     customerId: p.customer,
     amountUsd: p.value,
-    currency: 'brl',
+    currency: ASAAS_DEFAULT_CURRENCY,
     status: 'refunded',
     rawEventJson: JSON.stringify(payload),
   };
 }
 
+const ASAAS_EVENT_HANDLERS: Record<string, (payload: AsaasWebhookPayload) => NormalizedAsaasPayment | null> = {
+  'PAYMENT_RECEIVED': handleReceived,
+  'PAYMENT_CONFIRMED': handleConfirmed,
+  'PAYMENT_AWAITING_RISK_ANALYSIS': handleFailed,
+  'PAYMENT_DENIED': handleFailed,
+  'PAYMENT_REFUNDED': handleRefunded,
+};
+
+function dispatchAsaasEvent(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+
+  return ASAAS_EVENT_HANDLERS[payload.event]?.(payload) ?? null;
+}
+
 /** Map any Asaas webhook event to a normalized payment status. */
-export function normalizeAsaasEvent
-(payload: AsaasWebhookPayload): {
+export function normalizeAsaasEvent(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;
@@ -174,17 +163,27 @@ export function normalizeAsaasEvent
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   rawEventJson: string;
 } | null {
-  const received = normalizeAsaasPaymentReceived(payload);
-  if (received) return received;
+  return dispatchAsaasEvent(payload);
+}
 
-  const confirmed = normalizeAsaasPaymentConfirmed(payload);
-  if (confirmed) return confirmed;
+/** Normalize an Asaas PAYMENT_RECEIVED event. */
+export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+  return payload.event === 'PAYMENT_RECEIVED' ? dispatchAsaasEvent(payload) : null;
+}
 
-  const failed = normalizeAsaasPaymentFailed(payload);
-  if (failed) return failed;
+/** Normalize an Asaas PAYMENT_CONFIRMED event. */
+export function normalizeAsaasPaymentConfirmed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+  return payload.event === 'PAYMENT_CONFIRMED' ? dispatchAsaasEvent(payload) : null;
+}
 
-  const refunded = normalizeAsaasPaymentRefunded(payload);
-  if (refunded) return refunded;
+/** Normalize an Asaas PAYMENT_AWAITING_RISK_ANALYSIS or PAYMENT_DENIED event. */
+export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+  return payload.event === 'PAYMENT_AWAITING_RISK_ANALYSIS' || payload.event === 'PAYMENT_DENIED'
+    ? dispatchAsaasEvent(payload)
+    : null;
+}
 
-  return null;
+/** Normalize an Asaas PAYMENT_REFUNDED event. */
+export function normalizeAsaasPaymentRefunded(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+  return payload.event === 'PAYMENT_REFUNDED' ? dispatchAsaasEvent(payload) : null;
 }
