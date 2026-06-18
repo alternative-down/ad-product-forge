@@ -65,7 +65,7 @@ export function registerSkillOps(
           where: sql`id = ${body.agentId}`,
           columns: { id: true, workspaceFilesystem: true },
         });
-        if (agent === null || agent === undefined)
+        if (!agent)
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
         await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath,
@@ -93,7 +93,7 @@ export function registerSkillOps(
           where: sql`id = ${body.agentId}`,
           columns: { id: true, workspaceFilesystem: true },
         });
-        if (agent === null || agent === undefined)
+        if (!agent)
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
         await installGlobalSkillToAgentWorkspace({
           workspaceBasePath,
