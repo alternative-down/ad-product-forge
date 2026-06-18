@@ -74,7 +74,8 @@ describe('createCapabilityTools', () => {
       mocks.listRoles.mockResolvedValue([{ roleId: 'role-1', name: 'Developer' }]);
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
       const result = await (tools.list_agent_roles as any).execute({});
-      expect(result).toEqual([{ roleId: 'role-1', name: 'Developer' }]);
+      expect(result.valid).toBe(true);
+      expect(result.data).toEqual([{ roleId: 'role-1', name: 'Developer' }]);
     });
 
     it('returns valid=false with hint on error', async () => {
@@ -113,7 +114,7 @@ describe('createCapabilityTools', () => {
         description: 'QA role',
       });
       expect(result.valid).toBe(true);
-      expect(result.roleId).toBe('new-role-1');
+      expect(result.data.roleId).toBe('new-role-1');
     });
 
     it('returns error when update.roleId missing', async () => {
@@ -197,7 +198,8 @@ describe('createCapabilityTools', () => {
       mocks.listAgentStatuses.mockResolvedValue([{ agentId: 'agent-1', status: 'idle' }]);
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
       const result = await (tools.list_agent_statuses as any).execute({});
-      expect(result).toEqual([{ agentId: 'agent-1', status: 'idle' }]);
+      expect(result.valid).toBe(true);
+      expect(result.data).toEqual([{ agentId: 'agent-1', status: 'idle' }]);
     });
 
     it('returns valid=false with hint on error', async () => {
@@ -218,7 +220,8 @@ describe('createCapabilityTools', () => {
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
       const result = await (tools.list_role_capabilities as any).execute({ roleId: 'role-1' });
       expect(mocks.listRoleCapabilities).toHaveBeenCalledWith('role-1');
-      expect(result).toHaveLength(2);
+      expect(result.valid).toBe(true);
+      expect(result.data).toHaveLength(2);
     });
 
     it('returns valid=false on exception', async () => {
