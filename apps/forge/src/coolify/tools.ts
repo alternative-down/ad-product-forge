@@ -1,9 +1,11 @@
-import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/error-formatting';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { hasToolPermission } from '../capabilities/catalog';
+import {
+  withToolErrorLogging,
+  type ToolResult,
+} from '../capabilities/tools/error-wrapper';
 import type { CoolifyManager } from './manager';
 
 export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set<string> | null) {
@@ -16,24 +18,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       id: 'list_coolify_applications',
       description: 'List all Coolify applications configured in Forge.',
       inputSchema: z.object({}),
-      execute: async () => {
-        try {
-          const applications = await coolify.listApplications();
-          return { success: true as const, applications };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:coolify',
-            level: 'error',
-            message: 'list_coolify_applications error',
-            context: {
-              error: errorMsg(error),
-            },
-          });
-          return {
-            success: false as const,
-            error: errorMsg(error),
-          };
-        }
+      execute: async (): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:coolify',
+          op: 'list_coolify_applications',
+          hint: 'Verify Coolify is reachable and your API key has list permissions.',
+          fn: async () => {
+            const applications = await coolify.listApplications();
+            return { success: true as const, applications };
+          },
+        });
       },
     });
   }
@@ -45,25 +39,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       inputSchema: z.object({
         applicationUuid: z.string().describe('UUID of the Coolify application to start'),
       }),
-      execute: async (input: { applicationUuid: string }) => {
-        try {
-          await coolify.startApplication(input.applicationUuid);
-          return { success: true as const, applicationUuid: input.applicationUuid };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:coolify',
-            level: 'error',
-            message: 'start_coolify_application error',
-            context: {
-              error: errorMsg(error),
-            },
-          });
-          return {
-            success: false as const,
-            applicationUuid: input.applicationUuid,
-            error: errorMsg(error),
-          };
-        }
+      execute: async (input: { applicationUuid: string }): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:coolify',
+          op: 'start_coolify_application',
+          hint: 'Verify the application UUID is correct and the app is not already running.',
+          fn: async () => {
+            await coolify.startApplication(input.applicationUuid);
+            return { success: true as const, applicationUuid: input.applicationUuid };
+          },
+        });
       },
     });
   }
@@ -75,25 +60,16 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
       inputSchema: z.object({
         applicationUuid: z.string().describe('UUID of the Coolify application to stop'),
       }),
-      execute: async (input: { applicationUuid: string }) => {
-        try {
-          await coolify.stopApplication(input.applicationUuid);
-          return { success: true as const, applicationUuid: input.applicationUuid };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:coolify',
-            level: 'error',
-            message: 'stop_coolify_application error',
-            context: {
-              error: errorMsg(error),
-            },
-          });
-          return {
-            success: false as const,
-            applicationUuid: input.applicationUuid,
-            error: errorMsg(error),
-          };
-        }
+      execute: async (input: { applicationUuid: string }): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:coolify',
+          op: 'stop_coolify_application',
+          hint: 'Verify the application UUID is correct and the app is currently running.',
+          fn: async () => {
+            await coolify.stopApplication(input.applicationUuid);
+            return { success: true as const, applicationUuid: input.applicationUuid };
+          },
+        });
       },
     });
   }
@@ -111,28 +87,19 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           .optional()
           .describe('Number of log lines to fetch (default: 100)'),
       }),
-      execute: async (input: { applicationUuid: string; lines?: number }) => {
-        try {
-          const result = await coolify.getApplicationLogs({
-            applicationUuid: input.applicationUuid,
-            lines: input.lines,
-          });
-          return { success: true as const, ...result };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:coolify',
-            level: 'error',
-            message: 'get_coolify_application_logs error',
-            context: {
-              error: errorMsg(error),
-            },
-          });
-          return {
-            success: false as const,
-            applicationUuid: input.applicationUuid,
-            error: errorMsg(error),
-          };
-        }
+      execute: async (input: { applicationUuid: string; lines?: number }): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:coolify',
+          op: 'get_coolify_application_logs',
+          hint: 'Verify the application UUID is correct and you have log access permissions.',
+          fn: async () => {
+            const result = await coolify.getApplicationLogs({
+              applicationUuid: input.applicationUuid,
+              lines: input.lines,
+            });
+            return { success: true as const, ...result };
+          },
+        });
       },
     });
   }

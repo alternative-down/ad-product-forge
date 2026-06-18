@@ -49,6 +49,11 @@ const MIGRATED_FILES: FileMigration[] = [
     expectedTryCatchReturnFalse: 0,
     expectedWithToolErrorLoggingUsage: 3, // 3 tool sites (get_github_git_credentials, get_github_provisioning_status, start_github_app_provisioning)
   },
+  {
+    path: 'coolify/tools.ts',
+    expectedTryCatchReturnFalse: 0,
+    expectedWithToolErrorLoggingUsage: 4, // 4 tool sites (list_coolify_applications, start_coolify_application, stop_coolify_application, get_coolify_application_logs)
+  },
 ];
 
 /**
