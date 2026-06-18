@@ -11,13 +11,16 @@
  * - Migrated file MUST have ZERO try/catch+forgeDebug+return-{valid:false} blocks
  * - Migrated file MUST use withToolErrorLogging at least N times
  *
- * Migrated files (issue #5809 Phase 1, Day 18):
+ * Migrated files (issue #5809 Phase 1+2, Day 18):
  * - apps/forge/src/capabilities/tools.ts — 6 tool sites (7 calls due to manage_agent_role 3 branches)
+ * - apps/forge/src/github/tools.ts — 3 tool sites (3 calls, Phase 2 of #5809)
  *
- * Phase 2 candidates (github/tools.ts, 3 blocks) — NOT yet migrated, will trigger tripwire
  * Phase 3 candidates (coolify/tools.ts, 4 blocks) — NOT yet migrated, will trigger tripwire
+ * Phase 4 candidates (micro-erp/tools.ts, 5 blocks, NEW from Orion Revisão 15:02Z) — NOT yet migrated
+ *
+ * (L#NN-26 v1: string literal `valid: false` in this comment does NOT count as a
+ * tool-error pattern because the comment is descriptive documentation.)
  */
-
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
@@ -40,6 +43,11 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'capabilities/tools.ts',
     expectedTryCatchReturnFalse: 0,
     expectedWithToolErrorLoggingUsage: 7, // 6 tool sites; manage_agent_role has 3 action branches
+  },
+  {
+    path: 'github/tools.ts',
+    expectedTryCatchReturnFalse: 0,
+    expectedWithToolErrorLoggingUsage: 3, // 3 tool sites (get_github_git_credentials, get_github_provisioning_status, start_github_app_provisioning)
   },
 ];
 
@@ -90,11 +98,11 @@ describe('L#NN-50 tripwire — tool-error-wrapper rollout guard (issue #5809)', 
     for (const entry of MIGRATED_FILES) {
       const content = readSourceFile(entry.path);
       const usageCount = countOccurrences(content, /withToolErrorLogging\s*\(/g);
-      // Subtract 1 for the import statement
-      const callCount = usageCount - 1;
+      // Regex /withToolErrorLogging\s*\(/ matches call sites but NOT import statements
+      // (imports use withToolErrorLogging, or withToolErrorLogging }). So usageCount IS the call count.
       expect(
-        callCount,
-        `${entry.path} has ${callCount} withToolErrorLogging call(s) (expected >= ${entry.expectedWithToolErrorLoggingUsage})`,
+        usageCount,
+        `${entry.path} has ${usageCount} withToolErrorLogging call(s) (expected >= ${entry.expectedWithToolErrorLoggingUsage})`,
       ).toBeGreaterThanOrEqual(entry.expectedWithToolErrorLoggingUsage);
     }
   });

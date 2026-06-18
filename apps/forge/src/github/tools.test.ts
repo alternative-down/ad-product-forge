@@ -119,7 +119,8 @@ describe('createGitHubTools', () => {
       }
     ).execute;
     const result = await execute({ repositoryName: undefined });
-    expect(result).toEqual(credentials);
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: unknown }).data).toEqual(credentials);
   });
 
   it('tool execute returns valid:false error object on exception', async () => {
@@ -138,6 +139,7 @@ describe('createGitHubTools', () => {
     expect(result).toMatchObject({
       valid: false,
       error: expect.stringContaining('App not installed'),
+      hint: expect.any(String),
     });
   });
 
@@ -171,7 +173,8 @@ describe('get_github_provisioning_status', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({ valid: true, status: 'not_configured' });
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: { status: string } }).data).toMatchObject({ status: 'not_configured' });
   });
 
   it('returns pending status with registrationUrl', async () => {
@@ -186,8 +189,8 @@ describe('get_github_provisioning_status', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({
-      valid: true,
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: Record<string, unknown> }).data).toMatchObject({
       status: 'pending',
       registrationUrl: 'https://github.com/apps/register',
     });
@@ -204,8 +207,8 @@ describe('get_github_provisioning_status', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({
-      valid: true,
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: Record<string, unknown> }).data).toMatchObject({
       status: 'created',
       installUrl: 'https://github.com/apps/install',
     });
@@ -220,7 +223,8 @@ describe('get_github_provisioning_status', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({ valid: true, status: 'active' });
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: { status: string } }).data).toMatchObject({ status: 'active' });
   });
 
   it('returns valid false on error', async () => {
@@ -232,7 +236,11 @@ describe('get_github_provisioning_status', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({ valid: false });
+    expect(result).toMatchObject({
+      valid: false,
+      error: expect.stringContaining('DB error'),
+      hint: expect.any(String),
+    });
   });
 });
 
@@ -246,7 +254,8 @@ describe('start_github_app_provisioning', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({ valid: true, status: 'active' });
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: { status: string } }).data).toMatchObject({ status: 'active' });
   });
 
   it('returns registrationUrl for pending provisioning', async () => {
@@ -261,8 +270,9 @@ describe('start_github_app_provisioning', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({
-      valid: true,
+    expect(result).toMatchObject({ valid: true });
+    expect((result as { data: Record<string, unknown> }).data).toMatchObject({
+      status: 'pending',
       registrationUrl: 'https://github.com/apps/register',
     });
   });
@@ -279,6 +289,7 @@ describe('start_github_app_provisioning', () => {
     expect(result).toMatchObject({
       valid: false,
       error: 'GitHub integration is not configured at the platform level.',
+      hint: expect.any(String),
     });
   });
 
@@ -291,6 +302,6 @@ describe('start_github_app_provisioning', () => {
       {},
       { toolCallId: '', runtimeId: 'runtime-1', stepId: 'step-1', stepNumber: 0 },
     );
-    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error') });
+    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error'), hint: expect.any(String) });
   });
 });
