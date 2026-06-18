@@ -35,7 +35,7 @@ export function registerConfigOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-        if (input.githubApps === null || input.githubApps === undefined) {
+        if (!input.githubApps) {
           return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
         }
         const provisioning = await input.githubApps.updateAgentManifestConfig({
@@ -59,7 +59,7 @@ export function registerConfigOps(
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
         });
-        if (agent === null || agent === undefined) {
+        if (!agent) {
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
         }
         await db
