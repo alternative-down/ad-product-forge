@@ -98,7 +98,7 @@ describe('createCoolifyTools', () => {
         tools.list_coolify_applications as unknown as { execute: () => Promise<unknown> }
       ).execute;
       const result = await execute();
-      expect(result).toEqual({ success: true, applications });
+      expect(result).toEqual({ valid: true, data: { success: true, applications } });
     });
 
     it('returns success:false on error', async () => {
@@ -111,7 +111,7 @@ describe('createCoolifyTools', () => {
         tools.list_coolify_applications as unknown as { execute: () => Promise<unknown> }
       ).execute;
       const result = await execute();
-      expect(result).toMatchObject({ success: false, error: 'Coolify unavailable' });
+      expect(result).toMatchObject({ valid: false, error: 'Coolify unavailable', hint: expect.any(String) });
     });
   });
 
@@ -142,7 +142,7 @@ describe('createCoolifyTools', () => {
         }
       ).execute;
       const result = await execute({ applicationUuid: 'app-xyz' });
-      expect(result).toEqual({ success: true, applicationUuid: 'app-xyz' });
+      expect(result).toEqual({ valid: true, data: { success: true, applicationUuid: 'app-xyz' } });
     });
 
     it('returns success:false with error on exception', async () => {
@@ -158,9 +158,9 @@ describe('createCoolifyTools', () => {
       ).execute;
       const result = await execute({ applicationUuid: 'app-err' });
       expect(result).toMatchObject({
-        success: false,
-        applicationUuid: 'app-err',
+        valid: false,
         error: 'Start failed',
+        hint: expect.any(String),
       });
     });
   });
@@ -192,7 +192,7 @@ describe('createCoolifyTools', () => {
         }
       ).execute;
       const result = await execute({ applicationUuid: 'app-stopped' });
-      expect(result).toEqual({ success: true, applicationUuid: 'app-stopped' });
+      expect(result).toEqual({ valid: true, data: { success: true, applicationUuid: 'app-stopped' } });
     });
 
     it('returns success:false with error on exception', async () => {
@@ -208,9 +208,9 @@ describe('createCoolifyTools', () => {
       ).execute;
       const result = await execute({ applicationUuid: 'app-err' });
       expect(result).toMatchObject({
-        success: false,
-        applicationUuid: 'app-err',
+        valid: false,
         error: 'Stop failed',
+        hint: expect.any(String),
       });
     });
   });
@@ -246,9 +246,9 @@ describe('createCoolifyTools', () => {
       ).execute;
       const result = await execute({ applicationUuid: 'app-logs' });
       expect(result).toMatchObject({
-        success: false,
-        applicationUuid: 'app-logs',
+        valid: false,
         error: 'Logs unavailable',
+        hint: expect.any(String),
       });
     });
   });
