@@ -4,8 +4,8 @@ import { createId } from '../utils/id';
 
 import type { Database } from '../database/client';
 import { companyCashLedger } from '../database/schema';
-type CompanyCashDirection = 'in' | 'out';
-type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
+import { type CompanyCashDirection, type CompanyCashStatus } from './company-cash-enums';
+
 
 export function createCompanyCashLedger(db: Database) {
   interface BalanceTotalRow { total: number }

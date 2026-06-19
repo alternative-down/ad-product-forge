@@ -7,10 +7,11 @@ import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
+import { COMPANY_CASH_DIRECTIONS, COMPANY_CASH_STATUSES } from '../finance/company-cash-enums';
 
 const listCompanyCashInputSchema = z.object({
-  direction: z.enum(['in', 'out']).optional(),
-  status: z.enum(['planned', 'posted', 'canceled']).optional(),
+  direction: z.enum(COMPANY_CASH_DIRECTIONS).optional(),
+  status: z.enum(COMPANY_CASH_STATUSES).optional(),
   type: z.string().optional(),
   periodStart: z.coerce.number().int().optional(),
   periodEnd: z.coerce.number().int().optional(),
