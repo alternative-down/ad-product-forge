@@ -19,120 +19,77 @@ const listCompanyCashInputSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-const manageCompanyCashMovementInputSchema = z.object({
-  action: z
-    .enum([
-      'record_in',
-      'record_out',
-      'schedule_in',
-      'schedule_out',
-      'post_planned',
-      'cancel_planned',
-    ])
-    .describe('The cash movement operation to perform.'),
-  recordIn: z
-    .object({
-      type: z
-        .string()
-        .optional()
-        .describe('Required movement type for the immediate cash-in entry.'),
-      amountUsd: z.coerce
-        .number()
-        .positive()
-        .optional()
-        .describe('Required USD amount for the immediate cash-in entry.'),
-      description: z.string().optional(),
-      referenceType: z.string().optional(),
-      referenceId: z.string().optional(),
-      effectiveAt: z.coerce
-        .number()
-        .int()
-        .optional()
-        .describe('Optional posting time for the immediate cash-in entry.'),
-    })
+const recordInSchema = z.object({
+  type: z.string().min(1).describe('The movement type for the immediate cash-in entry.'),
+  amountUsd: z.coerce.number().positive().describe('The USD amount for the immediate cash-in entry.'),
+  description: z.string().optional(),
+  referenceType: z.string().optional(),
+  referenceId: z.string().optional(),
+  effectiveAt: z.coerce
+    .number()
+    .int()
     .optional()
-    .describe('Provide this object only when action is record_in.'),
-  recordOut: z
-    .object({
-      type: z
-        .string()
-        .optional()
-        .describe('Required movement type for the immediate cash-out entry.'),
-      amountUsd: z.coerce
-        .number()
-        .positive()
-        .optional()
-        .describe('Required USD amount for the immediate cash-out entry.'),
-      description: z.string().optional(),
-      referenceType: z.string().optional(),
-      referenceId: z.string().optional(),
-      effectiveAt: z.coerce
-        .number()
-        .int()
-        .optional()
-        .describe('Optional posting time for the immediate cash-out entry.'),
-    })
-    .optional()
-    .describe('Provide this object only when action is record_out.'),
-  scheduleIn: z
-    .object({
-      type: z.string().optional().describe('Required movement type for the planned cash-in entry.'),
-      amountUsd: z.coerce
-        .number()
-        .positive()
-        .optional()
-        .describe('Required USD amount for the planned cash-in entry.'),
-      description: z.string().optional(),
-      referenceType: z.string().optional(),
-      referenceId: z.string().optional(),
-      dueAt: z.coerce
-        .number()
-        .int()
-        .optional()
-        .describe('Required due date for the planned cash-in entry.'),
-    })
-    .optional()
-    .describe('Provide this object only when action is schedule_in.'),
-  scheduleOut: z
-    .object({
-      type: z
-        .string()
-        .optional()
-        .describe('Required movement type for the planned cash-out entry.'),
-      amountUsd: z.coerce
-        .number()
-        .positive()
-        .optional()
-        .describe('Required USD amount for the planned cash-out entry.'),
-      description: z.string().optional(),
-      referenceType: z.string().optional(),
-      referenceId: z.string().optional(),
-      dueAt: z.coerce
-        .number()
-        .int()
-        .optional()
-        .describe('Required due date for the planned cash-out entry.'),
-    })
-    .optional()
-    .describe('Provide this object only when action is schedule_out.'),
-  postPlanned: z
-    .object({
-      entryId: z.string().optional().describe('Required planned entryId to post.'),
-      effectiveAt: z.coerce
-        .number()
-        .int()
-        .optional()
-        .describe('Optional posting time for the planned entry.'),
-    })
-    .optional()
-    .describe('Provide this object only when action is post_planned.'),
-  cancelPlanned: z
-    .object({
-      entryId: z.string().optional().describe('Required planned entryId to cancel.'),
-    })
-    .optional()
-    .describe('Provide this object only when action is cancel_planned.'),
+    .describe('Optional posting time for the immediate cash-in entry.'),
 });
+
+const recordOutSchema = z.object({
+  type: z.string().min(1).describe('The movement type for the immediate cash-out entry.'),
+  amountUsd: z.coerce.number().positive().describe('The USD amount for the immediate cash-out entry.'),
+  description: z.string().optional(),
+  referenceType: z.string().optional(),
+  referenceId: z.string().optional(),
+  effectiveAt: z.coerce
+    .number()
+    .int()
+    .optional()
+    .describe('Optional posting time for the immediate cash-out entry.'),
+});
+
+const scheduleInSchema = z.object({
+  type: z.string().min(1).describe('The movement type for the planned cash-in entry.'),
+  amountUsd: z.coerce.number().positive().describe('The USD amount for the planned cash-in entry.'),
+  description: z.string().optional(),
+  referenceType: z.string().optional(),
+  referenceId: z.string().optional(),
+  dueAt: z.coerce
+    .number()
+    .int()
+    .describe('The due date for the planned cash-in entry, as a unix timestamp in milliseconds.'),
+});
+
+const scheduleOutSchema = z.object({
+  type: z.string().min(1).describe('The movement type for the planned cash-out entry.'),
+  amountUsd: z.coerce.number().positive().describe('The USD amount for the planned cash-out entry.'),
+  description: z.string().optional(),
+  referenceType: z.string().optional(),
+  referenceId: z.string().optional(),
+  dueAt: z.coerce
+    .number()
+    .int()
+    .describe('The due date for the planned cash-out entry, as a unix timestamp in milliseconds.'),
+});
+
+const postPlannedSchema = z.object({
+  entryId: z.string().min(1).describe('The planned entryId to post.'),
+  effectiveAt: z.coerce
+    .number()
+    .int()
+    .optional()
+    .describe('Optional posting time for the planned entry.'),
+});
+
+const cancelPlannedSchema = z.object({
+  entryId: z.string().min(1).describe('The planned entryId to cancel.'),
+});
+
+const manageCompanyCashMovementInputSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('record_in'), recordIn: recordInSchema }),
+  z.object({ action: z.literal('record_out'), recordOut: recordOutSchema }),
+  z.object({ action: z.literal('schedule_in'), scheduleIn: scheduleInSchema }),
+  z.object({ action: z.literal('schedule_out'), scheduleOut: scheduleOutSchema }),
+  z.object({ action: z.literal('post_planned'), postPlanned: postPlannedSchema }),
+  z.object({ action: z.literal('cancel_planned'), cancelPlanned: cancelPlannedSchema }),
+]);
 
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
   const microErp = createMicroErpReadModel(db);
@@ -196,250 +153,34 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
       inputSchema: manageCompanyCashMovementInputSchema,
       execute: async (input) => {
-        if (input.action === 'record_in') {
-          if (!input.recordIn) {
-            return {
-              valid: false,
-              error: 'recordIn is required when action is record_in',
-              hint: 'Provide recordIn.type and recordIn.amountUsd.',
-            };
-          }
-
-          if (input.recordIn.type === null || input.recordIn.type === undefined) {
-            return {
-              valid: false,
-              error: 'recordIn.type is required when action is record_in',
-              hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
-            };
-          }
-
-          if (input.recordIn.amountUsd === null || input.recordIn.amountUsd === undefined) {
-            return {
-              valid: false,
-              error: 'recordIn.amountUsd is required when action is record_in',
-              hint: 'Provide the USD amount for this movement.',
-            };
-          }
-
-          const recordIn = input.recordIn;
-          return await withToolErrorLogging({
-            scope: 'tools:micro-erp',
-            op: 'manage_company_cash_movement:record_in',
-            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
-            fn: async () => {
-              const result = await companyCash.recordCashIn({
-                type: recordIn.type!,
-                description: recordIn.description,
-                amountUsd: recordIn.amountUsd!,
-                referenceType: recordIn.referenceType,
-                referenceId: recordIn.referenceId,
-                effectiveAt: recordIn.effectiveAt,
-              });
-              return { valid: true, action: input.action, ...result };
-            },
-          });
-        }
-
-        if (input.action === 'record_out') {
-          if (!input.recordOut) {
-            return {
-              valid: false,
-              error: 'recordOut is required when action is record_out',
-              hint: 'Provide recordOut.type and recordOut.amountUsd.',
-            };
-          }
-
-          if (input.recordOut.type === null || input.recordOut.type === undefined) {
-            return {
-              valid: false,
-              error: 'recordOut.type is required when action is record_out',
-              hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
-            };
-          }
-
-          if (input.recordOut.amountUsd === null || input.recordOut.amountUsd === undefined) {
-            return {
-              valid: false,
-              error: 'recordOut.amountUsd is required when action is record_out',
-              hint: 'Provide the USD amount for this movement.',
-            };
-          }
-
-          const recordOut = input.recordOut;
-          return await withToolErrorLogging({
-            scope: 'tools:micro-erp',
-            op: 'manage_company_cash_movement:record_out',
-            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
-            fn: async () => {
-              const result = await companyCash.recordCashOut({
-                type: recordOut.type!,
-                description: recordOut.description,
-                amountUsd: recordOut.amountUsd!,
-                referenceType: recordOut.referenceType,
-                referenceId: recordOut.referenceId,
-                effectiveAt: recordOut.effectiveAt,
-              });
-              return { valid: true, action: input.action, ...result };
-            },
-          });
-        }
-
-        if (input.action === 'schedule_in') {
-          if (!input.scheduleIn) {
-            return {
-              valid: false,
-              error: 'scheduleIn is required when action is schedule_in',
-              hint: 'Provide scheduleIn.type, scheduleIn.amountUsd, and scheduleIn.dueAt.',
-            };
-          }
-
-          if (input.scheduleIn.type === null || input.scheduleIn.type === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleIn.type is required when action is schedule_in',
-              hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
-            };
-          }
-
-          if (input.scheduleIn.amountUsd === null || input.scheduleIn.amountUsd === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleIn.amountUsd is required when action is schedule_in',
-              hint: 'Provide the USD amount for this movement.',
-            };
-          }
-
-          if (input.scheduleIn.dueAt === null || input.scheduleIn.dueAt === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleIn.dueAt is required when action is schedule_in',
-              hint: 'Provide the due date as a unix timestamp in milliseconds.',
-            };
-          }
-
-          const scheduleIn = input.scheduleIn;
-          return await withToolErrorLogging({
-            scope: 'tools:micro-erp',
-            op: 'manage_company_cash_movement:schedule_in',
-            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
-            fn: async () => {
-              const result = await companyCash.scheduleCashIn({
-                type: scheduleIn.type!,
-                description: scheduleIn.description,
-                amountUsd: scheduleIn.amountUsd!,
-                referenceType: scheduleIn.referenceType,
-                referenceId: scheduleIn.referenceId,
-                dueAt: scheduleIn.dueAt!,
-              });
-              return { valid: true, action: input.action, ...result };
-            },
-          });
-        }
-
-        if (input.action === 'schedule_out') {
-          if (!input.scheduleOut) {
-            return {
-              valid: false,
-              error: 'scheduleOut is required when action is schedule_out',
-              hint: 'Provide scheduleOut.type, scheduleOut.amountUsd, and scheduleOut.dueAt.',
-            };
-          }
-
-          if (input.scheduleOut.type === null || input.scheduleOut.type === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleOut.type is required when action is schedule_out',
-              hint: 'Provide the movement type, such as infrastructure, payroll, or revenue.',
-            };
-          }
-
-          if (input.scheduleOut.amountUsd === null || input.scheduleOut.amountUsd === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleOut.amountUsd is required when action is schedule_out',
-              hint: 'Provide the USD amount for this movement.',
-            };
-          }
-
-          if (input.scheduleOut.dueAt === null || input.scheduleOut.dueAt === undefined) {
-            return {
-              valid: false,
-              error: 'scheduleOut.dueAt is required when action is schedule_out',
-              hint: 'Provide the due date as a unix timestamp in milliseconds.',
-            };
-          }
-
-          const scheduleOut = input.scheduleOut;
-          return await withToolErrorLogging({
-            scope: 'tools:micro-erp',
-            op: 'manage_company_cash_movement:schedule_out',
-            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
-            fn: async () => {
-              const result = await companyCash.scheduleCashOut({
-                type: scheduleOut.type!,
-                description: scheduleOut.description,
-                amountUsd: scheduleOut.amountUsd!,
-                referenceType: scheduleOut.referenceType,
-                referenceId: scheduleOut.referenceId,
-                dueAt: scheduleOut.dueAt!,
-              });
-              return { valid: true, action: input.action, ...result };
-            },
-          });
-        }
-
-        if (input.action === 'post_planned') {
-          if (!input.postPlanned) {
-            return {
-              valid: false,
-              error: 'postPlanned is required when action is post_planned',
-              hint: 'Provide postPlanned.entryId and optionally postPlanned.effectiveAt.',
-            };
-          }
-
-          if (input.postPlanned.entryId === null || input.postPlanned.entryId === undefined) {
-            return {
-              valid: false,
-              error: 'postPlanned.entryId is required when action is post_planned',
-              hint: 'Use list_company_cash to find the planned entryId before posting it.',
-            };
-          }
-
-          return await withToolErrorLogging({
-            scope: 'tools:micro-erp',
-            op: 'manage_company_cash_movement:post_planned',
-            hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
-            fn: async () => {
-              const result = await companyCash.postPlannedEntry(input.postPlanned!.entryId!, {
-                effectiveAt: input.postPlanned!.effectiveAt,
-              });
-              return { valid: true, action: input.action, ...result };
-            },
-          });
-        }
-
-        if (!input.cancelPlanned) {
-          return {
-            valid: false,
-            error: 'cancelPlanned is required when action is cancel_planned',
-            hint: 'Provide cancelPlanned.entryId.',
-          };
-        }
-
-        if (input.cancelPlanned.entryId === null || input.cancelPlanned.entryId === undefined) {
-          return {
-            valid: false,
-            error: 'cancelPlanned.entryId is required when action is cancel_planned',
-            hint: 'Use list_company_cash to find the planned entryId before canceling it.',
-          };
-        }
-
         return await withToolErrorLogging({
           scope: 'tools:micro-erp',
-          op: 'manage_company_cash_movement:cancel_planned',
+          op: `manage_company_cash_movement:${input.action}`,
           hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
           fn: async () => {
-            const result = await companyCash.cancelPlannedEntry(input.cancelPlanned!.entryId!);
+            let result: { entryId: string; status?: string; effectiveAt?: number };
+            switch (input.action) {
+              case 'record_in':
+                result = await companyCash.recordCashIn(input.recordIn);
+                break;
+              case 'record_out':
+                result = await companyCash.recordCashOut(input.recordOut);
+                break;
+              case 'schedule_in':
+                result = await companyCash.scheduleCashIn(input.scheduleIn);
+                break;
+              case 'schedule_out':
+                result = await companyCash.scheduleCashOut(input.scheduleOut);
+                break;
+              case 'post_planned':
+                result = await companyCash.postPlannedEntry(input.postPlanned.entryId, {
+                  effectiveAt: input.postPlanned.effectiveAt,
+                });
+                break;
+              case 'cancel_planned':
+                result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
+                break;
+            }
             return { valid: true, action: input.action, ...result };
           },
         });
