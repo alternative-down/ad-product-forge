@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
+import {
+  COMPANY_CASH_DIRECTIONS,
+  COMPANY_CASH_STATUSES,
+  type CompanyCashDirection,
+} from '@/lib/finance-enums';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -145,10 +150,10 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
-function formatUsdSigned(value: number, direction: 'in' | 'out') {
+function formatUsdSigned(value: number, direction: CompanyCashDirection) {
   const amount = formatUsd(value);
 
-  return direction === 'out' ? `-${amount}` : `+${amount}`;
+  return direction === COMPANY_CASH_DIRECTIONS[1] ? `-${amount}` : `+${amount}`;
 }
 
 function formatDateTime(value: number) {
@@ -159,15 +164,15 @@ function formatDateTime(value: number) {
 }
 
 function humanizeMovementStatus(status: string) {
-  if (status === 'planned') {
+  if (status === COMPANY_CASH_STATUSES[0]) {
     return 'Previsto';
   }
 
-  if (status === 'posted') {
+  if (status === COMPANY_CASH_STATUSES[1]) {
     return 'Postado';
   }
 
-  if (status === 'canceled') {
+  if (status === COMPANY_CASH_STATUSES[2]) {
     return 'Cancelado';
   }
 

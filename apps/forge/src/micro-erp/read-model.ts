@@ -10,16 +10,16 @@ import {
   companyCashLedger,
 } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
-
-const IN = 'in';
-const OUT = 'out';
-const POSTED = 'posted';
-const PLANNED = 'planned';
-const CANCELED = 'canceled';
+import {
+  COMPANY_CASH_DIRECTIONS,
+  COMPANY_CASH_STATUSES,
+  type CompanyCashDirection,
+  type CompanyCashStatus,
+} from '../finance/company-cash-enums';
 
 type ListCompanyCashMovementsInput = {
-  direction?: 'in' | 'out';
-  status?: 'planned' | 'posted' | 'canceled';
+  direction?: CompanyCashDirection;
+  status?: CompanyCashStatus;
   type?: string;
   periodStart?: number;
   periodEnd?: number;
@@ -117,7 +117,7 @@ export function createMicroErpReadModel(db: Database) {
     return {
       items: rows.map((row: any) => ({
         ...row,
-        direction: row.direction as 'in' | 'out',
+        direction: row.direction as CompanyCashDirection,
         description: row.description ?? undefined,
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
@@ -138,27 +138,27 @@ export function createMicroErpReadModel(db: Database) {
     const periodEnd = input.periodEnd ?? now;
     const postedTotals = await db
       .select({
-        totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[0]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[1]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
       })
       .from(companyCashLedger)
       .where(
         and(
-          eq(companyCashLedger.status, POSTED),
+          eq(companyCashLedger.status, COMPANY_CASH_STATUSES[1]),
           gte(companyCashLedger.effectiveAt, periodStart),
           lte(companyCashLedger.effectiveAt, periodEnd),
         ),
       );
     const scheduledTotals = await db
       .select({
-        scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[0]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[1]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
       })
       .from(companyCashLedger)
       .where(
         and(
-          ne(companyCashLedger.status, CANCELED),
-          eq(companyCashLedger.status, PLANNED),
+          ne(companyCashLedger.status, COMPANY_CASH_STATUSES[2]),
+          eq(companyCashLedger.status, COMPANY_CASH_STATUSES[0]),
           gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
           lte(companyCashLedger.dueAt, periodEnd),
         ),
