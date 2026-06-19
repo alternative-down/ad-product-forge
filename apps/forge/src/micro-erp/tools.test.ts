@@ -11,8 +11,10 @@ const mocks = vi.hoisted(() => ({
   cashOps: {
     recordCashIn: vi.fn<() => Promise<{ movementId: string }>>(),
     recordCashOut: vi.fn<() => Promise<{ movementId: string }>>(),
-    postCashMovement: vi.fn<() => Promise<{ movementId: string }>>(),
-    cancelCashMovement: vi.fn<() => Promise<{ movementId: string }>>(),
+    scheduleCashIn: vi.fn<() => Promise<{ entryId: string }>>(),
+    scheduleCashOut: vi.fn<() => Promise<{ entryId: string }>>(),
+    postPlannedEntry: vi.fn<() => Promise<{ entryId: string; status: string }>>(),
+    cancelPlannedEntry: vi.fn<() => Promise<{ entryId: string; status: string }>>(),
   },
 }));
 
@@ -47,8 +49,10 @@ describe('createMicroErpTools', () => {
     mocks.readModel.listActiveInternalAgentContracts.mockResolvedValue({ items: [] });
     mocks.cashOps.recordCashIn.mockResolvedValue({ movementId: 'mov_1' });
     mocks.cashOps.recordCashOut.mockResolvedValue({ movementId: 'mov_2' });
-    mocks.cashOps.postCashMovement.mockResolvedValue({ movementId: 'mov_3' });
-    mocks.cashOps.cancelCashMovement.mockResolvedValue({ movementId: 'mov_4' });
+    mocks.cashOps.scheduleCashIn.mockResolvedValue({ entryId: 'mov_5' });
+    mocks.cashOps.scheduleCashOut.mockResolvedValue({ entryId: 'mov_6' });
+    mocks.cashOps.postPlannedEntry.mockResolvedValue({ entryId: 'mov_3', status: 'posted' });
+    mocks.cashOps.cancelPlannedEntry.mockResolvedValue({ entryId: 'mov_4', status: 'canceled' });
   });
 
   // ── Tool availability ────────────────────────────────────────────────────
@@ -173,6 +177,59 @@ describe('createMicroErpTools', () => {
       expect.objectContaining({ type: 'payroll', amountUsd: 2000 }),
     );
   });
+
+  test('accepts valid schedule_in action', async () => {
+    const tools = createMicroErpTools({} as any);
+    const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
+    const result = await (tool.execute as any)({
+      action: 'schedule_in',
+      scheduleIn: { type: 'infrastructure', amountUsd: 500, dueAt: 1700000000000 },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'schedule_in', entryId: 'mov_5' });
+    expect(mocks.cashOps.scheduleCashIn).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'infrastructure', amountUsd: 500, dueAt: 1700000000000 }),
+    );
+  });
+
+  test('accepts valid schedule_out action', async () => {
+    const tools = createMicroErpTools({} as any);
+    const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
+    const result = await (tool.execute as any)({
+      action: 'schedule_out',
+      scheduleOut: { type: 'payroll', amountUsd: 2000, dueAt: 1700000000000 },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'schedule_out', entryId: 'mov_6' });
+    expect(mocks.cashOps.scheduleCashOut).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'payroll', amountUsd: 2000, dueAt: 1700000000000 }),
+    );
+  });
+
+  test('accepts valid post_planned action', async () => {
+    const tools = createMicroErpTools({} as any);
+    const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
+    const result = await (tool.execute as any)({
+      action: 'post_planned',
+      postPlanned: { entryId: 'plan_1' },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'post_planned', entryId: 'mov_3', status: 'posted' });
+    expect(mocks.cashOps.postPlannedEntry).toHaveBeenCalledWith('plan_1', { effectiveAt: undefined });
+  });
+
+  test('accepts valid cancel_planned action', async () => {
+    const tools = createMicroErpTools({} as any);
+    const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
+    const result = await (tool.execute as any)({
+      action: 'cancel_planned',
+      cancelPlanned: { entryId: 'plan_2' },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'cancel_planned', entryId: 'mov_4', status: 'canceled' });
+    expect(mocks.cashOps.cancelPlannedEntry).toHaveBeenCalledWith('plan_2');
+  });
+
 
   // ── adjust_agent_contract_budget ───────────────────────────────────────
 
