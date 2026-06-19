@@ -14,12 +14,13 @@ import { resolveAgentSkillRoot } from './workspace-skill-paths';
 function ensureAgentFound<T>(
   agent: T | null | undefined,
   agentId: string,
+  functionName: string,
 ): asserts agent is T {
   if (agent == null) {
     forgeDebug({
       scope: 'skills-tools',
       level: 'error',
-      message: 'load_workspace_skill agent not found',
+      message: `${functionName} agent not found`,
       context: { agentId },
     });
     throw new Error(`Agent not found: ${agentId}`);
@@ -85,7 +86,7 @@ export function createAgentSkillTools(input: {
         },
       });
 
-      ensureAgentFound(agent, input.agentId);
+      ensureAgentFound(agent, input.agentId, 'load_workspace_skill');
 
       const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
         workspaceBasePath: input.workspaceBasePath,
@@ -150,7 +151,7 @@ export function createAgentSkillTools(input: {
           },
         });
 
-        ensureAgentFound(agent, input.agentId);
+        ensureAgentFound(agent, input.agentId, 'publish_workspace_skill_to_global_catalog');
 
         await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath: input.workspaceBasePath,

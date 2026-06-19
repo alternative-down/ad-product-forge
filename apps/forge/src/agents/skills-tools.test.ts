@@ -106,6 +106,12 @@ describe('createAgentSkillTools', () => {
       await expect(
         tools.load_workspace_skill.execute({ skillName: 'my-skill' }, {} as any),
       ).rejects.toThrow('Agent not found: agent-42');
+      expect(mockForgeDebug).toHaveBeenCalledWith({
+        scope: 'skills-tools',
+        level: 'error',
+        message: 'load_workspace_skill agent not found',
+        context: { agentId: 'agent-42' },
+      });
     });
 
     it('loads skill markdown and support files', async () => {
@@ -287,6 +293,12 @@ describe('createAgentSkillTools', () => {
       await expect(
         tools.publish_skill_to_catalog.execute({ skillName: 'my-skill' }, {} as any),
       ).rejects.toThrow('Agent not found: agent-42');
+      expect(mockForgeDebug).toHaveBeenCalledWith({
+        scope: 'skills-tools',
+        level: 'error',
+        message: 'publish_workspace_skill_to_global_catalog agent not found',
+        context: { agentId: 'agent-42' },
+      });
     });
   });
 });
