@@ -3,6 +3,7 @@ import { errorMsg } from '../agents/error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/client';
+import { withDbErrorLogging } from '../database/error-logging';
 import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,
@@ -79,104 +80,89 @@ export function createSystemIntegrationStore(db: Database) {
   };
 
   async function listIntegrations(): Promise<SystemIntegrationSummary[]> {
-    try {
-      const rows = await db.query.systemIntegrations.findMany();
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'listIntegrations',
+      verb: 'read',
+      fn: async () => {
+        const rows = await db.query.systemIntegrations.findMany();
 
-      const typedRows = rows.filter(
-        (row: any) =>
-          row.providerType === 'migadu' ||
-          row.providerType === 'coolify' ||
-          row.providerType === 'github' ||
-          row.providerType === 'minimax',
-      ) as SystemIntegration[];
+        const typedRows = rows.filter(
+          (row: any) =>
+            row.providerType === 'migadu' ||
+            row.providerType === 'coolify' ||
+            row.providerType === 'github' ||
+            row.providerType === 'minimax',
+        ) as SystemIntegration[];
 
-      return typedRows.map((row) => {
-        const { encryptedConfig, ...rest } = row;
-        const rawConfig = parseIntegrationConfigForList(row.providerType as SystemIntegrationProviderType, encryptedConfig);
+        return typedRows.map((row) => {
+          const { encryptedConfig, ...rest } = row;
+          const rawConfig = parseIntegrationConfigForList(row.providerType as SystemIntegrationProviderType, encryptedConfig);
 
-        return {
-          ...rest,
-          isEnabled: row.isEnabled === 1,
-          config: sanitizeForList(row.providerType as SystemIntegrationProviderType, rawConfig),
-        };
-      }) as any;
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] listIntegrations failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+          return {
+            ...rest,
+            isEnabled: row.isEnabled === 1,
+            config: sanitizeForList(row.providerType as SystemIntegrationProviderType, rawConfig),
+          };
+        }) as any;
+      },
+    });
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
-    try {
-      const row = await getEnabledIntegration('migadu');
-      return row != null
-        ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig)
-        : null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] getMigaduConfig failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'getMigaduConfig',
+      verb: 'read',
+      fn: async () => {
+        const row = await getEnabledIntegration('migadu');
+        return row != null
+          ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig)
+          : null;
+      },
+    });
   }
 
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
-    try {
-      const row = await getEnabledIntegration('coolify');
-      return row != null
-        ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig)
-        : null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] getCoolifyConfig failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'getCoolifyConfig',
+      verb: 'read',
+      fn: async () => {
+        const row = await getEnabledIntegration('coolify');
+        return row != null
+          ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig)
+          : null;
+      },
+    });
   }
 
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
-    try {
-      const row = await getEnabledIntegration('github');
-      return row != null
-        ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig)
-        : null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] getGitHubConfig failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'getGitHubConfig',
+      verb: 'read',
+      fn: async () => {
+        const row = await getEnabledIntegration('github');
+        return row != null
+          ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig)
+          : null;
+      },
+    });
   }
 
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
-    try {
-      const row = await getEnabledIntegration('minimax');
-      return row != null
-        ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig)
-        : null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] getMinimaxConfig failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'getMinimaxConfig',
+      verb: 'read',
+      fn: async () => {
+        const row = await getEnabledIntegration('minimax');
+        return row != null
+          ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig)
+          : null;
+      },
+    });
   }
 
   async function upsertIntegration(
@@ -202,55 +188,52 @@ export function createSystemIntegrationStore(db: Database) {
           isEnabled?: boolean;
         },
   ) {
-    try {
-      const now = Date.now();
-      const parsedConfig = parseUpsertConfig(input.providerType, input.config);
-      await db
-        .insert(systemIntegrations)
-        .values({
-          providerType: input.providerType,
-          encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
-          isEnabled: input.isEnabled === false ? 0 : 1,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: systemIntegrations.providerType,
-          set: {
+    const parsedConfig = parseUpsertConfig(input.providerType, input.config);
+
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'upsertIntegration',
+      verb: 'write',
+      context: { providerType: input.providerType },
+      fn: async () => {
+        const now = Date.now();
+        await db
+          .insert(systemIntegrations)
+          .values({
+            providerType: input.providerType,
             encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
             isEnabled: input.isEnabled === false ? 0 : 1,
+            createdAt: now,
             updatedAt: now,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: systemIntegrations.providerType,
+            set: {
+              encryptedConfig: encryptSecret(JSON.stringify(parsedConfig)),
+              isEnabled: input.isEnabled === false ? 0 : 1,
+              updatedAt: now,
+            },
+          });
 
-      return {
-        providerType: input.providerType,
-        isEnabled: input.isEnabled ?? false,
-        config: parsedConfig,
-      };
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] upsertIntegration failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+        return {
+          providerType: input.providerType,
+          isEnabled: input.isEnabled ?? false,
+          config: parsedConfig,
+        };
+      },
+    });
   }
 
   async function deleteIntegration(providerType: SystemIntegrationProviderType) {
-    try {
-      await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'error',
-        message: '[system-integrations] deleteIntegration failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: 'deleteIntegration',
+      verb: 'write',
+      context: { providerType },
+      fn: async () => {
+        await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
+      },
+    });
   }
 
   async function getEnabledIntegration(providerType: SystemIntegrationProviderType) {
