@@ -12,15 +12,18 @@
  *     return adminRouteError(err, { path: ... });
  *   }
  *
- * This tripwire fails if any admin route handler file (excluding the helper itself
- * and tests) contains a forgeDebug error-level call inside a try/catch block.
+ * This tripwire fails if any admin route handler file in agents/, finance/, or system/
+ * (excluding the helper itself and tests) contains a forgeDebug error-level call
+ * inside a try/catch block.
+ *
  * Regression for #5784 (Q4 admin route Format A migration Phase 2).
+ * Extended for L#NN-50 #14 codification N=2 after PR #5829 (Day 19).
  */
 
 import { execSync } from 'node:child_process';
 import { describe, it, expect } from 'vitest';
 
-const ADMIN_ROUTE_FILES_PATTERN = 'apps/forge/src/admin/routes/agents/*.ts apps/forge/src/admin/routes/finance/*.ts';
+const ADMIN_ROUTE_FILES_PATTERN = 'apps/forge/src/admin/routes/agents/*.ts apps/forge/src/admin/routes/finance/*.ts apps/forge/src/admin/routes/system/*.ts';
 const EXCLUDE_FILES = ['admin-route-error-helper.ts', '__no-format-b-try-catch-admin-tripwire.test.ts'];
 
 function grepForFormatB(): { file: string; line: number; content: string }[] {
