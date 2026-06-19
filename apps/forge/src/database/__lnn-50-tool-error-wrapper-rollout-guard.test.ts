@@ -54,6 +54,11 @@ const MIGRATED_FILES: FileMigration[] = [
     expectedTryCatchReturnFalse: 0,
     expectedWithToolErrorLoggingUsage: 4, // 4 tool sites (list_coolify_applications, start_coolify_application, stop_coolify_application, get_coolify_application_logs)
   },
+  {
+    path: 'micro-erp/tools.ts',
+    expectedTryCatchReturnFalse: 0,
+    expectedWithToolErrorLoggingUsage: 10, // 5 tool sites; manage_company_cash_movement has 6 action branches (record_in, record_out, schedule_in, schedule_out, post_planned, cancel_planned)
+  },
 ];
 
 /**

@@ -89,7 +89,8 @@ describe('createMicroErpTools', () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['get_company_cash'] as Tool<unknown, unknown>;
     const result = await (tool.execute as any)({});
-    expect(result).toEqual({ balanceUsd: 1000 });
+    expect(result.valid).toBe(true);
+    expect(result.data).toEqual({ balanceUsd: 1000 });
   });
 
   test('returns error object on db failure', async () => {
@@ -106,7 +107,8 @@ describe('createMicroErpTools', () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_company_cash'] as Tool<unknown, unknown>;
     const result = await (tool.execute as any)({});
-    expect(result).toMatchObject({ items: [] });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ items: [], summary: { totalIn: 0, totalOut: 0 } });
   });
 
   test('returns error object on db failure', async () => {
@@ -123,7 +125,8 @@ describe('createMicroErpTools', () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_internal_agent_contracts'] as Tool<unknown, unknown>;
     const result = await (tool.execute as any)({});
-    expect(result).toMatchObject({ items: [] });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ items: [] });
   });
 
   test('returns error object on db failure', async () => {
@@ -150,7 +153,8 @@ describe('createMicroErpTools', () => {
       action: 'record_in',
       recordIn: { type: 'infrastructure', amountUsd: 500 },
     });
-    expect(result).toMatchObject({ valid: true, action: 'record_in', movementId: 'mov_1' });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'record_in', movementId: 'mov_1' });
     expect(mocks.cashOps.recordCashIn).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'infrastructure', amountUsd: 500 }),
     );
@@ -163,7 +167,8 @@ describe('createMicroErpTools', () => {
       action: 'record_out',
       recordOut: { type: 'payroll', amountUsd: 2000 },
     });
-    expect(result).toMatchObject({ valid: true, action: 'record_out', movementId: 'mov_2' });
+    expect(result.valid).toBe(true);
+    expect(result.data).toMatchObject({ valid: true, action: 'record_out', movementId: 'mov_2' });
     expect(mocks.cashOps.recordCashOut).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'payroll', amountUsd: 2000 }),
     );
