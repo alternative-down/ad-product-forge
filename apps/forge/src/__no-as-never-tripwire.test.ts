@@ -18,7 +18,7 @@
  * is tracked for Phase 2 cleanup. The tripwire catches NEW additions.
  *
  * Phase 2 cleanup targets (priority order):
- *   - P1: github/manager.ts (6 sites, escape hatch)
+ *   - P1: github/manager.ts (4 sites, escape hatch)
  *   - P1: github/ops/issues.ts (6 sites)
  *   - P2: agents/create-forge-agent.ts (5 sites)
  *   - P3: single-site files (tracked for review)
@@ -42,7 +42,7 @@ const FORGE_SRC = import.meta.dirname;
 // Format: { file: count } — count helps validate allowlist consistency.
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
-  ['github/manager.ts', 6],
+  ['github/manager.ts', 4],
   ['github/ops/issues.ts', 6],
   // Phase 2 P2 cleanup targets
   ['agents/create-forge-agent.ts', 5],

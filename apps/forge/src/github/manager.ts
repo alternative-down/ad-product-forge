@@ -153,11 +153,11 @@ export function createGitHubAppManager(config: {
     createGitHubInstallWakeContent: (payload: unknown) =>
       createGitHubInstallWakeContent(
         payload as Parameters<typeof createGitHubInstallWakeContent>[0],
-      ) as unknown,
+      ),
     createGitHubWebhookWakeContent: (payload: unknown) =>
       createGitHubWebhookWakeContent(
         payload as Parameters<typeof createGitHubWebhookWakeContent>[0],
-      ) as unknown,
+      ),
     isGitHubSelfEvent: (payload: unknown) => {
       // @ts-expect-error — same shape mismatch as createAppName:
       // isGitHubSelfEvent(sender, credentials) is a 2-arg function but the
@@ -168,13 +168,13 @@ export function createGitHubAppManager(config: {
     summarizeGitHubEvent: (payload: unknown) =>
       summarizeGitHubEvent(
         payload as Parameters<typeof summarizeGitHubEvent>[0],
-      ) as unknown as string,
+      ),
     normalizeGitHubAppCredentials: (r) =>
       normalizeGitHubAppCredentials(
         r as Parameters<typeof normalizeGitHubAppCredentials>[0],
-      ) as never,
+      ),
     normalizeManifestConfig: (r) =>
-      normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]) as never,
+      normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]),
     opsRouting: null as unknown as ReturnType<typeof createRoutingOps>,
   };
 
