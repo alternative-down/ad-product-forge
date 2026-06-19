@@ -333,5 +333,117 @@ describe('createSystemSettingsStore', () => {
       expect(vals.checkpointedOmEnabled).toBe(0);
       expect(vals.ltmRecallGraphIncludeSources).toBe(0);
     });
+
+    test('sets createdAt to current timestamp on insert (#5526)', async () => {
+      const store = createSystemSettingsStore(mockDb as any);
+      const before = Date.now();
+      const result = await store.upsertSettings({
+        companyName: 'Test',
+        companyContext: '',
+        stepDelayEnabled: true,
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: true,
+        memoryLastMessagesFullEnabled: false,
+        memoryLastMessagesCount: 20,
+        tokenCountFilterEnabled: true,
+        tokenCountFilterLimit: 100000,
+        checkpointedOmEnabled: false,
+        checkpointedOmTotalContextTokens: 50000,
+        checkpointedOmRecentRawTokens: 10000,
+        checkpointedOmRawObservationBatchTokens: 5000,
+        checkpointedOmObservationReflectionBatchTokens: 5000,
+        checkpointedOmObservationSupportTokens: 2000,
+        checkpointedOmReflectionSupportTokens: 2000,
+        ltmRecallSearchMode: 'hybrid',
+        ltmRecallWorkspaceTopK: 3,
+        ltmRecallGraphTopK: 3,
+        ltmRecallGraphThreshold: 0.7,
+        ltmRecallGraphRandomWalkSteps: 50,
+        ltmRecallGraphIncludeSources: true,
+        ltmRecallScoreThreshold: 0.7,
+        ltmRecallDocumentCount: 3,
+      });
+      const after = Date.now();
+
+      // createdAt should be set to current time
+      expect(result.createdAt).toBeDefined();
+      expect(result.createdAt).toBeGreaterThanOrEqual(before);
+      expect(result.createdAt).toBeLessThanOrEqual(after);
+    });
+
+    test('passes createdAt in insert values row (#5526)', async () => {
+      const store = createSystemSettingsStore(mockDb as any);
+      await store.upsertSettings({
+        companyName: 'Test',
+        companyContext: '',
+        stepDelayEnabled: true,
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: true,
+        memoryLastMessagesFullEnabled: false,
+        memoryLastMessagesCount: 20,
+        tokenCountFilterEnabled: true,
+        tokenCountFilterLimit: 100000,
+        checkpointedOmEnabled: false,
+        checkpointedOmTotalContextTokens: 50000,
+        checkpointedOmRecentRawTokens: 10000,
+        checkpointedOmRawObservationBatchTokens: 5000,
+        checkpointedOmObservationReflectionBatchTokens: 5000,
+        checkpointedOmObservationSupportTokens: 2000,
+        checkpointedOmReflectionSupportTokens: 2000,
+        ltmRecallSearchMode: 'hybrid',
+        ltmRecallWorkspaceTopK: 3,
+        ltmRecallGraphTopK: 3,
+        ltmRecallGraphThreshold: 0.7,
+        ltmRecallGraphRandomWalkSteps: 50,
+        ltmRecallGraphIncludeSources: true,
+        ltmRecallScoreThreshold: 0.7,
+        ltmRecallDocumentCount: 3,
+      });
+
+      // The insert call should include createdAt in the values row
+      expect(insertCalls.length).toBeGreaterThan(0);
+      const valuesArg = insertCalls[insertCalls.length - 1] as Record<string, unknown>;
+      expect(valuesArg.createdAt).toBeDefined();
+      expect(valuesArg.createdAt).toBeGreaterThan(0);
+    });
+
+    test('excludes createdAt from onConflictDoUpdate set (#5526)', async () => {
+      const store = createSystemSettingsStore(mockDb as any);
+      await store.upsertSettings({
+        companyName: 'Test',
+        companyContext: '',
+        stepDelayEnabled: true,
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: true,
+        memoryLastMessagesFullEnabled: false,
+        memoryLastMessagesCount: 20,
+        tokenCountFilterEnabled: true,
+        tokenCountFilterLimit: 100000,
+        checkpointedOmEnabled: false,
+        checkpointedOmTotalContextTokens: 50000,
+        checkpointedOmRecentRawTokens: 10000,
+        checkpointedOmRawObservationBatchTokens: 5000,
+        checkpointedOmObservationReflectionBatchTokens: 5000,
+        checkpointedOmObservationSupportTokens: 2000,
+        checkpointedOmReflectionSupportTokens: 2000,
+        ltmRecallSearchMode: 'hybrid',
+        ltmRecallWorkspaceTopK: 3,
+        ltmRecallGraphTopK: 3,
+        ltmRecallGraphThreshold: 0.7,
+        ltmRecallGraphRandomWalkSteps: 50,
+        ltmRecallGraphIncludeSources: true,
+        ltmRecallScoreThreshold: 0.7,
+        ltmRecallDocumentCount: 3,
+      });
+
+      // The onConflictDoUpdate set should NOT include createdAt or id
+      expect(onConflictCalls.length).toBeGreaterThan(0);
+      const setArg = onConflictCalls[onConflictCalls.length - 1] as { set: Record<string, unknown>; target: unknown };
+      expect(setArg.set).not.toHaveProperty('createdAt');
+      expect(setArg.set).not.toHaveProperty('id');
+      // But should include updatedAt and other mutable fields
+      expect(setArg.set.updatedAt).toBeDefined();
+      expect(setArg.set.companyName).toBe('Test');
+    });
   });
 });
