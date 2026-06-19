@@ -24,6 +24,7 @@ export type WorkspaceSkillsConfig = z.infer<typeof WorkspaceSkillsConfigSchema>;
 
 export const systemSettings = sqliteTable('system_settings', {
   id: text('id').primaryKey(),
+  createdAt: integer('created_at').notNull().default(0),
   companyName: text('company_name').notNull(),
   companyContext: text('company_context').notNull(),
   stepDelayEnabled: integer('step_delay_enabled').notNull().default(1),

@@ -40,7 +40,7 @@ const DEFAULTS = {
 
 type SystemSettingsInput = typeof DEFAULTS;
 
-export type SystemSettingsValue = SystemSettingsInput & { updatedAt: number | null };
+export type SystemSettingsValue = SystemSettingsInput & { updatedAt: number | null; createdAt: number | null };
 
 // ── Mapping helpers ──────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ function resolveRecallSearchMode(
  */
 function mapRow(row: any | null): SystemSettingsValue {
   if (row === null) {
-    return { ...DEFAULTS, updatedAt: null };
+    return { ...DEFAULTS, updatedAt: null, createdAt: null };
   }
 
   return {
@@ -95,6 +95,7 @@ function mapRow(row: any | null): SystemSettingsValue {
     ltmRecallScoreThreshold: row.ltmRecallScoreThreshold,
     ltmRecallDocumentCount: row.ltmRecallDocumentCount,
     updatedAt: row.updatedAt ?? null,
+    createdAt: row.createdAt ?? null,
   };
 }
 
@@ -115,7 +116,7 @@ export function createSystemSettingsStore(db: Database) {
         message: 'getSettings failed',
         context: { error: errorMsg(err) },
       });
-      return { ...DEFAULTS, updatedAt: null };
+      return { ...DEFAULTS, updatedAt: null, createdAt: null };
     }
   }
 
@@ -124,6 +125,7 @@ export function createSystemSettingsStore(db: Database) {
       const now = Date.now();
       const row = {
         id: SYSTEM_SETTINGS_ID,
+        createdAt: now,
         companyName: input.companyName,
         companyContext: input.companyContext,
         stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
@@ -153,8 +155,8 @@ export function createSystemSettingsStore(db: Database) {
       };
 
       // Atomic upsert (race-free, see #5502). Excludes `id` (the conflict
-      // target) from the SET clause; no createdAt column exists in the schema.
-      const { id: _id, ...updateSet } = row;
+      // target) and `createdAt` (preserved on update per #5526) from the SET clause.
+      const { id: _id, createdAt: _createdAt, ...updateSet } = row;
 
       await db
         .insert(systemSettings)
@@ -164,7 +166,7 @@ export function createSystemSettingsStore(db: Database) {
           set: updateSet,
         });
 
-      return { ...input, updatedAt: now };
+      return { ...input, updatedAt: now, createdAt: now };
     } catch (err) {
       forgeDebug({
         scope: 'system-settings',
