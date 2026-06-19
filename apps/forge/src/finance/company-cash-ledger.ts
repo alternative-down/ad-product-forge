@@ -57,7 +57,7 @@ export function createCompanyCashLedger(db: Database) {
       fn: async () => {
         const now = Date.now();
 
-        await (db.insert(companyCashLedger) as any).values({
+        await db.insert(companyCashLedger).values({
           id: createId(),
           type: input.type,
           direction: input.direction,
@@ -69,6 +69,7 @@ export function createCompanyCashLedger(db: Database) {
           dueAt: input.dueAt ?? now,
           effectiveAt: input.effectiveAt ?? now,
           createdAt: now,
+          updatedAt: now,
         });
       },
     });
