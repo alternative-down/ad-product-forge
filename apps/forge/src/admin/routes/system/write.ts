@@ -8,6 +8,7 @@ import { syncOpenAICodexCredential, syncAnthropicCredential } from '@forge-runti
 import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
+import { adminRouteError } from '../agents/admin-route-error-helper';
 import { jsonResponse, parseJsonBody, normalizeOptionalText, normalizeJsonText } from '../helpers';
 import { upsertSystemSettingsSchema, upsertLlmModelPriceSchema } from '../schemas/llm';
 import { upsertSystemMcpServerSchema, deleteSystemMcpServerSchema } from '../schemas/mcp';
@@ -80,14 +81,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/settings/upsert',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/settings/upsert' });
+        }
     },
   });
 
@@ -164,14 +159,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           updatedAt: server?.updatedAt ?? Date.now(),
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/mcp/upsert',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/mcp/upsert' });
+        }
     },
   });
 
@@ -197,14 +186,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse({ success: true, serverId: body.serverId });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/mcp/delete',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/mcp/delete' });
+        }
     },
   });
 
@@ -221,14 +204,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, installedSkillNames }, 201);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/skills/upload',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/skills/upload' });
+        }
     },
   });
 
@@ -245,14 +222,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, skillName: body.skillName });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/skills/delete',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/skills/delete' });
+        }
     },
   });
 
@@ -265,14 +236,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
         return jsonResponse(await llmModelPrices.upsertPrice(body));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/llm/price/upsert',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/llm/price/upsert' });
+        }
     },
   });
 
@@ -285,14 +250,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
         return jsonResponse(await integrations.upsertIntegration(body));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/integration/upsert',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/integration/upsert' });
+        }
     },
   });
 
@@ -306,14 +265,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await integrations.deleteIntegration(body.providerType);
         return jsonResponse({ success: true, integrationId: body.integrationId });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/integration/delete',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/integration/delete' });
+        }
     },
   });
 
@@ -326,14 +279,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/llm/profile/upsert',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/llm/profile/upsert' });
+        }
     },
   });
 
@@ -347,14 +294,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await llmSettings.deleteProfile(body.profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/llm/profile/delete',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/llm/profile/delete' });
+        }
     },
   });
 
@@ -367,14 +308,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/llm/defaults/update',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/llm/defaults/update' });
+        }
     },
   });
 
@@ -418,14 +353,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse({ state: await buildOauthState(), results });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/oauth/sync',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/oauth/sync' });
+        }
     },
   });
 
@@ -451,14 +380,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const result = await performFactoryReset();
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/reset',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
-      }
+        return adminRouteError(err, { path: '/admin/system/reset' });
+        }
     },
   });
 
