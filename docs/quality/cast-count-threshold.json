@@ -1,0 +1,12 @@
+{
+  "defaultThreshold": 20,
+  "fileOverrides": {
+    "admin/routes.ts": 50,
+    "communication/internal-chat-service.ts": 50,
+    "github/manager.ts": 50
+  },
+  "rationale": "Default 20 catches hot-spots without false-positives on legitimate narrowings. admin/routes.ts (49), internal-chat-service.ts (38), github/manager.ts (24) are pre-existing hot-spots tracked for Phase 2 cleanup but currently exceed default 20. Override set to 50 to give headroom for Phase 2 incremental progress.",
+  "version": 1,
+  "lastUpdated": "2026-06-19",
+  "codification": "L#NN-50 #11"
+}
