@@ -329,6 +329,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         }> = [];
 
         for (const providerId of providerIds) {
+          // Per-item catch: preserves partial-success semantics (one provider may fail
+          // while others succeed). adminRouteError would short-circuit with 500,
+          // killing the batch. See adminRouteError JSDoc for full rationale.
           try {
             if (providerId === 'openai-codex') {
               await syncOpenAICodexCredential();
