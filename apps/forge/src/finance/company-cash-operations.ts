@@ -5,9 +5,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
 import { companyCashLedger } from '../database/schema';
-
-type CompanyCashDirection = 'in' | 'out';
-type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
+import { type CompanyCashDirection, type CompanyCashStatus } from './company-cash-enums';
 
 type CompanyCashEntryInput = {
   type: string;
@@ -63,14 +61,13 @@ export function createCompanyCashOperations(db: Database) {
     return { entryId };
   }
 
-  async function recordCashIn(
-    input: CompanyCashEntryInput & { effectiveAt?: number },
+  async function recordCash(
+    input: CompanyCashEntryInput & { direction: CompanyCashDirection; effectiveAt?: number },
     session?: DbSession,
   ) {
     return await createEntry(
       {
         ...input,
-        direction: 'in',
         status: 'posted',
         dueAt: input.effectiveAt,
         effectiveAt: input.effectiveAt,
@@ -79,38 +76,12 @@ export function createCompanyCashOperations(db: Database) {
     );
   }
 
-  async function recordCashOut(
-    input: CompanyCashEntryInput & { effectiveAt?: number },
+  async function scheduleCash(
+    input: CompanyCashEntryInput & { direction: CompanyCashDirection; dueAt: number },
     session?: DbSession,
   ) {
     return await createEntry(
-      {
-        ...input,
-        direction: 'out',
-        status: 'posted',
-        dueAt: input.effectiveAt,
-        effectiveAt: input.effectiveAt,
-      },
-      session,
-    );
-  }
-
-  async function scheduleCashIn(
-    input: CompanyCashEntryInput & { dueAt: number },
-    session?: DbSession,
-  ) {
-    return await createEntry(
-      { ...input, direction: 'in', status: 'planned', dueAt: input.dueAt },
-      session,
-    );
-  }
-
-  async function scheduleCashOut(
-    input: CompanyCashEntryInput & { dueAt: number },
-    session?: DbSession,
-  ) {
-    return await createEntry(
-      { ...input, direction: 'out', status: 'planned', dueAt: input.dueAt },
+      { ...input, status: 'planned', dueAt: input.dueAt },
       session,
     );
   }
@@ -213,10 +184,32 @@ export function createCompanyCashOperations(db: Database) {
       }));
   }
 
+  // Back-compat wrappers. The canonical API is recordCash/scheduleCash (L#NN-50 #15 — see PR5 #5537).
+  // These thin wrappers preserve the old function names so callers don't need to migrate.
+  // Future PR will remove them and update callers to use the canonical API.
+  const recordCashIn = (
+    input: CompanyCashEntryInput & { effectiveAt?: number },
+    session?: DbSession,
+  ) => recordCash({ ...input, direction: 'in' }, session);
+  const recordCashOut = (
+    input: CompanyCashEntryInput & { effectiveAt?: number },
+    session?: DbSession,
+  ) => recordCash({ ...input, direction: 'out' }, session);
+  const scheduleCashIn = (
+    input: CompanyCashEntryInput & { dueAt: number },
+    session?: DbSession,
+  ) => scheduleCash({ ...input, direction: 'in' }, session);
+  const scheduleCashOut = (
+    input: CompanyCashEntryInput & { dueAt: number },
+    session?: DbSession,
+  ) => scheduleCash({ ...input, direction: 'out' }, session);
+
   return {
     createEntry,
+    recordCash,
     recordCashIn,
     recordCashOut,
+    scheduleCash,
     scheduleCashIn,
     scheduleCashOut,
     cancelPlannedEntry,

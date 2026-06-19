@@ -11,6 +11,21 @@ import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
 import { resolveAgentSkillRoot } from './workspace-skill-paths';
 
+function ensureAgentFound<T>(
+  agent: T | null | undefined,
+  agentId: string,
+): asserts agent is T {
+  if (agent == null) {
+    forgeDebug({
+      scope: 'skills-tools',
+      level: 'error',
+      message: 'load_workspace_skill agent not found',
+      context: { agentId },
+    });
+    throw new Error(`Agent not found: ${agentId}`);
+  }
+}
+
 async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]> {
   const entries = await fs.readdir(skillRoot, { withFileTypes: true });
   const files: string[] = [];
@@ -70,15 +85,7 @@ export function createAgentSkillTools(input: {
         },
       });
 
-      if (agent === null || agent === undefined) {
-        forgeDebug({
-          scope: 'skills-tools',
-          level: 'error',
-          message: 'load_workspace_skill agent not found',
-          context: { agentId: input.agentId },
-        });
-        throw new Error(`Agent not found: ${input.agentId}`);
-      }
+      ensureAgentFound(agent, input.agentId);
 
       const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
         workspaceBasePath: input.workspaceBasePath,
@@ -143,15 +150,7 @@ export function createAgentSkillTools(input: {
           },
         });
 
-        if (agent === null || agent === undefined) {
-          forgeDebug({
-            scope: 'skills-tools',
-            level: 'error',
-            message: 'load_workspace_skill agent not found',
-            context: { agentId: input.agentId },
-          });
-          throw new Error(`Agent not found: ${input.agentId}`);
-        }
+        ensureAgentFound(agent, input.agentId);
 
         await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath: input.workspaceBasePath,

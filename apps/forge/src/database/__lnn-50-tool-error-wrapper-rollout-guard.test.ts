@@ -57,7 +57,7 @@ const MIGRATED_FILES: FileMigration[] = [
   {
     path: 'micro-erp/tools.ts',
     expectedTryCatchReturnFalse: 0,
-    expectedWithToolErrorLoggingUsage: 10, // 5 tool sites; manage_company_cash_movement has 6 action branches (record_in, record_out, schedule_in, schedule_out, post_planned, cancel_planned)
+    expectedWithToolErrorLoggingUsage: 5, // 5 tool functions; manage_company_cash_movement consolidated 6 per-branch wrappers into 1 execute-level wrapper (z.discriminatedUnion refactor, closes #5533)
   },
 ];
 
