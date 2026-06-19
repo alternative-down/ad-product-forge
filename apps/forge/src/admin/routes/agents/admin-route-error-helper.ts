@@ -22,6 +22,12 @@ export type AdminRouteErrorOptions = {
  *   the path is included in the forgeDebug context.
  * - With label: the message becomes Admin {label} failed.
  * - With neither: falls back to the legacy generic message.
+ *
+ * Intentionally NOT applicable to:
+ * - Loop accumulators (catch in iteration that pushes to results array)
+ * - Batch operations (catch in bulk insert/update that needs partial-success semantics)
+ * For these, use raw forgeDebug + jsonResponse so the iteration can continue
+ * and report per-item results.
  */
 export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
   const path = opts?.path;

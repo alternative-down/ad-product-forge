@@ -5,8 +5,8 @@
 
 import { z, ZodError } from 'zod';
 
-import { forgeDebug } from '../debug';
 import type { HttpRequest, HttpHandler } from '../../../http/server';
+import { adminRouteError } from '../agents/admin-route-error-helper';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
 
@@ -61,7 +61,6 @@ type CompanyCash = {
   postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
 };
-import { errorMsg } from '../../../agents/error-formatting';
 
 type CompanyPayables = {
   createRecurringPayable: (input: {
@@ -134,13 +133,7 @@ export function registerFinanceWriteRoutes(
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance investment/create route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/finance/investment/create' });
       }
     },
   });
@@ -196,13 +189,7 @@ export function registerFinanceWriteRoutes(
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance payable/create route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/finance/payable/create' });
       }
     },
   });
@@ -227,13 +214,7 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance ledger/post route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/finance/ledger/post' });
       }
     },
   });
@@ -254,13 +235,7 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance ledger/cancel route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/finance/ledger/cancel' });
       }
     },
   });
@@ -279,13 +254,7 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Finance recurring-payable/set-active route failed',
-          context: { error: errorMsg(err) },
-        });
-        return jsonResponse({ error: errorMsg(err) }, 500);
+        return adminRouteError(err, { path: '/admin/finance/recurring-payable/set-active' });
       }
     },
   });

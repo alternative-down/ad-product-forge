@@ -20,7 +20,18 @@ export function normalizeJsonText(
     return null;
   }
 
-  const parsed = JSON.parse(normalized ?? '');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(normalized ?? '');
+  } catch (err) {
+    forgeDebug({
+      scope: 'admin-routes-helpers',
+      level: 'warn',
+      message: 'normalizeJsonText: JSON.parse failed',
+      context: { fieldName, expectedShape, error: errorMsg(err) },
+    });
+    throw new Error(`${fieldName} must be valid JSON: ${errorMsg(err)}`);
+  }
   const valid =
     expectedShape === 'array'
       ? Array.isArray(parsed)
@@ -43,7 +54,18 @@ export function parseJsonBody<TSchema extends z.ZodTypeAny>(
   bodyText: string,
   schema: TSchema,
 ): z.infer<TSchema> {
-  const parsed = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
+  let parsed: unknown;
+  try {
+    parsed = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
+  } catch (err) {
+    forgeDebug({
+      scope: 'admin-routes-helpers',
+      level: 'warn',
+      message: 'parseJsonBody: JSON.parse failed',
+      context: { error: errorMsg(err) },
+    });
+    throw new Error(`Invalid JSON body: ${errorMsg(err)}`);
+  }
   return schema.parse(parsed);
 }
 
