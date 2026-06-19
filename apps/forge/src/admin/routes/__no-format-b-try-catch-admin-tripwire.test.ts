@@ -21,9 +21,15 @@
  */
 
 import { execSync } from 'node:child_process';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 
-const ADMIN_ROUTE_FILES_PATTERN = 'apps/forge/src/admin/routes/agents/*.ts apps/forge/src/admin/routes/finance/*.ts apps/forge/src/admin/routes/system/*.ts';
+const __dirname = import.meta.dirname;
+const ADMIN_ROUTE_FILES_PATTERN = [
+  path.join(__dirname, 'agents/*.ts'),
+  path.join(__dirname, 'finance/*.ts'),
+  path.join(__dirname, 'system/*.ts'),
+].join(' ');
 const EXCLUDE_FILES = ['admin-route-error-helper.ts', '__no-format-b-try-catch-admin-tripwire.test.ts'];
 
 function grepForFormatB(): { file: string; line: number; content: string }[] {
@@ -31,7 +37,7 @@ function grepForFormatB(): { file: string; line: number; content: string }[] {
   // Pattern: catch (err) { ... forgeDebug({ ... scope: 'admin' ... level: 'error' ... }
   // We use a simplified regex that catches the canonical Format B structure.
   const grepPattern = String.raw`catch\s*\([^)]+\)\s*\{[^}]*forgeDebug\(\{[^}]*scope:\s*'admin'[^}]*level:\s*'error'`;
-  const cmd = `grep -rEn '${grepPattern}' ${ADMIN_ROUTE_FILES_PATTERN} 2>/dev/null || true`;
+  const cmd = `grep -rEn "${grepPattern}" ${ADMIN_ROUTE_FILES_PATTERN} 2>/dev/null || true`;
   const stdout = execSync(cmd, { encoding: 'utf8' });
   if (!stdout.trim()) return [];
   return stdout.trim().split('\n').map((line) => {
