@@ -1,8 +1,8 @@
 import { createTool, type Tool } from '@forge-runtime/core';
-import { errorMsg, serializeError } from '../../agents/error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
 
+import { withToolErrorLogging } from '../../capabilities/tools/error-wrapper';
 import { hasToolPermission } from '../../capabilities/catalog';
 import type { createAgentScheduleManager } from '../manager/manager';
 
@@ -287,28 +287,21 @@ export function createAgentScheduleTools(
         message: 'list_self_crons called',
         context: { agentId },
       });
-      try {
-        const result = await schedules.listSchedules(agentId);
-        forgeDebug({
-          scope: 'tools:schedules',
-          level: 'info',
-          message: 'list_self_crons result',
-          context: { count: result.length },
-        });
-        return result.map(toCronOutput);
-      } catch (error) {
-        forgeDebug({
-          scope: 'tools:schedules',
-          level: 'error',
-          message: 'list_self_crons failed',
-          context: { error: errorMsg(error) },
-        });
-        return {
-          valid: false,
-          error: serializeError(error),
-          hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
-        };
-      }
+      return await withToolErrorLogging({
+        scope: 'tools:schedules',
+        op: 'list_self_crons',
+        hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
+        fn: async () => {
+          const result = await schedules.listSchedules(agentId);
+          forgeDebug({
+            scope: 'tools:schedules',
+            level: 'info',
+            message: 'list_self_crons result',
+            context: { count: result.length },
+          });
+          return result.map(toCronOutput);
+        },
+      });
     },
   });
 
@@ -343,44 +336,34 @@ export function createAgentScheduleTools(
             return validation;
           }
 
-          try {
-            const result =
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_self_crons action=create',
+            hint: 'Review the cron fields and try again. Use cron for recurring execution or date for one-time execution.',
+            fn: async () =>
               createInput.scheduleType === 'cron'
-                ? await schedules.createSchedule(agentId, {
-                    name: createInput.name,
-                    description: normalizeOptionalText(createInput.description ?? undefined),
-                    scheduleType: 'cron',
-                    cronExpression: createInput.cronExpression ?? '',
-                    timezone: createInput.timezone ?? 'UTC',
-                    content: createInput.content,
-                    wakeWhenRunning: createInput.wakeWhenRunning ?? true,
-                  })
-                : await schedules.createSchedule(agentId, {
-                    name: createInput.name,
-                    description: normalizeOptionalText(createInput.description ?? undefined),
-                    scheduleType: 'date',
-                    scheduledDate: createInput.scheduledDate ?? '',
-                    timezone: createInput.timezone ?? 'UTC',
-                    content: createInput.content,
-                  });
-
-            return {
-              valid: true,
-              ...toCronOutput(result),
-            };
-          } catch (error) {
-            forgeDebug({
-              scope: 'tools:schedules',
-              level: 'error',
-              message: 'manage_self_crons action=create failed',
-              context: { error: errorMsg(error) },
-            });
-            return {
-              valid: false,
-              error: serializeError(error),
-              hint: 'Review the cron fields and try again. Use cron for recurring execution or date for one-time execution.',
-            };
-          }
+                ? toCronOutput(
+                    await schedules.createSchedule(agentId, {
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'cron',
+                      cronExpression: createInput.cronExpression ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                      wakeWhenRunning: createInput.wakeWhenRunning ?? true,
+                    }),
+                  )
+                : toCronOutput(
+                    await schedules.createSchedule(agentId, {
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'date',
+                      scheduledDate: createInput.scheduledDate ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                    }),
+                  ),
+          });
         }
 
         if (input.action === 'update') {
@@ -404,36 +387,25 @@ export function createAgentScheduleTools(
             };
           }
 
-          try {
-            const result = await schedules.updateSchedule(agentId, cronId, {
-              name: normalizeOptionalText(updateInput.name ?? undefined),
-              description: normalizeOptionalText(updateInput.description ?? undefined),
-              scheduleType: updateInput.scheduleType ?? undefined,
-              cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
-              scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
-              timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
-              content: normalizeOptionalText(updateInput.content ?? undefined),
-              wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
-              isActive: updateInput.isActive ?? undefined,
-            });
-
-            return {
-              valid: true,
-              ...toCronOutput(result),
-            };
-          } catch (error) {
-            forgeDebug({
-              scope: 'tools:schedules',
-              level: 'error',
-              message: 'manage_self_crons action=update failed',
-              context: { error: errorMsg(error) },
-            });
-            return {
-              valid: false,
-              error: serializeError(error),
-              hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
-            };
-          }
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_self_crons action=update',
+            hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
+            fn: async () =>
+              toCronOutput(
+                await schedules.updateSchedule(agentId, cronId, {
+                  name: normalizeOptionalText(updateInput.name ?? undefined),
+                  description: normalizeOptionalText(updateInput.description ?? undefined),
+                  scheduleType: updateInput.scheduleType ?? undefined,
+                  cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+                  scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+                  timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+                  content: normalizeOptionalText(updateInput.content ?? undefined),
+                  wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
+                  isActive: updateInput.isActive ?? undefined,
+                }),
+              ),
+          });
         }
 
         const deleteInput = input.action === 'delete' ? (input.delete ?? null) : null;
@@ -456,26 +428,15 @@ export function createAgentScheduleTools(
           };
         }
 
-        try {
-          const result = await schedules.deleteSchedule(agentId, cronId);
-          return {
-            valid: true,
-            cronId,
-            ...result,
-          };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:schedules',
-            level: 'error',
-            message: 'manage_self_crons action=delete failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: serializeError(error),
-            hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'manage_self_crons action=delete',
+          hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
+          fn: async () => {
+            const result = await schedules.deleteSchedule(agentId, cronId);
+            return { cronId, ...result };
+          },
+        });
       },
     });
   }
@@ -501,28 +462,21 @@ export function createAgentScheduleTools(
           message: 'list_crons called',
           context: { agentId, targetAgentId: input.targetAgentId },
         });
-        try {
-          const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
-          forgeDebug({
-            scope: 'tools:schedules',
-            level: 'info',
-            message: 'list_crons result',
-            context: { count: result.length },
-          });
-          return result.map(toCronOutput);
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:schedules',
-            level: 'error',
-            message: 'list_crons failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: serializeError(error),
-            hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'list_crons',
+          hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
+          fn: async () => {
+            const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
+            forgeDebug({
+              scope: 'tools:schedules',
+              level: 'info',
+              message: 'list_crons result',
+              context: { count: result.length },
+            });
+            return result.map(toCronOutput);
+          },
+        });
       },
     });
   }
@@ -564,46 +518,36 @@ export function createAgentScheduleTools(
             return validation;
           }
 
-          try {
-            const result =
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_crons action=create',
+            hint: 'Verify the targetAgentId exists and that you have permission to create delegated crons.',
+            fn: async () =>
               createInput.scheduleType === 'cron'
-                ? await schedules.createScheduleForAgent(agentId, {
-                    targetAgentId: createInput.targetAgentId,
-                    name: createInput.name,
-                    description: normalizeOptionalText(createInput.description ?? undefined),
-                    scheduleType: 'cron',
-                    cronExpression: createInput.cronExpression ?? '',
-                    timezone: createInput.timezone ?? 'UTC',
-                    content: createInput.content,
-                    wakeWhenRunning: createInput.wakeWhenRunning ?? true,
-                  })
-                : await schedules.createScheduleForAgent(agentId, {
-                    targetAgentId: createInput.targetAgentId,
-                    name: createInput.name,
-                    description: normalizeOptionalText(createInput.description ?? undefined),
-                    scheduleType: 'date',
-                    scheduledDate: createInput.scheduledDate ?? '',
-                    timezone: createInput.timezone ?? 'UTC',
-                    content: createInput.content,
-                  });
-
-            return {
-              valid: true,
-              ...toCronOutput(result),
-            };
-          } catch (error) {
-            forgeDebug({
-              scope: 'tools:schedules',
-              level: 'error',
-              message: 'manage_crons action=create failed',
-              context: { error: errorMsg(error) },
-            });
-            return {
-              valid: false,
-              error: serializeError(error),
-              hint: 'Verify the targetAgentId exists and that you have permission to create delegated crons.',
-            };
-          }
+                ? toCronOutput(
+                    await schedules.createScheduleForAgent(agentId, {
+                      targetAgentId: createInput.targetAgentId,
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'cron',
+                      cronExpression: createInput.cronExpression ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                      wakeWhenRunning: createInput.wakeWhenRunning ?? true,
+                    }),
+                  )
+                : toCronOutput(
+                    await schedules.createScheduleForAgent(agentId, {
+                      targetAgentId: createInput.targetAgentId,
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'date',
+                      scheduledDate: createInput.scheduledDate ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                    }),
+                  ),
+          });
         }
 
         if (input.action === 'update') {
@@ -627,36 +571,25 @@ export function createAgentScheduleTools(
             };
           }
 
-          try {
-            const result = await schedules.editCron(agentId, cronId, {
-              name: normalizeOptionalText(updateInput.name ?? undefined),
-              description: normalizeOptionalText(updateInput.description ?? undefined),
-              scheduleType: updateInput.scheduleType ?? undefined,
-              cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
-              scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
-              timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
-              content: normalizeOptionalText(updateInput.content ?? undefined),
-              wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
-              isActive: updateInput.isActive ?? undefined,
-            });
-
-            return {
-              valid: true,
-              ...toCronOutput(result),
-            };
-          } catch (error) {
-            forgeDebug({
-              scope: 'tools:schedules',
-              level: 'error',
-              message: 'manage_crons action=update failed',
-              context: { error: errorMsg(error) },
-            });
-            return {
-              valid: false,
-              error: serializeError(error),
-              hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
-            };
-          }
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_crons action=update',
+            hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
+            fn: async () =>
+              toCronOutput(
+                await schedules.editCron(agentId, cronId, {
+                  name: normalizeOptionalText(updateInput.name ?? undefined),
+                  description: normalizeOptionalText(updateInput.description ?? undefined),
+                  scheduleType: updateInput.scheduleType ?? undefined,
+                  cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+                  scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+                  timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+                  content: normalizeOptionalText(updateInput.content ?? undefined),
+                  wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
+                  isActive: updateInput.isActive ?? undefined,
+                }),
+              ),
+          });
         }
 
         const deleteInput = input.action === 'delete' ? (input.delete ?? null) : null;
@@ -679,26 +612,15 @@ export function createAgentScheduleTools(
           };
         }
 
-        try {
-          const result = await schedules.deleteCron(agentId, cronId);
-          return {
-            valid: true,
-            cronId,
-            ...result,
-          };
-        } catch (error) {
-          forgeDebug({
-            scope: 'tools:schedules',
-            level: 'error',
-            message: 'manage_crons action=delete failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: serializeError(error),
-            hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'manage_crons action=delete',
+          hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
+          fn: async () => {
+            const result = await schedules.deleteCron(agentId, cronId);
+            return { cronId, ...result };
+          },
+        });
       },
     });
   }
