@@ -1,8 +1,12 @@
-import { createTool, forgeDebug } from '@forge-runtime/core';
+import { createTool } from '@forge-runtime/core';
 import { hasToolPermission } from '../capabilities/catalog';
+import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 import { z } from 'zod';
 
 import type { InternalChatService } from './internal-chat-service';
+
+const INTERNAL_CHAT_HINT =
+  'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.';
 
 export function createInternalChatTools(
   agentId: string,
@@ -79,50 +83,26 @@ export function createInternalChatTools(
           .optional()
           .describe('Provide this object only when action is update.'),
       }),
+      // L#NN-50 #20: block body with `return await` required when wrapping helper callbacks.
+      // 3-layer pattern (L#NN-50 #12 family): validation OUTSIDE helper, success ops INSIDE helper.
       execute: async (input) => {
-        try {
-          if (input.action === 'create') {
-            if (input.create === null || input.create === undefined) {
-              return {
-                valid: false,
-                error: 'create is required when action is create',
-                hint: 'Provide create.name and optionally create.members.',
-              };
-            }
-
-            if (
-              input.create === null ||
-              input.create === undefined ||
-              input.create.name === null ||
-              input.create.name === undefined
-            ) {
-              return {
-                valid: false,
-                error: 'create.name is required when action is create',
-                hint: 'Provide the new group name in create.name.',
-              };
-            }
-
-            const result = await internalChat.changeChatGroup({
-              agentId,
-              name: input.create.name,
-              members: input.create.members?.map(
-                (member: {
-                  participantKey: string;
-                  role?: 'admin' | 'normal' | null | undefined;
-                }) => ({
-                  participantKey: member.participantKey,
-                  role: member.role ?? undefined,
-                }),
-              ),
-            });
-
+        if (input.action === 'create') {
+          if (input.create === null || input.create === undefined) {
             return {
-              valid: true,
-              ...result,
+              valid: false,
+              error: 'create is required when action is create',
+              hint: 'Provide create.name and optionally create.members.',
             };
           }
 
+          if (input.create.name === null || input.create.name === undefined) {
+            return {
+              valid: false,
+              error: 'create.name is required when action is create',
+              hint: 'Provide the new group name in create.name.',
+            };
+          }
+        } else {
           if (input.update === null || input.update === undefined) {
             return {
               valid: false,
@@ -131,55 +111,52 @@ export function createInternalChatTools(
             };
           }
 
-          if (
-            input.update === null ||
-            input.update === undefined ||
-            input.update.groupId === null ||
-            input.update.groupId === undefined
-          ) {
+          if (input.update.groupId === null || input.update.groupId === undefined) {
             return {
               valid: false,
               error: 'update.groupId is required when action is update',
               hint: 'Use the internal-chat conversation targetKey as update.groupId.',
             };
           }
-
-          const result = await internalChat.changeChatGroup({
-            agentId,
-            groupId: input.update.groupId,
-            name: input.update.name ?? undefined,
-            members: input.update.members?.map(
-              (member: {
-                participantKey: string;
-                role?: 'admin' | 'normal' | null | undefined;
-              }) => ({
-                participantKey: member.participantKey,
-                role: member.role ?? undefined,
-              }),
-            ),
-          });
-
-          return {
-            valid: true,
-            ...result,
-          };
-        } catch (error) {
-          forgeDebug({
-            scope: 'internal-chat',
-            level: 'error',
-            message: 'Internal chat tool failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.',
-          };
         }
+
+        return await withToolErrorLogging({
+          scope: 'internal-chat',
+          op: 'change_chat_group',
+          hint: INTERNAL_CHAT_HINT,
+          fn: () =>
+            input.action === 'create'
+              ? internalChat.changeChatGroup({
+                  agentId,
+                  name: input.create!.name,
+                  members: input.create!.members?.map(
+                    (member: {
+                      participantKey: string;
+                      role?: 'admin' | 'normal' | null | undefined;
+                    }) => ({
+                      participantKey: member.participantKey,
+                      role: member.role ?? undefined,
+                    }),
+                  ),
+                })
+              : internalChat.changeChatGroup({
+                  agentId,
+                  groupId: input.update!.groupId,
+                  name: input.update!.name ?? undefined,
+                  members: input.update!.members?.map(
+                    (member: {
+                      participantKey: string;
+                      role?: 'admin' | 'normal' | null | undefined;
+                    }) => ({
+                      participantKey: member.participantKey,
+                      role: member.role ?? undefined,
+                    }),
+                  ),
+                }),
+        });
       },
     });
   }
 
   return tools;
 }
-import { errorMsg } from '../agents/error-formatting';
