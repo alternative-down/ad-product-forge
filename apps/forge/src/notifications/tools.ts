@@ -1,10 +1,13 @@
-import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/error-formatting';
+import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database/client';
 import { hasToolPermission } from '../capabilities/catalog';
+import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 import { createAgentNotificationStore } from './store';
+
+const NOTIFICATIONS_HINT =
+  'Try again in a moment. If the problem persists, verify the notification store is available.';
 
 export function createAgentNotificationTools(
   db: Database,
@@ -37,25 +40,17 @@ export function createAgentNotificationTools(
           .describe('Maximum number of notifications to return.'),
       }),
       execute: async (input) => {
-        try {
-          return await notifications.listNotifications({
-            agentId,
-            unreadOnly: input.unreadOnly ?? false,
-            limit: input.limit ?? 20,
-          });
-        } catch (error) {
-          forgeDebug({
-            scope: 'notifications',
-            level: 'error',
-            message: '[notifications] list_agent_notifications failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'notifications',
+          op: 'list_agent_notifications',
+          hint: NOTIFICATIONS_HINT,
+          fn: () =>
+            notifications.listNotifications({
+              agentId,
+              unreadOnly: input.unreadOnly ?? false,
+              limit: input.limit ?? 20,
+            }),
+        });
       },
     });
   }
@@ -76,24 +71,16 @@ export function createAgentNotificationTools(
           .describe('The IDs of the notifications to mark as read. Must be non-empty.'),
       }),
       execute: async (input) => {
-        try {
-          return await notifications.markNotificationsRead({
-            agentId,
-            notificationIds: input.notificationIds,
-          });
-        } catch (error) {
-          forgeDebug({
-            scope: 'notifications',
-            level: 'error',
-            message: '[notifications] mark_notifications_read failed',
-            context: { error: errorMsg(error) },
-          });
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'notifications',
+          op: 'mark_notifications_read',
+          hint: NOTIFICATIONS_HINT,
+          fn: () =>
+            notifications.markNotificationsRead({
+              agentId,
+              notificationIds: input.notificationIds,
+            }),
+        });
       },
     });
   }

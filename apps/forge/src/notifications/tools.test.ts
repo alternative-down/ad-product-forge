@@ -121,7 +121,7 @@ describe('createAgentNotificationTools', () => {
       tools.list_agent_notifications as unknown as { execute: (input: unknown) => Promise<unknown> }
     ).execute;
     const result = await execute({});
-    expect(result).toEqual(notifications);
+    expect(result).toEqual({ valid: true, data: notifications });
   });
 
   it('tool execute returns valid:false error object on exception', async () => {
@@ -209,7 +209,7 @@ describe('createAgentNotificationTools (mark_notifications_read, #5623)', () => 
       tools.mark_notifications_read as unknown as { execute: (input: unknown) => Promise<unknown> }
     ).execute;
     const result = await execute({ notificationIds: ['n1', 'n2', 'n3'] });
-    expect(result).toEqual({ updatedCount: 3 });
+    expect(result).toEqual({ valid: true, data: { updatedCount: 3 } });
   });
 
   it('mark_notifications_read tool execute returns valid:false error object on exception', async () => {
