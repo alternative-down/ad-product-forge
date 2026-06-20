@@ -12,14 +12,12 @@ import type {
   LongTermMemoryRecallHistory,
 } from './store';
 
-// ─── Mock @forge-runtime/core ────────────────────────────────────────────────
-
-const { mockForgeDebug } = vi.hoisted(() => ({
-  mockForgeDebug: vi.fn(),
-}));
-
-vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: mockForgeDebug,
+// ─── Mock withDbErrorLogging (L#NN-50 #18, Veritas Option A) ─────────────
+//
+// Pass-through wrapper: calls fn() directly, lets errors propagate.
+// Tests verify rethrow behavior. Logging is tested in error-logging.test.ts.
+vi.mock('../../database/error-logging', () => ({
+  withDbErrorLogging: vi.fn(async ({ fn }: { fn: () => Promise<unknown> }) => fn()),
 }));
 
 // ─── Drizzle mock setup ─────────────────────────────────────────────────────
@@ -119,7 +117,6 @@ describe('createAgentLongTermMemoryStore', () => {
 
   beforeEach(() => {
     mockDb = createDrizzleMock();
-    mockForgeDebug.mockImplementation(() => {});
     store = createAgentLongTermMemoryStore(mockDb.db as unknown as Database, {
       agentId: 'agent-test',
     });
@@ -161,17 +158,10 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(result).toMatchObject({ version: 1, packages: [] });
     });
 
-    it('throws on DB error and logs with forgeDebug', async () => {
+    it('throws on DB error', async () => {
       mockDb.statesFindFirst.mockRejectedValue(new Error('DB error'));
 
       await expect(store.readState()).rejects.toThrow('DB error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({
-          scope: 'ltm',
-          level: 'info',
-          message: 'Failed to read LTM state',
-        }),
-      );
     });
   });
 
@@ -197,16 +187,13 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(result.lastWrittenPackageId).toBe('pkg-updated');
     });
 
-    it('throws on query error and logs', async () => {
+    it('throws on query error', async () => {
       mockDb.statesFindFirst.mockRejectedValue(new Error('Query error'));
 
       await expect(store.writeState(SAMPLE_STATE)).rejects.toThrow('Query error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to query LTM state for write' }),
-      );
     });
 
-    it('throws on insert error and logs', async () => {
+    it('throws on insert error', async () => {
       mockDb.statesFindFirst.mockResolvedValue(null);
       // Override insert to throw
       (mockDb.db as any).insert.mockImplementationOnce(() => ({
@@ -216,9 +203,6 @@ describe('createAgentLongTermMemoryStore', () => {
       }));
 
       await expect(store.writeState(SAMPLE_STATE)).rejects.toThrow('Insert error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to write LTM state' }),
-      );
     });
 
     it('sets updatedAt to current ISO timestamp', async () => {
@@ -259,13 +243,10 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(result).toBeNull();
     });
 
-    it('throws on DB error and logs', async () => {
+    it('throws on DB error', async () => {
       mockDb.statesFindFirst.mockRejectedValue(new Error('DB error'));
 
       await expect(store.readRecallIndexStamp()).rejects.toThrow('DB error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to read recall index stamp' }),
-      );
     });
   });
 
@@ -280,13 +261,10 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(mockDb.statesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('throws on query error and logs', async () => {
+    it('throws on query error', async () => {
       mockDb.statesFindFirst.mockRejectedValue(new Error('Query error'));
 
       await expect(store.writeRecallIndexStamp('reason')).rejects.toThrow('Query error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to query LTM state for recall index write' }),
-      );
     });
   });
 
@@ -333,13 +311,10 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(result.snapshot).toBeNull();
     });
 
-    it('throws on DB error and logs', async () => {
+    it('throws on DB error', async () => {
       mockDb.recallStatesFindFirst.mockRejectedValue(new Error('DB error'));
 
       await expect(store.readRecallState()).rejects.toThrow('DB error');
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to read recall state' }),
-      );
     });
   });
 
@@ -378,7 +353,7 @@ describe('createAgentLongTermMemoryStore', () => {
       expect(mockDb.recallStatesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('throws on query error and logs with the query error message', async () => {
+    it('throws on query error with the query error message', async () => {
       mockDb.recallStatesFindFirst.mockRejectedValue(new Error('Query error'));
 
       await expect(
@@ -388,9 +363,6 @@ describe('createAgentLongTermMemoryStore', () => {
         }),
       ).rejects.toThrow('Query error');
       // The query error is caught by the first catch block
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failed to query LTM recall state for write' }),
-      );
     });
   });
 });

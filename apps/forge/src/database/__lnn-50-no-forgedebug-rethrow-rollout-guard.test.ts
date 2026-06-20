@@ -14,6 +14,7 @@
  *
  * Migrated files (cumulative):
  * - apps/forge/src/agents/agent-loader-data.ts — 2 try/catch blocks (Day 18, #5811, Kaelen)
+ * - apps/forge/src/agents/ltm/store.ts — 9 try/catch blocks (Day 20, #5825 PR4, Varek)
  * - apps/forge/src/system-integrations/store.ts — 7 try/catch blocks (Day 19, #5830, Kaelen)
  * - apps/forge/src/system-settings/store.ts — 1 try/catch block (Day 20, #5825 PR2, Varek)
  * - apps/forge/src/llm/settings-store.ts — 5 try/catch blocks (Day 20, #5825 PR1, Kaelen)
@@ -66,6 +67,11 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'capabilities/store.ts',
     expectedForgeDebugRethrow: 0,
     expectedWithDbUsage: 8,
+  },
+  {
+    path: 'agents/ltm/store.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 9,
   },
 ];
 
