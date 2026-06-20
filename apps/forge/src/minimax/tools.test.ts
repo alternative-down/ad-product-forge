@@ -88,7 +88,7 @@ describe('createMiniMaxTools', () => {
       const tools = createMiniMaxTools(mockMinimaxManager(), null);
       const result = await (tools.list_minimax_voices as any).execute({});
       expect(result.valid).toBe(true);
-      expect(result.voices).toEqual(mockVoices);
+      expect(result.data.voices).toEqual(mockVoices);
     });
 
     it('returns valid=false with hint when API returns error', async () => {
@@ -183,7 +183,7 @@ describe('createMiniMaxTools', () => {
         outputFormat: 'mp3',
       });
       expect(result.valid).toBe(true);
-      expect(result.path).toBeDefined();
+      expect(result.data.path).toBeDefined();
     });
 
     it('returns valid=false with code 2013 hint when params rejected', async () => {
@@ -267,7 +267,7 @@ describe('createMiniMaxTools', () => {
         subjectReference: undefined,
       });
       expect(result.valid).toBe(true);
-      expect(result.path).toBeDefined();
+      expect(result.data.path).toBeDefined();
     });
   });
 
