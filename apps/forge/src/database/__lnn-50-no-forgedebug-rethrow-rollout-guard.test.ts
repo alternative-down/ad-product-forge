@@ -17,6 +17,7 @@
  * - apps/forge/src/system-integrations/store.ts — 7 try/catch blocks (Day 19, #5830, Kaelen)
  * - apps/forge/src/system-settings/store.ts — 1 try/catch block (Day 20, #5825 PR2, Varek)
  * - apps/forge/src/llm/settings-store.ts — 5 try/catch blocks (Day 20, #5825 PR1, Kaelen)
+ * - apps/forge/src/capabilities/store.ts — 8 try/catch blocks (Day 20, #5825 PR3, Varek)
  *
  * Candidate files (forgeDebug+rethrow pattern detected, NOT yet migrated):
  * - 56 files across apps/forge/src/ — see CANDIDATE_FILES below
@@ -60,6 +61,11 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'llm/settings-store.ts',
     expectedForgeDebugRethrow: 0,
     expectedWithDbUsage: 5,
+  },
+  {
+    path: 'capabilities/store.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 8,
   },
 ];
 
