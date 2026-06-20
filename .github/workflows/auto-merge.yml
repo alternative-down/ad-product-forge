@@ -27,6 +27,12 @@ jobs:
     if: github.event.review.state == 'approved' || github.event.action == 'synchronize'
     runs-on: ubuntu-latest
     steps:
+      # P0 #5832 fix: actions/checkout@v4 needed for --delete-branch flag
+      # (gh pr merge --delete-branch requires .git context)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check required approvals (L#NN-codified v2)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
