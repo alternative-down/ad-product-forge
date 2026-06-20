@@ -106,7 +106,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           scope: 'tools:micro-erp',
           op: 'get_company_cash',
           hint: 'Try again in a moment. If the problem persists, verify the finance ledger is available.',
-          fn: async () => microErp.getCompanyCashBalance(),
+          fn: () => microErp.getCompanyCashBalance(),
         });
       },
     });
@@ -123,7 +123,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           scope: 'tools:micro-erp',
           op: 'list_company_cash',
           hint: 'Review the selected filters and period, then try again.',
-          fn: async () => microErp.listCompanyCashMovements(input),
+          fn: () => microErp.listCompanyCashMovements(input),
         });
       },
     });
@@ -140,7 +140,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           scope: 'tools:micro-erp',
           op: 'list_internal_agent_contracts',
           hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
-          fn: async () => microErp.listActiveInternalAgentContracts(),
+          fn: () => microErp.listActiveInternalAgentContracts(),
         });
       },
     });
