@@ -11,6 +11,7 @@ import {
 } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
+import { withDbErrorLogging } from '../database/error-logging';
 
 const llmProfileSchema = z.object({
   name: z.string().min(1),
@@ -42,21 +43,18 @@ export type LlmProfileRecord = {
 };
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
-    try {
-      const rows = await db.query.llmProfiles.findMany({
-        orderBy: (fields, { asc }) => [asc(fields.modelKey)],
-      });
-
-      return rows.map(toProfileRecord);
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to list LLM profiles',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'llm',
+      op: 'listProfiles',
+      verb: 'read',
+      context: {},
+      fn: async () => {
+        const rows = await db.query.llmProfiles.findMany({
+          orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+        });
+        return rows.map(toProfileRecord);
+      },
+    });
   }
 
   async function getDefaults() {
@@ -164,41 +162,39 @@ export function createLlmSettingsStore(db: Database) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
     const profileId = input.profileId ?? createId();
-    try {
-      await db
-        .insert(llmProfiles)
-        .values({
-          id: profileId,
-          name: parsed.name.trim(),
-          modelKey: parsed.modelKey,
-          baseUrl: parsed.baseUrl?.trim() ?? null,
-          encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
-          contractCostMultiplier: parsed.contractCostMultiplier,
-          isEnabled: parsed.isEnabled ? 1 : 0,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: llmProfiles.id,
-          set: {
+    await withDbErrorLogging({
+      scope: 'llm',
+      op: 'upsertProfile',
+      verb: 'write',
+      context: { profileId },
+      fn: async () => {
+        await db
+          .insert(llmProfiles)
+          .values({
+            id: profileId,
             name: parsed.name.trim(),
             modelKey: parsed.modelKey,
             baseUrl: parsed.baseUrl?.trim() ?? null,
             encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
             contractCostMultiplier: parsed.contractCostMultiplier,
             isEnabled: parsed.isEnabled ? 1 : 0,
+            createdAt: now,
             updatedAt: now,
-          },
-        });
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to upsert LLM profile',
-        context: { profileId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+          })
+          .onConflictDoUpdate({
+            target: llmProfiles.id,
+            set: {
+              name: parsed.name.trim(),
+              modelKey: parsed.modelKey,
+              baseUrl: parsed.baseUrl?.trim() ?? null,
+              encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
+              contractCostMultiplier: parsed.contractCostMultiplier,
+              isEnabled: parsed.isEnabled ? 1 : 0,
+              updatedAt: now,
+            },
+          });
+      },
+    });
 
     return {
       profileId,
@@ -231,17 +227,15 @@ export function createLlmSettingsStore(db: Database) {
       );
     }
 
-    try {
-      await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to delete LLM profile',
-        context: { profileId, error: errorMsg(err) },
-      });
-      throw err;
-    }
+    await withDbErrorLogging({
+      scope: 'llm',
+      op: 'deleteProfile',
+      verb: 'write',
+      context: { profileId },
+      fn: async () => {
+        await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+      },
+    });
   }
 
   async function updateDefaults(input: {
@@ -276,52 +270,48 @@ export function createLlmSettingsStore(db: Database) {
     }
 
     const now = Date.now();
-    try {
-      await db
-        .insert(systemLlmDefaults)
-        .values({
-          id: DEFAULTS_ROW_ID,
-          primaryProfileId: parsed.primaryProfileId,
-          omProfileId: parsed.omProfileId,
-          hiringRhProfileId: parsed.hiringRhProfileId,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: systemLlmDefaults.id,
-          set: {
+    await withDbErrorLogging({
+      scope: 'llm',
+      op: 'updateDefaults',
+      verb: 'write',
+      context: {},
+      fn: async () => {
+        await db
+          .insert(systemLlmDefaults)
+          .values({
+            id: DEFAULTS_ROW_ID,
             primaryProfileId: parsed.primaryProfileId,
             omProfileId: parsed.omProfileId,
             hiringRhProfileId: parsed.hiringRhProfileId,
+            createdAt: now,
             updatedAt: now,
-          },
-        });
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to upsert LLM defaults',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+          })
+          .onConflictDoUpdate({
+            target: systemLlmDefaults.id,
+            set: {
+              primaryProfileId: parsed.primaryProfileId,
+              omProfileId: parsed.omProfileId,
+              hiringRhProfileId: parsed.hiringRhProfileId,
+              updatedAt: now,
+            },
+          });
+      },
+    });
     return parsed;
   }
 
   async function getDefaultsRow() {
-    try {
-      return await db.query.systemLlmDefaults.findFirst({
-        where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to get LLM defaults row',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'llm',
+      op: 'getDefaultsRow',
+      verb: 'read',
+      context: {},
+      fn: async () => {
+        return await db.query.systemLlmDefaults.findFirst({
+          where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
+        });
+      },
+    });
   }
 
   return {

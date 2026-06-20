@@ -12,8 +12,11 @@
  * - Migrated file MUST have ZERO try/catch+forgeDebug+rethrow blocks
  * - Migrated file MUST use withDbErrorLogging at least once
  *
- * Migrated files (issue #5512, Day 18):
- * - apps/forge/src/agents/agent-loader-data.ts — 2 try/catch blocks (this PR)
+ * Migrated files (cumulative):
+ * - apps/forge/src/agents/agent-loader-data.ts — 2 try/catch blocks (Day 18, #5811, Kaelen)
+ * - apps/forge/src/system-integrations/store.ts — 7 try/catch blocks (Day 19, #5830, Kaelen)
+ * - apps/forge/src/system-settings/store.ts — 1 try/catch block (Day 20, #5825 PR2, Varek)
+ * - apps/forge/src/llm/settings-store.ts — 5 try/catch blocks (Day 20, #5825 PR1, Kaelen)
  *
  * Candidate files (forgeDebug+rethrow pattern detected, NOT yet migrated):
  * - 56 files across apps/forge/src/ — see CANDIDATE_FILES below
@@ -52,6 +55,11 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'system-settings/store.ts',
     expectedForgeDebugRethrow: 0,
     expectedWithDbUsage: 1,
+  },
+  {
+    path: 'llm/settings-store.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 5,
   },
 ];
 
