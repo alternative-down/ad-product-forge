@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
+import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/client';
 import { systemSettings } from '../database/schema';
@@ -121,61 +122,57 @@ export function createSystemSettingsStore(db: Database) {
   }
 
   async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
-    try {
-      const now = Date.now();
-      const row = {
-        id: SYSTEM_SETTINGS_ID,
-        createdAt: now,
-        companyName: input.companyName,
-        companyContext: input.companyContext,
-        stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
-        communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
-        communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
-        memoryLastMessagesFullEnabled: input.memoryLastMessagesFullEnabled ? 1 : 0,
-        memoryLastMessagesCount: input.memoryLastMessagesCount,
-        tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
-        tokenCountFilterLimit: input.tokenCountFilterLimit,
-        checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
-        checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
-        checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
-        checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
-        checkpointedOmObservationReflectionBatchTokens:
-          input.checkpointedOmObservationReflectionBatchTokens,
-        checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
-        checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
-        ltmRecallSearchMode: input.ltmRecallSearchMode,
-        ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
-        ltmRecallGraphTopK: input.ltmRecallGraphTopK,
-        ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
-        ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
-        ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
-        ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
-        ltmRecallDocumentCount: input.ltmRecallDocumentCount,
-        updatedAt: now,
-      };
+    const now = Date.now();
+    const row = {
+      id: SYSTEM_SETTINGS_ID,
+      createdAt: now,
+      companyName: input.companyName,
+      companyContext: input.companyContext,
+      stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
+      communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
+      communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
+      memoryLastMessagesFullEnabled: input.memoryLastMessagesFullEnabled ? 1 : 0,
+      memoryLastMessagesCount: input.memoryLastMessagesCount,
+      tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
+      tokenCountFilterLimit: input.tokenCountFilterLimit,
+      checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
+      checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
+      checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
+      checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+      checkpointedOmObservationReflectionBatchTokens:
+        input.checkpointedOmObservationReflectionBatchTokens,
+      checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
+      checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+      ltmRecallSearchMode: input.ltmRecallSearchMode,
+      ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
+      ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+      ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+      ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+      ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
+      ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
+      ltmRecallDocumentCount: input.ltmRecallDocumentCount,
+      updatedAt: now,
+    };
 
-      // Atomic upsert (race-free, see #5502). Excludes `id` (the conflict
-      // target) and `createdAt` (preserved on update per #5526) from the SET clause.
-      const { id: _id, createdAt: _createdAt, ...updateSet } = row;
+    // Atomic upsert (race-free, see #5502). Excludes id (the conflict
+    // target) and createdAt (preserved on update per #5526) from the SET clause.
+    const { id: _id, createdAt: _createdAt, ...updateSet } = row;
 
-      await db
-        .insert(systemSettings)
-        .values(row)
-        .onConflictDoUpdate({
-          target: systemSettings.id,
-          set: updateSet,
-        });
-
-      return { ...input, updatedAt: now, createdAt: now };
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-settings',
-        level: 'error',
-        message: 'upsertSettings failed',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'system-settings',
+      op: 'upsertSettings',
+      verb: 'write',
+      fn: async () => {
+        await db
+          .insert(systemSettings)
+          .values(row)
+          .onConflictDoUpdate({
+            target: systemSettings.id,
+            set: updateSet,
+          });
+        return { ...input, updatedAt: now, createdAt: now };
+      },
+    });
   }
 
   return { getSettings, upsertSettings };
