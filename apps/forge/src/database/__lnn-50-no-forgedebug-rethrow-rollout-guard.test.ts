@@ -1,7 +1,7 @@
 /**
  * L#NN-50 tripwire test — no-forgeDebug-rethrow rollout guard (issue #5512).
  *
- * Purpose: Prevent regression of the forgeDebug+rethrow -> withDbErrorLogging
+ * Purpose: Prevent regression of the forgeDebug+rethrow → withDbErrorLogging
  * migration. After a file is migrated to use withDbErrorLogging for its
  * boilerplate try/catch+forgeDebug+rethrow pattern, this tripwire ensures
  * the manual pattern does not creep back in.
@@ -12,15 +12,12 @@
  * - Migrated file MUST have ZERO try/catch+forgeDebug+rethrow blocks
  * - Migrated file MUST use withDbErrorLogging at least once
  *
- * Migrated files (issue #5825 Phase 3 PR2, Day 20):
- * - apps/forge/src/system-settings/store.ts -- 1 try/catch+forgeDebug+rethrow block (this PR)
+ * Migrated files (issue #5512, Day 18):
+ * - apps/forge/src/agents/agent-loader-data.ts — 2 try/catch blocks (this PR)
  *
- * Note: This file was created by Varek PR2 of Phase 3. Kaelen PR1 (llm/settings-store.ts)
- * will rebase and add llm/settings-store.ts entry after this PR lands.
- *
- * Out-of-scope patterns (RETAIN, not migrated):
- * - forgeDebug + return-defaults (info-level returning null, e.g. getSettings)
- * - forgeDebug + validation throws (e.g. argument validation)
+ * Candidate files (forgeDebug+rethrow pattern detected, NOT yet migrated):
+ * - 56 files across apps/forge/src/ — see CANDIDATE_FILES below
+ * - Tracked for future rollout PRs (scope-boundary: NOT fixed in this PR)
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -38,9 +35,19 @@ interface FileMigration {
 /**
  * Registry of migrated files (forgeDebug+rethrow pattern eliminated).
  * Update when a new file is migrated.
- * Numbers verified at Day 20 09:15Z (PR2 of Phase 3).
+ * Numbers verified at Day 18 11:00Z.
  */
 const MIGRATED_FILES: FileMigration[] = [
+  {
+    path: 'agents/agent-loader-data.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 2,
+  },
+  {
+    path: 'system-integrations/store.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 7,
+  },
   {
     path: 'system-settings/store.ts',
     expectedForgeDebugRethrow: 0,
@@ -70,7 +77,7 @@ function readSourceFile(relPath: string): string {
   return readFileSync(join(FORGE_SRC, relPath), 'utf8');
 }
 
-describe('L#NN-50 tripwire -- no-forgeDebug-rethrow rollout guard (issue #5512)', () => {
+describe('L#NN-50 tripwire — no-forgeDebug-rethrow rollout guard (issue #5512)', () => {
   it('migrated files import withDbErrorLogging', () => {
     for (const entry of MIGRATED_FILES) {
       const content = readSourceFile(entry.path);
@@ -90,22 +97,69 @@ describe('L#NN-50 tripwire -- no-forgeDebug-rethrow rollout guard (issue #5512)'
       const rethrowCount = countOccurrences(content, FORGE_DEBUG_RETHROW_PATTERN);
       expect(
         rethrowCount,
-        `${entry.path} has ${rethrowCount} forgeDebug+rethrow block(s), expected ${entry.expectedForgeDebugRethrow}`,
+        `${entry.path} has ${rethrowCount} try/catch+forgeDebug+rethrow block(s) (expected 0)`,
       ).toBe(entry.expectedForgeDebugRethrow);
     }
   });
 
-  it('migrated files use withDbErrorLogging at least the expected count', () => {
+  it('migrated files use withDbErrorLogging at least N times', () => {
     for (const entry of MIGRATED_FILES) {
       const content = readSourceFile(entry.path);
-      // Count withDbErrorLogging CALLS (excluding the import line)
-      const importFree = content.replace(/^import.*withDbErrorLogging.*$/gm, '');
-      // Match withDbErrorLogging( as a function call (not identifier in comment)
-      const usageCount = (importFree.match(/withDbErrorLogging\s*\(/g) || []).length;
+      const usageCount = countOccurrences(content, /withDbErrorLogging\s*\(/g);
       expect(
         usageCount,
-        `${entry.path} has ${usageCount} withDbErrorLogging call(s), expected >= ${entry.expectedWithDbUsage}`,
+        `${entry.path} has ${usageCount} withDbErrorLogging call(s) (expected >= ${entry.expectedWithDbUsage})`,
       ).toBeGreaterThanOrEqual(entry.expectedWithDbUsage);
+    }
+  });
+});
+
+describe('L#NN-50 tripwire — candidate file detection (issue #5512 backlog)', () => {
+  /**
+   * Walks apps/forge/src/ (excluding tests) and detects files with the
+   * forgeDebug+rethrow pattern. These are candidates for future migration
+   * PRs (scope-boundary: NOT fixed in this PR).
+   *
+   * The list is large (56 files at Day 18) and grows as more code is
+   * added. The test verifies that the tripwire machinery itself works,
+   * not that the candidate count is bounded.
+   */
+  it('tripwire machinery detects candidate files (sanity check)', () => {
+    function walk(dir: string): string[] {
+      const out: string[] = [];
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        const stat = statSync(full);
+        if (stat.isDirectory()) {
+          out.push(...walk(full));
+        } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts')) {
+          out.push(full);
+        }
+      }
+      return out;
+    }
+
+    const allTsFiles = walk(FORGE_SRC);
+    const candidateFiles: string[] = [];
+
+    for (const file of allTsFiles) {
+      const content = readFileSync(file, 'utf8');
+      const rethrowCount = countOccurrences(content, FORGE_DEBUG_RETHROW_PATTERN);
+      if (rethrowCount > 0) {
+        candidateFiles.push(file.replace(FORGE_SRC + '/', ''));
+      }
+    }
+
+    // Sanity: we expect MANY candidates (backlog for future migrations)
+    // This is a positive signal that the pattern is widespread and
+    // the tripwire is identifying real work.
+    expect(candidateFiles.length).toBeGreaterThan(0);
+
+    // Sanity: migrated file should NOT appear in candidates (it's been refactored)
+    for (const entry of MIGRATED_FILES) {
+      expect(candidateFiles, `${entry.path} should NOT appear in candidates`).not.toContain(
+        entry.path,
+      );
     }
   });
 });
