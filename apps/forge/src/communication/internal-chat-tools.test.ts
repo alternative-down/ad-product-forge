@@ -84,7 +84,7 @@ describe('createInternalChatTools', () => {
           members: [{ participantKey: 'contact-1', role: 'normal' }],
         });
         expect(result.valid).toBe(true);
-        expect(result.groupId).toBe('new-group-123');
+        expect(result.data.groupId).toBe('new-group-123');
       });
 
       it('passes members as undefined when create has no members', async () => {
