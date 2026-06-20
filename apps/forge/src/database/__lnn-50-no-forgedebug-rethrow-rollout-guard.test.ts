@@ -48,6 +48,11 @@ const MIGRATED_FILES: FileMigration[] = [
     expectedForgeDebugRethrow: 0,
     expectedWithDbUsage: 7,
   },
+  {
+    path: 'system-settings/store.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 1,
+  },
 ];
 
 /**
