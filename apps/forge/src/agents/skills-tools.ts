@@ -1,4 +1,5 @@
 import { errorMsg } from './error-formatting';
+import { findAgentById } from './agent-lookup';
 import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -78,13 +79,7 @@ export function createAgentSkillTools(input: {
     description: 'Load one local workspace skill from `skills/`.',
     inputSchema: loadSkillSchema,
     execute: async (inputData) => {
-      const agent = await input.db.query.agents.findFirst({
-        where: (fields, operators) => operators.eq(fields.id, input.agentId),
-        columns: {
-          id: true,
-          workspaceFilesystem: true,
-        },
-      });
+      const agent = await findAgentById(input.db, input.agentId);
 
       ensureAgentFound(agent, input.agentId, 'load_workspace_skill');
 
@@ -143,13 +138,7 @@ export function createAgentSkillTools(input: {
           .describe('Skill directory name inside `skills/` to publish.'),
       }),
       execute: async (inputData) => {
-        const agent = await input.db.query.agents.findFirst({
-          where: (fields, operators) => operators.eq(fields.id, input.agentId),
-          columns: {
-            id: true,
-            workspaceFilesystem: true,
-          },
-        });
+        const agent = await findAgentById(input.db, input.agentId);
 
         ensureAgentFound(agent, input.agentId, 'publish_workspace_skill_to_global_catalog');
 
