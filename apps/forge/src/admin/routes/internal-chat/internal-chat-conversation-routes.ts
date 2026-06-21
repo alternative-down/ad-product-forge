@@ -147,20 +147,26 @@ function buildCreateConversationHandler(internalChat: InternalChatService): any 
 function buildSendMessageHandler(internalChat: InternalChatService): any {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/send', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
-    return jsonResponse(
-      await internalChat.sendMessage({
-        accountId: body.accountId,
-        targetKey: body.conversationId,
-        content: body.content,
-        attachments: (body.attachments ?? []).map(
-          (attachment: { name: string; contentType: string; dataBase64: string }) => ({
-            name: attachment.name,
-            contentType: attachment.contentType,
-            data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
-          }),
-        ),
-      }),
-    );
+    const result = await internalChat.sendMessage({
+      accountId: body.accountId,
+      targetKey: body.conversationId,
+      content: body.content,
+      attachments: (body.attachments ?? []).map(
+        (attachment: { name: string; contentType: string; dataBase64: string }) => ({
+          name: attachment.name,
+          contentType: attachment.contentType,
+          data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
+        }),
+      ),
+    });
+    if (!result.valid) {
+      throw new Error(result.error);
+    }
+    return jsonResponse({
+      success: true,
+      conversationKey: result.data.conversationKey,
+      messageId: result.data.messageId,
+    });
   });
 }
 

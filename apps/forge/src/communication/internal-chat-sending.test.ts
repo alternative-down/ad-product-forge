@@ -178,7 +178,9 @@ describe('createChatSending — sendMessage', () => {
     });
 
     expect(groups.ensureDirectConversation).toHaveBeenCalledWith('acc-1', 'acc-2');
-    expect(result.conversationKey).toBe('conv-abc');
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error('expected valid');
+    expect(result.data.conversationKey).toBe('conv-abc');
   });
 
   it('resolves conversation via getRequiredConversationForAccount when targetKey is a conversation key', async () => {
@@ -216,7 +218,9 @@ describe('createChatSending — sendMessage', () => {
       'acc-1',
       'conv-existing',
     );
-    expect(result.conversationKey).toBe('conv-existing');
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error('expected valid');
+    expect(result.data.conversationKey).toBe('conv-existing');
   });
 
   it('throws when getRequiredConversationForAccount fails', async () => {
@@ -240,14 +244,15 @@ describe('createChatSending — sendMessage', () => {
       attachments,
     });
 
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'conv-missing',
-        content: 'Hi',
-        attachments: [],
-      }),
-    ).rejects.toThrow('conv not found');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'conv-missing',
+      content: 'Hi',
+      attachments: [],
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('conv not found');
   });
 
   it('throws when findMany members fails', async () => {
@@ -273,14 +278,15 @@ describe('createChatSending — sendMessage', () => {
       attachments,
     });
 
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'Hi',
-        attachments: [],
-      }),
-    ).rejects.toThrow('findMany failed');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hi',
+      attachments: [],
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('findMany failed');
   });
 
   it('throws when insert messages fails', async () => {
@@ -311,14 +317,15 @@ describe('createChatSending — sendMessage', () => {
       attachments,
     });
 
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'Hi',
-        attachments: [],
-      }),
-    ).rejects.toThrow('insert failed');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hi',
+      attachments: [],
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('insert failed');
   });
 
   it('returns success with messageId and conversationKey', async () => {
@@ -350,9 +357,11 @@ describe('createChatSending — sendMessage', () => {
       attachments: [],
     });
 
-    expect(result.success).toBe(true);
-    expect(result.messageId).toBeTruthy();
-    expect(result.conversationKey).toBe('conv-xyz');
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error('expected valid');
+    expect(result.data.success).toBe(true);
+    expect(result.data.messageId).toBeTruthy();
+    expect(result.data.conversationKey).toBe('conv-xyz');
   });
 
   it('calls storeMessageAttachments', async () => {
@@ -448,14 +457,15 @@ describe('createChatSending — sendMessage', () => {
       attachments,
     });
 
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'Hi',
-        attachments: [],
-      }),
-    ).rejects.toThrow('storage failed');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hi',
+      attachments: [],
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('storage failed');
   });
 });
 
@@ -561,7 +571,9 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       replyToMessageId: 'msg-parent',
     });
 
-    expect(result.success).toBe(true);
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error('expected valid');
+    expect(result.data.success).toBe(true);
     expect(db.query.internalChatMessages.findFirst).toHaveBeenCalled();
     // Verify insert was called with replyToMessageId
     expect(db.insert).toHaveBeenCalled();
@@ -623,15 +635,16 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       reads,
       attachments,
     });
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'reply',
-        attachments: [],
-        replyToMessageId: 'msg-nonexistent',
-      }),
-    ).rejects.toThrow('Reply target message not found');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'reply',
+      attachments: [],
+      replyToMessageId: 'msg-nonexistent',
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('Reply target message not found');
   });
 
   it('throws when replyToMessageId belongs to a different conversation', async () => {
@@ -658,15 +671,16 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       reads,
       attachments,
     });
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'reply',
-        attachments: [],
-        replyToMessageId: 'msg-parent',
-      }),
-    ).rejects.toThrow('Reply target belongs to a different conversation');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'reply',
+      attachments: [],
+      replyToMessageId: 'msg-parent',
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('Reply target belongs to a different conversation');
   });
 
   it('rethrows when parent message lookup fails', async () => {
@@ -693,14 +707,15 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       reads,
       attachments,
     });
-    await expect(
-      sending.sendMessage({
-        accountId: 'acc-1',
-        targetKey: 'agent-bob',
-        content: 'reply',
-        attachments: [],
-        replyToMessageId: 'msg-parent',
-      }),
-    ).rejects.toThrow('DB lookup failed');
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'reply',
+      attachments: [],
+      replyToMessageId: 'msg-parent',
+    });
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error('expected invalid');
+    expect(result.error).toContain('DB lookup failed');
   });
 });

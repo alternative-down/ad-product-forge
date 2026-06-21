@@ -9,7 +9,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { createId } from '../utils/id';
-import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationFile } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
@@ -20,6 +19,8 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
+import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
+import type { ToolResult } from '../capabilities/tools/error-wrapper';
 import type { InternalChatGroupParticipant } from './internal-chat-helpers';
 
 export interface SendingDeps {
@@ -76,7 +77,6 @@ export interface SendingDeps {
     ) => Promise<{ stream: unknown; contentType: string | undefined }>;
   };
 }
-import { errorMsg } from '../agents/error-formatting';
 
 export function createChatSending(deps: SendingDeps) {
   const { db, accounts, serviceHelpers, groups, connection, reads, attachments } = deps;
@@ -87,160 +87,137 @@ export function createChatSending(deps: SendingDeps) {
     content: string;
     attachments: CommunicationFile[];
     replyToMessageId?: string | null;
-  }): Promise<{ success: true; messageId: string; conversationKey: string }> {
-    try {
-      const directAccount =
-        (await accounts.getAccountByAgentId(input.targetKey)) ??
-        (await accounts.getAccountBySlug(input.targetKey));
-      const conversation = directAccount
-        ? await groups.ensureDirectConversation(input.accountId, directAccount.id)
-        : await serviceHelpers.getRequiredConversationForAccount(input.accountId, input.targetKey);
+  }): Promise<
+    ToolResult<{ success: true; messageId: string; conversationKey: string }>
+  > {
+    return await withToolErrorLogging({
+      scope: 'internal-chat-sending',
+      op: 'sendMessage',
+      hint: 'Verify the recipient account exists, the conversation is accessible, and the input arguments are valid for internal chat sending.',
+      fn: async () => {
+        const directAccount =
+          (await accounts.getAccountByAgentId(input.targetKey)) ??
+          (await accounts.getAccountBySlug(input.targetKey));
+        const conversation = directAccount
+          ? await groups.ensureDirectConversation(input.accountId, directAccount.id)
+          : await serviceHelpers.getRequiredConversationForAccount(
+              input.accountId,
+              input.targetKey,
+            );
 
-      if (conversation === null || conversation === undefined) {
-        forgeDebug({
-          scope: 'internal-chat-sending',
-          level: 'error',
-          message: 'internal-chat-sending: validation/requirement failed',
-        });
-        throw new Error('Conversation not found: ' + input.targetKey);
-      }
-
-      // Guard: reject messages to archived/closed conversations (no-op: closedAt column not in schema)
-
-      // Guard: validate clock skew (no-op: now > now+ONE_DAY_MS always false — clock skew handled at DB schema level)
-      const now = Date.now();
-
-      // Guard: validate replyToMessageId belongs to the same conversation
-      let resolvedReplyTo: string | null = null;
-      if (input.replyToMessageId !== null && input.replyToMessageId !== undefined) {
-        const parentMessage = await db.query.internalChatMessages.findFirst({
-          where: eq(internalChatMessages.id, input.replyToMessageId),
-        });
-        if (!parentMessage) {
-          forgeDebug({
-            scope: 'internal-chat-sending',
-            level: 'error',
-            message: 'reply target message not found',
-            context: { replyToMessageId: input.replyToMessageId },
-          });
-          throw new Error('Reply target message not found: ' + input.replyToMessageId);
+        if (conversation === null || conversation === undefined) {
+          throw new Error('Conversation not found: ' + input.targetKey);
         }
-        if (parentMessage.conversationId !== conversation.id) {
-          forgeDebug({
-            scope: 'internal-chat-sending',
-            level: 'error',
-            message: 'reply target belongs to different conversation',
-            context: {
-              replyToMessageId: input.replyToMessageId,
-              expectedConversation: conversation.id,
-              actualConversation: parentMessage.conversationId,
-            },
+
+        const now = Date.now();
+
+        // Guard: validate replyToMessageId belongs to the same conversation
+        let resolvedReplyTo: string | null = null;
+        if (input.replyToMessageId !== null && input.replyToMessageId !== undefined) {
+          const parentMessage = await db.query.internalChatMessages.findFirst({
+            where: eq(internalChatMessages.id, input.replyToMessageId),
           });
-          throw new Error(
-            'Reply target belongs to a different conversation: ' + input.replyToMessageId,
-          );
+          if (!parentMessage) {
+            throw new Error('Reply target message not found: ' + input.replyToMessageId);
+          }
+          if (parentMessage.conversationId !== conversation.id) {
+            throw new Error(
+              'Reply target belongs to a different conversation: ' + input.replyToMessageId,
+            );
+          }
+          resolvedReplyTo = input.replyToMessageId;
         }
-        resolvedReplyTo = input.replyToMessageId;
-      }
 
-      const messageId = createId();
-      const members = await db.query.internalChatConversationMembers.findMany({
-        where: eq(internalChatConversationMembers.conversationId, conversation.id),
-      });
+        const messageId = createId();
+        const members = await db.query.internalChatConversationMembers.findMany({
+          where: eq(internalChatConversationMembers.conversationId, conversation.id),
+        });
 
-      await db.insert(internalChatMessages).values({
-        id: messageId,
-        conversationId: conversation.id,
-        authorAccountId: input.accountId,
-        content: input.content,
-        replyToMessageId: resolvedReplyTo,
-        createdAt: now,
-        updatedAt: now,
-      });
-      await attachments.storeMessageAttachments(messageId, input.attachments);
-
-      const accountIds = members.map((m: any) => m.accountId);
-      const accountMap = await accounts.getAccountsById(accountIds);
-      const readRows = Array.from(accountMap.values())
-        .filter(
-          (memberAccount): boolean =>
-            memberAccount.agentId !== null && memberAccount.agentId !== undefined,
-        )
-        .map(
-          (memberAccount): NewInternalChatMessageRead => ({
-            messageId,
-            agentId: memberAccount.agentId as string,
-            readAt: memberAccount.id === input.accountId ? now : null,
-            createdAt: now,
-            updatedAt: now,
-          }),
-        );
-
-      if (readRows.length > 0) {
-        await db.insert(internalChatMessageReads).values(readRows);
-      }
-
-      await db
-        .update(internalChatConversations)
-        .set({
+        await db.insert(internalChatMessages).values({
+          id: messageId,
+          conversationId: conversation.id,
+          authorAccountId: input.accountId,
+          content: input.content,
+          replyToMessageId: resolvedReplyTo,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(internalChatConversations.id, conversation.id));
+        });
+        await attachments.storeMessageAttachments(messageId, input.attachments);
 
-      const author = await accounts.getRequiredAccount(input.accountId);
-      const participants = await reads.listGroupMembersOrDmPeersByAccount(
-        input.accountId,
-        conversation.id,
-      );
-
-      const liveDeliveredAgentIds = connection.deliverToParticipants({
-        excludeAccountId: input.accountId,
-        participants: participants as InternalChatGroupParticipant[],
-        conversation: {
-          id: conversation.id,
-          name: (conversation.name ?? '') as string,
-          type: conversation.type,
-        },
-        messageId,
-        author: {
-          id: author.id,
-          displayName: author.displayName,
-          slug: author.slug,
-        },
-        content: input.content,
-        attachments: input.attachments,
-        createdAt: new Date(now).toISOString(),
-      });
-
-      if (liveDeliveredAgentIds.length > 0) {
-        await db
-          .update(internalChatMessageReads)
-          .set({
-            readAt: now,
-          })
-          .where(
-            and(
-              eq(internalChatMessageReads.messageId, messageId),
-              inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
-              isNull(internalChatMessageReads.readAt),
-            ),
+        const accountIds = members.map((m) => m.accountId);
+        const accountMap = await accounts.getAccountsById(accountIds);
+        const readRows = Array.from(accountMap.values())
+          .filter(
+            (memberAccount): memberAccount is typeof memberAccount & { agentId: string } =>
+              memberAccount.agentId !== null && memberAccount.agentId !== undefined,
+          )
+          .map(
+            (memberAccount): NewInternalChatMessageRead => ({
+              messageId,
+              agentId: memberAccount.agentId,
+              readAt: memberAccount.id === input.accountId ? now : null,
+              createdAt: now,
+              updatedAt: now,
+            }),
           );
-      }
 
-      return {
-        success: true,
-        messageId,
-        conversationKey: conversation.id,
-      };
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-sending',
-        level: 'error',
-        message: 'Failed to execute sendMessage',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+        if (readRows.length > 0) {
+          await db.insert(internalChatMessageReads).values(readRows);
+        }
+
+        await db
+          .update(internalChatConversations)
+          .set({
+            updatedAt: now,
+          })
+          .where(eq(internalChatConversations.id, conversation.id));
+
+        const [author, participants] = await Promise.all([
+          accounts.getRequiredAccount(input.accountId),
+          reads.listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id),
+        ]);
+
+        const liveDeliveredAgentIds = connection.deliverToParticipants({
+          excludeAccountId: input.accountId,
+          participants,
+          conversation: {
+            id: conversation.id,
+            name: (conversation.name ?? '') as string,
+            type: conversation.type,
+          },
+          messageId,
+          author: {
+            id: author.id,
+            displayName: author.displayName,
+            slug: author.slug,
+          },
+          content: input.content,
+          attachments: input.attachments,
+          createdAt: new Date(now).toISOString(),
+        });
+
+        if (liveDeliveredAgentIds.length > 0) {
+          await db
+            .update(internalChatMessageReads)
+            .set({
+              readAt: now,
+            })
+            .where(
+              and(
+                eq(internalChatMessageReads.messageId, messageId),
+                inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
+                isNull(internalChatMessageReads.readAt),
+              ),
+            );
+        }
+
+        return {
+          success: true as const,
+          messageId,
+          conversationKey: conversation.id,
+        };
+      },
+    });
   }
 
   async function getMessageAttachmentByAccount(input: {

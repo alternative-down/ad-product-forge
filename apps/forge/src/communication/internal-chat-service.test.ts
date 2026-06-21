@@ -74,7 +74,7 @@ const mockAccountOps = vi.hoisted(() => ({
 const mockSending = vi.hoisted(() => ({
   sendMessage: vi
     .fn()
-    .mockResolvedValue({ success: true, messageId: 'mock-id-123', conversationKey: 'conv_1' }),
+    .mockResolvedValue({ valid: true, data: { success: true, messageId: 'mock-id-123', conversationKey: 'conv_1' } }),
   getMessageAttachmentByAccount: vi
     .fn()
     .mockResolvedValue({ stream: null, contentType: undefined }),
@@ -833,8 +833,10 @@ describe('createInternalChatService', () => {
         attachments: [],
       });
 
-      expect(result.success).toBe(true);
-      expect(result.messageId).toBe('mock-id-123');
+      expect(result.valid).toBe(true);
+      if (!result.valid) throw new Error('expected valid');
+      expect(result.data.success).toBe(true);
+      expect(result.data.messageId).toBe('mock-id-123');
     });
   });
 

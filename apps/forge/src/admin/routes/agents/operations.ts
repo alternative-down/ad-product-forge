@@ -133,11 +133,14 @@ export function registerAgentOperationRoutes(
           content: payload.content,
           attachments: [],
         });
+        if (!sent.valid) {
+          throw new Error(sent.error);
+        }
 
         return jsonResponse({
           success: true,
-          conversationKey: sent.conversationKey,
-          messageId: sent.messageId,
+          conversationKey: sent.data.conversationKey,
+          messageId: sent.data.messageId,
         });
       } catch (err) {
         return adminRouteError(err, { label: 'Internal chat send route' });

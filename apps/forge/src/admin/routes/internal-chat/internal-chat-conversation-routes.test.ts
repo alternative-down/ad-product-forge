@@ -68,7 +68,9 @@ function createMockInternalChat() {
     createExternalChatGroupWithMembers: vi
       .fn()
       .mockResolvedValue({ groupId: 'conv_123', conversationKey: 'conv_123' }),
-    sendMessage: vi.fn().mockResolvedValue({ messageId: 'msg-sent' }),
+    sendMessage: vi
+      .fn()
+      .mockResolvedValue({ valid: true, data: { messageId: 'msg-sent' } }),
     updateGroupByAccount: vi
       .fn()
       .mockResolvedValue({ conversationId: 'conv-001', name: 'Updated' }),
