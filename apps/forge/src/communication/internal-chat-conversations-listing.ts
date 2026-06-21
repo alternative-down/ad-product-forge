@@ -18,6 +18,7 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 import { buildConversationParticipantNames } from './internal-chat-helpers';
 import type { Database } from '../database/client';
 
@@ -160,19 +161,28 @@ export function createInternalChatConversationListing(
         input.unread === true ? row.unread === 1 :
         row.unread === 0;
       if (shouldInclude && existing.length < 5) {
-        existing.push({
-          messageId: row.messageId,
-          provider: 'internal-chat',
-          authorId: row.authorAccountId,
-          targetKey: row.conversationId,
-          content: row.content ?? '',
-          attachments: [],
-          unread: row.unread === 1,
-          createdAt: new Date(row.createdAt ?? 0).toISOString(),
-          authorDisplayName: row.authorDisplayName ?? '',
-          replyToMessageId: row.replyToMessageId ?? null,
-        });
-        if (row.unread === 1) messageIdsToMarkRead.add(row.messageId);
+        if (row.createdAt == null) {
+          forgeDebug({
+            scope: 'internal-chat-conversations-listing',
+            level: 'warn',
+            message: 'skipping message with null createdAt',
+            context: { messageId: row.messageId, conversationId: row.conversationId },
+          });
+        } else {
+          existing.push({
+            messageId: row.messageId,
+            provider: 'internal-chat',
+            authorId: row.authorAccountId,
+            targetKey: row.conversationId,
+            content: row.content ?? '',
+            attachments: [],
+            unread: row.unread === 1,
+            createdAt: new Date(row.createdAt).toISOString(),
+            authorDisplayName: row.authorDisplayName ?? '',
+            replyToMessageId: row.replyToMessageId ?? null,
+          });
+          if (row.unread === 1) messageIdsToMarkRead.add(row.messageId);
+        }
       }
       messagesByConversationId.set(row.conversationId, existing);
     }
@@ -313,18 +323,27 @@ export function createInternalChatConversationListing(
     for (const row of messageRows as MessageRowFull[]) {
       const existing = messagesByConversationId.get(row.conversationId) ?? [];
       if (existing.length < 5) {
-        existing.push({
-          messageId: row.messageId,
-          provider: 'internal-chat',
-          authorId: row.authorAccountId,
-          targetKey: row.conversationId,
-          content: row.content ?? '',
-          attachments: [],
-          unread: false,
-          createdAt: new Date(row.createdAt ?? 0).toISOString(),
-          authorDisplayName: row.authorDisplayName ?? '',
-          replyToMessageId: row.replyToMessageId ?? null,
-        });
+        if (row.createdAt == null) {
+          forgeDebug({
+            scope: 'internal-chat-conversations-listing',
+            level: 'warn',
+            message: 'skipping message with null createdAt',
+            context: { messageId: row.messageId, conversationId: row.conversationId },
+          });
+        } else {
+          existing.push({
+            messageId: row.messageId,
+            provider: 'internal-chat',
+            authorId: row.authorAccountId,
+            targetKey: row.conversationId,
+            content: row.content ?? '',
+            attachments: [],
+            unread: false,
+            createdAt: new Date(row.createdAt).toISOString(),
+            authorDisplayName: row.authorDisplayName ?? '',
+            replyToMessageId: row.replyToMessageId ?? null,
+          });
+        }
       }
       messagesByConversationId.set(row.conversationId, existing);
     }
