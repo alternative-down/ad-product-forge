@@ -1,6 +1,7 @@
 import { getStoredAdminSecret } from '@/lib/admin-secret';
 
 const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
+const FORGE_ADMIN_HOSTNAME_PREFIX = 'forge-admin.';
 
 function stripTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -19,8 +20,8 @@ function getConfiguredApiBaseUrl() {
 
   const { protocol, hostname, port } = window.location;
 
-  if (hostname.startsWith('forge-admin.')) {
-    return `${protocol}//forge.${hostname.slice('forge-admin.'.length)}`;
+  if (hostname.startsWith(FORGE_ADMIN_HOSTNAME_PREFIX)) {
+    return `${protocol}//forge.${hostname.slice(FORGE_ADMIN_HOSTNAME_PREFIX.length)}`;
   }
 
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -40,6 +41,31 @@ function buildApiUrl(path: string) {
   return `${baseUrl}${path}`;
 }
 
+async function extractErrorMessage(
+  path: string,
+  response: Response,
+  defaultMessage: string,
+): Promise<string> {
+  const rawText = await response.text();
+  try {
+    const payload = JSON.parse(rawText) as { error?: string };
+    return payload.error ?? defaultMessage;
+  } catch {
+    console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
+    return defaultMessage;
+  }
+}
+
+async function throwIfNotOk(
+  path: string,
+  response: Response,
+  defaultMessage: string,
+): Promise<void> {
+  if (response.ok) return;
+  const message = await extractErrorMessage(path, response, defaultMessage);
+  throw new Error(message);
+}
+
 export async function request<TResponse>(path: string, init?: RequestInit) {
   const secret = getStoredAdminSecret();
   const response = await fetch(buildApiUrl(path), {
@@ -52,21 +78,9 @@ export async function request<TResponse>(path: string, init?: RequestInit) {
     },
   });
 
-  if (!response.ok) {
-    let message = 'Não foi possível concluir a operação.';
+  await throwIfNotOk(path, response, 'Não foi possível concluir a operação.');
 
-    const rawText = await response.text();
-    try {
-      const payload = JSON.parse(rawText) as { error?: string };
-      message = payload.error ?? message;
-    } catch {
-      console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
-    }
-
-    throw new Error(message);
-  }
-
-  return JSON.parse(await response.text()) as Promise<TResponse>;
+  return JSON.parse(await response.text()) as TResponse;
 }
 
 export async function requestBlob(path: string, init?: RequestInit) {
@@ -80,19 +94,7 @@ export async function requestBlob(path: string, init?: RequestInit) {
     },
   });
 
-  if (!response.ok) {
-    let message = 'Não foi possível concluir a operação.';
-
-    const rawText = await response.text();
-    try {
-      const payload = JSON.parse(rawText) as { error?: string };
-      message = payload.error ?? message;
-    } catch {
-      console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
-    }
-
-    throw new Error(message);
-  }
+  await throwIfNotOk(path, response, 'Não foi possível concluir a operação.');
 
   return response.blob();
 }
@@ -113,15 +115,11 @@ export async function validateAdminSecret(secret: string) {
     };
   }
 
-  let message = 'Não foi possível validar a chave.';
-
-  const rawText = await response.text();
-  try {
-    const payload = JSON.parse(rawText) as { error?: string };
-    message = payload.error ?? message;
-  } catch {
-    console.warn('[admin-api] /admin/overview: non-JSON error response', rawText);
-  }
+  const message = await extractErrorMessage(
+    '/admin/overview',
+    response,
+    'Não foi possível validar a chave.',
+  );
 
   return {
     valid: false as const,
