@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
+import type { ToolResult } from '../../../capabilities/tools/error-wrapper';
 import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
@@ -33,12 +34,14 @@ type InternalChat = {
     slug: string;
     displayName: string;
   }) => Promise<{ accountId: string }>;
-  sendMessage: (input: {
-    accountId: string;
-    targetKey: string;
-    content: string;
-    attachments: CommunicationFile[];
-  }) => Promise<{ success: boolean; conversationKey: string; messageId: string }>;
+  sendMessage: (
+    input: {
+      accountId: string;
+      targetKey: string;
+      content: string;
+      attachments: CommunicationFile[];
+    },
+  ) => Promise<ToolResult<{ success: boolean; conversationKey: string; messageId: string }>>;
 };
 
 // Widen to accept both the minimal Registry and the full InternalAgentRegistry
@@ -81,7 +84,7 @@ export function registerAgentOperationRoutes(
       handler: HttpHandler;
     }) => void;
   },
-  input: { internalChat: InternalChat } | any,
+  input: { internalChat: InternalChat },
   registry: Registry | any,
 ) {
   // POST /admin/agent/wake
@@ -133,7 +136,7 @@ export function registerAgentOperationRoutes(
           content: payload.content,
           attachments: [],
         });
-        if (sent.valid !== true) {
+        if (!sent.valid) {
           throw new Error(sent.error);
         }
 
