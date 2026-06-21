@@ -1,7 +1,7 @@
 import { forgeDebug } from "@forge-runtime/core";
 
 
-export function parseScheduleDate(value: string) {
+export function parseScheduleDate(value: string): number {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
@@ -42,11 +42,15 @@ export function validateScheduleShape(input: {
 }
 
 export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?: number) {
-  if (scheduleType !== 'date' || scheduledDate == null || scheduledDate === 0) {
+  if (scheduleType !== 'date') {
     return;
   }
 
-  if ((scheduledDate as number) <= Date.now()) {
+  if (scheduledDate == null || scheduledDate === 0) {
+    return;
+  }
+
+  if (scheduledDate <= Date.now()) {
     forgeDebug({
       scope: 'schedule-helpers',
       level: 'warn',
@@ -116,12 +120,12 @@ export function createWakeContent(input: {
     lines.push(`Cron expression: ${input.cronExpression}`);
   }
 
-  if (input.scheduleType === 'date' && input.scheduledDate !== undefined) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate as number).toISOString()}`);
+  if (input.scheduleType === 'date' && input.scheduledDate != null) {
+    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
   }
 
-  if (input.nextTriggerAt !== undefined) {
-    lines.push(`Next trigger at: ${new Date(input.nextTriggerAt as number).toISOString()}`);
+  if (input.nextTriggerAt != null) {
+    lines.push(`Next trigger at: ${new Date(input.nextTriggerAt).toISOString()}`);
   }
 
   lines.push('', 'Content:', input.content.trim());

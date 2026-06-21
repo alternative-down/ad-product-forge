@@ -494,6 +494,37 @@ describe('createWakeContent', () => {
   });
 });
 
+  test('skips scheduled date when value is null (does NOT print epoch 1970)', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'date',
+      scheduledDate: null,
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).not.toContain('Scheduled date:');
+    expect(result).not.toContain('1970-01-01');
+  });
+
+  test('skips nextTriggerAt when value is null (does NOT print epoch 1970)', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+      nextTriggerAt: null,
+    });
+
+    expect(result).not.toContain('Next trigger at:');
+    expect(result).not.toContain('1970-01-01');
+  });
+
 describe('createHeartbeatWakeInstruction', () => {
   test('returns custom content when provided and non-empty after trim', () => {
     const result = createHeartbeatWakeInstruction('Check pending tasks');
