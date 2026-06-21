@@ -71,8 +71,7 @@ export function createScheduleNotifications(deps: NotificationDependencies) {
       scheduleKind: scheduleRecord.kind,
       scheduleName: scheduleRecord.name,
       idleOnly:
-        scheduleRecord.kind === 'heartbeat' ||
-        (scheduleRecord.scheduleType === 'cron' && scheduleRecord.wakeWhenRunning === false),
+        scheduleRecord.kind === 'heartbeat' || scheduleRecord.wakeWhenRunning === false,
       content: createWakeContent({
         name: scheduleRecord.name,
         description: scheduleRecord.description,

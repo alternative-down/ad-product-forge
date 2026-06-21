@@ -232,13 +232,25 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
    * record — call sites pass their shape directly and rely on this function
    * for the runtime invariant check.
    */
+  /**
+   * Narrow the wide input kind (ScheduleLifecycleInput.kind is
+   * 'agent' | 'heartbeat' | string) to the literal union required
+   * by ScheduleLifecycleRecord. Throws on anything else so that
+   * silent coercion cannot bypass heartbeat semantics.
+   * 'agent' is also the default for null/undefined (matching prior
+   * behavior for DB rows that omit the column).
+   */
+  function parseScheduleKind(raw: string | null | undefined): 'agent' | 'heartbeat' {
+    if (raw === 'heartbeat') return 'heartbeat';
+    if (raw === 'agent' || raw == null) return 'agent';
+    throw new Error(`invalid schedule kind: ${JSON.stringify(raw)}`);
+  }
+
   function toLifecycleRecord(record: ScheduleLifecycleInput): ScheduleLifecycleRecord {
     const base = {
       scheduleId: record.scheduleId,
       isActive: record.isActive === 1 || record.isActive === true,
-      kind: (record.kind === 'heartbeat' ? 'heartbeat' : 'agent') as
-        | 'agent'
-        | 'heartbeat',
+      kind: parseScheduleKind(record.kind),
       agentId: record.agentId,
       name: record.name,
       description: record.description ?? undefined,
@@ -247,18 +259,28 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         record.wakeWhenRunning === 1 || record.wakeWhenRunning === true,
     };
     if (record.scheduleType === 'cron') {
+      if (record.cronExpression == null || record.cronExpression === '') {
+        throw new Error(
+          `invalid cron schedule: missing cronExpression for scheduleId=${record.scheduleId}`,
+        );
+      }
       return {
         ...base,
         scheduleType: 'cron' as const,
-        cronExpression: record.cronExpression ?? '',
-        timezone: record.timezone as string,
+        cronExpression: record.cronExpression,
+        timezone: record.timezone,
       };
     }
     if (record.scheduleType === 'date') {
+      if (record.scheduledDate == null) {
+        throw new Error(
+          `invalid date schedule: missing scheduledDate for scheduleId=${record.scheduleId}`,
+        );
+      }
       return {
         ...base,
         scheduleType: 'date',
-        scheduledDate: record.scheduledDate ?? 0,
+        scheduledDate: record.scheduledDate,
       };
     }
     // Runtime guard for DB rows whose schedule_type column is typed as

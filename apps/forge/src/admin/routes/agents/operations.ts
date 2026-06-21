@@ -133,7 +133,7 @@ export function registerAgentOperationRoutes(
           content: payload.content,
           attachments: [],
         });
-        if (!sent.valid) {
+        if (sent.valid !== true) {
           throw new Error(sent.error);
         }
 

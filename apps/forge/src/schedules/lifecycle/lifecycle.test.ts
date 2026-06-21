@@ -486,4 +486,43 @@ describe('logScheduleWarning helper (#5594)', () => {
       context: { scheduleId: 'sch_1', error: 'connection reset' },
     });
   });
+
+describe('toLifecycleRecord() null coercion throws (regression fix #5871)', () => {
+  it('throws on null cronExpression for cron schedule', async () => {
+    const lifecycle = createScheduleLifecycle(makeDeps());
+    const record = asDbRow(makeRecord({ scheduleType: 'cron' }));
+    record.cronExpression = null;
+    await expect(lifecycle.register(record)).rejects.toThrow(
+      /invalid cron schedule: missing cronExpression/,
+    );
+  });
+
+  it('throws on empty cronExpression for cron schedule', async () => {
+    const lifecycle = createScheduleLifecycle(makeDeps());
+    const record = asDbRow(makeRecord({ scheduleType: 'cron' }));
+    record.cronExpression = '';
+    await expect(lifecycle.register(record)).rejects.toThrow(
+      /invalid cron schedule: missing cronExpression/,
+    );
+  });
+
+  it('throws on null scheduledDate for date schedule (prevents null to epoch 1970)', async () => {
+    const lifecycle = createScheduleLifecycle(makeDeps());
+    const record = asDbRow(makeRecord({ scheduleType: 'date' }));
+    record.scheduledDate = null;
+    await expect(lifecycle.register(record)).rejects.toThrow(
+      /invalid date schedule: missing scheduledDate/,
+    );
+  });
+
+  it('throws on invalid kind value', async () => {
+    const lifecycle = createScheduleLifecycle(makeDeps());
+    const record = asDbRow(makeRecord({ scheduleType: 'cron' }));
+    (record as { kind: string }).kind = 'unknown-kind';
+    await expect(lifecycle.register(record)).rejects.toThrow(
+      /invalid schedule kind/,
+    );
+  });
+});
+
 });
