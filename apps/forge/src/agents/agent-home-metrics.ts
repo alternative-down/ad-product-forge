@@ -1,6 +1,4 @@
 import { errorMsg } from './error-formatting';
-import path from 'node:path'; /* eslint-disable-line @typescript-eslint/no-unused-vars */
-
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { forgeDebug } from '@forge-runtime/core';
@@ -26,6 +24,9 @@ import {
 } from './agent-home-metrics-thread-helpers';
 
 // Re-exports from helpers for backward compatibility
+
+import { withTimeout } from '../utils/async';
+import { FIVE_SECONDS_MS } from './time-constants';
 
 const OBSERVABILITY_READ_TIMEOUT_MS = FIVE_SECONDS_MS;
 
@@ -105,8 +106,26 @@ export type AgentHomeMetricSnapshot = {
   }>;
 };
 
-import { withTimeout } from '../utils/async';
-import { FIVE_SECONDS_MS } from './time-constants';
+
+function safeReadWithTimeout<T>(
+  name: string,
+  agentId: string,
+  promise: Promise<T>,
+  fallback: T,
+): Promise<T> {
+  return withTimeout(promise, OBSERVABILITY_READ_TIMEOUT_MS, `${name} timed out for ${agentId}`).catch(
+    (error) => {
+      forgeDebug({
+        scope: 'agent-home-metrics',
+        level: 'error',
+        agentId,
+        message: `Failed to load ${name}`,
+        context: { error: errorMsg(error) },
+      });
+      return fallback;
+    },
+  );
+}
 
 export async function readAgentHomeMetricSnapshot(input: {
   db: Database;
@@ -165,68 +184,36 @@ export async function readAgentHomeMetricSnapshot(input: {
       orderBy: [desc(agentExecutionSteps.createdAt)],
       limit: 6,
     }),
-    withTimeout(
+    safeReadWithTimeout(
+      'runtime memory',
+      agent.id,
       readAgentRuntimeMemory(input.db, input.workspaceBasePath, agent.id),
-      OBSERVABILITY_READ_TIMEOUT_MS,
-      `Agent runtime memory read timed out for ${agent.id}`,
-    ).catch((error) => {
-      forgeDebug({
-        scope: 'agent-home-metrics',
-        level: 'error',
-        agentId: agent.id,
-        message: 'Failed to load runtime memory',
-        context: { error: errorMsg(error) },
-      });
-      return null;
-    }),
-    withTimeout(
+      null,
+    ),
+    safeReadWithTimeout(
+      'latest thread details',
+      agent.id,
       readLatestThreadDetails(input.workspaceBasePath, agent.id),
-      OBSERVABILITY_READ_TIMEOUT_MS,
-      `Latest thread details read timed out for ${agent.id}`,
-    ).catch((error) => {
-      forgeDebug({
-        scope: 'agent-home-metrics',
-        level: 'error',
-        agentId: agent.id,
-        message: 'Failed to load latest thread details',
-        context: { error: errorMsg(error) },
-      });
-      return {
+      {
         preview: null,
         toolBadge: null,
-      };
-    }),
-    withTimeout(
+      },
+    ),
+    safeReadWithTimeout(
+      'LTM state',
+      agent.id,
       createAgentLongTermMemoryStore(input.db, {
         agentId: agent.id,
       }).readState(),
-      OBSERVABILITY_READ_TIMEOUT_MS,
-      `Long-term memory state read timed out for ${agent.id}`,
-    ).catch((error) => {
-      forgeDebug({
-        scope: 'agent-home-metrics',
-        level: 'error',
-        agentId: agent.id,
-        message: 'Failed to load LTM state',
-        context: { error: errorMsg(error) },
-      });
-      return null;
-    }),
+      null,
+    ),
     input.runtime?.longTermMemory
-      ? withTimeout(
+      ? safeReadWithTimeout(
+          'runtime LTM snapshot',
+          agent.id,
           Promise.resolve(input.runtime.longTermMemory.readSnapshot()),
-          OBSERVABILITY_READ_TIMEOUT_MS,
-          `Runtime LTM snapshot timed out for ${agent.id}`,
-        ).catch((error) => {
-          forgeDebug({
-            scope: 'agent-home-metrics',
-            level: 'error',
-            agentId: agent.id,
-            message: 'Failed to load runtime LTM snapshot',
-            context: { error: errorMsg(error) },
-          });
-          return null;
-        })
+          null,
+        )
       : Promise.resolve(null),
   ]);
 
