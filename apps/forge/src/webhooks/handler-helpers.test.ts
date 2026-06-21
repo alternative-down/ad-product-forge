@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import {
   extractRouteId,
   extractHeader,
@@ -71,11 +71,11 @@ describe('verifyWebhookSignature', () => {
   const secret = 'my-secret';
 
   function sign(rawBody: string, key: string): string {
-    return 'sha256=' + createHash('sha256').update(rawBody).digest('hex');
+    return 'sha256=' + createHmac('sha256', key).update(rawBody).digest('hex');
   }
 
   function signWith(rawBody: string, key: string): string {
-    return createHash('sha256').update(rawBody).digest('hex');
+    return createHmac('sha256', key).update(rawBody).digest('hex');
   }
 
   it('returns true for valid signature', () => {
@@ -100,15 +100,29 @@ describe('verifyWebhookSignature', () => {
     expect(verifyWebhookSignature(body, [signature, 'extra'], secret)).toBe(true);
   });
 
-  it('uses the body string, not the parsed payload', () => {
+  it('uses HMAC-SHA256 with the secret (not plain SHA-256)', () => {
     const bodyText = '{"a":1,"b":2}';
     const signature = sign(bodyText, secret);
-    // The signature is verified against the raw body, not a parsed payload.
-    // Same body + signature should match regardless of secret (the original
-    // implementation does not use the secret in the hash — it is a SHA-256 of
-    // the body). Documenting the actual behavior; secret verification
-    // correctness is a separate concern (out of scope for #5382 refactor).
-    expect(verifyWebhookSignature(bodyText, signature, 'unused-secret')).toBe(true);
+    // Signature must be computed with the secret. A signature computed
+    // with a different secret must NOT verify, and a signature verified
+    // against a different secret must NOT match.
+    expect(verifyWebhookSignature(bodyText, signature, secret)).toBe(true);
+    expect(verifyWebhookSignature(bodyText, signature, 'wrong-secret')).toBe(false);
+    expect(verifyWebhookSignature(bodyText, sign(bodyText, 'wrong-secret'), secret)).toBe(false);
+  });
+
+  it('returns false when secret differs', () => {
+    const signature = sign(body, secret);
+    expect(verifyWebhookSignature(body, signature, 'different-secret')).toBe(false);
+  });
+
+  it('security regression: forged signature with different secret is rejected', () => {
+    // Regression test for the P0 #5870 bypass: previously, any signature
+    // matching sha256(body) would verify, regardless of the secret.
+    // Compute a forged signature using a wrong secret — it must NOT verify
+    // against the route's real secret.
+    const forgedSig = sign(body, 'attacker-guessed-secret');
+    expect(verifyWebhookSignature(body, forgedSig, secret)).toBe(false);
   });
 
   it('returns false on crypto edge case (Buffer length mismatch)', () => {
