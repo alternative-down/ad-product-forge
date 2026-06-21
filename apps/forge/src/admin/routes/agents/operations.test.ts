@@ -21,9 +21,12 @@ function createMockInternalChat() {
   return {
     registerExternalAccount: vi.fn().mockResolvedValue({ accountId: 'account-123' }),
     sendMessage: vi.fn().mockResolvedValue({
-      success: true,
-      conversationKey: 'conv-456',
-      messageId: 'msg-789',
+      valid: true,
+      data: {
+        success: true,
+        conversationKey: 'conv-456',
+        messageId: 'msg-789',
+      },
     }),
   };
 }

@@ -91,10 +91,13 @@ export function createInternalChatProvider(input: {
         content: message.content,
         attachments: message.attachments,
       });
+      if (!sent.valid) {
+        throw new Error(sent.error);
+      }
 
       return {
-        targetKey: sent.conversationKey,
-        messageId: sent.messageId,
+        targetKey: sent.data.conversationKey,
+        messageId: sent.data.messageId,
       };
     },
   };

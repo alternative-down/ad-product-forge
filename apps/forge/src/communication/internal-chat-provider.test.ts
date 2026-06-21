@@ -284,7 +284,7 @@ describe('createInternalChatProvider', () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      const sent = { messageId: 'msg-new', conversationKey: 'conv-1' };
+      const sent = { valid: true, data: { messageId: 'msg-new', conversationKey: 'conv-1' } };
       const svc = makeService({
         getAccountByAgentId: vi.fn().mockResolvedValue(account),
         sendMessage: vi.fn().mockResolvedValue(sent),
@@ -316,7 +316,7 @@ describe('createInternalChatProvider', () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      const sent = { messageId: 'msg-x', conversationKey: 'different-conv' };
+      const sent = { valid: true, data: { messageId: 'msg-x', conversationKey: 'different-conv' } };
       const svc = makeService({
         getAccountByAgentId: vi.fn().mockResolvedValue(account),
         sendMessage: vi.fn().mockResolvedValue(sent),
