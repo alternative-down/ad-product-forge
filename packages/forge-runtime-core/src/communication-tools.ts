@@ -51,13 +51,6 @@ const sendMessageInputSchema = z.object({
   attachments: z.array(z.string()).optional().describe('Optional attachment file paths.'),
 });
 
-// Error output schema used by all tools
-const _errorOutputSchema = z.object({
-  valid: z.literal(false),
-  error: z.string().describe('Error message describing what went wrong.'),
-  hint: z.string().optional().describe('Suggestion for how to fix the error.'),
-});
-
 export function createExternalAccountTools(communication: CommunicationModule): ToolsInput {
   return {
     list_contacts: createTool({
