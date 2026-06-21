@@ -31,6 +31,14 @@ vi.mock('./internal-chat-helpers', () => ({
   buildConversationParticipantNames: mockBuildConversationParticipantNames,
 }));
 
+const { mockForgeDebug } = vi.hoisted(() => ({
+  mockForgeDebug: vi.fn(),
+}));
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: mockForgeDebug,
+}));
+
 // ---------------------------------------------------------------------------
 // Chainable DB mock
 // ---------------------------------------------------------------------------
@@ -161,6 +169,10 @@ function makeConversationRow(id: string, name: string | null, updatedAt = 1_500_
 // ---------------------------------------------------------------------------
 let getRequiredAgentAccount = vi.fn();
 let getRequiredExternalAccount = vi.fn();
+
+afterEach(() => {
+  mockForgeDebug.mockReset();
+});
 
 beforeEach(() => {
   mockAll.mockReset();
@@ -501,3 +513,59 @@ describe('buildConversationParticipantNames integration (#5738)', () => {
     expect(arg.map((m) => m.displayName)).toEqual(['A', 'B']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression fix L#NN-32 v8 — null createdAt skip + forgeDebug warn
+// ---------------------------------------------------------------------------
+
+describe('null createdAt handling (regression fix L#NN-32 v8)', () => {
+  it('skips a message with null createdAt instead of inserting 1970 epoch', async () => {
+    const conv = makeConversationRow('conv-1', null);
+    const nullCreatedAtRow = {
+      ...makeMessageRow('conv-1', 'msg-bad', { content: 'content', authorAccountId: 'acct-1', authorDisplayName: 'Alice' }),
+      createdAt: null,
+    };
+    const goodRow = makeMessageRow('conv-1', 'msg-good', { content: 'content', authorAccountId: 'acct-1', authorDisplayName: 'Alice' });
+    mockAll.mockResolvedValueOnce([conv]);
+    mockAll.mockResolvedValueOnce([nullCreatedAtRow, goodRow]);
+    mockFindMany.mockResolvedValueOnce([
+      makeMemberRow('conv-1', 'agent-acct-1', 'A', 'agent-1'),
+    ]);
+    const { listConversations } = makeListing();
+    const result = await listConversations({ agentId: 'agent-1', limit: 10 });
+
+    // The good message is included; the bad one is skipped.
+    const messages = result[0]?.messages ?? [];
+    expect(messages.map((m) => m.messageId)).toEqual(['msg-good']);
+
+    // forgeDebug was called with the warn level for the corrupted row.
+    expect(mockForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'internal-chat-conversations-listing',
+        level: 'warn',
+        message: 'skipping message with null createdAt',
+        context: expect.objectContaining({ messageId: 'msg-bad' }),
+      }),
+    );
+  });
+
+  it('does NOT mark a null-createdAt message as read', async () => {
+    const conv = makeConversationRow('conv-1', null);
+    const nullCreatedAtRow = {
+      ...makeMessageRow('conv-1', 'msg-bad', { content: 'content', authorAccountId: 'acct-1', authorDisplayName: 'Alice' }),
+      createdAt: null,
+      unread: 1,
+    };
+    mockAll.mockResolvedValueOnce([conv]);
+    mockAll.mockResolvedValueOnce([nullCreatedAtRow]);
+    mockFindMany.mockResolvedValueOnce([
+      makeMemberRow('conv-1', 'agent-acct-1', 'A', 'agent-1'),
+    ]);
+    const { listConversations } = makeListing();
+    await listConversations({ agentId: 'agent-1', limit: 10 });
+
+    // No mark-as-read call because the row was skipped.
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+

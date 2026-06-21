@@ -111,6 +111,17 @@ async function listRecentExternalConversations(
   }
 }
 
+/**
+ * Narrow the wide conversation type (Drizzle infers text as string) to the
+ * literal union 'group' | 'dm'. Throws on unexpected values — DB has
+ * .notNull() on the column, so any other value is real corruption that
+ * would otherwise silently coerce to 'dm'.
+ */
+function parseConversationType(raw: string | undefined): 'group' | 'dm' {
+  if (raw === 'group' || raw === 'dm') return raw;
+  throw new Error(`invalid conversation type: ${JSON.stringify(raw)}`);
+}
+
 async function listRecentInternalChatConversations(
   internalChat: InternalChatService,
   agentId: string,
@@ -143,7 +154,7 @@ async function listRecentInternalChatConversations(
           conversationId: c.targetKey,
           conversationKey: c.targetKey,
           provider: c.provider,
-          type: internalConversation?.type === 'group' ? 'group' : 'dm',
+          type: parseConversationType(internalConversation?.type),
           name: c.name ?? undefined,
           participants,
           updatedAt: Date.parse(c.latestMessageAt) || 0,
