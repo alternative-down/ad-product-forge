@@ -198,7 +198,7 @@ describe('createMiniMaxTools', () => {
         mockContext(),
       );
       expect(result.valid).toBe(false);
-      expect(result.hint).toContain('MiniMax rejected');
+      expect(result.hint).toContain('MiniMax speech API');
     });
   });
 

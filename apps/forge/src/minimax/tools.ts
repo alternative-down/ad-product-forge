@@ -1,5 +1,4 @@
 import { createTool, forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/error-formatting';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -242,33 +241,17 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
         'List MiniMax voices available for TTS. Use this before minimax_tts when you want to choose a voiceId instead of using the default voice.',
       inputSchema: z.object({}),
       execute: async () => {
-        let result;
-        try {
-          result = await minimax.listVoices('all');
-        } catch (error) {
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Verify the MiniMax integration is configured and the voice list API is available.',
-          };
-        }
-
-        if (!result.success || !result.data) {
-          return {
-            valid: false,
-            error: result.error?.message ?? 'Failed to list voices',
-            hint: 'Verify the MiniMax integration is configured and try again.',
-          };
-        }
-
         return await withToolErrorLogging({
           scope: 'minimax',
           op: 'list_minimax_voices',
           hint: 'Verify the MiniMax integration is configured and the voice list API is available.',
-          fn: () => Promise.resolve({
-            voiceType: 'all' as const,
-            ...result.data!,
-          }),
+          fn: async () => {
+            const result = await minimax.listVoices('all');
+            if (!result.success || !result.data) {
+              throw new Error(result.error?.message ?? 'Failed to list voices');
+            }
+            return { voiceType: 'all' as const, ...result.data };
+          },
         });
       },
     });
@@ -312,49 +295,37 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           .describe('Audio format for the saved file. Default is mp3.'),
       }),
       execute: async (input, context) => {
-        let result;
-        try {
-          result = await minimax.textToSpeech({
-            text: input.text,
-            voiceSetting: {
-              voiceId: input.voice_id ?? 'Portuguese_CaptivatingStoryteller',
-              speed: input.speed ?? undefined,
-              volume: input.volume ?? undefined,
-              pitch: input.pitch ?? undefined,
-            },
-            languageBoost: input.language_boost ?? undefined,
-            pronunciationToneReplacements: input.pronunciation_tone_replacements ?? undefined,
-            outputFormat: input.output_format ?? 'mp3',
-          });
-        } catch (error) {
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax speech API.',
-          };
-        }
-
-        if (!result.success || !result.data) {
-          return {
-            valid: false,
-            error: result.error?.message ?? 'Failed to generate speech',
-            hint: buildMiniMaxHint(
-              result.error?.code,
-              'Verify the MiniMax integration is configured and the selected speech options are supported.',
-            ),
-          };
-        }
-
         return await withToolErrorLogging({
           scope: 'minimax',
           op: 'minimax_tts',
           hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax speech API.',
           fn: async () => {
-            const audioBuffer = Buffer.from(result.data!.audioHex, 'hex');
+            const result = await minimax.textToSpeech({
+              text: input.text,
+              voiceSetting: {
+                voiceId: input.voice_id ?? 'Portuguese_CaptivatingStoryteller',
+                speed: input.speed ?? undefined,
+                volume: input.volume ?? undefined,
+                pitch: input.pitch ?? undefined,
+              },
+              languageBoost: input.language_boost ?? undefined,
+              pronunciationToneReplacements: input.pronunciation_tone_replacements ?? undefined,
+              outputFormat: input.output_format ?? 'mp3',
+            });
+            if (!result.success || !result.data) {
+              throw new Error(
+                result.error?.message
+                  ?? buildMiniMaxHint(
+                    result.error?.code,
+                    'Verify the MiniMax integration is configured and the selected speech options are supported.',
+                  ),
+              );
+            }
+            const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
             const savedPath = await writeBufferToWorkspace(
               (context as unknown as MiniMaxToolContext).workspace,
               'tts',
-              result.data!.audioFormat,
+              result.data.audioFormat,
               audioBuffer,
             );
             return { path: savedPath };
@@ -393,54 +364,42 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           ),
       }),
       execute: async (input, context) => {
-        let result;
-        try {
-          const subjectReference = input.reference_images
-            ? await Promise.all(
-                input.reference_images.map(async (referenceImage: string) => ({
-                  type: input.reference_type ?? 'character',
-                  imageFile: /^https?:\/\//i.test(referenceImage)
-                    ? referenceImage
-                    : await readWorkspaceImageAsDataUrl((context as unknown as MiniMaxToolContext).workspace, referenceImage),
-                })),
-              )
-            : undefined;
-
-          result = await minimax.generateImage({
-            prompt: input.prompt,
-            model: input.model ?? undefined,
-            aspectRatio: input.aspect_ratio ?? undefined,
-            width: input.width ?? undefined,
-            height: input.height ?? undefined,
-            imageCount: 1,
-            subjectReference,
-          });
-        } catch (error) {
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
-          };
-        }
-
-        if (!result.success || !result.data) {
-          return {
-            valid: false,
-            error: result.error?.message ?? 'Failed to generate image',
-            hint: buildMiniMaxHint(
-              result.error?.code,
-              'Verify the MiniMax integration is configured and the selected image options are supported.',
-            ),
-          };
-        }
-
         return await withToolErrorLogging({
           scope: 'minimax',
           op: 'minimax_image',
           hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
           fn: async () => {
+            const subjectReference = input.reference_images
+              ? await Promise.all(
+                  input.reference_images.map(async (referenceImage: string) => ({
+                    type: input.reference_type ?? 'character',
+                    imageFile: /^https?:\/\//i.test(referenceImage)
+                      ? referenceImage
+                      : await readWorkspaceImageAsDataUrl((context as unknown as MiniMaxToolContext).workspace, referenceImage),
+                  })),
+                )
+              : undefined;
+
+            const result = await minimax.generateImage({
+              prompt: input.prompt,
+              model: input.model ?? undefined,
+              aspectRatio: input.aspect_ratio ?? undefined,
+              width: input.width ?? undefined,
+              height: input.height ?? undefined,
+              imageCount: 1,
+              subjectReference,
+            });
+            if (!result.success || !result.data) {
+              throw new Error(
+                result.error?.message
+                  ?? buildMiniMaxHint(
+                    result.error?.code,
+                    'Verify the MiniMax integration is configured and the selected image options are supported.',
+                  ),
+              );
+            }
             const paths = await Promise.all(
-              result.data!.images.map((base64Image, index) =>
+              result.data.images.map((base64Image, index) =>
                 writeBufferToWorkspace(
                   (context as unknown as MiniMaxToolContext).workspace,
                   'images',
@@ -490,56 +449,43 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           .describe('Optional image URL to use as the last frame.'),
       }),
       execute: async (input, context) => {
-        let task;
-        try {
-          task = await minimax.createVideoGenerationTask({
-            prompt: input.prompt,
-            model: input.model ?? undefined,
-            duration: input.duration ?? undefined,
-            resolution: input.resolution ?? undefined,
-            firstFrameImage: input.first_frame_image ?? undefined,
-            lastFrameImage: input.last_frame_image ?? undefined,
-          });
-        } catch (error) {
-          return {
-            valid: false,
-            error: errorMsg(error),
-            hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax video API.',
-          };
-        }
-
-        if (!task.success || !task.data) {
-          return {
-            valid: false,
-            error: task.error?.message ?? 'Failed to start video generation',
-            hint: buildMiniMaxHint(
-              task.error?.code,
-              'Verify the MiniMax integration is configured and the selected video options are supported.',
-            ),
-          };
-        }
-
-        const fileId = await waitForVideoFile(minimax, task.data.taskId);
-        const file = await minimax.retrieveFile(fileId);
-
-        if (!file.success || !file.data) {
-          return {
-            valid: false,
-            error: file.error?.message ?? 'MiniMax did not return a downloadable video file',
-            hint: 'The video task finished, but the file could not be retrieved. Try again in a moment.',
-          };
-        }
-
         return await withToolErrorLogging({
           scope: 'minimax',
           op: 'minimax_video',
           hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax video API.',
           fn: async () => {
-            const fileBuffer = await downloadFileBuffer(file.data!.downloadUrl ?? '');
+            const task = await minimax.createVideoGenerationTask({
+              prompt: input.prompt,
+              model: input.model ?? undefined,
+              duration: input.duration ?? undefined,
+              resolution: input.resolution ?? undefined,
+              firstFrameImage: input.first_frame_image ?? undefined,
+              lastFrameImage: input.last_frame_image ?? undefined,
+            });
+            if (!task.success || !task.data) {
+              throw new Error(
+                task.error?.message
+                  ?? buildMiniMaxHint(
+                    task.error?.code,
+                    'Verify the MiniMax integration is configured and the selected video options are supported.',
+                  ),
+              );
+            }
+
+            const fileId = await waitForVideoFile(minimax, task.data.taskId);
+            const file = await minimax.retrieveFile(fileId);
+
+            if (!file.success || !file.data) {
+              throw new Error(
+                file.error?.message ?? 'MiniMax did not return a downloadable video file',
+              );
+            }
+
+            const fileBuffer = await downloadFileBuffer(file.data.downloadUrl ?? '');
             const savedPath = await writeBufferToWorkspace(
               (context as unknown as MiniMaxToolContext).workspace,
               'videos',
-              inferExtensionFromUrl(file.data!.downloadUrl ?? '', 'mp4'),
+              inferExtensionFromUrl(file.data.downloadUrl ?? '', 'mp4'),
               fileBuffer,
             );
             return { path: savedPath };
