@@ -143,3 +143,21 @@ export function upsertSystemIntegration(
     body: JSON.stringify(input),
   });
 }
+
+export type FactoryResetResult = {
+  backupPath: string;
+  backupBytes: number;
+  wipedTables: string[];
+  timestamp: number;
+};
+
+export type FactoryResetRequest = {
+  confirm: 'FACTORY_RESET';
+};
+
+export function triggerFactoryReset() {
+  return request<FactoryResetResult>('/admin/system/reset', {
+    method: 'POST',
+    body: JSON.stringify({ confirm: 'FACTORY_RESET' } satisfies FactoryResetRequest),
+  });
+}
