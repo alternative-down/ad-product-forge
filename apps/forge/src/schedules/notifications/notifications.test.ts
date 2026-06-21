@@ -147,11 +147,21 @@ describe('createScheduleNotifications', () => {
     expect(deps.notifyAgent.mock.calls[0]![0].idleOnly).toBe(false);
   });
 
-  it('does NOT mark date agent schedules as idleOnly even with wakeWhenRunning=false', async () => {
+  it('marks date agent schedules as idleOnly when wakeWhenRunning=false (regression fix #5874)', async () => {
     const deps = makeDeps();
     const fireDate = new Date('2026-06-02T09:00:00Z');
     await createScheduleNotifications(deps).triggerNotification(
       makeRecord({ kind: 'agent', scheduleType: 'date', wakeWhenRunning: false }),
+      fireDate,
+    );
+    expect(deps.notifyAgent.mock.calls[0]![0].idleOnly).toBe(true);
+  });
+
+  it('does NOT mark date agent schedules as idleOnly when wakeWhenRunning=true', async () => {
+    const deps = makeDeps();
+    const fireDate = new Date('2026-06-02T09:00:00Z');
+    await createScheduleNotifications(deps).triggerNotification(
+      makeRecord({ kind: 'agent', scheduleType: 'date', wakeWhenRunning: true }),
       fireDate,
     );
     expect(deps.notifyAgent.mock.calls[0]![0].idleOnly).toBe(false);
