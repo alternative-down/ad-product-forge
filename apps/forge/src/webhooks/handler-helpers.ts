@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { HttpRequest } from '../http/server';
 import type { WebhookRoute } from '../database/schema';
 
@@ -58,10 +58,10 @@ export function extractHeader(
 export function verifyWebhookSignature(
   rawBody: string,
   signatureHeader: string | string[] | undefined,
-  _secret: string,
+  secret: string,
 ): boolean {
   if (signatureHeader === undefined || signatureHeader === null) return false;
-  const expected = 'sha256=' + createHash('sha256').update(rawBody).digest('hex');
+  const expected = 'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex');
   const received = typeof signatureHeader === 'string' ? signatureHeader : signatureHeader[0];
   if (received.length === 0) return false;
   try {
