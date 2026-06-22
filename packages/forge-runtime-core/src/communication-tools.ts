@@ -1,12 +1,103 @@
 import { z } from 'zod';
 
 import type { CommunicationConversationView, CommunicationModule } from './communication.js';
+import { errorMsg } from './error-formatting.js';
 import { createTool, type ToolsInput } from './tools.js';
 
 const MAX_RETURNED_CONVERSATIONS = 20;
 const MAX_RETURNED_MESSAGES_PER_CONVERSATION = 3;
 const MAX_MESSAGE_CONTENT_CHARS = 280;
 const MAX_PARTICIPANTS = 8;
+
+// ─── Error handling (Phase 11 of #5887 / L#NN-50 #12 family) ────────────────
+
+/**
+ * A typed matcher for selecting a contextual hint based on the thrown error.
+ * Each tool may declare an array of these at module scope so they are
+ * individually testable and discoverable (rather than buried in inline
+ * `if (error.message.includes(...))` ladders — see #5887 Foco 3 for the
+ * long-term fix that requires typed errors in `CommunicationModule`).
+ */
+export type ErrorMatcher = {
+  /** Human-readable label describing what this matcher covers. */
+  label: string;
+  /** Predicate selecting which errors this matcher applies to. */
+  test: (error: Error) => boolean;
+  /** Hint returned to the caller when this matcher matches. */
+  hint: string;
+};
+
+/** Standard error return shape used by all 5 communication tools. */
+type ToolError = { valid: false; error: string; hint: string };
+
+/**
+ * Builds the standard `{ valid: false, error, hint }` return shape.
+ *
+ * Walks `matchers` first; the first matcher whose `test` returns true
+ * contributes its `hint`. Falls back to `fallbackHint` when no matcher
+ * matches or the thrown value is not an `Error` instance.
+ *
+ * Uses `errorMsg` from `@forge-runtime/core` so non-Error throws are
+ * rendered with `JSON.stringify` (string-passthrough otherwise) instead
+ * of the unsafe `error.message` access.
+ */
+function buildToolError(
+  error: unknown,
+  fallbackHint: string,
+  matchers?: ReadonlyArray<ErrorMatcher>,
+): ToolError {
+  if (error instanceof Error && matchers) {
+    for (const matcher of matchers) {
+      if (matcher.test(error)) {
+        return { valid: false, error: errorMsg(error), hint: matcher.hint };
+      }
+    }
+  }
+  return { valid: false, error: errorMsg(error), hint: fallbackHint };
+}
+
+/** Matchers for `get_messages` errors. Ordered most-specific first. */
+const GET_MESSAGES_ERROR_MATCHERS: ReadonlyArray<ErrorMatcher> = [
+  {
+    label: 'Provider not available',
+    test: (e) => e.message.includes('Provider not available'),
+    hint: 'Use a provider configured for this agent.',
+  },
+  {
+    label: 'Provider does not support reading',
+    test: (e) => e.message.includes('does not support reading messages'),
+    hint: 'This provider does not support reading conversation history.',
+  },
+  {
+    label: 'Target not found',
+    test: (e) => e.message.includes('not found') || e.message.includes('does not exist'),
+    hint: 'The targetKey may not exist for this provider. Use list_conversations to find valid conversations.',
+  },
+];
+
+/** Matchers for `send_message` errors. Ordered most-specific first. */
+const SEND_MESSAGE_ERROR_MATCHERS: ReadonlyArray<ErrorMatcher> = [
+  {
+    label: 'Provider not available',
+    test: (e) => e.message.includes('Provider not available'),
+    hint: 'Use a provider configured for this agent, such as internal-chat, email, or discord.',
+  },
+  {
+    label: 'Provider does not support',
+    test: (e) => e.message.includes('does not support'),
+    hint: 'This provider does not support sending to this kind of targetKey. Use a key that the provider accepts.',
+  },
+  {
+    label: 'Attachment path outside workspace',
+    test: (e) => e.message.includes('Attachment path is outside the workspace'),
+    hint: 'Attachment paths must point inside the workspace. Use a relative path or a path under the workspace root.',
+  },
+  {
+    label: 'ENOENT (attachment missing)',
+    test: (e) => e.message.includes('ENOENT'),
+    hint: 'An attachment path does not exist on disk. Verify the file path and try again.',
+  },
+];
 
 // Input Schemas
 const listContactsInputSchema = z.object({
@@ -65,12 +156,10 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             contacts: await communication.listContacts(input.filter ?? 'others'),
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
-          };
+          return buildToolError(
+            error,
+            'Try again in a moment. If the problem persists, verify the communication store is available.',
+          );
         }
       },
     }),
@@ -95,19 +184,17 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             description: contact.description,
           };
         } catch (error) {
-          if (error instanceof Error) {
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Verify the slug is valid and does not contain special characters. The slug should be a stable identifier (e.g., "john-doe" or "john@example.com").',
-            };
-          }
-
-          return {
-            valid: false,
-            error: 'An unknown error occurred while upserting the contact',
-            hint: 'Verify the slug and displayName are valid.',
-          };
+          return buildToolError(
+            error,
+            'Verify the slug and displayName are valid.',
+            [
+              {
+                label: 'Slug validation',
+                test: (e) => e instanceof Error,
+                hint: 'Verify the slug is valid and does not contain special characters. The slug should be a stable identifier (e.g., "john-doe" or "john@example.com").',
+              },
+            ],
+          );
         }
       },
     }),
@@ -122,23 +209,21 @@ export function createExternalAccountTools(communication: CommunicationModule): 
           const conversations = await communication.listConversations({
             provider: input.provider ?? undefined,
             unread: input.unread ?? undefined,
-            limit: Math.min(input.limit ?? 20, MAX_RETURNED_CONVERSATIONS),
+            limit: Math.min(input.limit ?? MAX_RETURNED_CONVERSATIONS, MAX_RETURNED_CONVERSATIONS),
           });
 
           return {
-            conversations: conversations.map((conversation) => summarizeConversation(conversation)),
+            conversations: conversations.map(summarizeConversation),
             returnedConversationCount: conversations.length,
             messagePreviewLimit: MAX_RETURNED_MESSAGES_PER_CONVERSATION,
             messageContentCharLimit: MAX_MESSAGE_CONTENT_CHARS,
             note: 'This tool returns a lightweight conversation preview. If you need more detail for one conversation, call get_messages for that specific provider and targetKey.',
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return {
-            valid: false,
-            error: message,
-            hint: 'Try again in a moment. If the problem persists, verify the selected provider is available.',
-          };
+          return buildToolError(
+            error,
+            'Try again in a moment. If the problem persists, verify the selected provider is available.',
+          );
         }
       },
     }),
@@ -163,43 +248,11 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             }),
           };
         } catch (error) {
-          if (error instanceof Error) {
-            if (error.message.includes('Provider not available')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'Use a provider configured for this agent.',
-              };
-            }
-
-            if (error.message.includes('does not support reading messages')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'This provider does not support reading conversation history.',
-              };
-            }
-
-            if (error.message.includes('not found') || error.message.includes('does not exist')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'The targetKey may not exist for this provider. Use list_conversations to find valid conversations.',
-              };
-            }
-
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Verify the provider and targetKey are valid.',
-            };
-          }
-
-          return {
-            valid: false,
-            error: 'An unknown error occurred while fetching messages',
-            hint: 'Verify the provider and targetKey are correct and try again.',
-          };
+          return buildToolError(
+            error,
+            'Verify the provider and targetKey are valid.',
+            GET_MESSAGES_ERROR_MATCHERS,
+          );
         }
       },
     }),
@@ -218,51 +271,11 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             attachments: input.attachments,
           });
         } catch (error) {
-          if (error instanceof Error) {
-            if (error.message.includes('Provider not available')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'Use a provider configured for this agent, such as internal-chat, email, or discord.',
-              };
-            }
-
-            if (error.message.includes('does not support')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'This provider does not support sending to this kind of targetKey. Use a key that the provider accepts.',
-              };
-            }
-
-            if (error.message.includes('Attachment path is outside the workspace')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'Use only attachment paths inside the agent workspace.',
-              };
-            }
-
-            if (error.message.includes('ENOENT')) {
-              return {
-                valid: false,
-                error: error.message,
-                hint: 'One of the attachment paths does not exist in the workspace.',
-              };
-            }
-
-            return {
-              valid: false,
-              error: error.message,
-              hint: 'Verify the provider and targetKey are correct.',
-            };
-          }
-
-          return {
-            valid: false,
-            error: 'An unknown error occurred while sending the message',
-            hint: 'Verify the provider and targetKey are correct.',
-          };
+          return buildToolError(
+            error,
+            'Verify the provider and targetKey are correct.',
+            SEND_MESSAGE_ERROR_MATCHERS,
+          );
         }
       },
     }),
