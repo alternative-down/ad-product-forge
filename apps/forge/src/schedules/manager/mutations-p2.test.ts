@@ -24,7 +24,18 @@ const forgeDebug = vi.hoisted(() => vi.fn());
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug,
-}));
+
+    errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+    withToolErrorLogging: vi.fn(async (params) => {
+      try {
+        return { valid: true, data: await params.fn() };
+      } catch (error) {
+        // Mirror the real impl: use errorMsg-style formatting
+        const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+        return { valid: false, error: msg, hint: params.hint || '' };
+      }
+    }),
+  }));
 
 const requireScheduleEditor = vi.hoisted(() => vi.fn());
 const requireScheduleDeleter = vi.hoisted(() => vi.fn());

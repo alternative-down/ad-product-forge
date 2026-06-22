@@ -59,17 +59,15 @@ export function serializeError(error: unknown): Record<string, unknown> {
     ...extra,
   };
 }
-// ─── Log-safe error message ────────────────────────────────────────────────────
+// ─── Log-safe error message (moved to @forge-runtime/core, #5889) ───────────────
 
-/**
- * Extracts a human-readable string from any error value.
- * Use instead of errorMsg(err) in logging contexts.
- */
-export function errorMsg(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return JSON.stringify(err);
-}
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { errorMsg } from '@forge-runtime/core';
+// Rationale: PR #5889 back-compat shim. The apps/forge/src/agents/error-formatting.ts
+// file used to define errorMsg locally. After the move to @forge-runtime/core, this
+// re-export preserves the 18+ existing import paths in apps/forge that still
+// import from './agents/error-formatting'. New code SHOULD import from
+// @forge-runtime/core directly.
 
 // ─── Absent-execution error formatting ────────────────────────────────────────
 

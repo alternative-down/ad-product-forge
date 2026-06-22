@@ -1,110 +1,33 @@
 /**
  * tools/_error-wrapper.ts
  *
- * Tool error logging helper for LLM-facing tool wrappers.
+ * BACK-COMPAT SHIM — re-exports `withToolErrorLogging` and `ToolResult<T>` from
+ * `@forge-runtime/core` (where they were moved in #5889).
  *
- * Tools across the capabilities/ namespace repeat the same try/catch +
- * forgeDebug + return {valid:false, error, hint} pattern around every
- * execute() body. This file provides a single helper that captures the
- * pattern, unifying:
+ * Existing import paths in `apps/forge` keep working unchanged:
+ *   import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
  *
- *   - Error logging format (scope, op, error message)
- *   - Error return shape (valid=false, error, hint)
- *   - Success return shape (valid=true, data)
+ * New code SHOULD import directly from `@forge-runtime/core`:
+ *   import { withToolErrorLogging, type ToolResult } from '@forge-runtime/core';
  *
- * No external state — pure function wrapper.
+ * ─── Why this shim exists ───────────────────────────────────────────────────
  *
- * ─── Canonical return shape (ToolResult<T>) ─────────────────────────────────
+ * Without the shim, moving `withToolErrorLogging` to the package would
+ * require updating 10 consumer files in apps (`coolify/tools.ts`,
+ * `communication/internal-chat-sending.ts`, `minimax/tools.ts`, etc.).
+ * The shim preserves those import paths via a thin re-export, so this PR
+ * stays a small, single-package refactor with zero consumer churn.
  *
- *   {
- *     valid: true,
- *     data: T,                    // original tool result
- *   }
+ * ─── Related issues ────────────────────────────────────────────────────────
  *
- *   - or -
- *
- *   {
- *     valid: false,
- *     error: string,              // formatted error message
- *     hint: string,               // tool-specific recovery hint
- *   }
- *
- * Callers must check `valid` first, then access `data` or `error`/`hint`.
- *
- * ─── Why this matters (drift prevention) ────────────────────────────────────
- *
- * Pre-#5809 tool wrappers had TWO inconsistent success shapes:
- *   - Some returned raw results (e.g. list_agent_roles → array of roles)
- *   - Some returned wrapped results (e.g. manage_agent_role → {valid:true, ...result})
- *
- * LLMs receiving these tool results had to learn two patterns. Helper enforces
- * a single discriminated-union shape across all tools, making downstream
- * parsers/dashboards uniform.
- *
- * ─── Related issues ───────────────────────────────────────────────────────
- *
- *   - #5809: this helper + Phase 1 rollout (capabilities/tools.ts)
- *   - #5483, #5468: withDbErrorLogging precedent (DB-throw pattern, L#NN-50 #8)
- *   - #5512 / PR #5806: withDbErrorLogging Phase 2 in agent-loader-data
+ *   - #5889: this shim's back-compat rationale
+ *   - #5809: L#NN-50 #12 family umbrella
+ *   - #5887: Phase 11 (consumes from new package location, then this shim
+ *           becomes a pure convenience re-export)
  */
 
-import { errorMsg } from '../../agents/error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
-
-/**
- * Discriminated union returned by every LLM-facing tool wrapper.
- *
- * - On success: `{ valid: true, data: T }` where T is the tool's success type
- * - On failure: `{ valid: false, error: string, hint: string }`
- */
-export type ToolResult<T> =
-  | { valid: true; data: T }
-  | { valid: false; error: string; hint: string };
-
-/**
- * Wraps a tool execute body with consistent error logging + return shape.
- *
- * On success: returns `{ valid: true, data: <result> }`.
- * On failure: logs via forgeDebug with the canonical format and returns
- * `{ valid: false, error: <formatted>, hint: <hint> }`.
- *
- * The log message format is `<op> error` to match the legacy inline pattern.
- * Log consumers should be unchanged.
- *
- * @param params.scope - forgeDebug scope (e.g. 'tools:capabilities')
- * @param params.op - operation name (e.g. 'list_agent_roles')
- * @param params.hint - recovery hint shown to the caller (LLM) on failure
- * @param params.fn - the async tool execute body to run
- * @returns ToolResult<T> — discriminated union of success or failure
- *
- * @example
- *   execute: async () => withToolErrorLogging({
- *     scope: 'tools:capabilities',
- *     op: 'list_agent_roles',
- *     hint: 'Try again in a moment.',
- *     fn: async () => capabilities.listRoles(),
- *   }),
- */
-export async function withToolErrorLogging<T>(params: {
-  scope: string;
-  op: string;
-  hint: string;
-  fn: () => Promise<T>;
-}): Promise<ToolResult<T>> {
-  try {
-    const data = await params.fn();
-    return { valid: true, data };
-  } catch (error) {
-    forgeDebug({
-      scope: params.scope,
-      level: 'error',
-      message: `${params.op} error`,
-      context: { error: errorMsg(error) },
-    });
-    return {
-      valid: false,
-      error: errorMsg(error),
-      hint: params.hint,
-    };
-  }
-}
+/* eslint-disable reexport-check/no-unnecessary-reexports */
+// Import from package source via relative path (bypasses vitest alias of
+// @forge-runtime/core, so vi.mock('@forge-runtime/core') in tests does NOT
+// break this shim's re-export. See: PR #5889 back-compat shim rationale).
+export { withToolErrorLogging, type ToolResult } from '@forge-runtime/core';
