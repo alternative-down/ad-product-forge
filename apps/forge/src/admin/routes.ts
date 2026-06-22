@@ -109,7 +109,7 @@ import {
 
 import { registerFinanceReadRoutes } from './routes/finance/read';
 import { registerFinanceWriteRoutes } from './routes/finance/write';
-import { registerAdminWebhooks } from './routes/webhooks/register';
+import { registerWebhookAdminRoutes } from './routes/webhooks/register';
 
 import { registerSystemReadRoutes } from './routes/system/read';
 import { registerSystemWriteRoutes } from './routes/system/write';
@@ -261,7 +261,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   // Internal chat routes (extracted to ./routes/internal-chat/index.ts)
   registerInternalChatRoutes(input.httpServer, input.internalChat);
 
-  registerAdminWebhooks({
+  registerWebhookAdminRoutes({
     httpServer: input.httpServer,
     db: input.db,
     registry,
