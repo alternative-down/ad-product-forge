@@ -30,7 +30,7 @@ export type Scheduler = {
     remainingBudgetUsd: number,
     estimatedStepUsd: number | null,
   ): number;
-  planNextStepDelay(): Promise<void>;
+  planNextStepDelay(): Promise<number>;
   startNewRunEpoch(): void;
   isStaleRun(runEpoch: number): boolean;
   invalidateInFlightGenerate(): void;
@@ -38,10 +38,26 @@ export type Scheduler = {
   finishGenerateAttempt(generateToken: number, controller: AbortController): void;
   advanceGenerateToken(): void;
   getGenerateToken(): number;
-  start(now: number): void;
+  start(
+    getExecutionState: (runtimeId: string) => Promise<'idle' | 'running' | 'absent'>,
+    beginRunFn: (opts: {
+      reloadRuntime: boolean;
+      wakeStartedAt: number;
+      markRunning: boolean;
+    }) => Promise<void>,
+  ): Promise<void>;
   stop(): void;
-  forceIdle(): Promise<void>;
-  transitionToIdle(runEpoch: number, opts?: { deferWakeQueueDrain?: boolean }): Promise<void>;
+  forceIdle(
+    setExecutionState: (runtimeId: string, state: 'idle' | 'running' | 'absent') => Promise<void>,
+    onAgentIdle?: () => Promise<void>,
+    _options?: { preserveQueuedWork?: boolean },
+  ): Promise<void>;
+  transitionToIdle(
+    runEpoch: number,
+    setExecutionState?: (runtimeId: string, state: 'idle' | 'running' | 'absent') => Promise<void>,
+    onRunnerIdle?: () => Promise<void>,
+    options?: { deferWakeQueueDrain?: boolean },
+  ): Promise<void>;
   startHealthcheck(now: number): void;
   clearHealthcheck(): void;
   shouldRunHealthcheckAt(now: number): boolean;
