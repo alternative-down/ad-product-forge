@@ -104,6 +104,8 @@ export {
 } from './embedder.js';
 export { createAgentWakeQueue, type AgentWakeEvent, type AgentWakeQueue } from './wake-queue.js';
 export { forgeDebug, isForgeDebugEnabled } from './debug.js';
+export { errorMsg } from './error-formatting.js';
+export { withToolErrorLogging, type ToolResult } from './tool-error-wrapper.js';
 export {
   toForgeSafeIdentifier,
   toForgeSafeIdentifier as toRuntimeSafeIdentifier,

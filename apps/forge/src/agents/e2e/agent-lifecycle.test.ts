@@ -20,6 +20,17 @@ vi.mock('@forge-runtime/core', () => ({
   LibsqlConversationStore: vi.fn(),
   readOperationalMemoryState: vi.fn().mockResolvedValue({}),
   withTimeout: vi.fn().mockImplementation(async (p: Promise<unknown>) => p),
+
+  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+  withToolErrorLogging: vi.fn(async (params) => {
+    try {
+      return { valid: true, data: await params.fn() };
+    } catch (error) {
+      // Mirror the real impl: use errorMsg-style formatting
+      const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+      return { valid: false, error: msg, hint: params.hint || '' };
+    }
+  })
 }));
 
 vi.mock('node:fs/promises', () => ({

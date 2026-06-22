@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
+  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
 }));
 vi.mock('../../../../agents/global-skills', () => ({
   installGlobalSkillsFromZip: vi.fn().mockResolvedValue(['skill-a', 'skill-b']),
