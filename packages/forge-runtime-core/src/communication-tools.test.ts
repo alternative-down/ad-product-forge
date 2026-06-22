@@ -171,13 +171,14 @@ describe('upsert_contact tool', () => {
     });
   });
 
-  it('returns error on non-Error throw', async () => {
+  it('returns error on non-Error throw (uses errorMsg string passthrough + fallback hint)', async () => {
     mockUpsertContact.mockRejectedValueOnce('boom');
     const { upsert_contact } = tools();
     const result = await upsert_contact.execute!({ slug: 'x', displayName: 'Y' });
     expect(result).toMatchObject({
       valid: false,
-      error: 'An unknown error occurred while upserting the contact',
+      error: 'boom',
+      hint: 'Verify the slug and displayName are valid.',
     });
   });
 
@@ -387,3 +388,94 @@ describe('send_message tool', () => {
     expect(result).toMatchObject({ valid: false, error: 'target offline' });
   });
 });
+
+
+describe('Phase 11 #5887 F2+F3: matcher tables and error helper', () => {
+  it('send_message returns provider-not-available hint when matcher matches', async () => {
+    mockSendMessage.mockRejectedValueOnce(new Error('Provider not available: slack'));
+    const { send_message } = tools();
+    const result = await send_message.execute!({ provider: 'slack', targetKey: 'ch', content: 'hi' });
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'Provider not available: slack',
+      hint: 'Use a provider configured for this agent, such as internal-chat, email, or discord.',
+    });
+  });
+
+  it('send_message returns attachment-outside-workspace hint when matcher matches', async () => {
+    mockSendMessage.mockRejectedValueOnce(
+      new Error('Attachment path is outside the workspace: /etc/passwd'),
+    );
+    const { send_message } = tools();
+    const result = await send_message.execute!({ provider: 'x', targetKey: 'y', content: 'hi' });
+    expect(result).toMatchObject({
+      valid: false,
+      hint: 'Attachment paths must point inside the workspace. Use a relative path or a path under the workspace root.',
+    });
+  });
+
+  it('send_message returns ENOENT hint when matcher matches', async () => {
+    mockSendMessage.mockRejectedValueOnce(new Error('ENOENT: no such file or directory'));
+    const { send_message } = tools();
+    const result = await send_message.execute!({ provider: 'x', targetKey: 'y', content: 'hi' });
+    expect(result).toMatchObject({
+      valid: false,
+      hint: 'An attachment path does not exist on disk. Verify the file path and try again.',
+    });
+  });
+
+  it('send_message returns fallback hint when no matcher matches', async () => {
+    mockSendMessage.mockRejectedValueOnce(new Error('totally novel error'));
+    const { send_message } = tools();
+    const result = await send_message.execute!({ provider: 'x', targetKey: 'y', content: 'hi' });
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'totally novel error',
+      hint: 'Verify the provider and targetKey are correct.',
+    });
+  });
+
+  it('get_messages returns not-found hint when matcher matches', async () => {
+    mockGetMessages.mockRejectedValueOnce(new Error('conversation does not exist'));
+    const { get_messages } = tools();
+    const result = await get_messages.execute!({ provider: 'x', targetKey: 'y' });
+    expect(result).toMatchObject({
+      valid: false,
+      hint: 'The targetKey may not exist for this provider. Use list_conversations to find valid conversations.',
+    });
+  });
+
+  it('get_messages returns does-not-support-reading hint when matcher matches', async () => {
+    mockGetMessages.mockRejectedValueOnce(
+      new Error('Provider does not support reading messages for this kind of targetKey'),
+    );
+    const { get_messages } = tools();
+    const result = await get_messages.execute!({ provider: 'x', targetKey: 'y' });
+    expect(result).toMatchObject({
+      valid: false,
+      hint: 'This provider does not support reading conversation history.',
+    });
+  });
+
+  it('list_contacts returns fallback hint on generic error', async () => {
+    mockListContacts.mockRejectedValueOnce(new Error('store down'));
+    const { list_contacts } = tools();
+    const result = await list_contacts.execute!({});
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'store down',
+      hint: 'Try again in a moment. If the problem persists, verify the communication store is available.',
+    });
+  });
+
+  it('list_contacts stringifies non-Error throw via errorMsg', async () => {
+    mockListContacts.mockRejectedValueOnce({ code: 'INTERNAL' });
+    const { list_contacts } = tools();
+    const result = await list_contacts.execute!({});
+    expect(result).toMatchObject({
+      valid: false,
+      error: JSON.stringify({ code: 'INTERNAL' }),
+    });
+  });
+});
+
