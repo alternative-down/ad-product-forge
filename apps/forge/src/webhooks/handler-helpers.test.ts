@@ -255,6 +255,8 @@ describe('buildNotificationContent', () => {
     agentId: 'agent-1',
     name: 'My Webhook',
     secret: null,
+    secretEncrypted: null,
+    secretLastFour: null,
     isActive: 1,
     createdAt: 1000,
     updatedAt: 2000,

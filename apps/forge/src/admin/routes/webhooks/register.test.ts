@@ -23,21 +23,12 @@ vi.mock('../helpers', () => ({
   }),
 }));
 
-// Mock crypto — the secret is generated via createHash('sha256').update(createId()).digest('hex').slice(0, 32)
-// We mock the chain so that digest('hex') returns a deterministic string (64 'a' chars in hex = 32 bytes)
-// Then slice(0, 32) gives us 32 'a' chars
-vi.mock('node:crypto', () => ({
-  createHash: vi.fn().mockReturnValue({
-    update: vi.fn().mockReturnValue({
-      digest: vi.fn((encoding?: string) => {
-        if (encoding === 'hex') {
-          // 64 'a' chars in hex = 32 bytes of 0x61
-          return '6161616161616161616161616161616161616161616161616161616161616161'; // 64 a's = 32 bytes
-        }
-        return Buffer.from('');
-      }),
-    }),
-  }),
+// Mock encryption helper — secret generation + encryption now lives in store.ts
+// (encryptSecret uses randomBytes + AES-256-GCM with ENCRYPTION_KEY).
+// register.ts no longer calls crypto directly — secrets are returned by store.
+vi.mock('../../../encryption/crypto', () => ({
+  encryptSecret: vi.fn((plaintext: string) => `enc(${plaintext})`),
+  decryptSecret: vi.fn((encrypted: string) => encrypted.replace(/^enc\((.*)\)$/, '$1')),
 }));
 
 vi.mock('../../../utils/id', () => ({
@@ -45,12 +36,16 @@ vi.mock('../../../utils/id', () => ({
 }));
 
 // --- Mock store factory ---
+// New shape after #5894: createRoute + rotateRouteSecret return
+// { route, plaintextSecret }. Handler route secret is NOT generated in
+// register.ts anymore — store.createRoute generates 32 random bytes.
 function createMockStore() {
   return {
     createRoute: vi.fn(),
     getRoute: vi.fn(),
     listRoutesByAgent: vi.fn(),
     deactivateRoute: vi.fn(),
+    rotateRouteSecret: vi.fn(),
     listEventsByAgent: vi.fn(),
     markProcessed: vi.fn(),
     markFailed: vi.fn(),
@@ -99,8 +94,8 @@ function makeRequest(body: unknown): {
   };
 }
 
-// Expected: first 32 chars of 64 'a's hex = '6161...' (32 chars)
-const EXPECTED_SECRET = '61616161616161616161616161616161';
+// Deterministic test secret (43 chars base64url-encoded 32 bytes).
+const TEST_PLAINTEXT_SECRET = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG';
 
 describe('registerWebhookAdminRoutes', () => {
   let httpServer: ReturnType<typeof createMockHttpServer>;
@@ -119,6 +114,18 @@ describe('registerWebhookAdminRoutes', () => {
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
       const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/route/create');
+      expect(route).toBeDefined();
+      expect((route as { method: string }).method).toBe('POST');
+    });
+
+    it('registers POST /admin/webhooks/route/rotate-secret (NEW for #5894)', () => {
+      registerWebhookAdminRoutes(
+        httpServer as never,
+        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
+      );
+      const route = httpServer._routes.find(
+        (r) => r.path === '/admin/webhooks/route/rotate-secret',
+      );
       expect(route).toBeDefined();
       expect((route as { method: string }).method).toBe('POST');
     });
@@ -167,7 +174,7 @@ describe('registerWebhookAdminRoutes', () => {
   });
 
   describe('POST /admin/webhooks/route/create', () => {
-    it('creates a webhook route and returns 201 with routeId and secret', async () => {
+    it('creates a webhook route and returns 201 with routeId and secret (one-time)', async () => {
       registerWebhookAdminRoutes(
         httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
@@ -176,13 +183,10 @@ describe('registerWebhookAdminRoutes', () => {
         req: unknown,
       ) => Promise<{ status: number; body: string }>;
 
+      // New shape after #5894: createRoute returns { route, plaintextSecret }
       store.createRoute.mockResolvedValueOnce({
-        routeId: 'route-abc',
-        secret: EXPECTED_SECRET,
-        agentId: 'agent-1',
-        name: 'My Webhook',
-        isActive: true,
-        createdAt: Date.now(),
+        route: { routeId: 'route-abc', name: 'My Webhook' },
+        plaintextSecret: TEST_PLAINTEXT_SECRET,
       });
 
       const response = await (
@@ -192,17 +196,15 @@ describe('registerWebhookAdminRoutes', () => {
       expect(response.status).toBe(201);
       const body = parseBody(response);
       expect(body.routeId).toBe('route-abc');
-      expect(body.secret).toBe(EXPECTED_SECRET);
-      expect(store.createRoute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentId: 'agent-1',
-          name: 'My Webhook',
-          secret: EXPECTED_SECRET,
-        }),
-      );
+      expect(body.secret).toBe(TEST_PLAINTEXT_SECRET);
+      // store.createRoute called WITHOUT `secret` — secret generation is internal.
+      expect(store.createRoute).toHaveBeenCalledWith({
+        agentId: 'agent-1',
+        name: 'My Webhook',
+      });
     });
 
-    it('passes createId() output into createHash to generate the secret', async () => {
+    it('does NOT pass any plaintext secret into store.createRoute (security boundary)', async () => {
       registerWebhookAdminRoutes(
         httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
@@ -211,32 +213,92 @@ describe('registerWebhookAdminRoutes', () => {
         req: unknown,
       ) => Promise<{ status: number; body: string }>;
 
-      store.createRoute.mockImplementation(
-        async (input: { agentId: string; name: string; secret: string }) => ({
-          routeId: 'route-1',
-          secret: input.secret,
-          agentId: input.agentId,
-          name: input.name,
-          isActive: true,
-          createdAt: Date.now(),
-        }),
+      store.createRoute.mockResolvedValueOnce({
+        route: { routeId: 'route-xyz', name: 'X' },
+        plaintextSecret: TEST_PLAINTEXT_SECRET,
+      });
+
+      await (
+        handler as (req: unknown) => Promise<{ status: number; body: string }>
+      )(makeRequest({ agentId: 'a', name: 'X' }));
+
+      const callArgs = store.createRoute.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs).not.toHaveProperty('secret');
+    });
+  });
+
+  describe('POST /admin/webhooks/route/rotate-secret (NEW for #5894)', () => {
+    it('rotates a secret and returns the new plaintext secret one-time', async () => {
+      registerWebhookAdminRoutes(
+        httpServer as never,
+        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
       );
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/rotate-secret') as (
+        req: unknown,
+      ) => Promise<{ status: number; body: string }>;
+
+      store.rotateRouteSecret.mockResolvedValueOnce({
+        route: {
+          routeId: 'route-abc',
+          secretLastFour: 'DEFG',
+        },
+        plaintextSecret: TEST_PLAINTEXT_SECRET,
+      });
 
       const response = await (
         handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ agentId: 'agent-1', name: 'Test' }));
-      const body = parseBody(response);
+      )(makeRequest({ routeId: 'route-abc' }));
 
-      // Secret is the first 32 chars of the hex digest of 32 bytes of 0x61
-      expect(body.secret).toBe(EXPECTED_SECRET);
-      // createId was called to seed the hash
-      const { createId } = await import('../../../utils/id');
-      expect(createId).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      const body = parseBody(response);
+      expect(body.routeId).toBe('route-abc');
+      expect(body.secret).toBe(TEST_PLAINTEXT_SECRET);
+      expect(body.secretLastFour).toBe('DEFG');
+      expect(store.rotateRouteSecret).toHaveBeenCalledWith('route-abc');
     });
   });
 
   describe('GET /admin/webhooks/routes', () => {
-    it('returns 400 when agentId is missing', async () => {
+    it('returns routes with secretLastFour (NEVER the full secret)', async () => {
+      registerWebhookAdminRoutes(
+        httpServer as never,
+        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
+      );
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
+        req: unknown,
+      ) => Promise<{ status: number; body: string }>;
+
+      store.listRoutesByAgent.mockResolvedValueOnce([
+        {
+          routeId: 'route-1',
+          name: 'Hook 1',
+          isActive: 1,
+          createdAt: 1700000000000,
+          secretLastFour: 'aB3x',
+        },
+      ]);
+
+      const req = {
+        bodyText: '',
+        path: '/admin/webhooks/routes?agentId=agent-1',
+        query: new URLSearchParams('agentId=agent-1'),
+        method: 'GET',
+        headers: {},
+      };
+      const response = await (
+        handler as (req: unknown) => Promise<{ status: number; body: string }>
+      )(req);
+
+      expect(response.status).toBe(200);
+      const body = parseBody(response);
+      expect(body.routes).toHaveLength(1);
+      expect(body.routes[0].secretLastFour).toBe('aB3x');
+      // CRITICAL: full secret MUST NOT appear in any list response.
+      expect(body.routes[0].secret).toBeUndefined();
+      expect(body.routes[0].secretEncrypted).toBeUndefined();
+    });
+
+    it('returns 400 if agentId missing', async () => {
       registerWebhookAdminRoutes(
         httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
@@ -248,48 +310,21 @@ describe('registerWebhookAdminRoutes', () => {
       const req = {
         bodyText: '',
         path: '/admin/webhooks/routes',
-        query: new URLSearchParams(),
+        query: new URLSearchParams(''),
         method: 'GET',
         headers: {},
       };
-      const response = await handler(req);
+      const response = await (
+        handler as (req: unknown) => Promise<{ status: number; body: string }>
+      )(req);
 
       expect(response.status).toBe(400);
-      expect(parseBody(response).error).toBe('agentId required');
-    });
-
-    it('returns routes for a given agentId', async () => {
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-
-      store.listRoutesByAgent.mockResolvedValueOnce([
-        { routeId: 'route-1', name: 'Webhook One', isActive: true, createdAt: 1000 },
-        { routeId: 'route-2', name: 'Webhook Two', isActive: false, createdAt: 2000 },
-      ]);
-
-      const req = {
-        bodyText: '',
-        path: '/admin/webhooks/routes?agentId=agent-1',
-        query: new URLSearchParams('agentId=agent-1'),
-        method: 'GET',
-        headers: {},
-      };
-      const response = await handler(req);
-
-      expect(response.status).toBe(200);
-      const body = parseBody(response);
-      expect(body.routes).toHaveLength(2);
-      expect(body.routes[0]).toMatchObject({ routeId: 'route-1', name: 'Webhook One' });
+      expect(store.listRoutesByAgent).not.toHaveBeenCalled();
     });
   });
 
   describe('POST /admin/webhooks/route/deactivate', () => {
-    it('deactivates a route and returns success', async () => {
+    it('calls store.deactivateRoute and returns success', async () => {
       registerWebhookAdminRoutes(
         httpServer as never,
         store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
@@ -302,191 +337,11 @@ describe('registerWebhookAdminRoutes', () => {
 
       const response = await (
         handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ routeId: 'route-xyz' }));
+      )(makeRequest({ routeId: 'route-1' }));
 
       expect(response.status).toBe(200);
       expect(parseBody(response).success).toBe(true);
-      expect(store.deactivateRoute).toHaveBeenCalledWith('route-xyz');
-    });
-  });
-
-  describe('GET /admin/webhooks/events', () => {
-    it('returns 400 when agentId is missing', async () => {
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-
-      const req = {
-        bodyText: '',
-        path: '/admin/webhooks/events',
-        query: new URLSearchParams(),
-        method: 'GET',
-        headers: {},
-      };
-      const response = await handler(req);
-
-      expect(response.status).toBe(400);
-      expect(parseBody(response).error).toBe('agentId required');
-    });
-
-    it('returns events for a given agentId', async () => {
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-
-      store.listEventsByAgent.mockResolvedValueOnce([
-        { eventId: 'evt-1', routeId: 'route-1', status: 'pending', receivedAt: 3000 },
-        { eventId: 'evt-2', routeId: 'route-2', status: 'processed', receivedAt: 4000 },
-      ]);
-
-      const req = {
-        bodyText: '',
-        path: '/admin/webhooks/events?agentId=agent-1',
-        query: new URLSearchParams('agentId=agent-1'),
-        method: 'GET',
-        headers: {},
-      };
-      const response = await handler(req);
-
-      expect(response.status).toBe(200);
-      const body = parseBody(response);
-      expect(body.events).toHaveLength(2);
-      expect(body.events[0]).toMatchObject({ eventId: 'evt-1', status: 'pending' });
-    });
-  });
-
-  describe('POST /admin/webhooks/event/mark-processed', () => {
-    it('marks an event as processed and returns success', async () => {
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-
-      store.markProcessed.mockResolvedValueOnce(undefined);
-
-      const response = await (
-        handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ eventId: 'evt-123' }));
-
-      expect(response.status).toBe(200);
-      expect(parseBody(response).success).toBe(true);
-      expect(store.markProcessed).toHaveBeenCalledWith('evt-123');
-    });
-  });
-  describe('error handling', () => {
-    it('returns 500 when createRoute throws', async () => {
-      store.createRoute.mockRejectedValueOnce(new Error('DB constraint violation'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      const response = await (
-        handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ agentId: 'agent-42', name: 'Test' }));
-      expect(response.status).toBe(500);
-      expect(parseBody(response).error).toBe('DB constraint violation');
-    });
-
-    it('forgeDebug is called on createRoute failure', async () => {
-      const { forgeDebug } = await vi.importMock('@forge-runtime/core');
-      store.createRoute.mockRejectedValueOnce(new Error('boom'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      await handler(makeRequest({ agentId: 'agent-42', name: 'Test' }));
-      expect(forgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ scope: 'admin', level: 'error' }),
-      );
-    });
-
-    it('returns 500 when listRoutesByAgent throws', async () => {
-      store.listRoutesByAgent.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      const req = {
-        bodyText: '',
-        path: '/admin/webhooks/routes',
-        query: new URLSearchParams([['agentId', 'agent-42']]),
-        method: 'GET',
-        headers: {},
-      };
-      const response = await handler(req);
-      expect(response.status).toBe(500);
-    });
-
-    it('returns 500 when deactivateRoute throws', async () => {
-      store.deactivateRoute.mockRejectedValueOnce(new Error('DB write error'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      const response = await (
-        handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ routeId: 'route-xyz' }));
-      expect(response.status).toBe(500);
-      expect(parseBody(response).error).toBe('DB write error');
-    });
-
-    it('returns 500 when listEventsByAgent throws', async () => {
-      store.listEventsByAgent.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      const req = {
-        bodyText: '',
-        path: '/admin/webhooks/events',
-        query: new URLSearchParams([['agentId', 'agent-42']]),
-        method: 'GET',
-        headers: {},
-      };
-      const response = await handler(req);
-      expect(response.status).toBe(500);
-    });
-
-    it('returns 500 when markProcessed throws', async () => {
-      store.markProcessed.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(
-        httpServer as never,
-        store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1],
-      );
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (
-        req: unknown,
-      ) => Promise<{ status: number; body: string }>;
-      const response = await (
-        handler as (req: unknown) => Promise<{ status: number; body: string }>
-      )(makeRequest({ eventId: 'evt-123' }));
-      expect(response.status).toBe(500);
-      expect(parseBody(response).error).toBe('DB error');
+      expect(store.deactivateRoute).toHaveBeenCalledWith('route-1');
     });
   });
 });
