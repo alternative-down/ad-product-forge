@@ -15,7 +15,18 @@ export const webhookRoutes = sqliteTable(
       .notNull()
       .references(() => agents.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    // Legacy column (plain text). Retained during 0027 backfill window for
+    // safe application-level lazy migration. Will be dropped in 0028 after
+    // backfill audit confirms all rows have secret_encrypted populated.
+    // See migration 0027 header for full context (Closes #5894).
     secret: text('secret'),
+    // NEW: AES-256-GCM encrypted secret. Combined output (iv || ciphertext ||
+    // authTag), base64-encoded. Decryption via decryptSecret in
+    // apps/forge/src/encryption/crypto.ts (key from ENCRYPTION_KEY env).
+    secretEncrypted: text('secret_encrypted'),
+    // NEW: Last 4 chars of plaintext secret, for admin identification only.
+    // Never used for verification or any cryptographic operation.
+    secretLastFour: text('secret_last_four'),
     isActive: integer('is_active').notNull().default(1),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),

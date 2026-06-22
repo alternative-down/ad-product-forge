@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { createId } from '../../../utils/id';
 import { parseJsonBody, jsonResponse } from '../index';
 import { z } from 'zod';
@@ -22,6 +21,10 @@ const markProcessedSchema = z.object({
   eventId: z.string().min(1),
 });
 
+const rotateRouteSecretSchema = z.object({
+  routeId: z.string().min(1),
+});
+
 export function registerWebhookAdminRoutes(
   httpServer: ForgeHttpServerAdapter,
   store: ReturnType<typeof createWebhookStore>,
@@ -31,9 +34,33 @@ export function registerWebhookAdminRoutes(
     path: '/admin/webhooks/route/create',
     handler: wrapAdminRoute('/admin/webhooks/route/create', async (request) => {
       const body = parseJsonBody(request.bodyText, createRouteSchema);
-      const secret = createHash('sha256').update(createId()).digest('hex').slice(0, 32);
-      const route = await store.createRoute({ agentId: body.agentId, name: body.name, secret });
-      return jsonResponse({ routeId: route.routeId, secret }, 201);
+      // Secret is generated inside store.createRoute using 32 random bytes
+      // (256 bits) via crypto.randomBytes — see encryption/crypto.ts and
+      // Closes #5894. The plaintext is returned ONCE here and never again.
+      const { route, plaintextSecret } = await store.createRoute({
+        agentId: body.agentId,
+        name: body.name,
+      });
+      return jsonResponse({ routeId: route.routeId, secret: plaintextSecret }, 201);
+    }),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/webhooks/route/rotate-secret',
+    handler: wrapAdminRoute('/admin/webhooks/route/rotate-secret', async (request) => {
+      const body = parseJsonBody(request.bodyText, rotateRouteSecretSchema);
+      const { route, plaintextSecret } = await store.rotateRouteSecret(body.routeId);
+      // Plaintext returned ONCE; admin must store client-side immediately.
+      // Last four is provided for identification alongside the new secret.
+      return jsonResponse(
+        {
+          routeId: route.routeId,
+          secret: plaintextSecret,
+          secretLastFour: route.secretLastFour,
+        },
+        200,
+      );
     }),
   });
 
@@ -54,6 +81,8 @@ export function registerWebhookAdminRoutes(
           routeId: r.routeId,
           name: r.name,
           isActive: r.isActive,
+          // Show last-4 for identification (NEVER the full secret).
+          secretLastFour: r.secretLastFour,
           createdAt: r.createdAt,
         })),
       });
@@ -117,35 +146,3 @@ export function registerWebhookAdminRoutes(
  *                            uses registry.get(agentId).runner?.notifyExternalEvent
  *                            to push events back to running agents
  */
-export function registerAdminWebhooks(input: {
-  httpServer: Parameters<typeof registerWebhookAdminRoutes>[0];
-  db: import('../../../database/client').Database;
-  registry: import('../../../agents/internal-agent-registry').InternalAgentRegistry;
-}) {
-  const webhookStore = createWebhookStore(input.db);
-  const webhookHandler = createWebhookHandler({
-    store: webhookStore,
-    notifyAgent(notification) {
-      const entry = input.registry.get(notification.agentId);
-      if (!entry) {
-        return;
-      }
-      entry.runner?.notifyExternalEvent({
-        type: notification.type,
-        groupKey: notification.groupKey,
-        idempotencyKey: notification.idempotencyKey,
-        text: notification.content,
-        timestamp: notification.timestamp,
-      });
-    },
-  });
-
-  // Public webhook endpoint: POST /webhooks/:routeId
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/webhooks/:routeId',
-    handler: (req: HttpRequest) => webhookHandler.handleWebhook(req),
-  });
-
-  registerWebhookAdminRoutes(input.httpServer, webhookStore);
-}

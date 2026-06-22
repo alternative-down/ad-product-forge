@@ -1,0 +1,48 @@
+-- =============================================================================
+-- Migration 0027: Encrypt webhook secrets at rest using AES-256-GCM
+-- =============================================================================
+--
+-- Closes #5894 (P0 SECURITY — webhook secrets stored as plain text in DB).
+--
+-- CONTEXT
+-- -------
+-- Until migration 0026, the `webhook_routes.secret` column was stored as plain
+-- text. While HMAC-SHA256 signature verification (#5876) protects secrets in
+-- transit, a database leak (.db backup, log snapshot, internal agent read)
+-- would expose every webhook secret simultaneously — allowing an attacker to
+-- forge valid signatures on ALL routes (lateral movement).
+--
+-- THIS MIGRATION
+-- --------------
+-- Adds two new columns to `webhook_routes`:
+--   - `secret_encrypted` : AES-256-GCM combined output (iv || ciphertext || authTag),
+--                          base64-encoded. Encryption key from ENCRYPTION_KEY env var.
+--                          See `apps/forge/src/encryption/crypto.ts`.
+--   - `secret_last_four` : Last 4 characters of plaintext secret, for admin
+--                          identification ONLY (e.g., "…aB3x").
+--
+-- The legacy `secret` column is RETAINED in this migration to allow safe
+-- application-level lazy backfill. Once backfill is confirmed across all
+-- environments, a follow-up migration will drop the legacy column.
+--
+-- WHY NOT HASH (Option A in #5894)?
+-- ----------------------------------
+-- Hashing is one-way. HMAC-SHA256 verification (#5876) requires the PLAINTEXT
+-- secret as the HMAC key on every request. With only a hash stored, the server
+-- cannot reconstruct the HMAC key, so every legitimate webhook would be
+-- rejected. AES-256-GCM is reversible (with the master key in env) and
+-- preserves HMAC verification end-to-end.
+--
+-- SAFETY
+-- ------
+-- - Migration is reversible: legacy `secret` column is preserved.
+-- - New columns are nullable: existing rows have secret_encrypted=NULL,
+--   secret_last_four=NULL until lazy backfill on first read.
+-- - No data loss: legacy `secret` plaintext remains in DB until backfill.
+-- - Follow-up migration 0028 (separate PR) drops `secret` after backfill audit.
+--
+-- Fixes: #5894
+-- =============================================================================
+
+ALTER TABLE `webhook_routes` ADD COLUMN `secret_encrypted` text;--> statement-breakpoint
+ALTER TABLE `webhook_routes` ADD COLUMN `secret_last_four` text;--> statement-breakpoint

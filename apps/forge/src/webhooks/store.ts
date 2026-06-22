@@ -1,28 +1,77 @@
 import { eq, desc, and, sql } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
 import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/client';
 import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
+import { encryptSecret, decryptSecret } from '../encryption/crypto';
 
 export type CreateEventResult =
   | { kind: 'created'; eventId: string }
   | { kind: 'duplicate'; eventId: string };
 
-// WebhookEvent is imported from the database schema (InferModel<typeof webhookEvents>)
+/**
+ * Plaintext secret bytes used for HMAC verification (#5876) and
+ * webhook source configuration. NOT persisted — only the
+ * AES-256-GCM ciphertext (secret_encrypted) is stored.
+ *
+ * Encoding: 32 bytes random → base64url → 43 chars URL-safe.
+ * The webhooks API returns this ONCE on create/rotate; admin must
+ * store it client-side immediately.
+ */
+function generateWebhookSecret(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+function lastFourOf(plaintext: string): string {
+  return plaintext.slice(-4);
+}
+
+/**
+ * Decrypt a route's encrypted secret to plaintext (used as HMAC key).
+ *
+ * Returns null when the route has no secret at all (legacy null column,
+ * or a route that never had one configured).
+ *
+ * Throws if the encrypted value is present but cannot be decrypted —
+ * this indicates a key rotation issue or data corruption and must
+ * surface, not silently fail open.
+ */
+function decryptRouteSecretOrThrow(encrypted: string | null): string | null {
+  if (encrypted === null || encrypted === undefined) return null;
+  return decryptSecret(encrypted);
+}
+
+/**
+ * WebhookRoute with the plaintext secret field populated for callers
+ * that need it (e.g. HMAC verification in handler.ts).
+ *
+ * `secret` here is the DECRYPTED value — never persist it.
+ * For new code, prefer reading `secretEncrypted` and decrypting
+ * explicitly at the call site.
+ */
+export type WebhookRouteWithSecret = WebhookRoute & {
+  secret: string | null;
+};
 
 export function createWebhookStore(db: Database) {
   async function createRoute(input: {
     agentId: string;
     name: string;
-    secret?: string;
-  }): Promise<WebhookRoute> {
+  }): Promise<{ route: WebhookRoute; plaintextSecret: string }> {
     const now = Date.now();
+    const plaintextSecret = generateWebhookSecret();
+    const secretEncrypted = encryptSecret(plaintextSecret);
+    const secretLastFour = lastFourOf(plaintextSecret);
     const route = {
       routeId: createId(),
       agentId: input.agentId,
       name: input.name,
-      secret: input.secret ?? null,
+      // Legacy column left null on new creates — backfill window only.
+      secret: null,
+      secretEncrypted,
+      secretLastFour,
       isActive: 1,
       createdAt: now,
       updatedAt: now,
@@ -34,10 +83,10 @@ export function createWebhookStore(db: Database) {
       context: { agentId: input.agentId },
       fn: () => db.insert(webhookRoutes).values(route as NewWebhookRoute),
     });
-    return route as WebhookRoute;
+    return { route: route as WebhookRoute, plaintextSecret };
   }
 
-  async function getRoute(routeId: string): Promise<WebhookRoute | null> {
+  async function getRoute(routeId: string): Promise<WebhookRouteWithSecret | null> {
     return await withDbErrorLogging({
       scope: 'webhooks-store',
       op: 'getRoute',
@@ -50,7 +99,42 @@ export function createWebhookStore(db: Database) {
           .where(eq(webhookRoutes.routeId, routeId))
           .limit(1)
           .all();
-        return (rows as WebhookRoute[])[0] ?? null;
+        const route = (rows as WebhookRoute[])[0];
+        if (route === undefined) return null;
+
+        // Path A: new encrypted column populated → decrypt normally.
+        if (route.secretEncrypted !== null && route.secretEncrypted !== undefined) {
+          return {
+            ...route,
+            secret: decryptRouteSecretOrThrow(route.secretEncrypted),
+          };
+        }
+
+        // Path B: legacy plain-text secret exists (pre-#5894 row) →
+        // lazy backfill. Encrypt and update on first read so subsequent
+        // reads use Path A. Original plaintext is returned to caller
+        // for THIS read only.
+        if (route.secret !== null && route.secret !== undefined && route.secret !== '') {
+          const encrypted = encryptSecret(route.secret);
+          const lastFour = lastFourOf(route.secret);
+          await db
+            .update(webhookRoutes)
+            .set({
+              secretEncrypted: encrypted,
+              secretLastFour: lastFour,
+              updatedAt: Date.now(),
+            })
+            .where(eq(webhookRoutes.routeId, routeId));
+          return {
+            ...route,
+            secretEncrypted: encrypted,
+            secretLastFour: lastFour,
+            secret: route.secret,
+          };
+        }
+
+        // No secret configured on this route at all.
+        return { ...route, secret: null };
       },
     });
   }
@@ -82,6 +166,44 @@ export function createWebhookStore(db: Database) {
           .set({ isActive: 0, updatedAt: Date.now() })
           .where(eq(webhookRoutes.routeId, routeId)),
     });
+  }
+
+  /**
+   * Generate a new 32-byte secret for an existing route, encrypt it,
+   * and return the new plaintext secret one-time to the caller.
+   *
+   * Updates: secret_encrypted, secret_last_four, updated_at.
+   * Does NOT touch the legacy `secret` column (stays null on rotated rows).
+   *
+   * Caller (admin route) MUST surface the plaintextSecret ONCE to the
+   * admin and never store it server-side.
+   */
+  async function rotateRouteSecret(routeId: string): Promise<{ route: WebhookRoute; plaintextSecret: string }> {
+    const plaintextSecret = generateWebhookSecret();
+    const secretEncrypted = encryptSecret(plaintextSecret);
+    const secretLastFour = lastFourOf(plaintextSecret);
+
+    const updated = await withDbErrorLogging({
+      scope: 'webhooks-store',
+      op: 'rotateRouteSecret',
+      verb: 'write',
+      context: { routeId },
+      fn: async () =>
+        (await db
+          .update(webhookRoutes)
+          .set({
+            secretEncrypted,
+            secretLastFour,
+            updatedAt: Date.now(),
+          })
+          .where(eq(webhookRoutes.routeId, routeId))
+          .returning()) as unknown as WebhookRoute[],
+    });
+
+    if (updated.length === 0) {
+      throw new Error(`Cannot rotate secret: route ${routeId} not found`);
+    }
+    return { route: updated[0], plaintextSecret };
   }
 
   async function createEvent(input: {
@@ -217,6 +339,7 @@ export function createWebhookStore(db: Database) {
     getRoute,
     listRoutesByAgent,
     deactivateRoute,
+    rotateRouteSecret,
     createEvent,
     listEventsByAgent,
     markProcessed,
