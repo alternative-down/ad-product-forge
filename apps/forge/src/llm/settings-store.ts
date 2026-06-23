@@ -14,19 +14,27 @@ import { forgeDebug } from '@forge-runtime/core';
 import { withDbErrorLogging } from '../database/error-logging';
 
 const llmProfileSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1),
   modelKey: z.string().min(1),
   baseUrl: z.string().url().optional().nullable(),
-  apiKey: z.string().min(1),
+  apiKey: z.string().trim().min(1),
   contractCostMultiplier: z.number().positive().default(1),
   isEnabled: z.boolean().default(true),
 });
 
-const llmDefaultsSchema = z.object({
-  primaryProfileId: z.string().min(1),
-  omProfileId: z.string().min(1),
-  hiringRhProfileId: z.string().min(1),
-});
+const llmDefaultsSchema = z
+  .object({
+    primaryProfileId: z.string().min(1),
+    omProfileId: z.string().min(1),
+    hiringRhProfileId: z.string().min(1),
+  })
+  .refine(
+    (data) =>
+      data.primaryProfileId !== data.omProfileId &&
+      data.omProfileId !== data.hiringRhProfileId &&
+      data.primaryProfileId !== data.hiringRhProfileId,
+    { message: 'All three default profile IDs must be distinct' },
+  );
 
 const DEFAULTS_ROW_ID = 'default';
 
@@ -228,32 +236,36 @@ export function createLlmSettingsStore(db: Database) {
   }
 
   async function deleteProfile(profileId: string) {
-    const defaults = await getDefaults();
-
-    if (
-      defaults &&
-      (defaults.primaryProfileId === profileId ||
-        defaults.omProfileId === profileId ||
-        defaults.hiringRhProfileId === profileId)
-    ) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'deleteModelProfile: cannot delete selected system default',
-        context: { profileId },
-      });
-      throw new Error(
-        'Cannot delete an LLM profile that is currently selected as a system default',
-      );
-    }
-
     await withDbErrorLogging({
       scope: 'llm',
       op: 'deleteProfile',
       verb: 'write',
       context: { profileId },
       fn: async () => {
-        await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+        await db.transaction(async (tx) => {
+          const defaults = await tx.query.systemLlmDefaults.findFirst({
+            where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
+          });
+
+          if (
+            defaults &&
+            (defaults.primaryProfileId === profileId ||
+              defaults.omProfileId === profileId ||
+              defaults.hiringRhProfileId === profileId)
+          ) {
+            forgeDebug({
+              scope: 'llm-settings',
+              level: 'warn',
+              message: 'deleteModelProfile: cannot delete selected system default',
+              context: { profileId },
+            });
+            throw new Error(
+              'Cannot delete an LLM profile that is currently selected as a system default',
+            );
+          }
+
+          await tx.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+        });
       },
     });
   }
