@@ -96,6 +96,19 @@ type MockedAgentRunner = {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+// Helper to set up db.transaction so that tx.query and tx.update share
+// the same vi.fn() instances as db.query and db.update. This lets the
+// existing per-test setup (db.query.agents.findFirst = vi.fn()...,
+// db.update = vi.fn().mockReturnValue(...)) work for the inside-transaction
+// reads + write without duplicating mock wiring.
+function setupTxMock(db: Database) {
+  db.transaction = vi.fn().mockImplementation(async (fn: (tx: Database) => Promise<unknown>) => {
+    return fn({ query: db.query, update: db.update } as unknown as Database);
+  });
+}
+
+
+
 function makeMinimalInternalChat(): InternalChatService {
   return {
     registerAgentAccount: vi.fn().mockResolvedValue(undefined),
@@ -145,6 +158,7 @@ function makeDb(overrides: Partial<Database> = {}): Database {
     select: vi.fn(),
     insert: vi.fn(),
     delete: vi.fn(),
+    transaction: vi.fn(),
     ...overrides,
   } as unknown as Database;
   // L#NN-9 9f.3 (#5633 PR 2): double cast is intentional -- Database is LibSQLDatabase<typeof schema> (Drizzle typed), mock is partial subset. Single cast `as Database` fails structural check.
@@ -263,9 +277,11 @@ describe('capabilities/runtime', () => {
 
     it('throws when target agent is not found', async () => {
       const db = makeDb();
+      setupTxMock(db);
+      // Actor has admin role to pass the permission check (closes #5972 PR-0).
       db.query.agents.findFirst = vi
         .fn()
-        .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
+        .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor', 'admin'))
         .mockResolvedValueOnce(undefined);
 
       await expect(
@@ -281,9 +297,10 @@ describe('capabilities/runtime', () => {
 
     it('throws when role is not found', async () => {
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi
         .fn()
-        .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
+        .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor', 'admin'))
         .mockResolvedValueOnce(makeAgent('ag_target', 'Target'))
         .mockResolvedValueOnce(undefined);
 
@@ -299,11 +316,12 @@ describe('capabilities/runtime', () => {
     });
 
     it('updates agent role, notifies, reloads, and returns the result', async () => {
-      const actor = makeAgent('ag_actor', 'Actor');
+      const actor = makeAgent('ag_actor', 'Actor', 'admin');
       const target = makeAgent('ag_target', 'Target', 'role_dev');
       const role = makeRole('role_dev', 'Developer', 'Developer description');
 
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi
         .fn()
         .mockResolvedValueOnce(actor)
@@ -351,6 +369,7 @@ describe('capabilities/runtime', () => {
       const role = makeRole('role_dev', 'Developer');
 
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(agent).mockResolvedValueOnce(agent);
       db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
@@ -382,6 +401,7 @@ describe('capabilities/runtime', () => {
   describe('changeAgentRoleFromAdmin', () => {
     it('throws when target agent is not found', async () => {
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
 
       await expect(
@@ -396,6 +416,7 @@ describe('capabilities/runtime', () => {
 
     it('throws when role is not found', async () => {
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi
         .fn()
         .mockResolvedValueOnce(makeAgent('ag_001', 'Target'))
@@ -416,6 +437,7 @@ describe('capabilities/runtime', () => {
       const role = makeRole('role_qa', 'QA Engineer', 'QA role description');
 
       const db = makeDb();
+      setupTxMock(db);
       db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(target);
       db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
@@ -451,15 +473,16 @@ describe('capabilities/runtime', () => {
   // ── updateInternalChatProviderProfile ───────────────────────────────────
 
   describe('updateInternalChatProviderProfile', () => {
-    it('returns early when no provider exists for the agent', async () => {
+    it('returns {updated: false, reason: no-provider} when no provider exists', async () => {
       const db = makeDb();
 
-      await updateInternalChatProviderProfile(db, {
+      const result = await updateInternalChatProviderProfile(db, {
         agentId: 'ag_no_provider',
         displayName: 'No Provider Agent',
         description: 'Has no internal-chat provider',
       });
 
+      expect(result).toEqual({ updated: false, reason: 'no-provider' });
       expect(db.query.agentProviders.findFirst).toHaveBeenCalled();
       expect(db.update).not.toHaveBeenCalled();
     });
@@ -484,6 +507,25 @@ describe('capabilities/runtime', () => {
       expect(encryptSecret).toHaveBeenCalledWith(
         expect.stringContaining('"displayName":"Updated Name"'),
       );
+    });
+
+    it('throws when decrypted credentials have invalid shape', async () => {
+      const storedCredentials = JSON.stringify({ wrongField: 'no-agentId' });
+      const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
+
+      const db = makeDb();
+      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue(provider);
+      db.update = vi.fn().mockReturnValue(makeUpdateChain());
+
+      await expect(
+        updateInternalChatProviderProfile(db, {
+          agentId: 'ag_001',
+          displayName: 'Name',
+          description: 'Desc',
+        }),
+      ).rejects.toThrow('failed to decrypt/parse credentials');
+
+      expect(db.update).not.toHaveBeenCalled();
     });
 
     it('preserves other credential fields when updating profile', async () => {
@@ -511,7 +553,7 @@ describe('capabilities/runtime', () => {
       expect(call).toContain('"customField":"keepThis"');
     });
 
-    it('logs and returns early when decryptSecret throws', async () => {
+    it('logs and throws when decryptSecret throws', async () => {
       const provider = makeProvider('prov_001', 'ag_001', 'encrypted');
 
       const db = makeDb();
@@ -522,16 +564,18 @@ describe('capabilities/runtime', () => {
         throw new Error('decryption failed');
       });
 
-      await updateInternalChatProviderProfile(db, {
-        agentId: 'ag_001',
-        displayName: 'Name',
-        description: 'Desc',
-      });
+      await expect(
+        updateInternalChatProviderProfile(db, {
+          agentId: 'ag_001',
+          displayName: 'Name',
+          description: 'Desc',
+        }),
+      ).rejects.toThrow('failed to decrypt/parse credentials');
 
       expect(db.update).not.toHaveBeenCalled();
     });
 
-    it('logs and returns early when DB update throws', async () => {
+    it('logs and throws when DB update throws', async () => {
       const storedCredentials = JSON.stringify({ agentId: 'ag_001', displayName: 'Old' });
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
@@ -544,13 +588,26 @@ describe('capabilities/runtime', () => {
       };
       db.update = vi.fn().mockReturnValue(updateChain);
 
-      await updateInternalChatProviderProfile(db, {
-        agentId: 'ag_001',
-        displayName: 'New Name',
-        description: 'Desc',
-      });
+      await expect(
+        updateInternalChatProviderProfile(db, {
+          agentId: 'ag_001',
+          displayName: 'New Name',
+          description: 'Desc',
+        }),
+      ).rejects.toThrow('failed to update provider');
 
       expect(updateChain.set).toHaveBeenCalled();
+    });
+
+    // ── L#NN-32 v13 tripwire: type-guard for StoredCredentials ───────────
+    it('source uses isStoredCredentials type-guard (L#NN-32 v13, no JSON.parse as cast)', async () => {
+      const { readFileSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const source = readFileSync(join(__dirname, 'runtime.ts'), 'utf8');
+      // type-guard present
+      expect(source).toMatch(/function\s+isStoredCredentials/);
+      // JSON.parse cast is now wrapped in type-guard
+      expect(source).not.toMatch(/JSON\.parse\([^)]+\)\s+as\s+\{/);
     });
   });
 });
