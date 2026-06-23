@@ -13,7 +13,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
  * guaranteed to be identical from both paths.
  */
 function requireEncryptionKey(): Buffer {
-  if (ENCRYPTION_KEY === null || ENCRYPTION_KEY === undefined) {
+  if (ENCRYPTION_KEY === null) {
     forgeDebug({
       scope: 'encryption-crypto',
       level: 'error',
@@ -61,6 +61,13 @@ export function decryptSecret(encrypted: string): string {
   const key = requireEncryptionKey();
 
   const combined = Buffer.from(encrypted, 'base64');
+
+  // Validate input structure: minimum 32 bytes (16 IV + 0 ciphertext + 16 authTag).
+  // Without this check, malformed input would throw a confusing IV/authTag size
+  // error at decipher.final() instead of a clear "invalid encrypted input" error.
+  if (combined.length < 32) {
+    throw new Error('Invalid encrypted input: combined buffer must contain IV (16) + ciphertext + authTag (16)');
+  }
 
   // Extract components: IV (16) + ciphertext + authTag (16)
   const iv = combined.slice(0, 16);
