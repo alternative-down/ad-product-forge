@@ -116,6 +116,9 @@ describe('llm/settings-store', () => {
       const result = await store.listProfileMetadata();
 
       expect(result).toHaveLength(1);
+      // Closes #5967: LlmProfileMetadata = Omit<LlmProfileRecord, 'apiKey'>.
+      // LlmProfileRecord does NOT include createdAt/updatedAt — those are DB
+      // row fields only. So we assert identity/enabled fields only.
       expect(result[0]).toMatchObject({
         profileId: 'p-id-1',
         name: 'My Profile',
@@ -123,8 +126,6 @@ describe('llm/settings-store', () => {
         baseUrl: 'https://api.anthropic.com',
         contractCostMultiplier: 1.5,
         isEnabled: true,
-        createdAt: 1700000000000,
-        updatedAt: 1700000001000,
       });
       // No apiKey field on metadata type
       expect((result[0] as Record<string, unknown>).apiKey).toBeUndefined();
@@ -551,18 +552,22 @@ describe('llm/settings-store', () => {
     });
 
     it('throws when default OM profile is disabled', async () => {
-      // Closes #5967: getResolvedDefaults calls getProfile(primary) then getProfile(om-disabled).
-      // Both succeed; then the isEnabled check on om triggers the throw.
+      // Closes #5967: getResolvedDefaults calls getProfile(primary) then getProfile(om-disabled)
+      // in a Promise.all with the hr profile. All 3 dispatches happen, so the mock must provide
+      // 3 values; the isEnabled check on om fires the throw AFTER the hr call returns.
       const primaryRow = createMockProfileRow({ id: 'primary-ok', isEnabled: 1 });
       const omRow = createMockProfileRow({ id: 'om-disabled', isEnabled: 0 });
+      const hrRow = createMockProfileRow({ id: 'hr-ok', isEnabled: 1 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary-ok',
         omProfileId: 'om-disabled',
+        hiringRhProfileId: 'hr-ok',
       });
 
       db.query.llmProfiles.findFirst = vi.fn()
         .mockResolvedValueOnce(primaryRow)
-        .mockResolvedValueOnce(omRow);
+        .mockResolvedValueOnce(omRow)
+        .mockResolvedValueOnce(hrRow);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);

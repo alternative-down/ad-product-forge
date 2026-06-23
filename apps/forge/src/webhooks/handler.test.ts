@@ -2,17 +2,33 @@
  * Unit tests for webhooks/handler.ts — webhook HTTP handler.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { createHmac } from 'node:crypto';
 import { createWebhookHandler } from './handler';
 import type { HttpRequest, HttpResponse } from '../http/server';
 
-const makeReq = (overrides: Partial<HttpRequest> = {}): HttpRequest =>
-  ({
+// Closes #5963: HMAC-SHA256 signing helper (matches verifyWebhookSignature impl).
+const signWebhookBody = (body: string, secret: string): string =>
+  'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
+
+// Closes #5963: makeReq defaults include a valid HMAC-SHA256 signature for
+// the default test secret. Tests that exercise missing/invalid signature
+// override headers explicitly.
+const TEST_SECRET = 'test-secret';
+const DEFAULT_BODY = '{"action":"push","repository":"acme/repo"}';
+
+const makeReq = (overrides: Partial<HttpRequest> = {}): HttpRequest => {
+  const bodyText = (overrides as { bodyText?: string }).bodyText ?? DEFAULT_BODY;
+  return {
     path: '/webhooks/route-123',
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    bodyText: '{"action":"push","repository":"acme/repo"}',
+    headers: {
+      'content-type': 'application/json',
+      'x-forge-signature': signWebhookBody(bodyText, TEST_SECRET),
+    },
+    bodyText,
     ...overrides,
-  }) as unknown as HttpRequest;
+  } as unknown as HttpRequest;
+};
 
 describe('createWebhookHandler', () => {
   const mockStore = vi.hoisted(() => ({
@@ -51,7 +67,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: false,
       });
       const handler = makeHandler();
@@ -100,8 +116,7 @@ describe('createWebhookHandler', () => {
 
     it('accepts valid sha256= signature', async () => {
       const rawBody = makeReq().bodyText!;
-      const crypto = await import('node:crypto');
-      const expected = 'sha256=' + crypto.createHash('sha256').update(rawBody).digest('hex');
+      const expected = signWebhookBody(rawBody, 'my-secret');
 
       mockStore.getRoute.mockResolvedValue({
         routeId: 'r1',
@@ -122,10 +137,9 @@ describe('createWebhookHandler', () => {
       expect(result.status).toBe(202);
     });
 
-    it('accepts valid x-hub-signature-256 header', async () => {
+    it('accepts valid x-hub-signature-256 header (HMAC-SHA256)', async () => {
       const rawBody = makeReq().bodyText!;
-      const crypto = await import('node:crypto');
-      const expected = 'sha256=' + crypto.createHash('sha256').update(rawBody).digest('hex');
+      const expected = signWebhookBody(rawBody, 'my-secret');
 
       mockStore.getRoute.mockResolvedValue({
         routeId: 'r1',
@@ -146,20 +160,38 @@ describe('createWebhookHandler', () => {
       expect(result.status).toBe(202);
     });
 
-    it('skips signature check when route has no secret', async () => {
+    // Closes #5963: defense-in-depth — null/empty secret means misconfigured.
+    // Fail closed with 500 instead of silently accepting unsigned requests.
+    it('returns 500 when route has no secret (fail-closed)', async () => {
       mockStore.getRoute.mockResolvedValue({
         routeId: 'r1',
         agentId: 'agent-1',
-        name: 'Public',
+        name: 'Misconfigured',
         secret: null,
         isActive: true,
       });
-      mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-1' });
-      mockNotify.mockReturnValue(undefined);
 
       const handler = makeHandler();
       const result = await handler.handleWebhook(makeReq());
-      expect(result.status).toBe(202);
+      expect(result.status).toBe(500);
+      expect(result.body).toBe('Route misconfigured');
+      // No event created, no notification sent
+      expect(mockStore.createEvent).not.toHaveBeenCalled();
+      expect(mockNotify).not.toHaveBeenCalled();
+    });
+
+    it('returns 500 when route has empty-string secret (fail-closed)', async () => {
+      mockStore.getRoute.mockResolvedValue({
+        routeId: 'r1',
+        agentId: 'agent-1',
+        name: 'Misconfigured',
+        secret: '',
+        isActive: true,
+      });
+
+      const handler = makeHandler();
+      const result = await handler.handleWebhook(makeReq());
+      expect(result.status).toBe(500);
     });
 
     it('returns 401 when signature header is an array', async () => {
@@ -182,32 +214,46 @@ describe('createWebhookHandler', () => {
 
   describe('payload parsing', () => {
     it('returns 400 for invalid JSON payload', async () => {
+      const bodyText = 'not json';
       mockStore.getRoute.mockResolvedValue({
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ bodyText: 'not json' } as unknown as string as never),
+        makeReq({
+          bodyText,
+          headers: {
+            'content-type': 'application/json',
+            'x-forge-signature': signWebhookBody(bodyText, 'test-secret'),
+          },
+        } as unknown as HttpRequest),
       );
       expect(result.status).toBe(400);
       expect(result.body).toBe('Invalid JSON payload');
     });
 
     it('returns 400 for empty body', async () => {
+      const bodyText = '';
       mockStore.getRoute.mockResolvedValue({
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ bodyText: '' } as unknown as string as never),
+        makeReq({
+          bodyText,
+          headers: {
+            'content-type': 'application/json',
+            'x-forge-signature': signWebhookBody(bodyText, 'test-secret'),
+          },
+        } as unknown as HttpRequest),
       );
       expect(result.status).toBe(400);
     });
@@ -219,7 +265,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'GitHub',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'event-456' });
@@ -236,7 +282,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-42',
         name: 'Stripe',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -254,7 +300,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -267,6 +313,7 @@ describe('createWebhookHandler', () => {
             'content-type': 'application/json',
             'user-agent': 'GitHub-Hookshot',
             'x-forwarded-for': '1.2.3.4',
+            'x-forge-signature': signWebhookBody(makeReq().bodyText!, 'test-secret'),
           },
         } as unknown as HttpRequest),
       );
@@ -286,7 +333,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -295,7 +342,11 @@ describe('createWebhookHandler', () => {
       const handler = makeHandler();
       await handler.handleWebhook(
         makeReq({
-          headers: { 'content-type': 'application/json', 'x-idempotency-key': 'unique-key-123' },
+          headers: {
+            'content-type': 'application/json',
+            'x-idempotency-key': 'unique-key-123',
+            'x-forge-signature': signWebhookBody(makeReq().bodyText!, 'test-secret'),
+          },
         } as unknown as HttpRequest),
       );
       expect(mockStore.createEvent).toHaveBeenCalledWith(
@@ -308,7 +359,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -326,7 +377,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'GitHub',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -349,7 +400,7 @@ describe('createWebhookHandler', () => {
         routeId: 'r1',
         agentId: 'agent-1',
         name: 'Test',
-        secret: null,
+        secret: 'test-secret',
         isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'created', eventId: 'e1' });
@@ -361,6 +412,7 @@ describe('createWebhookHandler', () => {
           headers: {
             'content-type': 'application/json',
             'x-forwarded-for': ['1.2.3.4', '5.6.7.8'],
+            'x-forge-signature': signWebhookBody(makeReq().bodyText!, 'test-secret'),
           },
         } as unknown as unknown as HttpRequest),
       );
@@ -373,7 +425,7 @@ describe('createWebhookHandler', () => {
 
     it('returns 200 with deduplicated:true on idempotent replay (T1, T7: AC-1 + AC-5)', async () => {
       mockStore.getRoute.mockResolvedValue({
-        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'test-secret', isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'duplicate', eventId: 'event-1' });
       mockNotify.mockReturnValue(undefined);
@@ -389,7 +441,7 @@ describe('createWebhookHandler', () => {
 
     it('does NOT call notifyAgent on idempotent replay (skip duplicate notification)', async () => {
       mockStore.getRoute.mockResolvedValue({
-        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'test-secret', isActive: true,
       });
       mockStore.createEvent.mockResolvedValue({ kind: 'duplicate', eventId: 'event-1' });
       mockNotify.mockReturnValue(undefined);
@@ -401,7 +453,7 @@ describe('createWebhookHandler', () => {
 
     it('returns 202 on first call (created) and 200 on replay (duplicate) — full T1 flow', async () => {
       mockStore.getRoute.mockResolvedValue({
-        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: null, isActive: true,
+        routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'test-secret', isActive: true,
       });
       mockStore.createEvent
         .mockResolvedValueOnce({ kind: 'created', eventId: 'event-1' })
