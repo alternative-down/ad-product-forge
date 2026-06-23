@@ -32,6 +32,26 @@ function createMockDb(overrides?: Partial<Database>): Database {
     delete: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
     }),
+    transaction: vi.fn().mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const txDelete = vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(undefined),
+        });
+        const tx = {
+          query: {
+            llmProfiles: {
+              findMany: vi.fn().mockResolvedValue([]),
+              findFirst: vi.fn().mockResolvedValue(null),
+            },
+            systemLlmDefaults: {
+              findFirst: vi.fn().mockResolvedValue(null),
+            },
+          },
+          delete: txDelete,
+        };
+        return fn(tx);
+      },
+    ),
     ...overrides,
   } as unknown as Database;
 }
@@ -343,6 +363,20 @@ describe('llm/settings-store', () => {
         store.upsertProfile({ name: 'A', modelKey: 'm', apiKey: 'k', baseUrl: null }),
       ).resolves.toBeTruthy();
     });
+
+    it('rejects whitespace-only apiKey (#5968: trim BEFORE min validation)', async () => {
+      const store = createLlmSettingsStore(db);
+      await expect(
+        store.upsertProfile({ name: 'Valid', modelKey: 'gpt-4', apiKey: '   ' }),
+      ).rejects.toThrow();
+    });
+
+    it('rejects whitespace-only name (#5968: trim BEFORE min validation)', async () => {
+      const store = createLlmSettingsStore(db);
+      await expect(
+        store.upsertProfile({ name: '   ', modelKey: 'gpt-4', apiKey: 'real-key' }),
+      ).rejects.toThrow();
+    });
   });
 
   // ── deleteProfile ───────────────────────────────────────────────────────────
@@ -350,7 +384,21 @@ describe('llm/settings-store', () => {
   describe('deleteProfile', () => {
     it('throws when trying to delete a profile that is a system default', async () => {
       const defaultsRow = createMockDefaultsRow({ primaryProfileId: 'to-delete' });
-      db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
+      db.transaction = vi.fn().mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            query: {
+              systemLlmDefaults: {
+                findFirst: vi.fn().mockResolvedValue(defaultsRow),
+              },
+            },
+            delete: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(undefined),
+            }),
+          };
+          return fn(tx);
+        },
+      );
 
       const store = createLlmSettingsStore(db);
       await expect(store.deleteProfile('to-delete')).rejects.toThrow(
@@ -360,7 +408,21 @@ describe('llm/settings-store', () => {
 
     it('throws when profile is OM default', async () => {
       const defaultsRow = createMockDefaultsRow({ omProfileId: 'to-delete-om' });
-      db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
+      db.transaction = vi.fn().mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            query: {
+              systemLlmDefaults: {
+                findFirst: vi.fn().mockResolvedValue(defaultsRow),
+              },
+            },
+            delete: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(undefined),
+            }),
+          };
+          return fn(tx);
+        },
+      );
 
       const store = createLlmSettingsStore(db);
       await expect(store.deleteProfile('to-delete-om')).rejects.toThrow(
@@ -370,7 +432,21 @@ describe('llm/settings-store', () => {
 
     it('throws when profile is hiring RH default', async () => {
       const defaultsRow = createMockDefaultsRow({ hiringRhProfileId: 'to-delete-hr' });
-      db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
+      db.transaction = vi.fn().mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            query: {
+              systemLlmDefaults: {
+                findFirst: vi.fn().mockResolvedValue(defaultsRow),
+              },
+            },
+            delete: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue(undefined),
+            }),
+          };
+          return fn(tx);
+        },
+      );
 
       const store = createLlmSettingsStore(db);
       await expect(store.deleteProfile('to-delete-hr')).rejects.toThrow(
@@ -378,18 +454,57 @@ describe('llm/settings-store', () => {
       );
     });
 
-    it('deletes profile when it is not a default', async () => {
-      db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(null);
-
-      const mockDelete = vi.fn().mockReturnValue({
+    it('deletes profile when it is not a default (atomic via transaction)', async () => {
+      const txDelete = vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       });
-      db.delete = mockDelete as Database['delete'];
+      db.transaction = vi.fn().mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            query: {
+              systemLlmDefaults: {
+                findFirst: vi.fn().mockResolvedValue(null),
+              },
+            },
+            delete: txDelete,
+          };
+          return fn(tx);
+        },
+      );
 
       const store = createLlmSettingsStore(db);
       await store.deleteProfile('non-default-profile');
 
-      expect(mockDelete).toHaveBeenCalled();
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(txDelete).toHaveBeenCalled();
+    });
+
+    it('does NOT call tx.delete when check inside transaction throws (atomicity)', async () => {
+      const defaultsRow = createMockDefaultsRow({ primaryProfileId: 'is-default' });
+      const txDelete = vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      });
+      db.transaction = vi.fn().mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            query: {
+              systemLlmDefaults: {
+                findFirst: vi.fn().mockResolvedValue(defaultsRow),
+              },
+            },
+            delete: txDelete,
+          };
+          return fn(tx);
+        },
+      );
+
+      const store = createLlmSettingsStore(db);
+      await expect(store.deleteProfile('is-default')).rejects.toThrow(
+        'Cannot delete an LLM profile that is currently selected as a system default',
+      );
+
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(txDelete).not.toHaveBeenCalled();
     });
   });
 
@@ -413,6 +528,7 @@ describe('llm/settings-store', () => {
       const rows = [
         createMockProfileRow({ id: 'enabled-1', isEnabled: 1 }),
         createMockProfileRow({ id: 'disabled-2', isEnabled: 0 }),
+        createMockProfileRow({ id: 'enabled-3', isEnabled: 1 }),
       ];
       db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
 
@@ -421,7 +537,7 @@ describe('llm/settings-store', () => {
         store.updateDefaults({
           primaryProfileId: 'enabled-1',
           omProfileId: 'disabled-2',
-          hiringRhProfileId: 'enabled-1',
+          hiringRhProfileId: 'enabled-3',
         }),
       ).rejects.toThrow('Default LLM profile must be enabled: disabled-2');
     });
@@ -493,6 +609,28 @@ describe('llm/settings-store', () => {
       // is the SINGLE atomic statement (not findFirst+update).
       expect(mockInsert).toHaveBeenCalled();
       expect(mockOnConflict).toHaveBeenCalled();
+    });
+
+    it('rejects updateDefaults where all 3 IDs are the same (#5969: uniqueness invariant)', async () => {
+      const store = createLlmSettingsStore(db);
+      await expect(
+        store.updateDefaults({
+          primaryProfileId: 'p1',
+          omProfileId: 'p1',
+          hiringRhProfileId: 'p1',
+        }),
+      ).rejects.toThrow(/distinct|unique|different/i);
+    });
+
+    it('rejects updateDefaults with 2-of-3 duplicate IDs (#5969: uniqueness invariant)', async () => {
+      const store = createLlmSettingsStore(db);
+      await expect(
+        store.updateDefaults({
+          primaryProfileId: 'p1',
+          omProfileId: 'p1',
+          hiringRhProfileId: 'p2',
+        }),
+      ).rejects.toThrow(/distinct|unique|different/i);
     });
   });
 
