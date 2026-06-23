@@ -16,7 +16,7 @@ type CreateEventResult =
   | { kind: 'duplicate'; eventId: string };
 
 type Store = {
-  getRoute(routeId: string): Promise<WebhookRoute | null>;
+  getRoute(routeId: string): Promise<WebhookRouteWithSecret | null>;
   createEvent(input: {
     routeId: string;
     agentId: string;
@@ -36,6 +36,7 @@ type NotifyAgent = (input: {
 }) => void;
 
 import type { WebhookRoute } from '../database/schema';
+import type { WebhookRouteWithSecret } from './store';
 
 export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyAgent }) {
   async function handleWebhook(request: HttpRequest): Promise<HttpResponse> {

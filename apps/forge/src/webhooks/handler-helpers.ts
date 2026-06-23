@@ -89,12 +89,16 @@ export type ParsePayloadResult =
   | { ok: false };
 
 export function parseWebhookPayload(bodyText: string): ParsePayloadResult {
+  let parsed: unknown;
   try {
-    const payload = JSON.parse(bodyText) as Record<string, unknown>;
-    return { ok: true, payload };
+    parsed = JSON.parse(bodyText);
   } catch {
     return { ok: false };
   }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { ok: false };
+  }
+  return { ok: true, payload: parsed as Record<string, unknown> };
 }
 
 /**
@@ -149,9 +153,10 @@ export function buildNotificationContent(
   idempotencyKey: string;
   timestamp: number;
 } {
+  const safeRouteName = route.name.length > 100 ? route.name.slice(0, 100) + '…' : route.name;
   return {
     agentId: route.agentId,
-    content: `[Webhook] Event received on route "${route.name}" (${routeId}). Event ID: ${eventId}`,
+    content: `[Webhook] Event received on route "${safeRouteName}" (${routeId}). Event ID: ${eventId}`,
     groupKey: `webhook:${eventId}`,
     type: 'webhook',
     idempotencyKey: `webhook:${eventId}`,
