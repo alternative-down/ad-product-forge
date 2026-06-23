@@ -49,13 +49,6 @@ export type SystemIntegrationSummary = {
 };
 
 /** Fields that must not appear in list/summary API responses */
-const SENSITIVE_FIELDS: Record<SystemIntegrationProviderType, string[]> = {
-  migadu: ['apiKey'],
-  coolify: ['adminToken'],
-  github: [], // no raw secrets; appHomeUrl and organization are not secret
-  minimax: ['apiKey'],
-};
-
 export type SystemIntegrationStore = Awaited<ReturnType<typeof createSystemIntegrationStore>>;
 export function createSystemIntegrationStore(db: Database) {
   const parseEncryptedConfigMap: Record<
@@ -79,6 +72,10 @@ export function createSystemIntegrationStore(db: Database) {
     minimax: minimaxConfigSchema,
   };
 
+  // Closes #5981: listIntegrations MUST NOT decrypt credentials. Returns
+  // metadata only. Callers that need the full config must call
+  // getMigaduConfig() / getCoolifyConfig() / getGithubConfig() / getMinimaxConfig()
+  // explicitly.
   async function listIntegrations(): Promise<SystemIntegrationSummary[]> {
     return await withDbErrorLogging({
       scope: 'system-integrations',
@@ -97,12 +94,11 @@ export function createSystemIntegrationStore(db: Database) {
 
         return typedRows.map((row) => {
           const { encryptedConfig, ...rest } = row;
-          const rawConfig = parseIntegrationConfigForList(row.providerType as SystemIntegrationProviderType, encryptedConfig);
-
+          void encryptedConfig; // intentionally not decrypted in list path
           return {
             ...rest,
             isEnabled: row.isEnabled === 1,
-            config: sanitizeForList(row.providerType as SystemIntegrationProviderType, rawConfig),
+            config: null, // list path does not decrypt; see get*Config() for full
           };
         }) as any;
       },
@@ -269,43 +265,6 @@ export function createSystemIntegrationStore(db: Database) {
     encryptedConfig: string,
   ) {
     return parseEncryptedConfigMap[providerType](encryptedConfig);
-  }
-
-  function parseIntegrationConfigForList(
-    providerType: SystemIntegrationProviderType,
-    encryptedConfig: string,
-  ) {
-    try {
-      return parseIntegrationConfig(providerType, encryptedConfig);
-    } catch (error) {
-      forgeDebug({
-        scope: 'system-integrations',
-        level: 'info',
-        message: 'Failed to parse integration config',
-        context: { error: errorMsg(error) },
-      });
-      return null;
-    }
-  }
-
-  function sanitizeForList(
-    providerType: SystemIntegrationProviderType,
-    rawConfig: unknown,
-  ): Record<string, unknown> | null {
-    if (rawConfig === null || rawConfig === undefined || typeof rawConfig !== 'object') {
-      return null;
-    }
-
-    const sensitive = SENSITIVE_FIELDS[providerType] ?? [];
-    const result: Record<string, unknown> = { ...(rawConfig as Record<string, unknown>) };
-
-    for (const field of sensitive) {
-      if (field in result) {
-        result[field] = null;
-      }
-    }
-
-    return result;
   }
 
   function parseUpsertConfig(
