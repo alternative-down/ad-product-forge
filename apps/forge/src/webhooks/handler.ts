@@ -52,27 +52,38 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       return { status: 404, body: 'Route inactive' };
     }
 
-    if (route.secret !== null && route.secret !== undefined) {
-      const signatureHeader =
-        request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
-      if (signatureHeader === null || signatureHeader === undefined) {
-        forgeDebug({
-          scope: 'webhooks',
-          level: 'warn',
-          message: 'Missing signature header',
-          context: { routeId },
-        });
-        return { status: 401, body: 'Missing signature' };
-      }
-      if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
-        forgeDebug({
-          scope: 'webhooks-handler',
-          level: 'warn',
-          message: 'Invalid signature',
-          context: { routeId },
-        });
-        return { status: 401, body: 'Invalid signature' };
-      }
+    // Defense-in-depth (closes #5963): require HMAC for ALL routes. A null/empty
+    // secret means the route is misconfigured — fail closed with 500 rather
+    // than silently accepting unsigned requests.
+    if (route.secret === null || route.secret === undefined || route.secret === '') {
+      forgeDebug({
+        scope: 'webhooks-handler',
+        level: 'error',
+        message: 'Route has no secret — misconfigured, refusing request',
+        context: { routeId, agentId: route.agentId },
+      });
+      return { status: 500, body: 'Route misconfigured' };
+    }
+
+    const signatureHeader =
+      request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
+    if (signatureHeader === null || signatureHeader === undefined) {
+      forgeDebug({
+        scope: 'webhooks',
+        level: 'warn',
+        message: 'Missing signature header',
+        context: { routeId },
+      });
+      return { status: 401, body: 'Missing signature' };
+    }
+    if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
+      forgeDebug({
+        scope: 'webhooks-handler',
+        level: 'warn',
+        message: 'Invalid signature',
+        context: { routeId },
+      });
+      return { status: 401, body: 'Invalid signature' };
     }
 
     const parsed = parseWebhookPayload(request.bodyText);

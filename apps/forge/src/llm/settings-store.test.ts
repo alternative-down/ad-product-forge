@@ -95,7 +95,9 @@ describe('llm/settings-store', () => {
       expect(result).toEqual([]);
     });
 
-    it('redacts apiKey in list response for security', async () => {
+    // Closes #5967: listProfiles keeps decrypting for backward compat (admin UI
+    // explicit credential surfacing). listProfileMetadata is the new safe API.
+    it('listProfileMetadata returns metadata without apiKey (least-privilege)', async () => {
       const row = createMockProfileRow({
         id: 'p-id-1',
         name: 'My Profile',
@@ -111,20 +113,22 @@ describe('llm/settings-store', () => {
       db.query.llmProfiles.findMany = vi.fn().mockResolvedValue([row]);
 
       const store = createLlmSettingsStore(db);
-      const result = await store.listProfiles();
+      const result = await store.listProfileMetadata();
 
       expect(result).toHaveLength(1);
+      // Closes #5967: LlmProfileMetadata = Omit<LlmProfileRecord, 'apiKey'>.
+      // LlmProfileRecord does NOT include createdAt/updatedAt — those are DB
+      // row fields only. So we assert identity/enabled fields only.
       expect(result[0]).toMatchObject({
         profileId: 'p-id-1',
         name: 'My Profile',
         modelKey: 'claude-3',
         baseUrl: 'https://api.anthropic.com',
-        apiKey: null,
         contractCostMultiplier: 1.5,
         isEnabled: true,
-        createdAt: 1700000000000,
-        updatedAt: 1700000001000,
       });
+      // No apiKey field on metadata type
+      expect((result[0] as Record<string, unknown>).apiKey).toBeUndefined();
     });
 
     it('converts isEnabled 0 to false', async () => {
@@ -506,21 +510,21 @@ describe('llm/settings-store', () => {
     });
 
     it('throws when default primary profile is missing', async () => {
+      // Closes #5967: new getResolvedDefaults calls getProfile(id) which throws when missing.
       const defaultsRow = createMockDefaultsRow({ primaryProfileId: 'missing-primary' });
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue([]);
+      db.query.llmProfiles.findFirst = vi.fn().mockResolvedValue(null);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
-      await expect(store.getResolvedDefaults()).rejects.toThrow(
-        'Default primary LLM profile is missing or disabled',
-      );
+      await expect(store.getResolvedDefaults()).rejects.toThrow('LLM profile not found: missing-primary');
     });
 
     it('throws when default primary profile is disabled', async () => {
-      const rows = [createMockProfileRow({ id: 'primary-disabled', isEnabled: 0 })];
+      // Closes #5967: getResolvedDefaults calls getProfile then checks isEnabled.
+      const row = createMockProfileRow({ id: 'primary-disabled', isEnabled: 0 });
       const defaultsRow = createMockDefaultsRow({ primaryProfileId: 'primary-disabled' });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn().mockResolvedValue(row);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
@@ -530,32 +534,40 @@ describe('llm/settings-store', () => {
     });
 
     it('throws when default OM profile is missing', async () => {
-      const rows = [createMockProfileRow({ id: 'primary-ok', isEnabled: 1 })];
+      // Closes #5967: getResolvedDefaults calls getProfile(primary) first which succeeds,
+      // then getProfile(om=missing-om) throws.
+      const primaryRow = createMockProfileRow({ id: 'primary-ok', isEnabled: 1 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary-ok',
         omProfileId: 'missing-om',
       });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn()
+        .mockResolvedValueOnce(primaryRow)  // primary
+        .mockResolvedValueOnce(null);       // om (missing)
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
-      await expect(store.getResolvedDefaults()).rejects.toThrow(
-        'Default OM LLM profile is missing or disabled',
-      );
+      await expect(store.getResolvedDefaults()).rejects.toThrow('LLM profile not found: missing-om');
     });
 
     it('throws when default OM profile is disabled', async () => {
-      const rows = [
-        createMockProfileRow({ id: 'primary-ok', isEnabled: 1 }),
-        createMockProfileRow({ id: 'om-disabled', isEnabled: 0 }),
-      ];
+      // Closes #5967: getResolvedDefaults calls getProfile(primary) then getProfile(om-disabled)
+      // in a Promise.all with the hr profile. All 3 dispatches happen, so the mock must provide
+      // 3 values; the isEnabled check on om fires the throw AFTER the hr call returns.
+      const primaryRow = createMockProfileRow({ id: 'primary-ok', isEnabled: 1 });
+      const omRow = createMockProfileRow({ id: 'om-disabled', isEnabled: 0 });
+      const hrRow = createMockProfileRow({ id: 'hr-ok', isEnabled: 1 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary-ok',
         omProfileId: 'om-disabled',
+        hiringRhProfileId: 'hr-ok',
       });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn()
+        .mockResolvedValueOnce(primaryRow)
+        .mockResolvedValueOnce(omRow)
+        .mockResolvedValueOnce(hrRow);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
@@ -565,38 +577,40 @@ describe('llm/settings-store', () => {
     });
 
     it('throws when default hiring RH profile is missing', async () => {
-      const rows = [
-        createMockProfileRow({ id: 'primary-ok', isEnabled: 1 }),
-        createMockProfileRow({ id: 'om-ok', isEnabled: 1 }),
-      ];
+      // Closes #5967: getResolvedDefaults calls getProfile 3x; hr is the missing one.
+      const primaryRow = createMockProfileRow({ id: 'primary-ok', isEnabled: 1 });
+      const omRow = createMockProfileRow({ id: 'om-ok', isEnabled: 1 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary-ok',
         omProfileId: 'om-ok',
         hiringRhProfileId: 'missing-hr',
       });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn()
+        .mockResolvedValueOnce(primaryRow)
+        .mockResolvedValueOnce(omRow)
+        .mockResolvedValueOnce(null);  // hr missing
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
-      await expect(store.getResolvedDefaults()).rejects.toThrow(
-        'Default hiring RH LLM profile is missing or disabled',
-      );
+      await expect(store.getResolvedDefaults()).rejects.toThrow('LLM profile not found: missing-hr');
     });
 
     it('throws when default hiring RH profile is disabled', async () => {
-      const rows = [
-        createMockProfileRow({ id: 'primary-ok', isEnabled: 1 }),
-        createMockProfileRow({ id: 'om-ok', isEnabled: 1 }),
-        createMockProfileRow({ id: 'hr-disabled', isEnabled: 0 }),
-      ];
+      // Closes #5967: getResolvedDefaults calls getProfile 3x; hr row has isEnabled:0.
+      const primaryRow = createMockProfileRow({ id: 'primary-ok', isEnabled: 1 });
+      const omRow = createMockProfileRow({ id: 'om-ok', isEnabled: 1 });
+      const hrRow = createMockProfileRow({ id: 'hr-disabled', isEnabled: 0 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary-ok',
         omProfileId: 'om-ok',
         hiringRhProfileId: 'hr-disabled',
       });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn()
+        .mockResolvedValueOnce(primaryRow)
+        .mockResolvedValueOnce(omRow)
+        .mockResolvedValueOnce(hrRow);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
@@ -606,18 +620,20 @@ describe('llm/settings-store', () => {
     });
 
     it('returns all three resolved profiles when all are enabled', async () => {
-      const rows = [
-        createMockProfileRow({ id: 'primary', name: 'Primary Profile', isEnabled: 1 }),
-        createMockProfileRow({ id: 'om', name: 'OM Profile', isEnabled: 1 }),
-        createMockProfileRow({ id: 'hr', name: 'HR Profile', isEnabled: 1 }),
-      ];
+      // Closes #5967: getResolvedDefaults now calls getProfile 3x.
+      const primaryRow = createMockProfileRow({ id: 'primary', name: 'Primary Profile', isEnabled: 1 });
+      const omRow = createMockProfileRow({ id: 'om', name: 'OM Profile', isEnabled: 1 });
+      const hrRow = createMockProfileRow({ id: 'hr', name: 'HR Profile', isEnabled: 1 });
       const defaultsRow = createMockDefaultsRow({
         primaryProfileId: 'primary',
         omProfileId: 'om',
         hiringRhProfileId: 'hr',
       });
 
-      db.query.llmProfiles.findMany = vi.fn().mockResolvedValue(rows);
+      db.query.llmProfiles.findFirst = vi.fn()
+        .mockResolvedValueOnce(primaryRow)
+        .mockResolvedValueOnce(omRow)
+        .mockResolvedValueOnce(hrRow);
       db.query.systemLlmDefaults.findFirst = vi.fn().mockResolvedValue(defaultsRow);
 
       const store = createLlmSettingsStore(db);
