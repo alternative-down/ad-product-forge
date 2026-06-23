@@ -348,7 +348,11 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileMetadata(row: LlmProfile): LlmProfileMetadata {
-  const { id, encryptedApiKey, isEnabled, ...rest } = row;
+  // Closes #5967 + L#NN-50 #17 N=4: destructure excludes apiKey for the
+  // metadata type. The destructured variable is intentionally unused -
+  // prefix with underscore to silence the no-unused-vars lint rule while
+  // preserving the destructure pattern.
+  const { id, encryptedApiKey: _encryptedApiKey, isEnabled, ...rest } = row;
   return {
     profileId: id,
     name: rest.name ?? '',

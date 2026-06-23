@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/client';
@@ -258,13 +257,6 @@ export function createSystemIntegrationStore(db: Database) {
 
   function parseMinimaxConfig(encryptedConfig: string): MinimaxSystemIntegrationConfig {
     return minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
-  }
-
-  function parseIntegrationConfig(
-    providerType: SystemIntegrationProviderType,
-    encryptedConfig: string,
-  ) {
-    return parseEncryptedConfigMap[providerType](encryptedConfig);
   }
 
   function parseUpsertConfig(
