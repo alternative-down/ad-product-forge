@@ -39,7 +39,10 @@ export function createAgentNotificationStore(db: Database) {
         message: 'createNotification content exceeds max length',
         context: { length: input.content.length, max: MAX_NOTIFICATION_CONTENT_LENGTH },
       });
-      return null;
+      throw new Error(
+        'createNotification content length ' + input.content.length +
+        ' exceeds max ' + MAX_NOTIFICATION_CONTENT_LENGTH
+      );
     }
     const now = input.createdAt ?? Date.now();
     const notification = {
@@ -115,7 +118,7 @@ export function createAgentNotificationStore(db: Database) {
       return { updatedCount: 0 };
     }
     try {
-      await db
+      const updated = (await db
         .update(agentNotifications)
         .set({ readAt: Date.now(), updatedAt: Date.now() })
         .where(
@@ -123,20 +126,20 @@ export function createAgentNotificationStore(db: Database) {
             eq(agentNotifications.agentId, input.agentId),
             inArray(agentNotifications.id, input.notificationIds),
           ),
-        );
-      return { updatedCount: input.notificationIds.length };
+        )
+        .returning({ id: agentNotifications.id })) as unknown as Array<{ id: string }>;
+      return { updatedCount: updated.length };
     } catch (err) {
-      // markNotificationsRead has a unique return shape ({ updatedCount: 0 })
-      // that withDbErrorLogging's return-null mode cannot produce. Keep this
-      // site as a manual try/catch. Future enhancement: add a fallback param
-      // to withDbErrorLogging to generalize this case (tracked in #5468 follow-up).
+      // markNotificationsRead no longer silently swallows DB errors. We log
+      // the error context and rethrow so callers can distinguish actual
+      // updates from no-ops (see #5977).
       forgeDebug({
         scope: 'notifications-store',
         level: 'error',
         runtimeId: input.agentId,
         message: 'markNotificationsRead DB update failed: ' + errorMsg(err),
       });
-      return { updatedCount: 0 };
+      throw err;
     }
   }
 

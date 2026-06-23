@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import crypto from 'node:crypto';
 import { decryptSecret, encryptSecret } from './crypto';
 
@@ -190,6 +192,72 @@ describe('crypto', () => {
       // Flip last byte to corrupt the auth tag
       ct[ct.length - 1] ^= 0xff;
       expect(() => decryptSecret(Buffer.from(ct).toString('base64'))).toThrow();
+    });
+
+    // L#NN-19 hygiene (#5952 + #5508): clear error on short input instead of
+    // confusing "Unsupported state or unable to authenticate data" from GCM.
+    it('throws clear "Invalid encrypted input" on combined.length < 32', async () => {
+      process.env.ENCRYPTION_KEY = validKey;
+      const { decryptSecret: fn } = await import('./crypto');
+      // Empty base64 → empty buffer → length 0 < 32 → clear error before GCM.
+      expect(() => fn('')).toThrow('Invalid encrypted input');
+      expect(() => fn('')).toThrow('IV (16) + ciphertext + authTag (16)');
+    });
+
+    it('throws clear "Invalid encrypted input" on combined.length 31', async () => {
+      process.env.ENCRYPTION_KEY = validKey;
+      const { decryptSecret: fn } = await import('./crypto');
+      // 31 bytes of base64 input — just under the 32-byte minimum.
+      const short = Buffer.alloc(31, 0).toString('base64');
+      expect(() => fn(short)).toThrow('Invalid encrypted input');
+    });
+
+    it('accepts minimum-length combined (32 bytes: empty plaintext)', async () => {
+      process.env.ENCRYPTION_KEY = validKey;
+      const { decryptSecret: fn, encryptSecret: enc } = await import('./crypto');
+      // Encrypt empty string → 16 IV + 0 ciphertext + 16 authTag = 32 bytes combined.
+      // This is the boundary case where the new check passes (32 is not < 32).
+      const ct = enc('');
+      expect(() => fn(ct)).not.toThrow();
+      expect(fn(ct)).toBe('');
+    });
+  });
+
+
+  // L#NN-19 hygiene (#5953 + #5509): redundant `=== undefined` check removed.
+  // The module-level `const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null`
+  // produces type `string | null` (NOT `string | null | undefined`). A tripwire
+  // test that asserts the behavior matches the type: setting ENCRYPTION_KEY to
+  // the literal `undefined` (via unset env) produces the SAME error as null,
+  // and the function does NOT have a separate undefined-branch.
+  describe('requireEncryptionKey type narrowing (#5953 + #5509)', () => {
+    // The redundant `=== undefined` check was removed because ENCRYPTION_KEY is
+    // typed as `string | null` (from `process.env.ENCRYPTION_KEY ?? null`), not
+    // `string | null | undefined`. The `=== undefined` branch was unreachable.
+    it('source: requireEncryptionKey does NOT contain === undefined check', () => {
+      const source = readFileSync(join(__dirname, 'crypto.ts'), 'utf8');
+      // The bug pattern is "ENCRYPTION_KEY === undefined" — this must NOT appear
+      // in the function body. We anchor on the function header to avoid matching
+      // any other `=== undefined` checks elsewhere in the file.
+      const fnBody = source.match(/function requireEncryptionKey[\s\S]*?\n\}/);
+      expect(fnBody).not.toBeNull();
+      expect(fnBody![0]).not.toMatch(/=== undefined/);
+    });
+
+    it('source: requireEncryptionKey still checks === null (defensive)', () => {
+      const source = readFileSync(join(__dirname, 'crypto.ts'), 'utf8');
+      const fnBody = source.match(/function requireEncryptionKey[\s\S]*?\n\}/);
+      expect(fnBody).not.toBeNull();
+      expect(fnBody![0]).toMatch(/=== null/);
+    });
+
+    it('unset ENCRYPTION_KEY throws required-variable error (positive control)', async () => {
+      // Unset env → ENCRYPTION_KEY becomes null via `?? null` → throws required.
+      // This is the ONLY path that hits the `=== null` branch.
+      delete process.env.ENCRYPTION_KEY;
+      vi.resetModules();
+      const { encryptSecret: fn } = await import('./crypto');
+      expect(() => fn('test')).toThrow('ENCRYPTION_KEY environment variable is required');
     });
   });
 

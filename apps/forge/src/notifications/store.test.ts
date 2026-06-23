@@ -134,7 +134,13 @@ function createMockDb(initial: NotificationRow[] = []) {
       })),
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(async () => ({ returning: vi.fn(async () => []) })),
+          where: vi.fn(() => ({
+            // Real drizzle chain: .set().where().returning() — the returning call
+            // yields the actual updated rows. The mock returns [] by default;
+            // individual tests can override the chain to simulate partial updates
+            // (e.g., requested 3, only 2 matched) or DB errors.
+            returning: vi.fn(async () => []),
+          })),
         })),
       })),
     } as unknown as Parameters<typeof createAgentNotificationStore>[0],
@@ -193,19 +199,21 @@ describe('createAgentNotificationStore', () => {
       expect((result as any).content).toHaveLength(16_384);
     });
 
-    test('rejects content one byte over MAX (16_385 chars) and returns null', async () => {
+    test('rejects content one byte over MAX (16_385 chars) and throws clear error (#5976)', async () => {
       const content = 'a'.repeat(16_385);
       const insertSpy = vi.mocked(mock.db.insert);
-      const result = await store.createNotification({ agentId: 'ag_001', content });
-      expect(result).toBeNull();
+      await expect(
+        store.createNotification({ agentId: 'ag_001', content })
+      ).rejects.toThrow(/createNotification content length 16385 exceeds max 16384/);
       expect(insertSpy).not.toHaveBeenCalled();
     });
 
-    test('rejects pathological 10MB content and does not bloat DB', async () => {
+    test('rejects pathological 10MB content and throws clear error (#5976)', async () => {
       const content = 'x'.repeat(10 * 1024 * 1024);
       const insertSpy = vi.mocked(mock.db.insert);
-      const result = await store.createNotification({ agentId: 'ag_001', content });
-      expect(result).toBeNull();
+      await expect(
+        store.createNotification({ agentId: 'ag_001', content })
+      ).rejects.toThrow(/createNotification content length 10485760 exceeds max 16384/);
       expect(insertSpy).not.toHaveBeenCalled();
       const list = await mock.db.query.agentNotifications.findMany();
       expect(list).toHaveLength(0);
@@ -222,10 +230,11 @@ describe('createAgentNotificationStore', () => {
       expect(source).toMatch(/const MAX_NOTIFICATION_CONTENT_LENGTH = 16_384/);
     });
 
-    test('source rejects content over cap via length check before insert', () => {
+    test('source rejects content over cap via length check before insert (#5976)', () => {
       const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
       expect(source).toMatch(/input.content.length > MAX_NOTIFICATION_CONTENT_LENGTH/);
-      expect(source).toMatch(/return null/);
+      // Throws instead of returning null — silent failure pattern removed.
+      expect(source).toMatch(/throw new Error\(\s*'createNotification content length/);
     });
   });
 
@@ -362,16 +371,53 @@ describe('createAgentNotificationStore', () => {
       expect(updateSpy).toHaveBeenCalledTimes(1);
     });
 
-    test('returns updatedCount equal to the number of notificationIds passed', async () => {
+    test('returns updatedCount equal to ACTUAL rows updated, not requested count (#5975)', async () => {
       mock = createMockDb([]);
       store = createAgentNotificationStore(mock.db);
+
+      // Mock returning() to report only 2 actual updates even though 3 were requested
+      // (e.g., n3 doesn't exist in DB). The function must reflect actual state, not input.
+      const returningMock = vi.fn(async () => [{ id: 'n1' }, { id: 'n2' }]);
+      // L#NN-50 #18 (N=1): mockImplementationOnce chainable DB methods need
+      // explicit type cast. Cast the whole chain, matching the createMockDb
+      // pattern at L132.
+      vi.mocked(mock.db.update).mockImplementationOnce(() => ({
+        set: () => ({
+          where: () => ({
+            returning: returningMock,
+          }),
+        }),
+      }) as unknown as ReturnType<typeof mock.db.update>);
 
       const result = await store.markNotificationsRead({
         agentId: 'agent_1',
         notificationIds: ['n1', 'n2', 'n3'],
       });
 
-      expect(result).toEqual({ updatedCount: 3 });
+      expect(returningMock).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ updatedCount: 2 }); // 2 actual, NOT 3 requested
+    });
+
+    test('returns updatedCount 0 when no rows matched (#5975)', async () => {
+      mock = createMockDb([]);
+      store = createAgentNotificationStore(mock.db);
+
+      const returningMock = vi.fn(async () => []);
+      // L#NN-50 #18 (N=1): cast the chain to satisfy TypeScript.
+      vi.mocked(mock.db.update).mockImplementationOnce(() => ({
+        set: () => ({
+          where: () => ({
+            returning: returningMock,
+          }),
+        }),
+      }) as unknown as ReturnType<typeof mock.db.update>);
+
+      const result = await store.markNotificationsRead({
+        agentId: 'agent_1',
+        notificationIds: ['n1', 'n2'],
+      });
+
+      expect(result).toEqual({ updatedCount: 0 });
     });
 
     test('returns updatedCount: 0 for empty notificationIds array (no DB call)', async () => {
@@ -388,21 +434,22 @@ describe('createAgentNotificationStore', () => {
       expect(updateSpy).not.toHaveBeenCalled();
     });
 
-    test('returns updatedCount: 0 on DB error (does not throw)', async () => {
+    test('throws on DB error (#5977 — no longer silent)', async () => {
       mock = createMockDb([]);
       store = createAgentNotificationStore(mock.db);
 
-      // Make the update chain throw
-      vi.mocked(mock.db.update).mockImplementationOnce(() => {
+      // Make the update chain throw (simulating DB connection failure).
+      // L#NN-50 #18 (N=1): cast the throwing function to the parameter type of update().
+      vi.mocked(mock.db.update).mockImplementationOnce((() => {
         throw new Error('boom');
-      });
+      }) as never);
 
-      const result = await store.markNotificationsRead({
-        agentId: 'agent_1',
-        notificationIds: ['n1'],
-      });
-
-      expect(result).toEqual({ updatedCount: 0 });
+      await expect(
+        store.markNotificationsRead({
+          agentId: 'agent_1',
+          notificationIds: ['n1'],
+        })
+      ).rejects.toThrow('boom');
     });
   });
 
