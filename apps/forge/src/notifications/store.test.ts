@@ -378,13 +378,16 @@ describe('createAgentNotificationStore', () => {
       // Mock returning() to report only 2 actual updates even though 3 were requested
       // (e.g., n3 doesn't exist in DB). The function must reflect actual state, not input.
       const returningMock = vi.fn(async () => [{ id: 'n1' }, { id: 'n2' }]);
+      // L#NN-50 #18 (N=1): mockImplementationOnce chainable DB methods need
+      // explicit type cast. Cast the whole chain, matching the createMockDb
+      // pattern at L132.
       vi.mocked(mock.db.update).mockImplementationOnce(() => ({
         set: () => ({
           where: () => ({
             returning: returningMock,
           }),
         }),
-      }));
+      }) as unknown as ReturnType<typeof mock.db.update>);
 
       const result = await store.markNotificationsRead({
         agentId: 'agent_1',
@@ -400,13 +403,14 @@ describe('createAgentNotificationStore', () => {
       store = createAgentNotificationStore(mock.db);
 
       const returningMock = vi.fn(async () => []);
+      // L#NN-50 #18 (N=1): cast the chain to satisfy TypeScript.
       vi.mocked(mock.db.update).mockImplementationOnce(() => ({
         set: () => ({
           where: () => ({
             returning: returningMock,
           }),
         }),
-      }));
+      }) as unknown as ReturnType<typeof mock.db.update>);
 
       const result = await store.markNotificationsRead({
         agentId: 'agent_1',
@@ -434,10 +438,11 @@ describe('createAgentNotificationStore', () => {
       mock = createMockDb([]);
       store = createAgentNotificationStore(mock.db);
 
-      // Make the update chain throw (simulating DB connection failure)
-      vi.mocked(mock.db.update).mockImplementationOnce(() => {
+      // Make the update chain throw (simulating DB connection failure).
+      // L#NN-50 #18 (N=1): cast the throwing function to the parameter type of update().
+      vi.mocked(mock.db.update).mockImplementationOnce((() => {
         throw new Error('boom');
-      });
+      }) as never);
 
       await expect(
         store.markNotificationsRead({
