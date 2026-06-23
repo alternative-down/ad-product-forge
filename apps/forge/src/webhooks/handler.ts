@@ -35,7 +35,6 @@ type NotifyAgent = (input: {
   timestamp: number;
 }) => void;
 
-import type { WebhookRoute } from '../database/schema';
 import type { WebhookRouteWithSecret } from './store';
 
 export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyAgent }) {
