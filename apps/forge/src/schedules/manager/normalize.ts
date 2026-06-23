@@ -92,16 +92,24 @@ export function normalizeScheduleUpdate(
       parsed.scheduleType !== undefined ||
       parsed.isActive === true);
 
+  // #5941: scheduledDateRaw is `number | null | undefined` from the conditional
+  // chain above. Use proper type narrowing instead of `as number` cast. The
+  // NormalizedScheduleUpdate type expects `number | null` for scheduledDate
+  // and `number | undefined` for parsedScheduledDate.
+  const scheduledDateNumber = typeof scheduledDateRaw === 'number' ? scheduledDateRaw : null;
+  const parsedScheduledDateNumber =
+    typeof scheduledDateRaw === 'number' ? scheduledDateRaw : undefined;
+
   return {
     scheduleType,
     cronExpression: scheduleType === 'cron' ? (cronExpression ?? null) : null,
-    scheduledDate: scheduleType === 'date' ? ((scheduledDateRaw as number) ?? null) : null,
+    scheduledDate: scheduleType === 'date' ? scheduledDateNumber : null,
     wakeWhenRunning:
       scheduleType === 'cron'
         ? (parsed.wakeWhenRunning ?? existing.wakeWhenRunning)
         : true,
     shouldRequireFutureDate,
-    parsedScheduledDate: scheduledDateRaw as number,
+    parsedScheduledDate: parsedScheduledDateNumber,
   };
 }
 

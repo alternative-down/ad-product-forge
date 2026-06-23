@@ -20,7 +20,7 @@ import {
   updateScheduleSchema,
 } from '../tools/schemas';
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from '../lifecycle/heartbeat';
-import { toScheduleRecord, type UpdateAgentScheduleInput } from './store';
+import { toScheduleRecord } from './store';
 import type { ScheduleLifecycle } from '../lifecycle/lifecycle';
 
 /**
@@ -142,7 +142,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     try {
       await getLifecycle()!.register(toScheduleRecord(record));
     } catch (error) {
-      await store.deleteAgentSchedule(agentId, (record as { id: string }).id);
+      await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
@@ -187,9 +187,11 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(
-      existing,
-    ) as UpdateAgentScheduleInput;
+    // #5943: buildScheduleRollbackInput/buildScheduleUpdateInput return shapes
+    // are structurally assignable to UpdateAgentScheduleInput (all fields optional
+    // on the target type, all fields provided by the helper). The previous
+    // `as UpdateAgentScheduleInput` casts were unnecessary. Drop them.
+    const rollbackInput = buildScheduleRollbackInput(existing);
     const updated = await store.updateAgentSchedule(
       agentId,
       scheduleId,
@@ -198,7 +200,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
         cronExpression: normalized.cronExpression ?? null,
         scheduledDate: normalized.scheduledDate,
         wakeWhenRunning: normalized.wakeWhenRunning,
-      }) as UpdateAgentScheduleInput,
+      }),
     );
 
     if (updated === null) {
@@ -270,9 +272,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(
-      existing,
-    ) as UpdateAgentScheduleInput;
+    const rollbackInput = buildScheduleRollbackInput(existing);
     const updated = await store.updateAgentSchedule(
       agentId,
       scheduleId,
@@ -281,7 +281,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
         cronExpression: normalized.cronExpression ?? null,
         scheduledDate: normalized.scheduledDate,
         wakeWhenRunning: normalized.wakeWhenRunning,
-      }) as UpdateAgentScheduleInput,
+      }),
     );
 
     if (updated === null) {
@@ -379,22 +379,22 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
       creatorId: creatorAgentId,
     });
-    const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, (record as { id: string }).id);
+    const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
 
     if (scheduleRecord === null) {
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
         message: 'createScheduleForAgent failed to load schedule',
-        context: { agentId: parsed.targetAgentId, recordId: (record as { id: string }).id },
+        context: { agentId: parsed.targetAgentId, recordId: record.id },
       });
-      throw new Error(`Failed to load created schedule: ${(record as { id: string }).id}`);
+      throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
     try {
       await getLifecycle()!.register(scheduleRecord);
     } catch (error) {
-      await store.deleteAgentSchedule(parsed.targetAgentId, (record as { id: string }).id);
+      await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',

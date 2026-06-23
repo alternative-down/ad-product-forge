@@ -30,12 +30,26 @@ export async function resolveProfileRuntimeModel(
       throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
     }
 
+    // #5942: providerId comes from a split() of profile.modelKey. Validate
+    // it is in the literal union before passing to the gateway. Reject
+    // unknown providerIds at runtime instead of casting past the type
+    // system.
+    if (providerId !== 'openai-codex' && providerId !== 'claude-code') {
+      forgeDebug({
+        scope: 'llm-runtime-model',
+        level: 'error',
+        message: 'resolveRuntimeModel: unsupported OAuth providerId',
+        context: { providerId, modelKey: profile.modelKey },
+      });
+      throw new Error(`Unsupported OAuth providerId: ${providerId}`);
+    }
+
     const gateway = createOAuthGateway();
     const apiKey = await gateway.getApiKey(profile.modelKey);
 
     return gateway.resolveLanguageModel({
       modelId,
-      providerId: providerId as 'openai-codex' | 'claude-code',
+      providerId,
       apiKey,
     });
   }
