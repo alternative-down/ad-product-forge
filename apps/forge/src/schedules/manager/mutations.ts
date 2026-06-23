@@ -20,7 +20,7 @@ import {
   updateScheduleSchema,
 } from '../tools/schemas';
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from '../lifecycle/heartbeat';
-import { toScheduleRecord, type UpdateAgentScheduleInput } from './store';
+import { toScheduleRecord } from './store';
 import type { ScheduleLifecycle } from '../lifecycle/lifecycle';
 
 /**

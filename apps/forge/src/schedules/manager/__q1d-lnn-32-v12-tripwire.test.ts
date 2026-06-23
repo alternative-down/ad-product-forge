@@ -81,7 +81,7 @@ describe('Q1-D Day 23 cluster tripwire (L#NN-32 v12)', () => {
   describe('#5945 lifecycle-ops.ts non-null assertion', () => {
     it('source has 0 getLifecycle()!.register in __registerSchedule', () => {
       const src = stripComments(readFileSync(LIFECYCLE_OPS_TS, 'utf8'));
-      const fnBody = src.match(/async function __registerSchedule[\s\S]*?\n  \}/);
+      const fnBody = src.match(/async function __registerSchedule[\s\S]*?\n {2}\}/);
       expect(fnBody).not.toBeNull();
       expect(fnBody![0]).not.toMatch(/getLifecycle\(\)!\.register/);
     });
