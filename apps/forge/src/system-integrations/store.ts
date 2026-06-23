@@ -50,20 +50,6 @@ export type SystemIntegrationSummary = {
 /** Fields that must not appear in list/summary API responses */
 export type SystemIntegrationStore = Awaited<ReturnType<typeof createSystemIntegrationStore>>;
 export function createSystemIntegrationStore(db: Database) {
-  const parseEncryptedConfigMap: Record<
-    SystemIntegrationProviderType,
-    (encryptedConfig: string) => unknown
-  > = {
-    migadu: (encryptedConfig) =>
-      migaduConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
-    coolify: (encryptedConfig) =>
-      coolifyConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
-    github: (encryptedConfig) =>
-      githubConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
-    minimax: (encryptedConfig) =>
-      minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
-  };
-
   const parseConfigSchemaMap: Record<SystemIntegrationProviderType, z.ZodType<unknown>> = {
     migadu: migaduConfigSchema,
     coolify: coolifyConfigSchema,

@@ -348,18 +348,17 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileMetadata(row: LlmProfile): LlmProfileMetadata {
-  // Closes #5967 + L#NN-50 #17 N=4: destructure excludes apiKey for the
-  // metadata type. The destructured variable is intentionally unused -
-  // prefix with underscore to silence the no-unused-vars lint rule while
-  // preserving the destructure pattern.
-  const { id, encryptedApiKey: _encryptedApiKey, isEnabled, ...rest } = row;
+  // Closes #5967 + L#NN-50 #17 N=4: read row fields directly. This avoids
+  // both the destructure pattern (which requires an unused-var workaround
+  // for encryptedApiKey) and the underscore-prefix hack. Cleanest solution
+  // per Veritas QA r4 review_id 4553006809.
   return {
-    profileId: id,
-    name: rest.name ?? '',
+    profileId: row.id,
+    name: row.name ?? '',
     modelKey: row.modelKey,
-    baseUrl: rest.baseUrl ?? null,
-    contractCostMultiplier: rest.contractCostMultiplier,
-    isEnabled: isEnabled === 1,
+    baseUrl: row.baseUrl ?? null,
+    contractCostMultiplier: row.contractCostMultiplier,
+    isEnabled: row.isEnabled === 1,
   };
 }
 
