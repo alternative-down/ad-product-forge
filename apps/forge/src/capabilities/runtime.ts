@@ -79,6 +79,26 @@ export async function changeAgentRole(input: {
     { where: eq(agents.id, input.actorAgentId) },
   );
 
+  // Defense-in-depth (closes #5972): verify actor can change the target role.
+  // Allowed: self-role-change OR actor has admin role. Otherwise fail closed.
+  const actorIsSelf = input.actorAgentId === input.targetAgentId;
+  const actorIsAdmin = actorAgent.roleId === "admin";
+  if (!actorIsSelf && !actorIsAdmin) {
+    forgeDebug({
+      scope: "capabilities-runtime",
+      level: "warn",
+      message: "changeAgentRole: actor lacks permission",
+      context: {
+        actorAgentId: input.actorAgentId,
+        actorRoleId: actorAgent.roleId,
+        targetAgentId: input.targetAgentId,
+      },
+    });
+    throw new Error(
+      `Agent ${input.actorAgentId} cannot change role for ${input.targetAgentId}`,
+    );
+  }
+
   const targetAgent = await findOrThrow(
     input.db.query.agents,
     {
