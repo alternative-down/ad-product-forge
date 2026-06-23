@@ -161,12 +161,29 @@ describe('parseWebhookPayload', () => {
     expect(parseWebhookPayload('{"a":1}garbage')).toEqual({ ok: false });
   });
 
-  it('parses JSON arrays (passes through as object cast — caller responsible)', () => {
-    // parseWebhookPayload types the result as `Record<string, unknown>`,
-    // but JSON.parse is honest: if the top-level is an array, it's still
-    // "ok: true" with the array as payload.
+  it('returns ok: false for JSON arrays (#5964: must be non-array object)', () => {
     const result = parseWebhookPayload('[1,2,3]');
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok: false for JSON null (#5964: must be non-null object)', () => {
+    const result = parseWebhookPayload('null');
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok: false for JSON number (#5964: must be non-number top-level)', () => {
+    const result = parseWebhookPayload('42');
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok: false for JSON string (#5964: must be non-string top-level)', () => {
+    const result = parseWebhookPayload('"hello"');
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok: false for JSON boolean (#5964: must be non-boolean top-level)', () => {
+    const result = parseWebhookPayload('true');
+    expect(result.ok).toBe(false);
   });
 });
 
@@ -292,5 +309,23 @@ describe('buildNotificationContent', () => {
     };
     const result = buildNotificationContent(routeWithQuotes, 'evt-1', 'route-1', 0);
     expect(result.content).toContain('Name with "quotes" and \\backslashes');
+  });
+
+  it('truncates route.name over 100 chars (#5965: DoS prevention)', () => {
+    const longName = 'A'.repeat(1000);
+    const routeWithLongName: WebhookRoute = { ...route, name: longName };
+    const result = buildNotificationContent(routeWithLongName, 'evt-1', 'route-1', 0);
+    // Truncated to 100 chars + ellipsis = 101 chars total
+    const expectedNameSegment = 'A'.repeat(100) + '…';
+    expect(result.content).toContain(`"${expectedNameSegment}"`);
+    expect(result.content).not.toContain(`"${longName}"`);
+  });
+
+  it('does NOT truncate route.name at exactly 100 chars (#5965: boundary check)', () => {
+    const boundaryName = 'B'.repeat(100);
+    const routeBoundary: WebhookRoute = { ...route, name: boundaryName };
+    const result = buildNotificationContent(routeBoundary, 'evt-1', 'route-1', 0);
+    expect(result.content).toContain(`"${boundaryName}"`);
+    expect(result.content).not.toContain('…');
   });
 });
