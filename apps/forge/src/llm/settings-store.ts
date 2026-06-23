@@ -41,7 +41,16 @@ export type LlmProfileRecord = {
   contractCostMultiplier?: number;
   isEnabled: boolean;
 };
+
+// Closes #5967: list* MUST NOT decrypt credentials. This metadata-only
+// projection is the safe API for callers that only need identity/enabled state.
+export type LlmProfileMetadata = Omit<LlmProfileRecord, 'apiKey'>;
+
 export function createLlmSettingsStore(db: Database) {
+  // DEPRECATED for callers that do not need plaintext apiKey.
+  // Use listProfileMetadata() to enumerate, getProfile(id) for single fetch.
+  // Retained for backward compatibility with admin UIs that legitimately
+  // surface credentials (e.g., "show API key" button under explicit user action).
   async function listProfiles() {
     return await withDbErrorLogging({
       scope: 'llm',
@@ -53,6 +62,22 @@ export function createLlmSettingsStore(db: Database) {
           orderBy: (fields, { asc }) => [asc(fields.modelKey)],
         });
         return rows.map(toProfileRecord);
+      },
+    });
+  }
+
+  // Closes #5967: returns metadata only, no decryption.
+  async function listProfileMetadata(): Promise<LlmProfileMetadata[]> {
+    return await withDbErrorLogging({
+      scope: 'llm',
+      op: 'listProfileMetadata',
+      verb: 'read',
+      context: {},
+      fn: async () => {
+        const rows = await db.query.llmProfiles.findMany({
+          orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+        });
+        return rows.map(toProfileMetadata);
       },
     });
   }
@@ -73,8 +98,10 @@ export function createLlmSettingsStore(db: Database) {
     };
   }
 
+  // Closes #5967: fetch only the 3 needed profiles via getProfile (decrypts 3,
+  // not N). Previously this called listProfiles which decrypted ALL.
   async function getResolvedDefaults(): Promise<{ primaryProfile: LlmProfileRecord; omProfile: LlmProfileRecord; hiringRhProfile: LlmProfileRecord; }> {
-    const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
+    const defaults = await getDefaults();
 
     if (defaults === null || defaults === undefined) {
       forgeDebug({
@@ -85,16 +112,13 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('System LLM defaults are not configured');
     }
 
-    const profileMap = new Map(profiles.map((profile: LlmProfileRecord) => [profile.profileId, profile]));
-    const primaryProfile = profileMap.get(defaults.primaryProfileId);
-    const omProfile = profileMap.get(defaults.omProfileId);
-    const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
+    const [primaryProfile, omProfile, hiringRhProfile] = await Promise.all([
+      getProfile(defaults.primaryProfileId),
+      getProfile(defaults.omProfileId),
+      getProfile(defaults.hiringRhProfileId),
+    ]);
 
-    if (
-      primaryProfile === null ||
-      primaryProfile === undefined ||
-      primaryProfile.isEnabled !== true
-    ) {
+    if (primaryProfile.isEnabled !== true) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',
@@ -103,7 +127,7 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('Default primary LLM profile is missing or disabled');
     }
 
-    if (omProfile === null || omProfile === undefined || omProfile.isEnabled !== true) {
+    if (omProfile.isEnabled !== true) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',
@@ -112,11 +136,7 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('Default OM LLM profile is missing or disabled');
     }
 
-    if (
-      hiringRhProfile === null ||
-      hiringRhProfile === undefined ||
-      hiringRhProfile.isEnabled !== true
-    ) {
+    if (hiringRhProfile.isEnabled !== true) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',
@@ -238,14 +258,15 @@ export function createLlmSettingsStore(db: Database) {
     });
   }
 
+  // Closes #5967: use listProfileMetadata (no decryption) for existence/enabled checks.
   async function updateDefaults(input: {
     primaryProfileId: string;
     omProfileId: string;
     hiringRhProfileId: string;
   }) {
     const parsed = llmDefaultsSchema.parse(input);
-    const profiles = await listProfiles();
-    const profileMap = new Map(profiles.map((profile: LlmProfileRecord) => [profile.profileId, profile]));
+    const profiles = await listProfileMetadata();
+    const profileMap = new Map(profiles.map((profile: LlmProfileMetadata) => [profile.profileId, profile]));
 
     for (const profileId of [
       parsed.primaryProfileId,
@@ -316,12 +337,25 @@ export function createLlmSettingsStore(db: Database) {
 
   return {
     listProfiles,
+    listProfileMetadata,
     getProfile,
     getDefaults,
     getResolvedDefaults,
     upsertProfile,
     deleteProfile,
     updateDefaults,
+  };
+}
+
+function toProfileMetadata(row: LlmProfile): LlmProfileMetadata {
+  const { id, encryptedApiKey, isEnabled, ...rest } = row;
+  return {
+    profileId: id,
+    name: rest.name ?? '',
+    modelKey: row.modelKey,
+    baseUrl: rest.baseUrl ?? null,
+    contractCostMultiplier: rest.contractCostMultiplier,
+    isEnabled: isEnabled === 1,
   };
 }
 
