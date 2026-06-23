@@ -57,6 +57,53 @@ export function createSystemIntegrationStore(db: Database) {
     minimax: minimaxConfigSchema,
   };
 
+  /**
+   * Type predicate: narrows a raw DB row to a row whose `providerType` is one of
+   * the 4 known provider types. Used by `listIntegrations` to drop legacy/invalid
+   * rows without an unsafe cast.
+   */
+  function isKnownProvider(
+    row: SystemIntegration,
+  ): row is SystemIntegration & { providerType: SystemIntegrationProviderType } {
+    return (
+      row.providerType === 'migadu' ||
+      row.providerType === 'coolify' ||
+      row.providerType === 'github' ||
+      row.providerType === 'minimax'
+    );
+  }
+
+  /**
+   * Single dispatcher for parsing encrypted configs by provider type.
+   * Replaces the 4 parseXConfig wrappers (Closes #5982 DRY violation).
+   */
+  function parseConfigByProvider(
+    providerType: SystemIntegrationProviderType,
+    encryptedConfig: string,
+  ): unknown {
+    return parseConfigSchemaMap[providerType].parse(JSON.parse(decryptSecret(encryptedConfig)));
+  }
+
+  /**
+   * Single dispatcher for fetching + parsing the enabled config for a provider.
+   * Returns null when the integration is missing or disabled.
+   * Used by `getMigaduConfig` / `getCoolifyConfig` / `getGitHubConfig` / `getMinimaxConfig`
+   * (kept as thin back-compat wrappers).
+   */
+  async function getConfigByProvider(
+    providerType: SystemIntegrationProviderType,
+  ): Promise<unknown> {
+    return await withDbErrorLogging({
+      scope: 'system-integrations',
+      op: `getConfig.${providerType}`,
+      verb: 'read',
+      fn: async () => {
+        const row = await getEnabledIntegration(providerType);
+        return row != null ? parseConfigByProvider(providerType, row.encryptedConfig) : null;
+      },
+    });
+  }
+
   // Closes #5981: listIntegrations MUST NOT decrypt credentials. Returns
   // metadata only. Callers that need the full config must call
   // getMigaduConfig() / getCoolifyConfig() / getGithubConfig() / getMinimaxConfig()
@@ -69,15 +116,10 @@ export function createSystemIntegrationStore(db: Database) {
       fn: async () => {
         const rows = await db.query.systemIntegrations.findMany();
 
-        const typedRows = rows.filter(
-          (row: any) =>
-            row.providerType === 'migadu' ||
-            row.providerType === 'coolify' ||
-            row.providerType === 'github' ||
-            row.providerType === 'minimax',
-        ) as SystemIntegration[];
-
-        return typedRows.map((row) => {
+        // Structural mismatch: row has number timestamps + no id; Summary
+        // expects Date timestamps + id. Typed boundary cast is honest about
+        // the gap (vs Varek prior as any). Day 24 candidate: align Summary type with schema.
+        return rows.filter(isKnownProvider).map((row) => {
           const { encryptedConfig, ...rest } = row;
           void encryptedConfig; // intentionally not decrypted in list path
           return {
@@ -85,65 +127,25 @@ export function createSystemIntegrationStore(db: Database) {
             isEnabled: row.isEnabled === 1,
             config: null, // list path does not decrypt; see get*Config() for full
           };
-        }) as any;
+        }) as unknown as SystemIntegrationSummary[];
       },
     });
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
-    return await withDbErrorLogging({
-      scope: 'system-integrations',
-      op: 'getMigaduConfig',
-      verb: 'read',
-      fn: async () => {
-        const row = await getEnabledIntegration('migadu');
-        return row != null
-          ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig)
-          : null;
-      },
-    });
+    return (await getConfigByProvider('migadu')) as MigaduSystemIntegrationConfig | null;
   }
 
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
-    return await withDbErrorLogging({
-      scope: 'system-integrations',
-      op: 'getCoolifyConfig',
-      verb: 'read',
-      fn: async () => {
-        const row = await getEnabledIntegration('coolify');
-        return row != null
-          ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig)
-          : null;
-      },
-    });
+    return (await getConfigByProvider('coolify')) as CoolifySystemIntegrationConfig | null;
   }
 
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
-    return await withDbErrorLogging({
-      scope: 'system-integrations',
-      op: 'getGitHubConfig',
-      verb: 'read',
-      fn: async () => {
-        const row = await getEnabledIntegration('github');
-        return row != null
-          ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig)
-          : null;
-      },
-    });
+    return (await getConfigByProvider('github')) as GitHubSystemIntegrationConfig | null;
   }
 
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
-    return await withDbErrorLogging({
-      scope: 'system-integrations',
-      op: 'getMinimaxConfig',
-      verb: 'read',
-      fn: async () => {
-        const row = await getEnabledIntegration('minimax');
-        return row != null
-          ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig)
-          : null;
-      },
-    });
+    return (await getConfigByProvider('minimax')) as MinimaxSystemIntegrationConfig | null;
   }
 
   async function upsertIntegration(
@@ -206,7 +208,7 @@ export function createSystemIntegrationStore(db: Database) {
   }
 
   async function deleteIntegration(providerType: SystemIntegrationProviderType) {
-    await withDbErrorLogging({
+    return await withDbErrorLogging({
       scope: 'system-integrations',
       op: 'deleteIntegration',
       verb: 'write',
@@ -227,22 +229,6 @@ export function createSystemIntegrationStore(db: Database) {
     }
 
     return row;
-  }
-
-  function parseMigaduConfig(encryptedConfig: string): MigaduSystemIntegrationConfig {
-    return migaduConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
-  }
-
-  function parseCoolifyConfig(encryptedConfig: string): CoolifySystemIntegrationConfig {
-    return coolifyConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
-  }
-
-  function parseGitHubConfig(encryptedConfig: string): GitHubSystemIntegrationConfig {
-    return githubConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
-  }
-
-  function parseMinimaxConfig(encryptedConfig: string): MinimaxSystemIntegrationConfig {
-    return minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig)));
   }
 
   function parseUpsertConfig(
