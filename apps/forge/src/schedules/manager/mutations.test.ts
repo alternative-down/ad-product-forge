@@ -41,7 +41,7 @@ const baseSchedule = {
   id: 'sched-1', agentId: 'agent-1',
   scheduleType: 'date' as const,
   cronExpression: null,
-  scheduledDate: futureDate,
+  scheduledDate: futureDate.getTime(),
   wakeWhenRunning: false,
   isActive: 1,
   createdAt: 1000,

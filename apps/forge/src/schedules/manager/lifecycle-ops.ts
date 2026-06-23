@@ -63,7 +63,20 @@ export function createManagerLifecycleOps(
   async function __registerSchedule(record: StoredSchedule | null) {
     if (record === null || isActiveSchedule(record) !== true) return;
 
-    await getLifecycle()!.register(record);
+    // #5945: getLifecycle() can return null if the lifecycle has been stopped
+    // before this schedule could be registered. Log and skip instead of using
+    // `!` non-null assertion (which bypasses the null check).
+    const lifecycle = getLifecycle();
+    if (lifecycle === null) {
+      forgeDebug({
+        scope: 'schedules-manager',
+        level: 'info',
+        message: '__registerSchedule: lifecycle is null (stopped), skipping register',
+        context: { scheduleId: record.scheduleId },
+      });
+      return;
+    }
+    await lifecycle.register(record);
   }
 
   async function triggerSchedule(

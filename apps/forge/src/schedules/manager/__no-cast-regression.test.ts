@@ -46,6 +46,11 @@ describe('L#19 tripwire for #5608 cast removal', () => {
   it('manager/ register() calls are all safe (Lead 8 #5739 Phase 2: 6 use toScheduleRecord(), 2 receive post-conversion ScheduleRecord) — split across sub-modules after #5737', () => {
     // After #5737 refactor, register() calls moved to mutations.ts and lifecycle-ops.ts.
     // The contract: no `as unknown as` casts remain anywhere in the manager/ directory.
+    // After #5945, lifecycle-ops.ts L52 was refactored to use a local `lifecycle`
+    // variable with explicit null handling, so that single register() call no longer
+    // uses the `getLifecycle()!` pattern. The OTHER 7 calls in mutations.ts still
+    // use `getLifecycle()!`. Both patterns are valid; the total ≥8 contract is
+    // what matters (proves all expected schedule paths still register).
     const { readFileSync, readdirSync, statSync } = require('node:fs');
     const { join } = require('node:path');
     const scanDir = join(import.meta.dirname);
@@ -53,7 +58,9 @@ describe('L#19 tripwire for #5608 cast removal', () => {
     const allImplSrc = implFiles.map((f: string) => readFileSync(join(scanDir, f), 'utf8')).join('\n\n');
     const unsafeCasts = allImplSrc.match(/as unknown as/g) ?? [];
     expect(unsafeCasts).toHaveLength(0);
-    const registerCalls = allImplSrc.match(/getLifecycle\(\)!?\.register\(/g) ?? [];
-    expect(registerCalls.length).toBeGreaterThanOrEqual(8);
+    // Count BOTH patterns: `getLifecycle()!` (mutations.ts) and `lifecycle.` (lifecycle-ops.ts).
+    const getLifecycleCalls = allImplSrc.match(/getLifecycle\(\)!\.register\(/g) ?? [];
+    const lifecycleCalls = allImplSrc.match(/lifecycle\.register\(/g) ?? [];
+    expect(getLifecycleCalls.length + lifecycleCalls.length).toBeGreaterThanOrEqual(8);
   });
 });

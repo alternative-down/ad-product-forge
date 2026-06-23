@@ -31,8 +31,8 @@ export type UpdateAgentScheduleInput = {
   scheduleType?: ScheduleType;
   cronExpression?: string | null;
   scheduledDate?: number | null;
-  timezone?: string;
-  content?: string;
+  timezone?: string | null;
+  content?: string | null;
   wakeWhenRunning?: boolean;
   isActive?: boolean;
 };
@@ -126,6 +126,7 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listAgentSchedules',
       verb: 'read',
+      mode: 'return-empty-array',
       context: { agentId },
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -134,7 +135,7 @@ export function createAgentScheduleStore(db: Database) {
         });
         return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
       },
-    }).catch(() => []);
+    });
   }
 
   async function listActiveSchedules(): Promise<any[]> {
@@ -142,6 +143,7 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listActiveSchedules',
       verb: 'read',
+      mode: 'return-empty-array',
       context: {},
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -150,7 +152,7 @@ export function createAgentScheduleStore(db: Database) {
         });
         return rows.map(toScheduleRecord);
       },
-    }).catch(() => []);
+    });
   }
 
   async function listCreatedAgentSchedules(creatorId: string, targetAgentId?: string) {
@@ -158,6 +160,7 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listCreatedAgentSchedules',
       verb: 'read',
+      mode: 'return-empty-array',
       context: { creatorId, targetAgentId },
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -172,7 +175,7 @@ export function createAgentScheduleStore(db: Database) {
         });
         return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
       },
-    }).catch(() => []);
+    });
   }
 
   async function getAgentSchedule(agentId: string, scheduleId: string) {
@@ -180,6 +183,7 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'getAgentSchedule',
       verb: 'read',
+      mode: 'return-null',
       context: { agentId, scheduleId },
       fn: async () => {
         const row = await db.query.agentSchedules.findFirst({
@@ -196,7 +200,7 @@ export function createAgentScheduleStore(db: Database) {
 
         return toScheduleRecord(row);
       },
-    }).catch(() => null);
+    });
   }
 
   async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
@@ -204,6 +208,7 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'getScheduleByKind',
       verb: 'read',
+      mode: 'return-null',
       context: { agentId, kind },
       fn: async () => {
         const row = await db.query.agentSchedules.findFirst({
@@ -213,7 +218,7 @@ export function createAgentScheduleStore(db: Database) {
         if (row === null || row === undefined) return null;
         return toScheduleRecord(row);
       },
-    }).catch(() => null);
+    });
   }
 
   // Get schedule by ID (for cross-agent authorization)
