@@ -103,7 +103,7 @@ type MockedAgentRunner = {
 // reads + write without duplicating mock wiring.
 function setupTxMock(db: Database) {
   db.transaction = vi.fn().mockImplementation(async (fn: (tx: Database) => Promise<unknown>) => {
-    return fn({ query: db.query, update: db.update });
+    return fn({ query: db.query, update: db.update } as unknown as Database);
   });
 }
 
