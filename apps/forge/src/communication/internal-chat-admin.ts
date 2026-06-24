@@ -10,7 +10,7 @@
  *
  * @module
  */
-import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import {
@@ -306,16 +306,35 @@ export function createInternalChatAdmin(db: Database) {
   }
 
   async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
-    // Find existing DM between these two accounts
+    // Find existing DM that has BOTH accounts as members. The original filter
+    // referenced an isNotNull column that was removed from the schema (#6036);
+    // we now use the members table as the source of truth for participation.
+    // Note: a conversation is "direct" if its type is 'direct' AND it has
+    // exactly 2 members (leftAccountId + rightAccountId). For deduplication,
+    // we just check both accounts are members — a direct conversation with
+    // >2 members is not expected (see schema constraint).
+    const leftMemberDMs = db
+      .select({ conversationId: internalChatConversationMembers.conversationId })
+      .from(internalChatConversationMembers)
+      .where(eq(internalChatConversationMembers.accountId, leftAccountId));
     const existing = await db.query.internalChatConversations.findFirst({
       where: and(
         eq(internalChatConversations.type, 'direct'),
-        // isNotNull column removed from schema
+        inArray(internalChatConversations.id, leftMemberDMs),
       ),
     });
-
     if (existing != null) {
-      return existing;
+      // Also verify rightAccountId is a member — a 1-sided match is not a real DM.
+      const rightIsMember = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.conversationId, existing.id),
+          eq(internalChatConversationMembers.accountId, rightAccountId),
+        ),
+      });
+      if (rightIsMember != null) {
+        return existing;
+      }
+      // Left side matched but right side didn't — fall through to create.
     }
 
     const now = Date.now();
