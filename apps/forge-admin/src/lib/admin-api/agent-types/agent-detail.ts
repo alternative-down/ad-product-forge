@@ -1,3 +1,26 @@
+// ScheduleSummary: local mirror of the shape returned by
+// apps/forge/src/admin/read-model/helpers.ts toScheduleSummary. Defined
+// here to avoid a forge-admin → forge import; structural typing keeps both
+// definitions in sync. Update both if you add or rename a field.
+// See #6023.
+export type ScheduleSummary = {
+  scheduleId: string;
+  kind: 'agent' | 'system' | 'heartbeat';
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: number | string;
+  timezone: string;
+  content: string;
+  wakeWhenRunning: boolean;
+  isActive: boolean;
+  lastTriggeredAt?: number;
+  nextTriggerAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+};
+
 import type {
   DiscordProviderCredentials,
   EmailProviderCredentials,
@@ -207,9 +230,9 @@ export type AgentDetail = {
     createdAt: number;
   }>;
 
-  schedules: AgentSchedule[];
+  schedules: ScheduleSummary[];
 
-  heartbeat: AgentSchedule | null;
+  heartbeat: ScheduleSummary | null;
 
   recentNotifications: Array<{
     notificationId: string;

@@ -29,6 +29,8 @@ import {
   toScheduleSummary as toScheduleSummaryHelper,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
+  withTimeoutAndLog,
+  type ScheduleSummary,
 } from './helpers';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
@@ -42,7 +44,6 @@ import {
 } from '@forge-runtime/core';
 import { type AgentExecutionState } from './agents-types';
 import { errorMsg } from '../../agents/error-formatting';
-import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
 const RECENT_STEP_LIMIT = 10;
@@ -254,11 +255,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
 
     const _runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
-      ? await withTimeout(
-          loadedAgent.runtime.longTermMemory.readSnapshot(),
-          ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-          `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-        ).catch(() => null)
+      ? await withTimeoutAndLog({
+          scope: 'admin-read-model-agents-list',
+          op: 'runtimeLtmSnapshot',
+          promise: loadedAgent.runtime.longTermMemory.readSnapshot(),
+          timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+          timeoutMessage: `Agent runtime memory LTM snapshot timed out for ${agentId}`,
+          fallback: null,
+        })
       : null;
 
     const rawMetrics = operationalMemoryState.metrics;
@@ -337,11 +341,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           async (agent) =>
             [
               agent.id,
-              await withTimeout(
-                getRuntimeMemoryForAgent(agent.id),
-                ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-                `Admin runtime memory read timed out for ${agent.id}`,
-              ).catch(() => null),
+              await withTimeoutAndLog({
+                scope: 'admin-read-model-agents-list',
+                op: 'runtimeMemoryByAgent',
+                promise: getRuntimeMemoryForAgent(agent.id),
+                timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+                timeoutMessage: `Admin runtime memory read timed out for ${agent.id}`,
+                fallback: null,
+              }),
             ] as const,
         ),
       ),
@@ -350,14 +357,17 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const latestThreadDetailsByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
-          const threadMessages = await withTimeout(
-            listThreadMessages(workspaceBasePath, agent.id, { page: 0, perPage: 8 }),
-            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            `Admin latest thread details read timed out for ${agent.id}`,
-          ).catch(() => ({
-            items: [] as Array<{ role: string; content: unknown }>,
-            hasMore: false,
-          }));
+          const threadMessages = await withTimeoutAndLog({
+            scope: 'admin-read-model-agents-list',
+            op: 'latestThreadDetails',
+            promise: listThreadMessages(workspaceBasePath, agent.id, { page: 0, perPage: 8 }),
+            timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            timeoutMessage: `Admin latest thread details read timed out for ${agent.id}`,
+            fallback: {
+              items: [] as Array<{ role: string; content: unknown }>,
+              hasMore: false,
+            },
+          });
 
           let preview: string | null = null;
           let toolBadge: string | null = null;
@@ -383,16 +393,19 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     // Batch-fetch LTM state for all agents in a single query, then group by agentId
     const ltmStateRows =
       agentIds.length > 0
-        ? await withTimeout(
-            (async () => {
+        ? await withTimeoutAndLog({
+            scope: 'admin-read-model-agents-list',
+            op: 'ltmStateBatch',
+            promise: (async () => {
               const rows = await db.query.agentLongTermMemoryStates.findMany({
                 where: inArray(agentLongTermMemoryStates.agentId, agentIds),
               });
               return rows;
             })(),
-            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            'Admin LTM state batch read timed out',
-          ).catch(() => null)
+            timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            timeoutMessage: 'Admin LTM state batch read timed out',
+            fallback: null,
+          })
         : null;
 
     const longTermMemoryStateByAgentId = new Map<string, LongTermMemoryState | null>();
@@ -676,9 +689,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           : null,
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
-        .map(toScheduleSummaryHelper),
-      heartbeat: heartbeat ? (toScheduleSummaryHelper(heartbeat) as unknown) : null,
-    } as unknown as AgentDetail;
+        .map((row): ScheduleSummary => toScheduleSummaryHelper(row)),
+      heartbeat: heartbeat ? toScheduleSummaryHelper(heartbeat) : null,
+    };
   }
 
   return { listAgents, getAgent };
