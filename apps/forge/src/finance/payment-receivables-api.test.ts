@@ -50,10 +50,12 @@ function createMockDb() {
               Object.entries(conditions).every(([k, v]) => r[k] === v),
             );
             return {
-              limit: (_n: number) => Promise.resolve(filtered.slice()),
+              limit: (_n: number) => ({
+                all: () => Promise.resolve(filtered.slice()),
+              }),
             };
           },
-          limit: (n: number) => Promise.resolve(txStore.slice(0, n)),
+          limit: (n: number) => ({ all: () => Promise.resolve(txStore.slice(0, n)) }),
         };
       },
     };
@@ -245,6 +247,7 @@ describe('upsertSubscription', () => {
     providerSubscriptionId: 'sub_new',
     status: 'active' as const,
     amountUsd: 49.99,
+    currency: 'usd' as const, // #6013 L#NN-50 #23 N=4 — required since currency tracking fix
     billingCycle: 'monthly' as const,
     currentPeriodStart: 1000,
     currentPeriodEnd: 2000,
@@ -304,6 +307,7 @@ describe('upsertSubscription', () => {
       providerSubscriptionId: 'sub_minimal',
       status: 'trialing' as const,
       amountUsd: 0,
+      currency: 'usd' as const,
       billingCycle: 'monthly' as const,
     });
     expect(id).toBeDefined();

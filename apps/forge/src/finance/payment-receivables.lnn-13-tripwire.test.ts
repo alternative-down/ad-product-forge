@@ -14,7 +14,7 @@
  *   2. The function body contains `.select(` (find existing row).
  *   3. The function body contains `.update(paymentProviders)` (L#19 fix).
  *   4. The function body contains `.set(` (the UPDATE actually sets values).
- *   5. The function body contains `db.insert(paymentProviders)` (the
+ *   5. The function body contains `(?:db|tx).insert(paymentProviders)` (the
  *      original INSERT path is preserved).
  *
  * L#NN-26 v1 mutation sanity (L#NN-13 13a tripwire-construction protocol):
@@ -79,12 +79,12 @@ describe('payment-receivables.ts L#NN-13 tripwire: upsertProvider true-upsert in
   });
 
   it('upsertProvider body (comments stripped) preserves the original INSERT path', () => {
-    expect(fnBody).toMatch(/db\.insert\(paymentProviders\)/);
+    expect(fnBody).toMatch(/(?:db|tx)\.insert\(paymentProviders\)/);
   });
 
   it('upsertProvider body (comments stripped) has BOTH .update() and .insert() branches', () => {
     const hasUpdate = /\.update\(paymentProviders\)/.test(fnBody);
-    const hasInsert = /db\.insert\(paymentProviders\)/.test(fnBody);
+    const hasInsert = /(?:db|tx)\.insert\(paymentProviders\)/.test(fnBody);
     expect(hasUpdate).toBe(true);
     expect(hasInsert).toBe(true);
   });
