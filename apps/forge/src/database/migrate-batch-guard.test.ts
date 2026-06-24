@@ -44,7 +44,11 @@ import { describe, expect, test } from 'vitest';
  *       (b) upgrade libsql/drizzle beyond the buggy version, or
  *       (c) document why the new total is safe
  */
-export const MAX_TOTAL_STATEMENTS = 200;
+// Bumped 200→250 by PR #6059 (Day 24): migration 0032 adds 5 statements,
+// pushing cumulative total from 199 → 204. New safety margin 250 leaves room for
+// ~10 future migrations of similar size before next bump. Sequential db.run()
+// workaround (PR #5438) handles up to 1000 statements per Drizzle docs.
+export const MAX_TOTAL_STATEMENTS = 250;
 
 // Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the
 // path resolves correctly regardless of the cwd from which vitest was launched.

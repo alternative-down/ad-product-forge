@@ -19,22 +19,26 @@ function createMockDb(): any {
   }
 
   function insert(table: unknown) {
-    const name = (table as any)[DRIZZLE_NAME] ?? String(table);
+    // Direct table reference comparison (L#NN-50 #11 N=8 codification):
+    // Symbol.for('drizzle:Name') cross-module resolution is unreliable under vitest's
+    // module isolation. Comparing table references via === is bulletproof.
+    const isPaymentTransactions = table === paymentTransactions;
+    const isCompanyCashLedger = table === companyCashLedger;
     return {
-      values: (values: Record<string, unknown>) => ({
-        returning: (cols: unknown) => {
-          if (name === 'payment_transactions') txStore.push({ ...values });
-          else if (name === 'company_cash_ledger') ledgerStore.push({ ...values });
-          const result = { ...values, id: values['id'] ?? 'mock-id-' + txStore.length };
-          return Promise.resolve([result]);
-        },
-        then: (resolve: any, reject: any) => {
-          if (name === 'payment_transactions') txStore.push({ ...values });
-          else if (name === 'company_cash_ledger') ledgerStore.push({ ...values });
-          resolve({ rowCount: 1 });
-          return {} as any;
-        },
-      }),
+      values: (values: Record<string, unknown>) => {
+        if (isPaymentTransactions) txStore.push({ ...values });
+        else if (isCompanyCashLedger) ledgerStore.push({ ...values });
+        return {
+          returning: (cols: unknown) => {
+            const result = { ...values, id: values['id'] ?? 'mock-id-' + txStore.length };
+            return Promise.resolve([result]);
+          },
+          then: (resolve: any, reject: any) => {
+            resolve({ rowCount: 1 });
+            return {} as any;
+          },
+        };
+      },
     };
   }
 
@@ -81,16 +85,26 @@ function createMockDb(): any {
     });
   }
 
-  return {
+  const db = {
     insert,
     update,
     select,
     query: { paymentTransactions: { findFirst } },
-    transaction,
     _ledgerStore: ledgerStore,
     _txStore: txStore,
     processPaymentEvent: vi.fn().mockResolvedValue({ id: 'mock-tx-id', isNew: false }),
   } as unknown as any;
+  // #6015 L#NN-46 v4.6 N=4: db.transaction passes db.* as tx so that test-level
+  // overrides of db.select/db.update/db.insert propagate into the transaction
+  // context. Tests mocking these properties directly continue to work without
+  // restructuring each test to mock db.transaction separately.
+  db.transaction = async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> =>
+    fn({
+      insert: db.insert,
+      update: db.update,
+      select: db.select,
+    });
+  return db;
 }
 
 // ─── Condition extractor ───────────────────────────────────────────────────
@@ -191,7 +205,7 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_123',
       customerId: 'cust_1',
-      amountUsd: 49.99,
+      amountUsd: 49.99, currency: 'usd',
       status: 'completed',
     } as any);
     expect(result.id).toBeDefined();
@@ -203,14 +217,14 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_dup',
       customerId: 'cust_1',
-      amountUsd: 49.99,
+      amountUsd: 49.99, currency: 'usd',
       status: 'completed',
     } as any);
     const result = await store.processPaymentEvent({
       provider: 'stripe',
       providerPaymentId: 'evt_dup',
       customerId: 'cust_1',
-      amountUsd: 49.99,
+      amountUsd: 49.99, currency: 'usd',
       status: 'completed',
     } as any);
     expect(result.isNew).toBe(false);
@@ -221,7 +235,7 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_fail',
       customerId: 'cust_1',
-      amountUsd: 49.99,
+      amountUsd: 49.99, currency: 'usd',
       status: 'failed',
       failureReason: 'card declined',
     } as any);
@@ -233,7 +247,7 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_completed',
       customerId: 'cust_1',
-      amountUsd: 49.99,
+      amountUsd: 49.99, currency: 'usd',
       status: 'completed',
     } as any);
     expect(db._ledgerStore).toHaveLength(1);
@@ -248,7 +262,7 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_dup2',
       customerId: 'cust_1',
-      amountUsd: 99.0,
+      amountUsd: 99.0, currency: 'usd',
       status: 'completed',
     } as any);
     const initial = db._ledgerStore.length;
@@ -256,7 +270,7 @@ describe('createPaymentReceivablesStore', () => {
       provider: 'stripe',
       providerPaymentId: 'evt_dup2',
       customerId: 'cust_1',
-      amountUsd: 99.0,
+      amountUsd: 99.0, currency: 'usd',
       status: 'completed',
     } as any);
     expect(db._ledgerStore).toHaveLength(initial);
@@ -279,7 +293,17 @@ describe('createPaymentReceivablesStore', () => {
         return {
           values: (v: any) => {
             insertCalls.push({ table, values: v });
+            // #6013/#6015 cluster: support both .returning({...}) and await (no return)
+            // for ledger inserts (which now use .returning({id: companyCashLedger.id}) to
+            // capture the ledger.id back to paymentTransactions.ledgerEntryId).
             return {
+              returning: (_cols: any) => {
+                if (table === paymentTransactions && opts.rejectTxInsert) {
+                  return Promise.reject(new Error('Simulated tx insert failure'));
+                }
+                if (table === paymentTransactions) txStore.push(v);
+                return Promise.resolve([{ id: 'mock-ledger-id' }]);
+              },
               then: (resolve: any, reject: any) => {
                 if (table === paymentTransactions && opts.rejectTxInsert) {
                   return reject(new Error('Simulated tx insert failure'));
@@ -291,10 +315,19 @@ describe('createPaymentReceivablesStore', () => {
           },
         };
       }
+      function update(_table: any) {
+        return {
+          set: (_vals: any) => ({
+            where: (_w: any) => Promise.resolve({ rowCount: 1 }),
+          }),
+        };
+      }
       const db = {
         insert,
+        update,
         transaction: (fn: any) => fn({
           insert,
+          update,
           select: () => ({
             from: (_t: any) => ({
               where: (_c: any) => ({
@@ -311,7 +344,7 @@ describe('createPaymentReceivablesStore', () => {
       const { db, insertCalls } = makeDb();
       const storeLocal = createPaymentReceivablesStore(db as any) as any;
       await storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_atom', customerId: 'c1', amountUsd: 50, status: 'completed',
+        provider: 'stripe', providerPaymentId: 'evt_atom', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'completed',
       });
       const txInsert = insertCalls.find(c => c.table === paymentTransactions);
       const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
@@ -323,7 +356,7 @@ describe('createPaymentReceivablesStore', () => {
       const { db, insertCalls } = makeDb();
       const storeLocal = createPaymentReceivablesStore(db as any) as any;
       await storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_status', customerId: 'c1', amountUsd: 50, status: 'completed',
+        provider: 'stripe', providerPaymentId: 'evt_status', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'completed',
       });
       const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
       expect(ledgerInsert).toBeDefined();
@@ -334,7 +367,7 @@ describe('createPaymentReceivablesStore', () => {
       const { db, insertCalls } = makeDb();
       const storeLocal = createPaymentReceivablesStore(db as any) as any;
       await storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_failed', customerId: 'c1', amountUsd: 50, status: 'failed', failureReason: 'declined',
+        provider: 'stripe', providerPaymentId: 'evt_failed', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'failed', failureReason: 'declined',
       });
       const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
       expect(ledgerInsert).toBeUndefined();
@@ -345,10 +378,10 @@ describe('createPaymentReceivablesStore', () => {
       const { db } = makeDb({ txStore });
       const storeLocal = createPaymentReceivablesStore(db as any) as any;
       const r1 = await storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, status: 'completed',
+        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'completed',
       });
       const r2 = await storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, status: 'completed',
+        provider: 'stripe', providerPaymentId: 'evt_idem', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'completed',
       });
       expect(r1.isNew).toBe(true);
       expect(r2.isNew).toBe(false);
@@ -358,7 +391,7 @@ describe('createPaymentReceivablesStore', () => {
       const { db, insertCalls } = makeDb({ rejectTxInsert: true });
       const storeLocal = createPaymentReceivablesStore(db as any) as any;
       await expect(storeLocal.processPaymentEvent({
-        provider: 'stripe', providerPaymentId: 'evt_rollback', customerId: 'c1', amountUsd: 50, status: 'completed',
+        provider: 'stripe', providerPaymentId: 'evt_rollback', customerId: 'c1', amountUsd: 50, currency: 'usd', status: 'completed',
       })).rejects.toThrow('Simulated tx insert failure');
       const ledgerInsert = insertCalls.find(c => c.table === companyCashLedger);
       expect(ledgerInsert).toBeUndefined();
@@ -501,7 +534,7 @@ describe('createPaymentReceivablesStore', () => {
       db.select = vi.fn().mockReturnValue({
         from: () => ({
           where: () => ({
-            all: () => Promise.resolve([existing]),
+            limit: () => ({ all: () => Promise.resolve([existing]) }),
           }),
         }),
       });
@@ -537,7 +570,7 @@ describe('createPaymentReceivablesStore', () => {
       db.select = vi.fn().mockReturnValue({
         from: () => ({
           where: () => ({
-            all: () => Promise.resolve([]),
+            limit: () => ({ all: () => Promise.resolve([]) }),
           }),
         }),
       });
@@ -557,15 +590,15 @@ describe('createPaymentReceivablesStore', () => {
         isActive: true,
       });
 
-      // Assert: new id returned, INSERT was called (not UPDATE)
-      // Note: INSERT path uses the InsertBuilder type-lie cast, so the
-      // captured isActive is still boolean (not coerced to 1 in JS).
-      // SQLite coerces to 0/1 at the SQL level.
+      // Assert: new id returned, INSERT was called (not UPDATE).
+      // #6013 L#NN-50 #23 N=4: isActive is now coerced at the JS level (was boolean
+      // pre-fix; SQLite coerced to 0/1 at SQL level via the type-lie cast). Test
+      // asserts the canonical integer value 1 = truthy.
       expect(result).toBeDefined();
       expect(inserted?.id).toBe(result);
       expect(inserted?.provider).toBe('asaas');
       expect(inserted?.apiKeyEncrypted).toBe('asaas-key');
-      expect(inserted?.isActive).toBe(true);
+      expect(inserted?.isActive).toBe(1);
     });
   });
 
