@@ -8,6 +8,8 @@
  * event name and delegates to dispatchAsaasEvent.
  * currency is now centralized as the default constant.
  */
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 import type { PaymentProviderType } from '../payment-schema';
 import { errorMsg } from '../../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
@@ -44,27 +46,59 @@ type NormalizedAsaasPayment = {
 
 const ASAAS_DEFAULT_CURRENCY = 'brl' as const;
 
-/** Verify an Asaas webhook signature using the API key as Bearer token. */
+/**
+ * Verify an Asaas webhook signature using HMAC-SHA256 and parse the JSON payload.
+ *
+ * Signature header format: `x-asaas-signature: sha256=<hex>` (GitHub-style)
+ * - Signed payload: the raw request body
+ * - Comparison: constant-time via timingSafeEqual
+ *
+ * SECURITY (issue #6043 P0 SEC): The PREVIOUS implementation used the API key as a
+ * Bearer token in the Authorization header. This caused the API key to be sent
+ * over the wire on every webhook and risked credential leak if the header was
+ * ever logged. This implementation uses a SEPARATE `webhookSecret` (stored
+ * encrypted in `paymentProviders.webhookSecretEncrypted`) and HMAC signature
+ * verification — the API key is no longer transmitted during webhook delivery.
+ *
+ * Pure verification: no logging, no side effects. The caller decides whether
+ * to throw 401 (invalid signature) or 400 (malformed body).
+ *
+ * Throws Error on:
+ *   - missing or malformed signature header (caller should respond 400)
+ *   - invalid JSON body (caller should respond 400)
+ *
+ * Returns the parsed `AsaasWebhookPayload` on success.
+ *
+ * @param payloadBody - Raw request body string (NOT parsed JSON)
+ * @param webhookSecret - HMAC signing key (decrypted from webhookSecretEncrypted)
+ * @param signatureHeader - Value of the x-asaas-signature header
+ * @returns Parsed payload if signature is valid AND JSON parses
+ */
 export function verifyAsaasWebhookRequest(
   payloadBody: string,
-  apiKey: string,
-  authHeader: string | null,
+  webhookSecret: string,
+  signatureHeader: string | null | undefined,
 ): AsaasWebhookPayload {
-  if (authHeader === null || !authHeader.startsWith('Bearer ')) {
-    forgeDebug({
-      scope: 'asaas',
-      level: 'warn',
-      message: 'verifyAsaasWebhookAuth: missing or invalid Bearer header',
-    });
-    throw new Error('Asaas webhook: missing or invalid Bearer authorization header');
+  if (signatureHeader === null || signatureHeader === undefined || signatureHeader === '') {
+    throw new Error('Asaas webhook: missing x-asaas-signature header');
   }
-  if (authHeader.slice(7) !== apiKey) {
-    forgeDebug({
-      scope: 'asaas',
-      level: 'warn',
-      message: 'verifyAsaasWebhookAuth: invalid API key in header',
-    });
-    throw new Error('Asaas webhook: invalid API key in authorization header');
+  // Header format: "sha256=<hex>" (GitHub-style). Strip prefix if present.
+  const received = signatureHeader.startsWith('sha256=')
+    ? signatureHeader.slice(7)
+    : signatureHeader;
+  const expected = createHmac('sha256', webhookSecret).update(payloadBody).digest('hex');
+  let sigValid = false;
+  try {
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(received, 'hex');
+    if (a.length === b.length) {
+      sigValid = timingSafeEqual(a, b);
+    }
+  } catch {
+    sigValid = false;
+  }
+  if (!sigValid) {
+    throw new Error('Asaas webhook: invalid signature');
   }
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
