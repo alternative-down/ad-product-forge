@@ -173,7 +173,7 @@ export function verifyStripeWebhookSignature(
   toleranceSeconds: number = STRIPE_DEFAULT_TOLERANCE_SECONDS,
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): boolean {
-  if (signatureHeader === null || signatureHeader === undefined || signatureHeader === '') {
+  if (!signatureHeader) {
     return false;
   }
   const parts = signatureHeader.split(',');
