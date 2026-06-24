@@ -44,10 +44,12 @@ import { describe, expect, test } from 'vitest';
  *       (b) upgrade libsql/drizzle beyond the buggy version, or
  *       (c) document why the new total is safe
  */
-// Bumped 200→250 by PR #6059 (Day 24): migration 0032 adds 5 statements,
-// pushing cumulative total from 199 → 204. New safety margin 250 leaves room for
-// ~10 future migrations of similar size before next bump. Sequential db.run()
-// workaround (PR #5438) handles up to 1000 statements per Drizzle docs.
+// Bumped 200→250 by PRs #6059 + #6064 (Day 24, post-rebase):
+//   - #6059 migration 0032 adds 5 statements (cumulative 199 → 204)
+//   - #6064 migration 0033 adds ~10 statements (cumulative 204 → ~209)
+// New safety margin 250 leaves room for ~8 future migrations of similar size.
+// Sequential db.run() workaround (PR #5438) handles up to 1000 statements.
+// (post-merge tail line from PR #6059 fix - already incorporated above)
 export const MAX_TOTAL_STATEMENTS = 250;
 
 // Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the

@@ -264,7 +264,7 @@ export const agentSchedules = sqliteTable(
     isActive: integer('is_active').notNull().default(1),
     lastTriggeredAt: integer('last_triggered_at'),
     nextTriggerAt: integer('next_trigger_at'),
-    creatorId: text('creator_id'),
+    creatorId: text('creator_id').references(() => agents.id, { onDelete: 'set null' }),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
