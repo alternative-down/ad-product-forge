@@ -1,6 +1,4 @@
 import { eq } from 'drizzle-orm';
-import { errorMsg } from '../agents/error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
 import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/client';
