@@ -69,7 +69,6 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['communication/internal-chat-connection.ts', 2],
   ['communication/internal-chat-provider.ts', 2],
   ['webhooks/store.ts', 2],
-  ['admin/read-model/agents-list.ts', 1],
   ['admin/read-model/agents.ts', 1],
   ['agents/agent-contract-store.ts', 1],
   ['agents/agent-home-metrics.ts', 1],
