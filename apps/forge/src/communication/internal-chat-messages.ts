@@ -1,6 +1,5 @@
 import { and, desc, eq, gte, inArray, like, lte, sql } from 'drizzle-orm';
 
-import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProviderMessage } from '@forge-runtime/core';
 
 import {
@@ -44,6 +43,32 @@ export interface InternalChatMessagesDeps {
   readMessageAttachments(messageId: string): Promise<unknown[]>;
 }
 
+
+
+/**
+ * Escape SQL LIKE wildcards in user input to prevent filter bypass.
+ *
+ * SQL LIKE has three special characters that must be escaped to be treated
+ * as literals:
+ *   - `%` matches any sequence (zero or more)
+ *   - `_` matches any single character
+ *   - `\\` is the escape character itself
+ *
+ * Without escaping, an attacker can:
+ *   - Pass `%` to bypass content filtering (filter bypass)
+ *   - Pass `_` to widen matching to single chars
+ *   - Enumerate via partial-match (e.g., `password%`)
+ *
+ * NOTE: Drizzle parameterizes the LIKE value, so this is NOT a SQL injection
+ * (no raw SQL); it's specifically a LIKE-wildcard filter bypass.
+ *
+ * @param input  Raw user-supplied search string
+ * @returns      Escaped string safe to wrap in `%...%`
+ */
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, (ch) => '\\' + ch);
+}
+
 export function createInternalChatMessages(db: Database, deps: InternalChatMessagesDeps) {
   const {
     requireConversationMembership,
@@ -68,7 +93,7 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(input.query ? [like(internalChatMessages.content, `%${escapeLikePattern(input.query)}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
     ];
@@ -149,7 +174,7 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(input.query ? [like(internalChatMessages.content, `%${escapeLikePattern(input.query)}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
     ];
