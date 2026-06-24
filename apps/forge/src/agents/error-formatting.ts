@@ -9,6 +9,26 @@
  * No external dependencies — fully testable in isolation.
  */
 
+// ─── Typed cast helper (L#NN-32 v8 — #6021 cluster) ──────────────────────────
+
+/**
+ * Returns the dynamic property bag of an Error instance as a typed Record.
+ *
+ * The `Error` class does not declare dynamic properties (e.g. `code`,
+ * `statusCode`, `responseBody`) in TypeScript's type system. Real-world
+ * errors frequently attach these via `Object.assign(error, {...})` or by
+ * extending Error. To read them safely, we cast the Error to
+ * `Record<string, unknown>` once, in one place, instead of repeating the
+ * `as unknown as Record<string, unknown>` cast at every site.
+ *
+ * This helper IS the type-lie. Centralizing it ensures the lie is documented
+ * and that future call-sites can use the helper instead of re-introducing
+ * the cast. (See L#NN-32 v8 type-lie cascade pattern, #6021.)
+ */
+function getErrorExtras(error: Error): Record<string, unknown> {
+  return error as unknown as Record<string, unknown>;
+}
+
 // ─── Core serialization ────────────────────────────────────────────────────────
 
 /**
@@ -47,9 +67,9 @@ export function serializeError(error: unknown): Record<string, unknown> {
     };
   }
   const extra = Object.fromEntries(
-    Object.keys(error as unknown as Record<string, unknown>)
+    Object.keys(getErrorExtras(error))
       .filter((key) => !['name', 'message', 'stack'].includes(key))
-      .map((key) => [key, serializeUnknown((error as unknown as Record<string, unknown>)[key])]),
+      .map((key) => [key, serializeUnknown(getErrorExtras(error)[key])]),
   );
 
   return {
@@ -98,7 +118,7 @@ export function formatAbsentErrorDetailValue(value: unknown): string | null {
  */
 export function extractAbsentErrorDetails(error: Error): string[] {
   const details: string[] = [];
-  const e = error as unknown as Record<string, unknown>;
+  const e = getErrorExtras(error);
 
   if ('code' in e && typeof e.code === 'string') {
     details.push(`Error code: ${e.code}`);
