@@ -479,7 +479,7 @@ export function createInternalChatGroups(
         .where(eq(internalChatConversationMembers.conversationId, input.groupId))
         .all();
 
-      return rows.map((row: any) => ({
+      return rows.map((row) => ({
         ...row,
         createdAt: new Date(row.createdAt).toISOString(),
       }));
@@ -517,7 +517,7 @@ export function createInternalChatGroups(
         .where(eq(internalChatConversationMembers.conversationId, input.groupId))
         .all();
 
-      return rows.map((row: any) => ({
+      return rows.map((row) => ({
         ...row,
         createdAt: new Date(row.createdAt).toISOString(),
       }));
