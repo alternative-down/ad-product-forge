@@ -105,20 +105,21 @@ function mapRow(row: any | null): SystemSettingsValue {
 export type SystemSettingsStore = Awaited<ReturnType<typeof createSystemSettingsStore>>;
 export function createSystemSettingsStore(db: Database) {
   async function getSettings(): Promise<SystemSettingsValue> {
-    try {
-      const row = await db.query.systemSettings.findFirst({
-        where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
-      });
-      return mapRow(row);
-    } catch (err) {
-      forgeDebug({
-        scope: 'system-settings',
-        level: 'error',
-        message: 'getSettings failed',
-        context: { error: errorMsg(err) },
-      });
-      return { ...DEFAULTS, updatedAt: null, createdAt: null };
-    }
+    // #6028 (L#NN-50 #19 v3): distinguish 'settings not initialized' (row=null,
+    // handled by mapRow → DEFAULTS) from 'DB query failed' (error → throw).
+    // Previously the silent failure returned DEFAULTS on both, hiding real
+    // failures. Now the DB error propagates via withDbErrorLogging (default
+    // mode='throw') and is logged in the unified Format A.
+    const row = await withDbErrorLogging({
+      scope: 'system-settings',
+      op: 'getSettings',
+      verb: 'read',
+      fn: () =>
+        db.query.systemSettings.findFirst({
+          where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
+        }),
+    });
+    return mapRow(row);
   }
 
   async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
