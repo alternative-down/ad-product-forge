@@ -32,7 +32,7 @@ export type CapabilityStore = Awaited<ReturnType<typeof createCapabilityStore>>;
 export function createCapabilityStore(db: Database) {
   async function listRoles() {
     const rows = await queryRoles(db);
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       roleId: row.id,
       name: row.name,
       description: row.description ?? undefined,
@@ -153,7 +153,7 @@ export function createCapabilityStore(db: Database) {
 
   async function listRoleToolPermissions(roleId: string) {
     const rows = await queryToolPermissions(db, roleId);
-    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row: any) => row.toolId)));
+    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row) => row.toolId)));
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {
@@ -206,7 +206,7 @@ export function createCapabilityStore(db: Database) {
 
   async function listRoleWorkflowPermissions(roleId: string) {
     const rows = await queryWorkflowPermissions(db, roleId);
-    return rows.map((row: any) => row.workflowId);
+    return rows.map((row) => row.workflowId);
   }
 
   async function addRoleWorkflowPermission(input: { roleId: string; workflowId: string }) {
@@ -456,12 +456,14 @@ export function createCapabilityStore(db: Database) {
       executionState: input.executionState,
     });
 
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       agentId: row.id,
       name: row.name,
       description: row.description ?? undefined,
       roleName: row.role?.name ?? undefined,
       roleDescription: row.role?.description ?? undefined,
+      // executionState column is text() in schema; runtime values are constrained by app code to this union.
+      // Cast preserved to maintain narrow type for downstream consumers. Schema migration to enum is a separate follow-up.
       executionState: row.executionState as 'idle' | 'running' | 'absent',
       updatedAt: row.updatedAt,
     }));

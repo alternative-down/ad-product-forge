@@ -23,11 +23,11 @@ export interface SystemReadModel {
     items: Array<{
       roleId: string;
       name: string;
-      description: string | null;
+      description: string | undefined;
       assignedAgentCount: number;
       capabilityIds: string[];
-      createdAt: Date;
-      updatedAt: Date;
+      createdAt: number;
+      updatedAt: number;
     }>;
   }>;
   listSystemIntegrations: () => Promise<SystemIntegrationSummary[]>;
