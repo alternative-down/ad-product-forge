@@ -230,7 +230,7 @@ describe('updateOwnedSchedule', () => {
     expect(mockForgeDebug).toHaveBeenCalledWith(
       expect.objectContaining({
         level: 'error',
-        message: expect.stringMatching(/scheduler registration failed/),
+        message: expect.stringMatching(/updateOwnedSchedule DB write failed/),
       }),
     );
   });
@@ -308,8 +308,7 @@ describe('deleteSchedule', () => {
     await expect(mutations.deleteSchedule('agent-1', 'sched-1')).rejects.toThrow(
       /Schedule not found or not authorized/,
     );
-    expect(mockForgeDebug).toHaveBeenCalledWith(
-      expect.objectContaining({ level: 'error' }),
-    );
+    // After migration to withDbErrorLogging, the check-throw (not a DB op) is not logged.
+    // The throw is still surfaced to the caller; the DB op itself was successful.
   });
 });

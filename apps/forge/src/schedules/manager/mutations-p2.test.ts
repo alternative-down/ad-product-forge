@@ -145,7 +145,7 @@ describe('createHeartbeatSchedule', () => {
       expect.objectContaining({
         scope: 'schedules-manager',
         level: 'error',
-        message: 'createHeartbeatSchedule: registerSchedule failed',
+        message: 'createHeartbeatSchedule DB write failed',
       }),
     );
   });
@@ -249,7 +249,7 @@ describe('updateSchedule', () => {
       expect.objectContaining({
         scope: 'schedules-manager',
         level: 'error',
-        message: 'updateSchedule: scheduler registration failed, DB rolled back',
+        message: 'updateSchedule DB write failed',
       }),
     );
   });
@@ -421,13 +421,10 @@ describe('deleteCron', () => {
     await expect(mutations.deleteCron('editor-1', 'sched-1')).rejects.toThrow(
       'Not authorized to delete schedule: sched-1',
     );
-    expect(forgeDebug).toHaveBeenCalledWith(
-      expect.objectContaining({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: expect.stringContaining('deleteCron failed'),
-      }),
-    );
+    // After migration: auth errors thrown by requireScheduleDeleter are no longer logged
+    // (they're not DB errors, so withDbErrorLogging correctly doesn't handle them).
+    // The throw is still surfaced to the caller.
+    void forgeDebug; // keep the mock reference for other tests in the file
   });
 });
 
@@ -479,7 +476,7 @@ describe('removeAgent', () => {
       expect.objectContaining({
         scope: 'schedules-manager',
         level: 'error',
-        message: expect.stringContaining('removeAgent: failed to delete schedule'),
+        message: expect.stringContaining('removeAgent DB write failed'),
       }),
     );
   });
@@ -497,7 +494,7 @@ describe('removeAgent', () => {
       expect.objectContaining({
         scope: 'schedules-manager',
         level: 'error',
-        message: expect.stringContaining('removeAgent: failed to delete heartbeat'),
+        message: expect.stringContaining('removeAgent DB write failed'),
       }),
     );
   });

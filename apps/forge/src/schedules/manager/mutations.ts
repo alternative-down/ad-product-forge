@@ -1,5 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/error-formatting';
+import { withDbErrorLogging } from '../../database/error-logging';
 import { z } from 'zod';
 
 import {
@@ -97,21 +97,16 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
       agentId,
       store: store,
     });
-    try {
-      await getLifecycle()!.register(toScheduleRecord(record));
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: {
-          agentId,
-          scheduleId: (record).scheduleId,
-          error: errorMsg(error),
-        },
-      });
-      throw error;
-    }
+    await withDbErrorLogging({
+      scope: 'schedules-manager',
+      op: 'createHeartbeatSchedule',
+      verb: 'write',
+      context: {
+        agentId,
+        scheduleId: (record).scheduleId,
+      },
+      fn: () => getLifecycle()!.register(toScheduleRecord(record)),
+    });
     return {
       scheduleId: (record).scheduleId,
     };
@@ -140,15 +135,15 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      await getLifecycle()!.register(toScheduleRecord(record));
+      await withDbErrorLogging({
+        scope: 'schedules-manager',
+        op: 'createSchedule',
+        verb: 'write',
+        context: { agentId, scheduleId: record.id },
+        fn: () => getLifecycle()!.register(toScheduleRecord(record)),
+      });
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'createSchedule: registerSchedule failed, cleaned up record',
-        context: { agentId, error: errorMsg(error) },
-      });
       throw error;
     }
 
@@ -211,18 +206,24 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     try {
       if (isActiveSchedule(updated) === true) {
-        await getLifecycle()!.register(toScheduleRecord(updated));
+        await withDbErrorLogging({
+          scope: 'schedules-manager',
+          op: 'updateSchedule',
+          verb: 'write',
+          context: { agentId, scheduleId },
+          fn: () => getLifecycle()!.register(toScheduleRecord(updated)),
+        });
       } else {
-        await store.setNextTriggerAt(scheduleId, null);
+        await withDbErrorLogging({
+          scope: 'schedules-manager',
+          op: 'updateSchedule',
+          verb: 'write',
+          context: { agentId, scheduleId },
+          fn: () => store.setNextTriggerAt(scheduleId, null),
+        });
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'updateSchedule: scheduler registration failed, DB rolled back',
-        context: { agentId, scheduleId, error: errorMsg(error) },
-      });
 
       getLifecycle()!.cancel(scheduleId);
 
@@ -292,18 +293,24 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     try {
       if (isActiveSchedule(updated) === true) {
-        await getLifecycle()!.register(toScheduleRecord(updated));
+        await withDbErrorLogging({
+          scope: 'schedules-manager',
+          op: 'updateOwnedSchedule',
+          verb: 'write',
+          context: { agentId, scheduleId },
+          fn: () => getLifecycle()!.register(toScheduleRecord(updated)),
+        });
       } else {
-        await store.setNextTriggerAt(scheduleId, null);
+        await withDbErrorLogging({
+          scope: 'schedules-manager',
+          op: 'updateOwnedSchedule',
+          verb: 'write',
+          context: { agentId, scheduleId },
+          fn: () => store.setNextTriggerAt(scheduleId, null),
+        });
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back',
-        context: { agentId, scheduleId, error: errorMsg(error) },
-      });
 
       getLifecycle()!.cancel(scheduleId);
 
@@ -334,22 +341,18 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
   }
 
   async function deleteSchedule(agentId: string, scheduleId: string) {
-    try {
-      getLifecycle()!.cancel(scheduleId);
-      const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
-      if (!deleted) {
-        throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
-      }
-      return { success: true };
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: `deleteSchedule failed: ${errorMsg(error)}`,
-        context: { agentId, scheduleId },
-      });
-      throw error;
+    getLifecycle()!.cancel(scheduleId);
+    const deleted = await withDbErrorLogging({
+      scope: 'schedules-manager',
+      op: 'deleteSchedule',
+      verb: 'write',
+      context: { agentId, scheduleId },
+      fn: () => store.deleteAgentSchedule(agentId, scheduleId),
+    });
+    if (!deleted) {
+      throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
     }
+    return { success: true };
   }
 
   async function createScheduleForAgent(
@@ -392,15 +395,15 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     }
 
     try {
-      await getLifecycle()!.register(scheduleRecord);
+      await withDbErrorLogging({
+        scope: 'schedules-manager',
+        op: 'createScheduleForAgent',
+        verb: 'write',
+        context: { agentId: parsed.targetAgentId, scheduleId: record.id },
+        fn: () => getLifecycle()!.register(scheduleRecord),
+      });
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'createScheduleForAgent: registerSchedule failed, cleaned up record',
-        context: { agentId: parsed.targetAgentId, error: errorMsg(error) },
-      });
       throw error;
     }
 
@@ -428,28 +431,30 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
   }
 
   async function deleteCron(editorAgentId: string, scheduleId: string) {
-    try {
-      const schedule = await store.getScheduleById(scheduleId);
+    const schedule = await withDbErrorLogging({
+      scope: 'schedules-manager',
+      op: 'deleteCron',
+      verb: 'read',
+      context: { editorAgentId, scheduleId },
+      fn: () => store.getScheduleById(scheduleId),
+    });
 
-      if (schedule === null) {
-        throw new Error(`Schedule not found: ${scheduleId}`);
-      }
-
-      requireScheduleDeleter(schedule, editorAgentId);
-
-      getLifecycle()!.cancel(scheduleId);
-      return {
-        success: await store.deleteAgentSchedule((schedule).agentId, scheduleId),
-      };
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: `deleteCron failed: ${errorMsg(error)}`,
-        context: { editorAgentId, scheduleId },
-      });
-      throw error;
+    if (schedule === null) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
     }
+
+    requireScheduleDeleter(schedule, editorAgentId);
+
+    getLifecycle()!.cancel(scheduleId);
+    return {
+      success: await withDbErrorLogging({
+        scope: 'schedules-manager',
+        op: 'deleteCron',
+        verb: 'write',
+        context: { editorAgentId, scheduleId },
+        fn: () => store.deleteAgentSchedule((schedule).agentId, scheduleId),
+      }),
+    };
   }
 
   async function removeAgent(agentId: string) {
@@ -457,30 +462,22 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     for (const scheduleRecord of schedules) {
       getLifecycle()!.cancel((scheduleRecord).scheduleId);
-      try {
-        await store.deleteAgentSchedule(agentId, (scheduleRecord).scheduleId);
-      } catch (error) {
-        forgeDebug({
-          scope: 'schedules-manager',
-          level: 'error',
-          message: `removeAgent: failed to delete schedule ${(scheduleRecord).scheduleId}: ${errorMsg(error)}`,
-          context: { agentId, scheduleId: (scheduleRecord).scheduleId },
-        });
-        throw error;
-      }
+      await withDbErrorLogging({
+        scope: 'schedules-manager',
+        op: 'removeAgent',
+        verb: 'write',
+        context: { agentId, scheduleId: (scheduleRecord).scheduleId },
+        fn: () => store.deleteAgentSchedule(agentId, (scheduleRecord).scheduleId),
+      });
     }
 
-    try {
-      await store.deleteHeartbeatSchedule(agentId);
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: `removeAgent: failed to delete heartbeat schedule: ${errorMsg(error)}`,
-        context: { agentId },
-      });
-      throw error;
-    }
+    await withDbErrorLogging({
+      scope: 'schedules-manager',
+      op: 'removeAgent',
+      verb: 'write',
+      context: { agentId },
+      fn: () => store.deleteHeartbeatSchedule(agentId),
+    });
   }
 
   return {
