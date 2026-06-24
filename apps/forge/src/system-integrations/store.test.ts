@@ -86,7 +86,7 @@ describe('system-integrations/store', () => {
       expect(result).toEqual([]);
     });
 
-    it('maps DB rows to summary shape and decrypts config', async () => {
+    it('maps DB rows to summary shape without decrypting config (per #5987 fail-closed)', async () => {
       const row = createMockRow('migadu', {
         encryptedConfig: 'encrypted:{"apiUser":"test@example.com","apiKey":"key123"}',
         isEnabled: 1,
@@ -100,9 +100,10 @@ describe('system-integrations/store', () => {
       expect(result[0]).toMatchObject({
         providerType: 'migadu',
         isEnabled: true,
-        config: expect.objectContaining({ apiUser: 'test@example.com' }),
       });
-      expect((result[0].config as Record<string, unknown>).apiKey).toBeNull();
+      // Per #5987: listIntegrations returns metadata only. Callers needing
+      // the full config must invoke getMigaduConfig() explicitly.
+      expect(result[0].config).toBeNull();
     });
 
     it('excludes rows with invalid providerType', async () => {
@@ -169,6 +170,7 @@ describe('system-integrations/store', () => {
       const result = await store.upsertIntegration({
         providerType: 'migadu',
         config: { apiUser: 'user@example.com', apiKey: 'secret-key' },
+        isEnabled: true, // #6034: explicit opt-in (default is false, fail-closed)
       });
 
       expect(result.providerType).toBe('migadu');
@@ -305,55 +307,56 @@ describe('system-integrations/store', () => {
   // ── parseIntegrationConfig (via listIntegrations coverage) ────────────────
 
   describe('parseIntegrationConfig', () => {
-    it('correctly parses coolify config via listIntegrations', async () => {
+    // Per #5987: listIntegrations does NOT decrypt credentials. Parse the
+    // full encrypted config via the dedicated get*Config() helpers instead.
+
+    it('correctly parses coolify config via getCoolifyConfig', async () => {
       const row = createMockRow('coolify', {
         encryptedConfig:
           'encrypted:{"baseUrl":"https://coolify.io","adminToken":"tok","serverId":"s1","destinationId":"d1"}',
         isEnabled: 1,
       });
-      (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(row);
 
       const store = createSystemIntegrationStore(db);
-      const result = await store.listIntegrations();
+      const result = await store.getCoolifyConfig();
 
-      expect(result[0].config).toMatchObject({
+      expect(result).toMatchObject({
         baseUrl: 'https://coolify.io',
         serverId: 's1',
         destinationId: 'd1',
+        adminToken: 'tok',
       });
-      expect((result[0].config as Record<string, unknown>).adminToken).toBeNull();
     });
 
-    it('correctly parses github config via listIntegrations', async () => {
+    it('correctly parses github config via getGitHubConfig', async () => {
       const row = createMockRow('github', {
         encryptedConfig:
           'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
         isEnabled: 1,
       });
-      (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(row);
 
       const store = createSystemIntegrationStore(db);
-      const result = await store.listIntegrations();
+      const result = await store.getGitHubConfig();
 
-      expect(result[0].config).toMatchObject({
+      expect(result).toMatchObject({
         organization: 'my-org',
         appHomeUrl: 'https://github.com/apps/my-app',
       });
     });
 
-    it('correctly parses minimax config via listIntegrations', async () => {
+    it('correctly parses minimax config via getMinimaxConfig', async () => {
       const row = createMockRow('minimax', {
         encryptedConfig: 'encrypted:{"apiKey":"minimax-api-key"}',
         isEnabled: 1,
       });
-      (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(row);
 
       const store = createSystemIntegrationStore(db);
-      const result = await store.listIntegrations();
+      const result = await store.getMinimaxConfig();
 
-      // apiKey is stripped by sanitizeForList in list output
-      expect((result[0].config as Record<string, unknown>).apiKey).toBeNull();
-      expect(result[0].config).toMatchObject({});
+      expect(result).toMatchObject({ apiKey: 'minimax-api-key' });
     });
   });
 
@@ -405,6 +408,7 @@ describe('system-integrations/store', () => {
       const result = await store.upsertIntegration({
         providerType: 'migadu',
         config: { apiUser: 'updated@example.com', apiKey: 'updated-key' },
+        isEnabled: true, // #6034: explicit opt-in (default is false, fail-closed)
       });
 
       expect(result.isEnabled).toBe(true);
