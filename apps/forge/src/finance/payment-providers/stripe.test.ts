@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import { createHmac } from 'node:crypto';
 import {
   normalizeStripeEvent,
   parseStripePaymentSucceeded,
   parseStripePaymentFailed,
   parseStripeCheckoutCompleted,
   parseStripePaymentRefunded,
+  verifyStripeWebhookSignature,
 } from './stripe';
 
 function makeStripeEvent(
@@ -261,4 +263,70 @@ describe('stripe adapter', () => {
       expect(hasDefaultZero).toBe(false);
     });
   });
-});
+
+  describe('verifyStripeWebhookSignature (#6044 P0 SEC)', () => {
+    const SECRET = 'whsec_test_secret';
+    const NOW = 1700000000; // fixed for deterministic tests
+    const BODY = '{"id":"evt_1","type":"payment_intent.succeeded"}';
+
+    function sign(timestamp: number, body: string, secret: string): string {
+      const sig = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
+      return `t=${timestamp},v1=${sig}`;
+    }
+
+    it('returns true for a valid signature within tolerance', () => {
+      const header = sign(NOW, BODY, SECRET);
+      expect(verifyStripeWebhookSignature(BODY, header, SECRET, 300, NOW)).toBe(true);
+    });
+
+    it('returns false for an invalid signature', () => {
+      const header = sign(NOW, BODY, 'wrong-secret');
+      expect(verifyStripeWebhookSignature(BODY, header, SECRET, 300, NOW)).toBe(false);
+    });
+
+    it('returns false for a tampered body', () => {
+      const header = sign(NOW, BODY, SECRET);
+      const tamperedBody = BODY + 'tampered';
+      expect(verifyStripeWebhookSignature(tamperedBody, header, SECRET, 300, NOW)).toBe(false);
+    });
+
+    it('returns false for an expired timestamp (outside tolerance)', () => {
+      const oldTimestamp = NOW - 1000; // > 300s old
+      const header = sign(oldTimestamp, BODY, SECRET);
+      expect(verifyStripeWebhookSignature(BODY, header, SECRET, 300, NOW)).toBe(false);
+    });
+
+    it('returns true for a signature within tolerance using default 300s', () => {
+      // Use current time for nowSeconds (test the default-tolerance path),
+      // and timestamp 100s in the past to be within the 300s default window.
+      const currentTime = Math.floor(Date.now() / 1000);
+      const header = sign(currentTime - 100, BODY, SECRET);
+      expect(verifyStripeWebhookSignature(BODY, header, SECRET)).toBe(true);
+    });
+
+    it('accepts any matching v1 signature (key rotation support)', () => {
+      const oldSig = createHmac('sha256', 'old-secret').update(`${NOW}.${BODY}`).digest('hex');
+      const newSig = createHmac('sha256', SECRET).update(`${NOW}.${BODY}`).digest('hex');
+      const header = `t=${NOW},v1=${oldSig},v1=${newSig}`;
+      expect(verifyStripeWebhookSignature(BODY, header, SECRET, 300, NOW)).toBe(true);
+    });
+
+    it('returns false for null/empty/undefined signature header', () => {
+      expect(verifyStripeWebhookSignature(BODY, null, SECRET, 300, NOW)).toBe(false);
+      expect(verifyStripeWebhookSignature(BODY, undefined, SECRET, 300, NOW)).toBe(false);
+      expect(verifyStripeWebhookSignature(BODY, '', SECRET, 300, NOW)).toBe(false);
+    });
+
+    it('throws for malformed header missing timestamp', () => {
+      expect(() =>
+        verifyStripeWebhookSignature(BODY, 'v1=abc123', SECRET, 300, NOW),
+      ).toThrow(/timestamp/);
+    });
+
+    it('throws for malformed header missing v1 signature', () => {
+      expect(() =>
+        verifyStripeWebhookSignature(BODY, `t=${NOW}`, SECRET, 300, NOW),
+      ).toThrow(/v1/);
+    });
+  });
+})
