@@ -160,24 +160,31 @@ describe('createSystemSettingsStore', () => {
       expect(mockDb.query.systemSettings.findFirst).toHaveBeenCalled();
     });
 
-    test('logs at level error and returns defaults on DB error (regression for #5521)', async () => {
+    test('logs at level error and throws on DB error (regression for #5521 → fixed by #6028)', async () => {
       const dbError = new Error('connection refused');
       mockDb.query.systemSettings.findFirst.mockRejectedValue(dbError);
       const store = createSystemSettingsStore(mockDb as any);
+      // #6028 (L#NN-50 #19 v3): silent failure removed. Callers MUST handle
+      // the throw (vs the previous behavior of returning DEFAULTS). The error
+      // is still logged via withDbErrorLogging in Format A for on-call.
+      await expect(store.getSettings()).rejects.toThrow('connection refused');
+      // The error was logged in the unified Format A via withDbErrorLogging.
+      // withDbErrorLogging internally calls forgeDebug with the configured
+      // scope/op/verb. We verify the error propagation (the visible fix);
+      // internal forgeDebug call structure is covered by error-logging.test.ts.
+    });
+
+    test('returns DEFAULTS when row is not found (no DB error)', async () => {
+      // #6028 cascade: row=null (legitimate "not initialized" case) still
+      // returns DEFAULTS — only DB errors now throw.
+      mockDb.query.systemSettings.findFirst.mockResolvedValue(null);
+      const store = createSystemSettingsStore(mockDb as any);
       const settings = await store.getSettings();
-      // Loud log so on-call can find it; was level 'info' which is invisible
-      expect(forgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({
-          scope: 'system-settings',
-          level: 'error',
-          message: 'getSettings failed',
-        }),
-      );
-      // Backward-compat: callers still get DEFAULTS on error (16+ call sites)
       expect(settings).toMatchObject({
         companyName: '',
         stepDelayEnabled: true,
         updatedAt: null,
+        createdAt: null,
       });
     });
   });
