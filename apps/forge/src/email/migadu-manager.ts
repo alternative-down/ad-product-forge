@@ -141,7 +141,7 @@ export function createAgentEmailManager(config: {
       return null;
     }
 
-    return parseStoredCredentials(provider.encryptedCredentials);
+    return parseStoredCredentials(agentId, provider.encryptedCredentials);
   }
 
   async function getMailbox(localPart: string) {
@@ -362,7 +362,48 @@ async function buildMigaduError(action: string, response: Response) {
   return new Error(`Migadu ${action} failed (${response.status}): ${message}`);
 }
 
-function parseStoredCredentials(encryptedCredentials: string) {
-  const decrypted = decryptSecret(encryptedCredentials);
-  return emailProviderCredentialsSchema.parse(JSON.parse(decrypted));
+function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
+  let decrypted: string;
+  try {
+    decrypted = decryptSecret(encryptedCredentials);
+  } catch (err) {
+    forgeDebug({
+      scope: 'migadu-manager',
+      level: 'error',
+      message: 'parseStoredCredentials: decrypt failed',
+      context: { agentId, error: errorMsg(err) },
+    });
+    throw new Error(
+      `Failed to decrypt email credentials for agent ${agentId}: ${errorMsg(err)}`,
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(decrypted);
+  } catch (err) {
+    forgeDebug({
+      scope: 'migadu-manager',
+      level: 'error',
+      message: 'parseStoredCredentials: JSON.parse failed',
+      context: { agentId, error: errorMsg(err) },
+    });
+    throw new Error(
+      `Failed to parse email credentials JSON for agent ${agentId}: ${errorMsg(err)}`,
+    );
+  }
+
+  try {
+    return emailProviderCredentialsSchema.parse(parsed);
+  } catch (err) {
+    forgeDebug({
+      scope: 'migadu-manager',
+      level: 'error',
+      message: 'parseStoredCredentials: schema parse failed',
+      context: { agentId, error: errorMsg(err) },
+    });
+    throw new Error(
+      `Email provider credentials schema validation failed for agent ${agentId}: ${errorMsg(err)}`,
+    );
+  }
 }
