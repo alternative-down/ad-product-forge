@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import {
   verifyAsaasWebhookRequest,
@@ -12,28 +13,62 @@ function makePayload(event: string, payment: Record<string, unknown> = {}): any 
 }
 
 describe('asaas adapter', () => {
-  describe('verifyAsaasWebhookRequest', () => {
-    it('parses a valid payload with correct Bearer token', () => {
-      const payload = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
-      expect(() =>
-        verifyAsaasWebhookRequest(payload, 'my-api-key', 'Bearer my-api-key'),
-      ).not.toThrow();
+  describe('verifyAsaasWebhookRequest (#6043 P0 SEC — HMAC migration)', () => {
+    const SECRET = 'whsec_test_asaas_secret';
+
+    function sign(body: string, secret: string): string {
+      return 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
+    }
+
+    it('parses a valid payload with correct HMAC signature', () => {
+      const body = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
+      const signature = sign(body, SECRET);
+      const result = verifyAsaasWebhookRequest(body, SECRET, signature);
+      expect(result.event).toBe('PAYMENT_RECEIVED');
     });
 
-    it('throws for missing auth header', () => {
-      expect(() => verifyAsaasWebhookRequest('{}', 'key', null)).toThrow('missing or invalid');
-    });
-
-    it('throws for incorrect API key', () => {
-      expect(() => verifyAsaasWebhookRequest('{}', 'correct-key', 'Bearer wrong-key')).toThrow(
-        'invalid API key',
+    it('throws for missing signature header', () => {
+      const body = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
+      expect(() => verifyAsaasWebhookRequest(body, SECRET, null)).toThrow(
+        'missing x-asaas-signature',
+      );
+      expect(() => verifyAsaasWebhookRequest(body, SECRET, undefined)).toThrow(
+        'missing x-asaas-signature',
+      );
+      expect(() => verifyAsaasWebhookRequest(body, SECRET, '')).toThrow(
+        'missing x-asaas-signature',
       );
     });
 
-    it('throws for invalid JSON payload', () => {
-      expect(() => verifyAsaasWebhookRequest('not-json', 'key', 'Bearer key')).toThrow(
-        'parse JSON',
+    it('throws for invalid HMAC signature', () => {
+      const body = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
+      const badSignature = sign(body, 'wrong-secret');
+      expect(() => verifyAsaasWebhookRequest(body, SECRET, badSignature)).toThrow(
+        'invalid signature',
       );
+    });
+
+    it('throws for tampered body (signature mismatch)', () => {
+      const originalBody = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
+      const signature = sign(originalBody, SECRET);
+      const tamperedBody = originalBody.replace('PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED');
+      expect(() => verifyAsaasWebhookRequest(tamperedBody, SECRET, signature)).toThrow(
+        'invalid signature',
+      );
+    });
+
+    it('throws for invalid JSON payload (even with valid signature)', () => {
+      const body = 'not-json';
+      const signature = sign(body, SECRET);
+      expect(() => verifyAsaasWebhookRequest(body, SECRET, signature)).toThrow('parse JSON');
+    });
+
+    it('accepts signature without sha256= prefix', () => {
+      const body = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
+      const signatureWithPrefix = sign(body, SECRET);
+      const signatureNoPrefix = signatureWithPrefix.slice(7); // strip 'sha256='
+      const result = verifyAsaasWebhookRequest(body, SECRET, signatureNoPrefix);
+      expect(result.event).toBe('PAYMENT_RECEIVED');
     });
   });
 
