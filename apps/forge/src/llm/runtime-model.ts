@@ -83,8 +83,25 @@ export async function resolveProfileRuntimeModel(
     return wrapAnthropicPromptCacheModel(model);
   }
 
+  // #6027: validate the default case modelKey has the expected provider/model
+  // format BEFORE the template-literal cast. Without this, modelKeys like 'gpt-4'
+  // or 'claude-sonnet' (no slash) silently pass through the type-lie and break
+  // downstream consumers that rely on the provider/model contract.
+  const slashIdx = profile.modelKey.indexOf('/');
+  if (slashIdx <= 0 || slashIdx === profile.modelKey.length - 1) {
+    forgeDebug({
+      scope: 'llm-runtime-model',
+      level: 'error',
+      message: 'resolveRuntimeModel: invalid default model key (expected provider/model)',
+      context: { modelKey: profile.modelKey },
+    });
+    throw new Error(
+      `Invalid account model key (expected provider/model format): ${profile.modelKey}`,
+    );
+  }
+
   return {
-    id: profile.modelKey as `${string}/${string}`,
+    id: profile.modelKey as `${string}/${string}`,  // safe: validated above
     apiKey: profile.apiKey,
     ...(profile.baseUrl !== null && profile.baseUrl !== undefined ? { url: profile.baseUrl } : {}),
   };
