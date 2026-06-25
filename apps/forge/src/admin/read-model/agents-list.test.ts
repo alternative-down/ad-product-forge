@@ -52,12 +52,12 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 function makeMockDb() {
   // Declare query as 'any' so vi.fn() is typed as Mock<unknown> → mockResolvedValueOnce available
   const _query: any = {
-    agents: { findMany: vi.fn(), findFirst: vi.fn() },
-    agentRoles: { findMany: vi.fn() },
-    llmProfiles: { findMany: vi.fn() },
-    agentExecutionSteps: { findMany: vi.fn() },
-    agentNotifications: { findMany: vi.fn() },
-    agentSchedules: { findMany: vi.fn() },
+    agents: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn().mockResolvedValue(null) },
+    agentRoles: { findMany: vi.fn().mockResolvedValue([]) },
+    llmProfiles: { findMany: vi.fn().mockResolvedValue([]) },
+    agentExecutionSteps: { findMany: vi.fn().mockResolvedValue([]) },
+    agentNotifications: { findMany: vi.fn().mockResolvedValue([]) },
+    agentSchedules: { findMany: vi.fn().mockResolvedValue([]) },
   };
   return {
     batch: vi.fn().mockReturnThis(),
