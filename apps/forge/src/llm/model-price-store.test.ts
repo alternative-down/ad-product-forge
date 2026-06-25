@@ -108,6 +108,30 @@ describe('createLlmModelPriceStore', () => {
       expect(result.inputPerMillionUsd).toBe(2);
     });
 
+    // Regression test for #6047: when inputCachePerMillionUsd is omitted from input,
+    // DB stores 0 (via `?? 0` on insert) and return value must also reflect 0
+    // (not undefined). Previous code returned input.inputCachePerMillionUsd which
+    // was undefined for callers that omitted the field.
+    it('returns inputCachePerMillionUsd: 0 when input omits the field (#6047)', async () => {
+      const db = createMockDb();
+      const { createLlmModelPriceStore } = await import('./model-price-store.js');
+      const store = createLlmModelPriceStore(
+        db as unknown as import('../database/index.js').Database,
+      );
+      const result = await store.upsertPrice({
+        modelKey: 'no-cache-model',
+        inputPerMillionUsd: 1,
+        // inputCachePerMillionUsd deliberately omitted
+        outputPerMillionUsd: 4,
+      });
+      expect(result).toEqual({
+        modelKey: 'no-cache-model',
+        inputPerMillionUsd: 1,
+        inputCachePerMillionUsd: 0,
+        outputPerMillionUsd: 4,
+      });
+    });
+
     it('returns the correct shape on insert', async () => {
       const db = createMockDb();
       const { createLlmModelPriceStore } = await import('./model-price-store.js');
