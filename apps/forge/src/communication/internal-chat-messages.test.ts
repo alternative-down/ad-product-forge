@@ -14,6 +14,7 @@ function makeMockDb(
     findManyRows?: unknown[];
     deleteRowsAffected?: number;
     deleteError?: Error;
+    allRows?: unknown[];
   } = {},
 ) {
   const findManyRows = overrides.findManyRows ?? [];
@@ -24,7 +25,7 @@ function makeMockDb(
   terminal.orderBy = vi.fn().mockReturnValue(terminal);
   terminal.offset = vi.fn().mockReturnValue(terminal);
   terminal.limit = vi.fn().mockReturnValue(terminal);
-  terminal.all = vi.fn().mockResolvedValue([]);
+  terminal.all = vi.fn().mockImplementation(async () => overrides.allRows ?? []);
   terminal.where = vi.fn().mockReturnValue(terminal);
   terminal.from = vi.fn().mockReturnValue(terminal);
   terminal.innerJoin = vi.fn().mockReturnValue(terminal);
@@ -146,6 +147,62 @@ describe('createInternalChatMessages — getMessagesByAccount', () => {
         offset: 0,
       }),
     ).rejects.toThrow('not a member');
+  });
+
+  // ─── getMessagesByAccount unread mapping (issue #6090) ──────────────────
+
+  it('maps unread=1 row to unread:true in result (issue #6090)', async () => {
+    const db = makeMockDb({
+      allRows: [
+        {
+          messageId: 'msg-1',
+          content: 'hello',
+          createdAt: 1700000000,
+          authorAccountId: 'acc-author',
+          authorDisplayName: 'Author',
+          unread: 1,
+        },
+      ],
+    });
+    const deps = makeMockDeps();
+    const messages = createInternalChatMessages(db as never, deps);
+
+    const result = await messages.getMessagesByAccount({
+      accountId: 'acc-1',
+      conversationKey: 'conv-1',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.unread).toBe(true);
+  });
+
+  it('maps unread=0 row to unread:false in result (issue #6090)', async () => {
+    const db = makeMockDb({
+      allRows: [
+        {
+          messageId: 'msg-2',
+          content: 'world',
+          createdAt: 1700000001,
+          authorAccountId: 'acc-author',
+          authorDisplayName: 'Author',
+          unread: 0,
+        },
+      ],
+    });
+    const deps = makeMockDeps();
+    const messages = createInternalChatMessages(db as never, deps);
+
+    const result = await messages.getMessagesByAccount({
+      accountId: 'acc-1',
+      conversationKey: 'conv-1',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.unread).toBe(false);
   });
 });
 
