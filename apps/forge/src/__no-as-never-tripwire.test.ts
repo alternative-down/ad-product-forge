@@ -19,7 +19,7 @@
  *
  * Phase 2 cleanup targets (priority order):
  *   - P1: github/manager.ts (4 sites, escape hatch)
- *   - P1: github/ops/issues.ts (6 sites)
+ *   - P1: github/ops/issues.ts (CLEARED #6101, was 6 sites)
  *   - P2: agents/create-forge-agent.ts (5 sites)
  *   - P3: single-site files (tracked for review)
  *
@@ -43,7 +43,7 @@ const FORGE_SRC = import.meta.dirname;
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
   ['github/manager.ts', 4],
-  ['github/ops/issues.ts', 6],
+  ['github/ops/issues.ts', 0],
   // Phase 2 P2 cleanup targets
   ['agents/create-forge-agent.ts', 5],
   // Phase 2 P3 cleanup targets (single-site files)
