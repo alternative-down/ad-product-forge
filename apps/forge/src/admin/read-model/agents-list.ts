@@ -7,7 +7,7 @@
  */
 
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import type { Agent } from '../../database/schema';
+import type { Agent, AgentExecutionStep } from '../../database/schema';
 import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
