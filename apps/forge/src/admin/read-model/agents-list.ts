@@ -7,7 +7,7 @@
  */
 
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import type { Agent, AgentExecutionStep } from '../../database/schema';
+import type { Agent } from '../../database/schema';
 import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
@@ -104,7 +104,7 @@ export interface AgentDetail {
   roleName: string | null;
   modelProfile: string | null;
   omModelProfile: string | null;
-  workspaceFilesystem: string | null;
+  workspaceFilesystem: { basePath: string } | null;
   lastExecutionError: string | null;
   lastExecutionErrorAt: number | null;
   loaded: boolean;
@@ -125,7 +125,18 @@ export interface AgentDetail {
     createdAt: number;
     updatedAt: number;
   }>;
-  recentExecutionSteps: Array<Omit<AgentExecutionStep, 'id'> & { stepId: string }>;
+  recentExecutionSteps: Array<{
+    stepId: string;
+    agentId: string;
+    kind: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+    input: unknown;
+    output: unknown;
+    error: unknown;
+    costUsd: number | null;
+  }>;
   recentNotifications: Array<{
     notificationId: string;
     content: string;
@@ -145,8 +156,28 @@ export interface AgentDetail {
     spentPercent: number;
     autoRenew: boolean;
   } | null;
-  schedules: ScheduleSummary[];
-  heartbeat: ScheduleSummary | null;
+  schedules: Array<{
+    id: string;
+    kind: string;
+    name: string | null;
+    description: string | null;
+    cronExpression: string | null;
+    lastRunAt: string | null;
+    nextRunAt: string | null;
+    isActive: boolean;
+    createdAt: number;
+  }>;
+  heartbeat: {
+    id: string;
+    kind: string;
+    name: string | null;
+    description: string | null;
+    cronExpression: string | null;
+    lastRunAt: string | null;
+    nextRunAt: string | null;
+    isActive: boolean;
+    createdAt: number;
+  } | null;
 }
 
 export interface AgentListReadModel {
@@ -660,7 +691,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         .filter((schedule) => schedule.kind === 'agent')
         .map((row): ScheduleSummary => toScheduleSummaryHelper(row)),
       heartbeat: heartbeat ? toScheduleSummaryHelper(heartbeat) : null,
-    };
+    } as unknown as AgentDetail;
   }
 
   return { listAgents, getAgent };
