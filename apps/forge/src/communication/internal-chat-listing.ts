@@ -242,11 +242,19 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
           authorAccountId: internalChatMessages.authorAccountId,
           authorDisplayName: internalChatAccounts.displayName,
           replyToMessageId: internalChatMessages.replyToMessageId,
+          unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
         })
         .from(internalChatMessages)
         .innerJoin(
           internalChatAccounts,
           eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+        )
+        .innerJoin(
+          internalChatMessageReads,
+          and(
+            eq(internalChatMessageReads.messageId, internalChatMessages.id),
+            eq(internalChatMessageReads.agentId, internalChatAccounts.agentId),
+          ),
         )
         .innerJoin(
           internalChatConversationMembers,
@@ -291,7 +299,7 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
           targetKey: input.conversationKey,
           content: row.content,
           attachments: attachmentsByMessageId.get(row.messageId) ?? [],
-          unread: false,
+          unread: row.unread === 1,
           createdAt: new Date(row.createdAt).toISOString(),
           authorDisplayName: row.authorDisplayName,
           replyToMessageId: row.replyToMessageId,

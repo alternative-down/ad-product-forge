@@ -186,11 +186,19 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
         createdAt: internalChatMessages.createdAt,
         authorAccountId: internalChatMessages.authorAccountId,
         authorDisplayName: internalChatAccounts.displayName,
+        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
       .from(internalChatMessages)
       .innerJoin(
         internalChatAccounts,
         eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .innerJoin(
+        internalChatMessageReads,
+        and(
+          eq(internalChatMessageReads.messageId, internalChatMessages.id),
+          eq(internalChatMessageReads.agentId, internalChatAccounts.agentId),
+        ),
       )
       .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
@@ -206,7 +214,7 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
         targetKey: input.conversationKey,
         content: row.content,
         attachments: await readMessageAttachments(row.messageId),
-        unread: false,
+        unread: row.unread === 1,
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
       })),
