@@ -1,25 +1,23 @@
-import { errorMsg } from '../agents/error-formatting';
-
 import type { Database } from '../database/client';
+import { withDbErrorLogging } from '../database/error-logging';
 import { llmModelPrices } from '../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
 
 export type LlmModelPriceStore = Awaited<ReturnType<typeof createLlmModelPriceStore>>;
 export function createLlmModelPriceStore(db: Database) {
   async function listPrices() {
-    try {
-      return await db.query.llmModelPrices.findMany({
-        orderBy: (fields, { asc }) => [asc(fields.modelKey)],
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to list LLM model prices',
-        context: { error: errorMsg(err) },
-      });
-      throw err;
-    }
+    return await withDbErrorLogging({
+      scope: 'llm',
+      op: 'listPrices',
+      verb: 'read',
+      context: {},
+      mode: 'return-empty-array',
+      fn: async () => {
+        const rows = await db.query.llmModelPrices.findMany({
+          orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+        });
+        return rows;
+      },
+    });
   }
 
   async function upsertPrice(input: {
@@ -29,42 +27,42 @@ export function createLlmModelPriceStore(db: Database) {
     outputPerMillionUsd: number;
   }) {
     const now = Date.now();
-    try {
-      await db
-        .insert(llmModelPrices)
-        .values({
+    return await withDbErrorLogging({
+      scope: 'llm',
+      op: 'upsertPrice',
+      verb: 'write',
+      context: { modelKey: input.modelKey },
+      fn: async () => {
+        await db
+          .insert(llmModelPrices)
+          .values({
+            modelKey: input.modelKey,
+            inputPerMillionUsd: input.inputPerMillionUsd,
+            inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
+            outputPerMillionUsd: input.outputPerMillionUsd,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: llmModelPrices.modelKey,
+            set: {
+              inputPerMillionUsd: input.inputPerMillionUsd,
+              inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
+              outputPerMillionUsd: input.outputPerMillionUsd,
+              updatedAt: now,
+            },
+          });
+
+        // Return value reflects STORED values, not input (#6047 fix).
+        // inputCachePerMillionUsd defaults to 0 in DB; surface that to caller.
+        return {
           modelKey: input.modelKey,
           inputPerMillionUsd: input.inputPerMillionUsd,
           inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
           outputPerMillionUsd: input.outputPerMillionUsd,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: llmModelPrices.modelKey,
-          set: {
-            inputPerMillionUsd: input.inputPerMillionUsd,
-            inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
-            outputPerMillionUsd: input.outputPerMillionUsd,
-            updatedAt: now,
-          },
-        });
-    } catch (err) {
-      forgeDebug({
-        scope: 'llm',
-        level: 'error',
-        message: 'Failed to upsert LLM model price',
-        context: { modelKey: input.modelKey, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    return {
-      modelKey: input.modelKey,
-      inputPerMillionUsd: input.inputPerMillionUsd,
-      inputCachePerMillionUsd: input.inputCachePerMillionUsd,
-      outputPerMillionUsd: input.outputPerMillionUsd,
-    };
+        };
+      },
+    });
   }
 
   return {
