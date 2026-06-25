@@ -98,19 +98,22 @@ export function createMicroErpReadModel(db: Database) {
       .where(where);
 
     let summary;
+    let summaryError: { message: string } | undefined;
     try {
       summary = await getCompanyCashSummary({
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
       });
     } catch (err) {
-      // Non-fatal: log but continue without summary
+      // L#NN-50 #19 v3: distinguish error from no-data (summaryError undefined = no error)
+      const message = errorMsg(err);
       forgeDebug({
         scope: 'micro-erp-read-model',
         level: 'error',
         message: 'listCompanyCashMovements: getCompanyCashSummary failed',
-        context: { error: errorMsg(err) },
+        context: { error: message },
       });
+      summaryError = { message };
       summary = null;
     }
 
@@ -124,6 +127,7 @@ export function createMicroErpReadModel(db: Database) {
       })),
       total: (countRows as unknown as TotalRow[])[0]?.total ?? 0,
       summary,
+      summaryError,
     };
   }
 
