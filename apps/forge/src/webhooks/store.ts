@@ -99,7 +99,7 @@ export function createWebhookStore(db: Database) {
           .where(eq(webhookRoutes.routeId, routeId))
           .limit(1)
           .all();
-        const route = (rows as WebhookRoute[])[0];
+        const route = rows[0];
         if (route === undefined) return null;
 
         // Path A: new encrypted column populated → decrypt normally.
@@ -151,7 +151,7 @@ export function createWebhookStore(db: Database) {
           .from(webhookRoutes)
           .where(eq(webhookRoutes.agentId, agentId))
           .orderBy(desc(webhookRoutes.createdAt))
-          .all()) as WebhookRoute[],
+          .all()),
     });
   }
 
@@ -278,7 +278,7 @@ export function createWebhookStore(db: Database) {
         ),
       )
       .limit(1)
-      .all()) as unknown as Array<{ eventId: string }>;
+      .all());
 
     if (existing.length === 0) {
       // Should not happen — INSERT OR IGNORE returned 0 but SELECT finds nothing.
@@ -304,7 +304,7 @@ export function createWebhookStore(db: Database) {
           .where(eq(webhookEvents.agentId, agentId))
           .orderBy(desc(webhookEvents.receivedAt))
           .limit(limit)
-          .all()) as WebhookEvent[],
+          .all()),
     });
   }
 
