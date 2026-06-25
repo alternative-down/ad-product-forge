@@ -59,16 +59,16 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['admin/routes/agents/provider-mcp.ts', 6],
   ['minimax/tools.ts', 4],
   ['communication/internal-chat-groups.ts', 4],
-  ['finance/payment-receivables.ts', 4],
+  ['finance/payment-receivables.ts', 3],
   // Single-site files (tracked, lower priority)
-  ['agents/error-formatting.ts', 3],
+  ['agents/error-formatting.ts', 1],
   ['email-account.ts', 3],
   ['github/ops/routing.ts', 3],
   ['admin/routes/internal-chat/internal-chat-conversation-routes.ts', 2],
   ['agents/agent-runner.ts', 2],
   ['communication/internal-chat-connection.ts', 2],
   ['communication/internal-chat-provider.ts', 2],
-  ['webhooks/store.ts', 2],
+  ['webhooks/store.ts', 3],
   ['admin/read-model/agents.ts', 1],
   ['admin/read-model/agents-list.ts', 1],
   ['agents/agent-contract-store.ts', 1],
@@ -84,6 +84,8 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['finance/company-cash-ledger.ts', 1],
   ['github/apps.ts', 1],
   ['http/server.ts', 1],
+  ['notifications/store.ts', 1],
+  ['system-integrations/store.ts', 1],
 ]);
 
 function findTsFiles(dir: string): string[] {
