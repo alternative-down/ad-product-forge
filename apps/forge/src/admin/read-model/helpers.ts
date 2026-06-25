@@ -1,6 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
+import { withTimeout } from '../../utils/async';
 
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
@@ -565,4 +566,57 @@ type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
 
 export function isTextPart(part: MessagePart): part is TextPart {
   return (part.type === 'text' || part.type === 'reasoning') && Boolean(part.text);
+}
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Summary shape returned by toScheduleSummary. Defined locally so consumers in
+// forge-admin (agent-types.ts) can declare AgentDetail fields with a matching
+// structural type, removing the (as unknown) cascade at the construction site.
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface ScheduleSummary {
+  scheduleId: string;
+  kind: AgentSchedule['kind'];
+  name: string;
+  description?: string;
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string;
+  scheduledDate?: number;
+  timezone: string;
+  content: string;
+  wakeWhenRunning: boolean;
+  isActive: boolean;
+  lastTriggeredAt?: number;
+  nextTriggerAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/**
+ * Combines withTimeout with structured error logging. Intended for admin
+ * observability endpoints where a slow or failing read should degrade
+ * gracefully (return the fallback) but the underlying error must still be
+ * logged so operators can diagnose blank charts (closes #6022).
+ */
+export async function withTimeoutAndLog<T>(params: {
+  scope: string;
+  op: string;
+  promise: Promise<T>;
+  timeoutMs: number;
+  timeoutMessage: string;
+  fallback: T;
+}): Promise<T> {
+  return await withTimeout(params.promise, params.timeoutMs, params.timeoutMessage).catch(
+    (err) => {
+      const msg = errorMsg(err).slice(0, 100);
+      forgeDebug({
+        scope: params.scope,
+        level: 'warn',
+        message: params.op + ' failed: ' + msg,
+        context: { error: errorMsg(err) },
+      });
+      return params.fallback;
+    },
+  );
 }

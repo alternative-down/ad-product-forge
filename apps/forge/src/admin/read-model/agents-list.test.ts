@@ -23,6 +23,7 @@ const mockCreateSystemSettingsStore = vi.hoisted(() =>
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: mockForgeDebug,
   withTimeout: mockWithTimeout,
+  errorMsg: (err: unknown) => String(err),
   readOperationalMemoryState: mockReadOperationalMemoryState,
   toMastraSafeIdentifier: (s: string) => s.replace(/[^a-zA-Z0-9_]/g, '_'),
   LibsqlConversationStore: vi.fn().mockImplementation(() => ({
