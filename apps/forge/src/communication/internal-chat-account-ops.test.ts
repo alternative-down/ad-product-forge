@@ -111,6 +111,10 @@ function makeMockDb(
         }),
       }),
     }),
+    transaction: vi.fn().mockImplementation(async (fn) => {
+      const txInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) });
+      return fn({ insert: txInsert });
+    }),
     delete: vi.fn().mockReturnValue({
       where: vi.fn().mockImplementation(async () => {
         if (overrides.deleteError) throw overrides.deleteError;
@@ -142,7 +146,7 @@ describe('createInternalChatAccountOps — createExternalChatGroup', () => {
     expect(result.creatorMember.role).toBe('admin');
   });
 
-  it('inserts conversation and member records', async () => {
+  it('inserts conversation and member records atomically via db.transaction (issue #6035)', async () => {
     const db = makeMockDb({ findFirstResult: null });
     const deps = makeMockDeps();
     const ops = createInternalChatAccountOps(db as never, deps);
@@ -153,7 +157,8 @@ describe('createInternalChatAccountOps — createExternalChatGroup', () => {
       name: 'Test Group',
     });
 
-    expect(db.insert).toHaveBeenCalledTimes(2);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   it('throws ChatGroupAlreadyExistsError when conversationKey exists', async () => {
