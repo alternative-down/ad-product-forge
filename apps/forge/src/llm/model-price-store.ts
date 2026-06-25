@@ -4,28 +4,30 @@ import { llmModelPrices } from '../database/schema';
 
 export type LlmModelPriceStore = Awaited<ReturnType<typeof createLlmModelPriceStore>>;
 export function createLlmModelPriceStore(db: Database) {
-  function listPrices() {
-    return withDbErrorLogging({
+  async function listPrices() {
+    return await withDbErrorLogging({
       scope: 'llm',
       op: 'listPrices',
       verb: 'read',
       context: {},
       mode: 'return-empty-array',
-      fn: async () =>
-        db.query.llmModelPrices.findMany({
+      fn: async () => {
+        const rows = await db.query.llmModelPrices.findMany({
           orderBy: (fields, { asc }) => [asc(fields.modelKey)],
-        }),
+        });
+        return rows;
+      },
     });
   }
 
-  function upsertPrice(input: {
+  async function upsertPrice(input: {
     modelKey: string;
     inputPerMillionUsd: number;
     inputCachePerMillionUsd?: number;
     outputPerMillionUsd: number;
   }) {
     const now = Date.now();
-    return withDbErrorLogging({
+    return await withDbErrorLogging({
       scope: 'llm',
       op: 'upsertPrice',
       verb: 'write',
