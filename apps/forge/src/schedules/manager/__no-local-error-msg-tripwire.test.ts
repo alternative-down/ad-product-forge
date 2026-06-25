@@ -38,16 +38,19 @@ describe('L#19 tripwire — schedules/manager/ hygiene + #5605 defensive cancel'
 
   describe('#5605 defensive cancel in updateSchedule catch block (split across sub-modules after #5737)', () => {
     // After #5737 refactor, the updateSchedule logic moved to mutations.ts.
-    // The defensive cancel pattern must still exist somewhere in the manager/ directory.
+    // After #5863 migration, the rollback + defensive cancel pattern still exists in
+    // the catch block that wraps withDbErrorLogging. The Format A message is now
+    // generic (`${op} DB ${verb} failed`), so the tripwire checks for the
+    // withDbErrorLogging call + defensive cancel + conditional re-register shape.
     const allImplSrc = files.map((f) => readSource(f)).join('\n\n');
 
-    it('manager/ contains the "updateSchedule: scheduler registration failed, DB rolled back" forgeDebug', () => {
-      expect(allImplSrc).toMatch(/message:\s*'updateSchedule: scheduler registration failed, DB rolled back'/);
+    it('manager/ contains the withDbErrorLogging wrap for updateSchedule', () => {
+      expect(allImplSrc).toMatch(/op:\s*'updateSchedule'[\s\S]{0,400}?getLifecycle\(\)!\.register\(toScheduleRecord\(updated\)\)/);
     });
 
-    it('manager/ contains a getLifecycle().cancel(scheduleId) call AFTER the "rolled back" log AND BEFORE the conditional re-register (defensive cancel — issue #5605)', () => {
+    it('manager/ contains a getLifecycle().cancel(scheduleId) call AFTER the "restored =" rollback AND BEFORE the conditional re-register (defensive cancel — issue #5605)', () => {
       const pattern =
-        /message:\s*'updateSchedule: scheduler registration failed, DB rolled back'[\s\S]{0,800}?getLifecycle\(\)!?\.cancel\(scheduleId\)[\s\S]{0,800}?isActiveSchedule\(restored\)\s*===\s*true/;
+        /restored\s*=\s*await\s*store\.updateAgentSchedule\([\s\S]{0,400}?getLifecycle\(\)!?\.cancel\(scheduleId\)[\s\S]{0,400}?isActiveSchedule\(restored\)\s*===\s*true/;
       expect(allImplSrc).toMatch(pattern);
     });
   });

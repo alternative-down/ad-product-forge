@@ -19,6 +19,7 @@
  * - apps/forge/src/system-settings/store.ts — 1 try/catch block (Day 20, #5825 PR2, Varek)
  * - apps/forge/src/llm/settings-store.ts — 5 try/catch blocks (Day 20, #5825 PR1, Kaelen)
  * - apps/forge/src/capabilities/store.ts — 8 try/catch blocks (Day 20, #5825 PR3, Varek)
+ * - apps/forge/src/schedules/manager/mutations.ts — 9 try/catch blocks (Day 24, #5863, Aldric)
  *
  * Candidate files (forgeDebug+rethrow pattern detected, NOT yet migrated):
  * - 56 files across apps/forge/src/ — see CANDIDATE_FILES below
@@ -67,6 +68,14 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'capabilities/store.ts',
     expectedForgeDebugRethrow: 0,
     expectedWithDbUsage: 8,
+  },
+  {
+    // #5863: 9 try/catch with forgeDebug+errorMsg migrated to withDbErrorLogging.
+    // 4 try/catch remain (for ROLLBACK patterns: createSchedule, updateSchedule,
+    // updateOwnedSchedule, createScheduleForAgent) but they no longer use forgeDebug.
+    path: 'schedules/manager/mutations.ts',
+    expectedForgeDebugRethrow: 0,
+    expectedWithDbUsage: 10,
   },
   {
     path: 'agents/ltm/store.ts',
