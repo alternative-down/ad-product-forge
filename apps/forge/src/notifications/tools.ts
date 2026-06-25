@@ -15,7 +15,7 @@ export function createAgentNotificationTools(
   allowedToolIds?: Set<string> | null,
 ) {
   const notifications = createAgentNotificationStore(db);
-  const tools: Record<string, unknown> = {};
+  const tools: Record<string, Tool<unknown, unknown>> = {};
 
   if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     // L#19: list_agent_notifications is a PURE READ. It does NOT mark
@@ -85,5 +85,5 @@ export function createAgentNotificationTools(
     });
   }
 
-  return tools as Record<string, Tool<unknown, unknown>>;
+  return tools;
 }

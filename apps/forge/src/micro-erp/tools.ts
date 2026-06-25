@@ -94,7 +94,7 @@ const manageCompanyCashMovementInputSchema = z.discriminatedUnion('action', [
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
   const microErp = createMicroErpReadModel(db);
   const companyCash = createCompanyCashOperations(db);
-  const tools: Record<string, unknown> = {};
+  const tools: Record<string, Tool<unknown, unknown>> = {};
 
   if (hasToolPermission(allowedToolIds, 'get_company_cash')) {
     tools.get_company_cash = createTool({
@@ -222,5 +222,5 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
     });
   }
 
-  return tools as Record<string, Tool<unknown, unknown>>;
+  return tools;
 }
