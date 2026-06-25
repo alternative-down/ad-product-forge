@@ -322,5 +322,143 @@ describe('createWebhookStore', () => {
       expect(result.kind).toBe('created');
       expect((result as { kind: 'created'; eventId: string }).eventId).toBeDefined();
     });
+
+    it('returns kind: created when idempotencyKey is empty string (AC-3: empty == missing)', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createEvent({
+        routeId: 'r1',
+        agentId: 'a1',
+        payload: { foo: 'bar' },
+        headers: { 'content-type': 'application/json' },
+        idempotencyKey: '',
+      });
+      expect(result.kind).toBe('created');
+      expect((result as { kind: 'created'; eventId: string }).eventId).toBeDefined();
+      // Empty string hits the simple-insert branch, NOT the onConflictDoNothing branch.
+      const insertChain = db.insert.mock.results[0].value;
+      expect(insertChain.onConflictDoNothing).not.toHaveBeenCalled();
+    });
+
+    it('returns kind: created with new eventId when idempotencyKey is provided AND INSERT succeeds (AC-4)', async () => {
+      const NEW_EVENT_ID = 'new-event-abc';
+      const insertChain = makeChain();
+      insertChain.returning = vi.fn().mockReturnValue([{ eventId: NEW_EVENT_ID }]);
+      db.insert.mockReturnValueOnce(insertChain);
+      const store = createWebhookStore(db as any);
+      const result = await store.createEvent({
+        routeId: 'r1',
+        agentId: 'a1',
+        payload: { foo: 'bar' },
+        headers: { 'content-type': 'application/json' },
+        idempotencyKey: 'key-1',
+      });
+      expect(result.kind).toBe('created');
+      expect((result as { kind: 'created'; eventId: string }).eventId).toBe(NEW_EVENT_ID);
+      const usedChain = db.insert.mock.results[0].value;
+      expect(usedChain.onConflictDoNothing).toHaveBeenCalled();
+    });
+
+    it('returns kind: duplicate with SAME eventId on replay (AC-1)', async () => {
+      const EXISTING_EVENT_ID = 'existing-event-xyz';
+      const insertChain = makeChain();
+      insertChain.returning = vi.fn().mockReturnValue([]);
+      db.insert.mockReturnValueOnce(insertChain);
+      // Custom chain: db.select().from().where().limit().all() resolves to EXISTING_EVENT_ID.
+      const selectChain = makeChain();
+      const whereChain: Record<string, any> = {};
+      ['limit', 'orderBy', 'all'].forEach((m) => { whereChain[m] = vi.fn().mockReturnValue(whereChain); });
+      whereChain.then = (cb: (v: unknown) => void) => cb([{ eventId: EXISTING_EVENT_ID }]);
+      selectChain.where = vi.fn().mockReturnValue(whereChain);
+      db.select.mockReturnValueOnce(selectChain);
+      const store = createWebhookStore(db as any);
+      const result = await store.createEvent({
+        routeId: 'r1',
+        agentId: 'a1',
+        payload: { foo: 'bar' },
+        headers: { 'content-type': 'application/json' },
+        idempotencyKey: 'key-1',
+      });
+      expect(result.kind).toBe('duplicate');
+      expect((result as { kind: 'duplicate'; eventId: string }).eventId).toBe(EXISTING_EVENT_ID);
+    });
+
+    it('throws when INSERT OR IGNORE returns 0 AND SELECT finds no existing row (race condition guard)', async () => {
+      const insertChain = makeChain();
+      insertChain.returning = vi.fn().mockReturnValue([]);
+      db.insert.mockReturnValueOnce(insertChain);
+      // Custom chain: db.select().from().where().limit().all() resolves to [] (no existing row).
+      const selectChain = makeChain();
+      const whereChain: Record<string, any> = {};
+      ['limit', 'orderBy', 'all'].forEach((m) => { whereChain[m] = vi.fn().mockReturnValue(whereChain); });
+      whereChain.then = (cb: (v: unknown) => void) => cb([]);
+      selectChain.where = vi.fn().mockReturnValue(whereChain);
+      db.select.mockReturnValueOnce(selectChain);
+      const store = createWebhookStore(db as any);
+      await expect(
+        store.createEvent({
+          routeId: 'r1',
+          agentId: 'a1',
+          payload: { foo: 'bar' },
+          headers: { 'content-type': 'application/json' },
+          idempotencyKey: 'key-1',
+        }),
+      ).rejects.toThrow(/Idempotency conflict but no existing event found/);
+    });
+
+    it('uses the COMPOSITE (routeId, idempotencyKey) conflict target (AC-2: scoped per route)', async () => {
+      const insertChain = makeChain();
+      insertChain.returning = vi.fn().mockReturnValue([]);
+      db.insert.mockReturnValueOnce(insertChain);
+      const selectChain = makeChain();
+      const whereChain: Record<string, any> = {};
+      ['limit', 'orderBy', 'all'].forEach((m) => { whereChain[m] = vi.fn().mockReturnValue(whereChain); });
+      whereChain.then = (cb: (v: unknown) => void) => cb([{ eventId: 'X' }]);
+      selectChain.where = vi.fn().mockReturnValue(whereChain);
+      db.select.mockReturnValueOnce(selectChain);
+      const store = createWebhookStore(db as any);
+      await store.createEvent({
+        routeId: 'route-A',
+        agentId: 'a1',
+        payload: {},
+        headers: {},
+        idempotencyKey: 'shared-key',
+      });
+      const usedChain = db.insert.mock.results[0].value;
+      expect(usedChain.onConflictDoNothing).toHaveBeenCalledTimes(1);
+      const onConflictArg = (usedChain.onConflictDoNothing as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(onConflictArg).toHaveProperty('target');
+      expect(Array.isArray(onConflictArg.target)).toBe(true);
+      expect(onConflictArg.target).toHaveLength(2);
+    });
+
+    it('persists idempotencyKey as NULL when not provided (not empty string)', async () => {
+      const store = createWebhookStore(db as any);
+      await store.createEvent({
+        routeId: 'r1',
+        agentId: 'a1',
+        payload: {},
+        headers: {},
+      });
+      const insertChain = db.insert.mock.results[0].value;
+      const valuesArg = (insertChain.values as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+      expect(valuesArg.idempotencyKey).toBeNull();
+    });
+
+    it('persists idempotencyKey as the provided string when present', async () => {
+      const insertChain = makeChain();
+      insertChain.returning = vi.fn().mockReturnValue([{ eventId: 'X' }]);
+      db.insert.mockReturnValueOnce(insertChain);
+      const store = createWebhookStore(db as any);
+      await store.createEvent({
+        routeId: 'r1',
+        agentId: 'a1',
+        payload: {},
+        headers: {},
+        idempotencyKey: 'my-stable-key',
+      });
+      const usedChain = db.insert.mock.results[0].value;
+      const valuesArg = (usedChain.values as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+      expect(valuesArg.idempotencyKey).toBe('my-stable-key');
+    });
   });
 });
