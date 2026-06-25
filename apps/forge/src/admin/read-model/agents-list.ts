@@ -99,12 +99,12 @@ export interface AgentDetail {
   id: string;
   name: string | null;
   description: string | null;
-  executionState: string;
+  executionState?: 'idle' | 'running' | 'absent' | null;
   role: string | null;
   roleName: string | null;
   modelProfile: string | null;
   omModelProfile: string | null;
-  workspaceFilesystem: { basePath: string } | null;
+  workspaceFilesystem: string | null;
   lastExecutionError: string | null;
   lastExecutionErrorAt: number | null;
   loaded: boolean;
@@ -125,18 +125,7 @@ export interface AgentDetail {
     createdAt: number;
     updatedAt: number;
   }>;
-  recentExecutionSteps: Array<{
-    stepId: string;
-    agentId: string;
-    kind: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    input: unknown;
-    output: unknown;
-    error: unknown;
-    costUsd: number | null;
-  }>;
+  recentExecutionSteps: Array<Omit<AgentExecutionStep, 'id'> & { stepId: string }>;
   recentNotifications: Array<{
     notificationId: string;
     content: string;
@@ -156,28 +145,8 @@ export interface AgentDetail {
     spentPercent: number;
     autoRenew: boolean;
   } | null;
-  schedules: Array<{
-    id: string;
-    kind: string;
-    name: string | null;
-    description: string | null;
-    cronExpression: string | null;
-    lastRunAt: string | null;
-    nextRunAt: string | null;
-    isActive: boolean;
-    createdAt: number;
-  }>;
-  heartbeat: {
-    id: string;
-    kind: string;
-    name: string | null;
-    description: string | null;
-    cronExpression: string | null;
-    lastRunAt: string | null;
-    nextRunAt: string | null;
-    isActive: boolean;
-    createdAt: number;
-  } | null;
+  schedules: ScheduleSummary[];
+  heartbeat: ScheduleSummary | null;
 }
 
 export interface AgentListReadModel {
