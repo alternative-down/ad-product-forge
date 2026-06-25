@@ -582,7 +582,7 @@ export interface ScheduleSummary {
   description?: string;
   scheduleType: 'cron' | 'date';
   cronExpression?: string;
-  scheduledDate?: string;
+  scheduledDate?: number;
   timezone: string;
   content: string;
   wakeWhenRunning: boolean;
