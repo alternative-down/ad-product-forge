@@ -52,7 +52,7 @@ const MIGRATED_FILES: FileMigration[] = [
   {
     path: 'system-integrations/store.ts',
     expectedForgeDebugRethrow: 0,
-    expectedWithDbUsage: 7,
+    expectedWithDbUsage: 4,
   },
   {
     path: 'system-settings/store.ts',
