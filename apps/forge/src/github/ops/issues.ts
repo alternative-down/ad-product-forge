@@ -7,6 +7,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 
 import type { OpsContext } from './context';
+import type { IssuePayload } from '../helpers';
 
 const SCOPE = 'github-ops-issues';
 
@@ -76,7 +77,7 @@ export function createIssuesOps(ctx: OpsContext) {
 
     return response.data
       .filter((issue) => !('pull_request' in issue))
-      .map((issue) => ctx.toIssueSummary(issue as never));
+      .map((issue) => ctx.toIssueSummary(issue as IssuePayload));
   }
 
   async function getIssue(
@@ -136,7 +137,7 @@ export function createIssuesOps(ctx: OpsContext) {
       throw err;
     }
 
-    return ctx.toIssueDetails(response.data as never);
+    return ctx.toIssueDetails(response.data as IssuePayload);
   }
 
   async function createIssue(
@@ -185,7 +186,7 @@ export function createIssuesOps(ctx: OpsContext) {
         title: input.title,
         body: input.body,
         labels: input.labels,
-        assignees: ctx.normalizeAssignees(input.assignees as never),
+        assignees: ctx.normalizeAssignees(input.assignees),
         milestone: input.milestone,
       });
     } catch (err) {
@@ -204,7 +205,7 @@ export function createIssuesOps(ctx: OpsContext) {
       throw err;
     }
 
-    return ctx.toIssueDetails(response.data as never);
+    return ctx.toIssueDetails(response.data as IssuePayload);
   }
 
   async function updateIssue(
@@ -257,7 +258,7 @@ export function createIssuesOps(ctx: OpsContext) {
         body: input.body,
         state: input.state,
         labels: input.labels,
-        assignees: ctx.normalizeAssignees(input.assignees as never),
+        assignees: ctx.normalizeAssignees(input.assignees),
         milestone: input.milestone,
       });
     } catch (err) {
@@ -276,7 +277,7 @@ export function createIssuesOps(ctx: OpsContext) {
       throw err;
     }
 
-    return ctx.toIssueDetails(response.data as never);
+    return ctx.toIssueDetails(response.data as IssuePayload);
   }
 
   async function closeIssue(
