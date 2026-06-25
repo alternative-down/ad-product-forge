@@ -23,7 +23,7 @@
  *
  * Phase 2 cleanup targets (priority order):
  *   - P1: github/manager.ts (2 sites, partial_context_binding)
- *   - P1: micro-erp/read-model.ts (6 sites, json_parse_narrowing — replace with Zod)
+ *   - P1: micro-erp/read-model.ts (CLEARED #6097, was 6 sites json_parse_narrowing)
  *   - P2: admin/routes/agents/provider-mcp.ts (6 sites, MCP wrapper escape)
  *   - P2: minimax/tools.ts (4 sites, helper_return_narrowing)
  *   - P2: communication/internal-chat-groups.ts (4 sites, needs investigation)
@@ -54,7 +54,7 @@ const FORGE_SRC = import.meta.dirname;
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
   ['github/manager.ts', 2],
-  ['micro-erp/read-model.ts', 6],
+  ['micro-erp/read-model.ts', 0],
   // Phase 2 P2 cleanup targets
   ['admin/routes/agents/provider-mcp.ts', 6],
   ['minimax/tools.ts', 4],

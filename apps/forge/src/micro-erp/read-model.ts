@@ -27,28 +27,6 @@ type ListCompanyCashMovementsInput = {
   offset?: number;
 };
 
-
-// ── Drizzle aggregate result interfaces ─────────────────────────────────────
-interface TotalRow {
-  total: number;
-}
-interface CashFlowTotalsRow {
-  totalInUsd: number;
-  totalOutUsd: number;
-}
-interface ScheduledTotalsRow {
-  scheduledInUsd: number;
-  scheduledOutUsd: number;
-}
-interface SingleContractRow {
-  contractId: string;
-  agentId: string;
-  agentName: string;
-  startsAt: number;
-  endsAt: number;
-  weeklyValueUsd: number;
-  autoRenew: number;
-}
 export type MicroErpReadModel = ReturnType<typeof createMicroErpReadModel>;
 
 export function createMicroErpReadModel(db: Database) {
@@ -95,7 +73,8 @@ export function createMicroErpReadModel(db: Database) {
         total: sql<number>`count(*)`,
       })
       .from(companyCashLedger)
-      .where(where);
+      .where(where)
+      .all();
 
     let summary;
     let summaryError: { message: string } | undefined;
@@ -118,14 +97,14 @@ export function createMicroErpReadModel(db: Database) {
     }
 
     return {
-      items: rows.map((row: any) => ({
+      items: rows.map((row) => ({
         ...row,
         direction: row.direction as CompanyCashDirection,
         description: row.description ?? undefined,
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
       })),
-      total: (countRows as unknown as TotalRow[])[0]?.total ?? 0,
+      total: countRows[0]?.total ?? 0,
       summary,
       summaryError,
     };
@@ -152,7 +131,8 @@ export function createMicroErpReadModel(db: Database) {
           gte(companyCashLedger.effectiveAt, periodStart),
           lte(companyCashLedger.effectiveAt, periodEnd),
         ),
-      );
+      )
+      .all();
     const scheduledTotals = await db
       .select({
         scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[0]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
@@ -166,11 +146,12 @@ export function createMicroErpReadModel(db: Database) {
           gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
           lte(companyCashLedger.dueAt, periodEnd),
         ),
-      );
-    const totalInUsd = (postedTotals as unknown as CashFlowTotalsRow[])[0]?.totalInUsd ?? 0;
-    const totalOutUsd = (postedTotals as unknown as CashFlowTotalsRow[])[0]?.totalOutUsd ?? 0;
-    const scheduledInUsd = (scheduledTotals as unknown as ScheduledTotalsRow[])[0]?.scheduledInUsd ?? 0;
-    const scheduledOutUsd = (scheduledTotals as unknown as ScheduledTotalsRow[])[0]?.scheduledOutUsd ?? 0;
+      )
+      .all();
+    const totalInUsd = postedTotals[0]?.totalInUsd ?? 0;
+    const totalOutUsd = postedTotals[0]?.totalOutUsd ?? 0;
+    const scheduledInUsd = scheduledTotals[0]?.scheduledInUsd ?? 0;
+    const scheduledOutUsd = scheduledTotals[0]?.scheduledOutUsd ?? 0;
 
     const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
@@ -208,7 +189,7 @@ export function createMicroErpReadModel(db: Database) {
     const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
-      items: rows.map((row: any) => ({
+      items: rows.map((row) => ({
         ...row,
         autoRenew: Boolean(row.autoRenew),
         ...metricsByContractId.get(row.contractId),
@@ -238,9 +219,10 @@ export function createMicroErpReadModel(db: Database) {
         ),
       )
       .orderBy(desc(agentExecutionContracts.endsAt))
-      .limit(1);
+      .limit(1)
+      .all();
 
-    const contract = (row as unknown as SingleContractRow[])[0];
+    const contract = row[0];
     if (contract === null || contract === undefined) {
       return null;
     }
