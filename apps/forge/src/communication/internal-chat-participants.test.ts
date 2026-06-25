@@ -22,9 +22,11 @@ function makeMockDb(overrides?: {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         innerJoin: vi.fn().mockReturnValue({
-          where: vi.fn().mockImplementation(async () => {
-            if (overrides?.dbSelectError) throw overrides.dbSelectError;
-            return memberRows;
+          where: vi.fn().mockReturnValue({
+            all: vi.fn().mockImplementation(async () => {
+              if (overrides?.dbSelectError) throw overrides.dbSelectError;
+              return memberRows;
+            }),
           }),
         }),
       }),

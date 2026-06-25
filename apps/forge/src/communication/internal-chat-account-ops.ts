@@ -71,21 +71,23 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     const creatorAccount = await deps.getRequiredExternalAccount(input.accountId);
     const now = Date.now();
 
-    await db.insert(internalChatConversations).values({
-      id: input.conversationKey,
-      type: 'group',
-      name: input.name,
-      createdByAccountId: creatorAccount.id,
-      createdAt: now,
-      updatedAt: now,
-    });
+    await db.transaction(async (tx) => {
+      await tx.insert(internalChatConversations).values({
+        id: input.conversationKey,
+        type: 'group',
+        name: input.name,
+        createdByAccountId: creatorAccount.id,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: input.conversationKey,
-      accountId: creatorAccount.id,
-      role: 'admin',
-      createdAt: now,
-      updatedAt: now,
+      await tx.insert(internalChatConversationMembers).values({
+        conversationId: input.conversationKey,
+        accountId: creatorAccount.id,
+        role: 'admin',
+        createdAt: now,
+        updatedAt: now,
+      });
     });
 
     return {
