@@ -5,7 +5,6 @@ import {
 } from '../database/schema';
 import type { Database } from '../database/client';
 import { sortParticipantsBySelfFirst } from './internal-chat-helpers';
-import type { InternalChatGroupParticipant } from './internal-chat-helpers';
 
 // =============================================================================
 // Participant listing
