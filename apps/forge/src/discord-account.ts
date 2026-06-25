@@ -303,7 +303,7 @@ export function createDiscordProvider(config: {
       }
     }
 
-    const channels = await listCandidateChannels(client, configuredChannels, getReadyClient());
+    const { channels } = await listCandidateChannels(client, configuredChannels, getReadyClient());
 
     for (const channel of channels) {
       if ('recipient' in channel && channel.recipient instanceof User) {
@@ -355,7 +355,7 @@ export function createDiscordProvider(config: {
       return await listCandidateUsers();
     },
     async listConversations({ limit }) {
-      const channels = await listCandidateChannels(client, configuredChannels, getReadyClient());
+      const { channels } = await listCandidateChannels(client, configuredChannels, getReadyClient());
       const conversations = [];
 
       for (const channel of channels) {
