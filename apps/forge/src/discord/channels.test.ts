@@ -96,3 +96,4 @@ describe('listCandidateChannels', () => {
     expect(result.failed).toEqual([]);
   });
 });
+

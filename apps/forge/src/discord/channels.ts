@@ -160,7 +160,7 @@ export async function listChannelMessages(input: {
     const passesQuery =
       queryFilter === ''
         ? true
-        : message.content.includes(queryFilter) || message.attachments.size > 0;
+        : message.content.includes(queryFilter);
     return (
       passesQuery &&
       (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
