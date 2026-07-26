@@ -16,11 +16,6 @@ import { downloadDiscordAttachments, extractDiscordMessageContent } from './mess
 
 const MEMBER_FETCH_LIMIT = 100;
 
-export type ChannelFetchResult = {
-  channels: DiscordSendableChannel[];
-  failed: Array<{ channelId: string; error: string }>;
-};
-
 export function createDiscordClient(_token: string) {
   return new Client({
     intents: [
@@ -48,7 +43,7 @@ export async function listCandidateChannels(
   client: Client,
   configuredChannels: Map<string, boolean>,
   readyPromise?: Promise<unknown>,
-): Promise<ChannelFetchResult> {
+) {
   if (readyPromise) {
     await readyPromise;
   }
@@ -61,7 +56,6 @@ export async function listCandidateChannels(
   }
 
   const channels: DiscordSendableChannel[] = [];
-  const failed: Array<{ channelId: string; error: string }> = [];
 
   for (const channelId of channelIds) {
     try {
@@ -73,27 +67,16 @@ export async function listCandidateChannels(
 
       channels.push(channel as DiscordSendableChannel);
     } catch (error) {
-      const errMsg = errorMsg(error);
       forgeDebug({
         scope: 'discord-account',
-        level: 'error',
+        level: 'warn',
         message: 'Failed to fetch channel',
-        context: { channelId, error: errMsg },
+        context: { channelId, error: errorMsg(error) },
       });
-      failed.push({ channelId, error: errMsg });
     }
   }
 
-  if (failed.length > 0) {
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'error',
-      message: 'listCandidateChannels: some channels failed to fetch',
-      context: { failedCount: failed.length, totalRequested: channelIds.size },
-    });
-  }
-
-  return { channels, failed };
+  return channels;
 }
 
 export async function resolveDiscordTargetChannel(
@@ -155,18 +138,11 @@ export async function listChannelMessages(input: {
 }) {
   const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
   const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
-  const queryFilter = input.query ?? '';
-  const matchesMessage = (message: Message) => {
-    const passesQuery =
-      queryFilter === ''
-        ? true
-        : message.content.includes(queryFilter) || message.attachments.size > 0;
-    return (
-      passesQuery &&
-      (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
-      (parsedDateTo === null || message.createdTimestamp <= parsedDateTo)
-    );
-  };
+  const hasQuery = (input.query ?? '') !== '';
+  const matchesMessage = (message: Message) =>
+    (!hasQuery || message.content.includes(input.query!)) &&
+    (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
+    (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
   const targetCount = input.limit + input.offset;
   const collected = new Collection<string, Message>();
   let before: string | undefined;
