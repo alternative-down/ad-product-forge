@@ -21,7 +21,7 @@ const CONTEXT_DECORATION_TIMEOUT_MS = FIVE_SECONDS_MS;
 export async function loadAgentContextInstructions(
   currentRuntime: InternalAgentRuntime,
   db: Database,
-) {
+): Promise<string | null> {
   const filesystem = currentRuntime.workspace.filesystem;
   const agentContextContent = await loadAgentContextContent(filesystem);
   const scheduleSummary = await loadActiveScheduleSummary(db, currentRuntime.id);
@@ -30,7 +30,7 @@ export async function loadAgentContextInstructions(
 
   const filtered = sections.filter((v): v is string => Boolean(v));
   if (filtered.length === 0) {
-    return undefined;
+    return null;
   }
 
   const _lines: Array<string | null> = [

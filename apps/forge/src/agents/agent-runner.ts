@@ -9,7 +9,7 @@ import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/client';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
-import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';
+import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager } from './agent-runner-loop-manager';
@@ -430,17 +430,14 @@ function stop() {
       markGenerateProgress: () => {},
       setLoopSignature: (sig) => { loopManager.getState().lastLoopSignature = sig; },
       loopSignature: loopManager.getState().lastLoopSignature ?? '',
-      loadAgentContextInstructions: loadAgentContextInstructions as (
-        currentRuntime: InternalAgentRuntime,
-        db: Database,
-      ) => Promise<string | null>,
+      loadAgentContextInstructions,
       currentRuntime,
       db,
       // Pending messages / LTM
       pendingLongTermMemoryRecallSystemText,
       flushPendingRunMessages: (opts) => messageManager.flushPendingRunMessages(opts),
       // Additional runner state
-      usage: usage as unknown as AgentRunnerUsage,
+      usage,
       notifications,
       homeMetricSnapshots,
       runLastMessages,

@@ -10,13 +10,29 @@ export type AgentRunnerUsage = {
     inputTokens: number,
     cachedInputTokens: number,
     outputTokens: number,
-  ) => Promise<void>;
+  ) => Promise<{ stepId: string; createdAt: number }>;
   recordRefund: (input: { contractId: string; refundedUsd: number }) => Promise<void>;
+  estimateStepCostUsd: () => Promise<number | null>;
+  recordObservationalMemorySteps: (
+    contractId: string,
+    steps: Array<{
+      response?: {
+        uiMessages?: Array<{
+          parts?: Array<unknown>;
+        }>;
+      };
+    }>,
+  ) => void;
+  getUsageFromResult: (result: { usage?: unknown }) => {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  };
   getPeriodUsage: (input: {
     agentId: string;
     periodStartMs: number;
     periodEndMs: number;
-  }) => Promise<{ totalCostUsd: number; stepCount: number }>;
+  }) => { totalCostUsd: number; stepCount: number };
 };
 
 type AgentUsage = {
