@@ -9,6 +9,35 @@ import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
 
+// ─── queryAppliedMigrations ─────────────────────────────────────────────────
+/**
+ * Read the most recently applied migrations from the bookkeeping table.
+ *
+ * Returns rows ordered by created_at desc, capped at `limit`.
+ * Replaces two duplicated inline query blocks (runMigrations pre/post
+ * migrations) that previously also asserted `as Array<{...}>` even
+ * though `db.all<T>` already returns `T[]` (#6129 P2, L#NN-50 #33).
+ */
+async function queryAppliedMigrations(
+  db: LibSQLDatabase<Record<string, unknown>>,
+  limit: number,
+): Promise<Array<{ id: number; hash: string; createdAt: number }>> {
+  return await db.all<{
+    id: number;
+    hash: string;
+    createdAt: number;
+  }>(sql`
+    select
+      id,
+      hash,
+      created_at as createdAt
+    from __drizzle_migrations
+    order by created_at desc
+    limit ${limit}
+  `);
+}
+
+// ─── findMigrationsFolder ───────────────────────────────────────────────────
 /**
  * Walk up from start directory until a migrations/meta/_journal.json is found.
  * Handles both dev (src/database/ -> apps/forge/migrations/) and bundled
@@ -55,19 +84,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
       )
     `);
 
-    const dbMigrations = (await db.all<{
-      id: number;
-      hash: string;
-      createdAt: number;
-    }>(sql`
-      select
-        id,
-        hash,
-        created_at as createdAt
-      from __drizzle_migrations
-      order by created_at desc
-      limit 1
-    `)) as Array<{ id: number; hash: string; createdAt: number }>;
+    const dbMigrations = await queryAppliedMigrations(db, 1);
 
     const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
     const allMigrations = readMigrationFiles({ migrationsFolder });
@@ -124,19 +141,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
       },
     });
 
-    const dbMigrationsAfter = (await db.all<{
-      id: number;
-      hash: string;
-      createdAt: number;
-    }>(sql`
-      select
-        id,
-        hash,
-        created_at as createdAt
-      from __drizzle_migrations
-      order by created_at desc
-      limit 10
-    `)) as Array<{ id: number; hash: string; createdAt: number }>;
+    const dbMigrationsAfter = await queryAppliedMigrations(db, 10);
 
     forgeDebug({
       scope: 'migrations',

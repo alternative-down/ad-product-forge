@@ -9,9 +9,11 @@ import {
 // ─── Mock setup ────────────────────────────────────────────────────────────────
 
 const mockGetRole = vi.fn();
+const mockListRoleToolPermissions = vi.fn();
 
 const mockCapabilities = {
   getRole: mockGetRole,
+  listRoleToolPermissions: mockListRoleToolPermissions,
 } as unknown as ReturnType<typeof import('../capabilities/store').createCapabilityStore>;
 
 // ─── normalizeAgentName ─────────────────────────────────────────────────────────
@@ -143,6 +145,7 @@ describe('isToolResultWithOutput', () => {
 describe('validateHireAgentInput', () => {
   beforeEach(() => {
     mockGetRole.mockReset();
+    mockListRoleToolPermissions.mockReset();
   });
 
   it('returns invalid when role does not exist', async () => {
@@ -154,18 +157,18 @@ describe('validateHireAgentInput', () => {
 
   it('returns valid when role has all base tools', async () => {
     mockGetRole.mockResolvedValueOnce({
-      id: 'developer',
+      roleId: 'developer',
       name: 'Developer',
-      toolIds: [
-        'list_conversations',
-        'get_messages',
-        'send_message',
-        'list_self_crons',
-        'manage_self_crons',
-        'extra_tool',
-      ],
       description: 'Developer role',
     });
+    mockListRoleToolPermissions.mockResolvedValueOnce([
+      'list_conversations',
+      'get_messages',
+      'send_message',
+      'list_self_crons',
+      'manage_self_crons',
+      'extra_tool',
+    ]);
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
     if (result.valid) {
@@ -176,10 +179,10 @@ describe('validateHireAgentInput', () => {
 
   it('returns invalid when role is missing base tools', async () => {
     mockGetRole.mockResolvedValueOnce({
-      id: 'incomplete-role',
+      roleId: 'incomplete-role',
       name: 'Incomplete Role',
-      toolIds: ['list_contacts', 'send_message'],
     });
+    mockListRoleToolPermissions.mockResolvedValueOnce(['list_contacts', 'send_message']);
     const result = await validateHireAgentInput(mockCapabilities, 'incomplete-role');
     expect(result.valid).toBe(false);
     if (!result.valid) expect(result.error).toContain('missing required base tools');
@@ -187,10 +190,10 @@ describe('validateHireAgentInput', () => {
 
   it('hint tells to call manage_role_capabilities', async () => {
     mockGetRole.mockResolvedValueOnce({
-      id: 'incomplete-role',
+      roleId: 'incomplete-role',
       name: 'Incomplete Role',
-      toolIds: ['list_contacts'],
     });
+    mockListRoleToolPermissions.mockResolvedValueOnce(['list_contacts']);
     const result = await validateHireAgentInput(mockCapabilities, 'incomplete-role');
     expect(result.valid).toBe(false);
     expect((result as { valid: false; error: string; hint?: string }).hint).toContain(
@@ -200,17 +203,17 @@ describe('validateHireAgentInput', () => {
 
   it('includes roleDescription when available', async () => {
     mockGetRole.mockResolvedValueOnce({
-      id: 'developer',
+      roleId: 'developer',
       name: 'Developer',
-      toolIds: [
-        'list_conversations',
-        'get_messages',
-        'send_message',
-        'list_self_crons',
-        'manage_self_crons',
-      ],
       description: 'Fullstack developer',
     });
+    mockListRoleToolPermissions.mockResolvedValueOnce([
+      'list_conversations',
+      'get_messages',
+      'send_message',
+      'list_self_crons',
+      'manage_self_crons',
+    ]);
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
     expect((result as { valid: true; roleDescription?: string }).roleDescription).toBe(
@@ -220,16 +223,16 @@ describe('validateHireAgentInput', () => {
 
   it('excludes roleDescription when undefined', async () => {
     mockGetRole.mockResolvedValueOnce({
-      id: 'developer',
+      roleId: 'developer',
       name: 'Developer',
-      toolIds: [
-        'list_conversations',
-        'get_messages',
-        'send_message',
-        'list_self_crons',
-        'manage_self_crons',
-      ],
     });
+    mockListRoleToolPermissions.mockResolvedValueOnce([
+      'list_conversations',
+      'get_messages',
+      'send_message',
+      'list_self_crons',
+      'manage_self_crons',
+    ]);
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
     expect((result as { valid: true; roleDescription?: string }).roleDescription).toBeUndefined();
