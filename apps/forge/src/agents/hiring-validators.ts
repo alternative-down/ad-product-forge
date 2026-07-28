@@ -74,7 +74,7 @@ export async function validateHireAgentInput(
     'manage_self_crons',
   ] as const);
 
-  const roleToolIds = new Set((role as { toolIds?: string[] }).toolIds ?? []);
+  const roleToolIds = new Set(await capabilities.listRoleToolPermissions(roleId));
   const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
 
   if (missingTools.length > 0) {
