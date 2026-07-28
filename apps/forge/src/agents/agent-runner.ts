@@ -430,17 +430,14 @@ function stop() {
       markGenerateProgress: () => {},
       setLoopSignature: (sig) => { loopManager.getState().lastLoopSignature = sig; },
       loopSignature: loopManager.getState().lastLoopSignature ?? '',
-      loadAgentContextInstructions: loadAgentContextInstructions as (
-        currentRuntime: InternalAgentRuntime,
-        db: Database,
-      ) => Promise<string | null>,
+      loadAgentContextInstructions,
       currentRuntime,
       db,
       // Pending messages / LTM
       pendingLongTermMemoryRecallSystemText,
       flushPendingRunMessages: (opts) => messageManager.flushPendingRunMessages(opts),
       // Additional runner state
-      usage: usage as unknown as AgentRunnerUsage,
+      usage,
       notifications,
       homeMetricSnapshots,
       runLastMessages,
