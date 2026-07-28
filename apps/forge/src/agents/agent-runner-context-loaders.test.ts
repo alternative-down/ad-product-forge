@@ -188,7 +188,7 @@ describe('loadAgentContextInstructions', () => {
     vi.useRealTimers();
   });
 
-  it('returns undefined when no schedule and no context file', async () => {
+  it('returns null when no schedule and no context file', async () => {
     const db = fakeDb([]);
     const fs = fakeFilesystem({ exists: async () => false });
 
@@ -198,7 +198,7 @@ describe('loadAgentContextInstructions', () => {
     };
 
     const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
-    expect(result).toBeUndefined();
+    expect(result).toBeNull();
   });
 
   it('includes schedule section when schedules exist', async () => {

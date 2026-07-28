@@ -9,7 +9,7 @@ import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/client';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
-import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';
+import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager } from './agent-runner-loop-manager';
