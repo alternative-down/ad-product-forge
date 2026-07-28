@@ -12,7 +12,8 @@ import {
 import { advanceStepEpoch as epochAdvanceStepEpoch } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
-import { createFlushManager, type FlushManager } from './agent-runner-flush-manager';
+import { createFlushManager } from './agent-runner-flush-manager';
+import type { BeginRunInput } from './agent-runner-scheduler-steps';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
 
@@ -63,7 +64,7 @@ export type Scheduler = {
   shouldRunHealthcheckAt(now: number): boolean;
   getHealthcheckIntervalMs(): number;
   scheduleAt(timestamp: number): void;
-  beginRun(runEpoch: number): Promise<void>;
+  beginRun(runEpoch: number, input: BeginRunInput): Promise<void>;
   queueNextStep(runEpoch: number): Promise<void>;
   refreshRunFlushSettings(): Promise<void>;
   resetFlushedRunEventKeys(): void;
@@ -155,7 +156,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     advanceStepEpoch,
     getActiveRunEpoch: () => state.activeRunEpoch,
     setInstant,
-    flushManager: flushManager as FlushManager,
+    flushManager,
     getExecuting: () => executing,
     isTimerActive: () => timerManager.isTimerActive(),
     isStopped: () => stopped,

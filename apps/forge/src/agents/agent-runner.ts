@@ -24,7 +24,7 @@ import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { generateWithTimeoutRetries, RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 
-import { createScheduler, type Scheduler, type SchedulerState } from './agent-runner-scheduler';
+import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { executeStep as executeStepExtracted, type ExecuteStepDeps } from './agent-runner-execute';
 
 import { ONE_MINUTE_MS } from './time-constants';
@@ -415,11 +415,9 @@ function stop() {
       // Stores & managers
       store,
       messageManager,
-      // Scheduler type mismatch: planNextStepDelay returns Promise<number> in
-      // createScheduler's full impl, Promise<void> in the Scheduler interface.
-      // Cast through 'unknown' to silence (this same cast was used in the
-      // original closure's GenerateDeps config).
-      scheduler: scheduler as unknown as Scheduler,
+      // Scheduler (planNextStepDelay returns Promise<number> per interface L33
+      // matching createScheduler's full impl since D22 fix; no cast needed)
+      scheduler,
       loopDetector: loopManager,
       // Wake-queue boundary
       onRunnerIdle: () => wakeQueue.onRunnerIdle(),
