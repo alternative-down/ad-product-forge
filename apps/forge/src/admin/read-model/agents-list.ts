@@ -333,7 +333,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
             timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             timeoutMessage: `Admin latest thread details read timed out for ${agent.id}`,
             fallback: {
-              items: [] as Array<{ role: string; content: unknown }>,
+              items: [],
               hasMore: false,
             },
           });
@@ -343,13 +343,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
           for (const message of threadMessages.items) {
             if (message.role !== 'assistant') continue;
-            const content = message.content as unknown[];
-            preview ??= extractLatestMessagePreview(
-              content as Parameters<typeof extractLatestMessagePreview>[0],
-            );
-            const tb = extractLatestMessageToolBadge(
-              content as Parameters<typeof extractLatestMessageToolBadge>[0],
-            );
+            const content = message.content;
+            preview ??= extractLatestMessagePreview(content);
+            const tb = extractLatestMessageToolBadge(content);
             toolBadge ??= tb ? (tb.label ?? null) : null;
             if ((preview ?? '') !== '') break;
           }
@@ -400,6 +396,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     }
 
     return agentRows.map((agent) => {
+      // L#NN-50 #35: extract structural-typed alias for `(agent as Agent).X` cluster (4 sites)
+      const agentTyped = agent as Agent;
       const loadedAgent = registry.get(agent.id) as
         | { runner?: { getSnapshot: () => unknown } }
         | undefined;
@@ -446,20 +444,20 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         agentId: agent.id,
         name: agent.name ?? '',
         description: agent.description ?? null,
-        role: (agent as Agent).roleId ?? null,
+        role: agentTyped.roleId ?? null,
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
         roleName: (() => {
-          const roleId = (agent as Agent).roleId;
+          const roleId = agentTyped.roleId;
           return roleId != null ? (roleMap.get(roleId)?.name ?? null) : null;
         })(),
         modelProfile: (() => {
-          const id = (agent as Agent).modelProfileId;
+          const id = agentTyped.modelProfileId;
           return id != null ? (profileMap.get(id)?.name ?? null) : null;
         })(),
         omModelProfile: (() => {
-          const id = (agent as Agent).omModelProfileId;
+          const id = agentTyped.omModelProfileId;
           return id != null ? (profileMap.get(id)?.name ?? null) : null;
         })(),
         loaded: Boolean(loadedAgent),
@@ -511,6 +509,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
+    // L#NN-50 #35: extract structural-typed alias for `(agent as Agent).X` cluster (3 sites)
+    const agentTyped = agent as Agent;
     const loadedAgent = registry.get(agentId) as
       | { runner?: { getSnapshot: () => unknown } }
       | undefined;
@@ -608,9 +608,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     const roleMap = new Map(allRoles.map((r) => [r.id, r]));
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
-    const agentRoleId = (agent as Agent).roleId;
-    const agentModelProfileId = (agent as Agent).modelProfileId;
-    const agentOmModelProfileId = (agent as Agent).omModelProfileId;
+    const agentRoleId = agentTyped.roleId;
+    const agentModelProfileId = agentTyped.modelProfileId;
+    const agentOmModelProfileId = agentTyped.omModelProfileId;
 
     const activeContractRow = activeContractRows[0] ?? null;
 
