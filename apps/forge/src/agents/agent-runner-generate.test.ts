@@ -433,3 +433,64 @@ describe('buildIterationFeedback', () => {
     });
   });
 });
+
+// ─── mapStepsToFeedback helper tests ─────────────────────────────────────────
+
+import { mapStepsToFeedback } from './agent-runner-generate';
+
+describe('mapStepsToFeedback', () => {
+  it('returns empty arrays when steps is empty', () => {
+    const result = mapStepsToFeedback([]);
+    expect(result).toEqual({ toolCalls: [], toolResults: [] });
+  });
+
+  it('flattens toolCalls across all steps', () => {
+    const steps = [
+      { toolCalls: [{ name: 'a', args: { x: 1 } }] },
+      { toolCalls: [{ name: 'b', args: { y: 2 } }, { name: 'c', args: { z: 3 } }] },
+    ];
+    const result = mapStepsToFeedback(steps);
+    expect(result.toolCalls).toEqual([
+      { name: 'a', args: { x: 1 } },
+      { name: 'b', args: { y: 2 } },
+      { name: 'c', args: { z: 3 } },
+    ]);
+  });
+
+  it('flattens toolResults with error field preserved', () => {
+    const errA = new Error('boom');
+    const errB = new Error('crash');
+    const steps = [
+      { toolResults: [{ name: 'r1', error: errA }] },
+      { toolResults: [{ name: 'r2' }, { name: 'r3', error: errB }] },
+    ];
+    const result = mapStepsToFeedback(steps);
+    expect(result.toolResults).toEqual([
+      { name: 'r1', error: errA },
+      { name: 'r2', error: undefined },
+      { name: 'r3', error: errB },
+    ]);
+  });
+
+  it('treats missing toolCalls/toolResults fields as empty', () => {
+    const steps = [
+      { response: { uiMessages: [] } },
+      {},
+    ];
+    const result = mapStepsToFeedback(steps);
+    expect(result).toEqual({ toolCalls: [], toolResults: [] });
+  });
+
+  it('handles steps with both fields together', () => {
+    const err = new Error('mix');
+    const steps = [
+      {
+        toolCalls: [{ name: 't', args: {} }],
+        toolResults: [{ name: 'r', error: err }],
+      },
+    ];
+    const result = mapStepsToFeedback(steps);
+    expect(result.toolCalls).toEqual([{ name: 't', args: {} }]);
+    expect(result.toolResults).toEqual([{ name: 'r', error: err }]);
+  });
+});
