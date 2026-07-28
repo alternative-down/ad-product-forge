@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/client';
-import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
+import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
 import { encryptSecret, decryptSecret } from '../encryption/crypto';
 
@@ -81,9 +81,9 @@ export function createWebhookStore(db: Database) {
       op: 'createRoute',
       verb: 'write',
       context: { agentId: input.agentId },
-      fn: () => db.insert(webhookRoutes).values(route as NewWebhookRoute),
+      fn: () => db.insert(webhookRoutes).values(route),
     });
-    return { route: route as WebhookRoute, plaintextSecret };
+    return { route, plaintextSecret };
   }
 
   async function getRoute(routeId: string): Promise<WebhookRouteWithSecret | null> {
@@ -227,6 +227,7 @@ export function createWebhookStore(db: Database) {
       receivedAt: now,
       processedAt: null,
     };
+    const eventValues = event;
 
     const eventContext = { routeId: input.routeId, agentId: input.agentId };
 
@@ -238,7 +239,7 @@ export function createWebhookStore(db: Database) {
         op: 'createEvent',
         verb: 'write',
         context: eventContext,
-        fn: () => db.insert(webhookEvents).values(event as NewWebhookEvent),
+        fn: () => db.insert(webhookEvents).values(eventValues),
       });
       return { kind: 'created', eventId: event.eventId };
     }
@@ -254,7 +255,7 @@ export function createWebhookStore(db: Database) {
       fn: async () =>
         (await db
           .insert(webhookEvents)
-          .values(event as NewWebhookEvent)
+          .values(eventValues)
           .onConflictDoNothing({
             target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
             where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
