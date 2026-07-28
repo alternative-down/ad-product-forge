@@ -48,6 +48,40 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
 import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
 
+type AgentStepWithFeedback = {
+  response?: { uiMessages?: Array<{ parts?: unknown[] }> };
+  toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+  toolResults?: Array<{ name: string; error?: Error }>;
+};
+
+type IterationFeedbackSummary = {
+  toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
+  toolResults: Array<{ name: string; error?: Error }>;
+};
+
+/**
+ * Extract tool calls and tool results from generate-loop step array.
+ *
+ * RuntimeGenerateResult.steps declares only response and uiMessages, but the
+ * runtime stream emits toolCalls and toolResults as sibling fields.
+ * Centralizing the mapping here eliminates duplicated typed casts at the
+ * two call sites that previously needed them.
+ */
+export function mapStepsToFeedback(
+  steps: ReadonlyArray<AgentStepWithFeedback>,
+): IterationFeedbackSummary {
+  return {
+    toolCalls: steps.flatMap((s) => s.toolCalls ?? []),
+    toolResults: steps.flatMap((s) =>
+      (s.toolResults ?? []).map((tr) => ({
+        name: tr.name,
+        error: tr.error,
+      })),
+    ),
+  };
+}
+
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import {
@@ -280,13 +314,7 @@ export async function generateWithTimeoutRetries(
           iteration: { iteration: steps.length, finishReason: result?.finishReason ?? 'unknown' },
           finishReason: result?.finishReason ?? 'unknown',
           text: result?.text ?? '',
-          toolCalls: steps.flatMap((s: any) => s.toolCalls ?? []) as Array<{
-            name: string;
-            args: Record<string, unknown>;
-          }>,
-          toolResults: steps.flatMap((s: any) =>
-            (s.toolResults ?? []).map((tr: any) => ({ name: tr.name, error: tr.error as Error })),
-          ) as Array<{ name: string; error?: Error }>,
+          ...mapStepsToFeedback(steps),
         },
         {
           suppressNoToolCallReminderForRun,
@@ -324,13 +352,7 @@ export async function generateWithTimeoutRetries(
 
       return {
         text: result?.text ?? '',
-        toolCalls: steps.flatMap((s: any) => s.toolCalls ?? []) as Array<{
-          name: string;
-          args: Record<string, unknown>;
-        }>,
-        toolResults: steps.flatMap((s: any) =>
-          (s.toolResults ?? []).map((tr: any) => ({ name: tr.name, error: tr.error as Error })),
-        ) as Array<{ name: string; error?: Error }>,
+        ...mapStepsToFeedback(steps),
         finishReason: result?.finishReason ?? 'unknown',
         inputTokens,
         outputTokens,
