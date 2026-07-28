@@ -65,7 +65,7 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['email-account.ts', 3],
   ['github/ops/routing.ts', 3],
   ['admin/routes/internal-chat/internal-chat-conversation-routes.ts', 2],
-  ['agents/agent-runner.ts', 1],
+  ['agents/agent-runner.ts', 0],
   ['communication/internal-chat-connection.ts', 2],
   ['communication/internal-chat-provider.ts', 2],
   ['webhooks/store.ts', 2],
