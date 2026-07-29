@@ -1,5 +1,4 @@
 // fallow-ignore-file circular-dependencies
-export { AdminToaster } from './admin-toaster';
 export { HireAgentDialog } from './agents/hire-agent-dialog';
 export { AdminLoadingState } from './system/admin-loading-state';
 export { AdminScrollArea } from './system/admin-scroll-area';
