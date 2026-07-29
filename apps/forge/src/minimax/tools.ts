@@ -11,6 +11,25 @@ export interface MiniMaxToolContext {
   workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown>; readFile(path: string): Promise<Uint8Array | string> } };
 }
 
+/**
+ * Bridges the ToolExecutionContext (which does not declare workspace) into
+ * the MiniMaxToolContext shape by reading workspace from the
+ * runtime-injected context.
+ *
+ * The single as-unknown-as cast inside this helper is the documented
+ * L#NN-50 #18 v2 type-lie centralization. Prior to this PR the same cast
+ * was repeated at four tool execute sites (lines 326, 378, 404, 486);
+ * this helper eliminates all four copies.
+ *
+ * The workspace may lack a filesystem — that case is handled by
+ * writeBufferToWorkspace and readWorkspaceImageAsDataUrl, which throw a
+ * descriptive error if filesystem is undefined.
+ */
+function getToolWorkspace(context: { toolCallId?: string }): MiniMaxToolContext['workspace'] {
+  return (context as unknown as MiniMaxToolContext).workspace;
+}
+
+
 const __MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
   'minimax_tts',
@@ -323,7 +342,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             }
             const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
             const savedPath = await writeBufferToWorkspace(
-              (context as unknown as MiniMaxToolContext).workspace,
+              getToolWorkspace(context),
               'tts',
               result.data.audioFormat,
               audioBuffer,
@@ -375,7 +394,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
                     type: input.reference_type ?? 'character',
                     imageFile: /^https?:\/\//i.test(referenceImage)
                       ? referenceImage
-                      : await readWorkspaceImageAsDataUrl((context as unknown as MiniMaxToolContext).workspace, referenceImage),
+                      : await readWorkspaceImageAsDataUrl(getToolWorkspace(context), referenceImage),
                   })),
                 )
               : undefined;
@@ -401,7 +420,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             const paths = await Promise.all(
               result.data.images.map((base64Image, index) =>
                 writeBufferToWorkspace(
-                  (context as unknown as MiniMaxToolContext).workspace,
+                  getToolWorkspace(context),
                   'images',
                   'png',
                   Buffer.from(base64Image, 'base64'),
@@ -483,7 +502,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
 
             const fileBuffer = await downloadFileBuffer(file.data.downloadUrl ?? '');
             const savedPath = await writeBufferToWorkspace(
-              (context as unknown as MiniMaxToolContext).workspace,
+              getToolWorkspace(context),
               'videos',
               inferExtensionFromUrl(file.data.downloadUrl ?? '', 'mp4'),
               fileBuffer,

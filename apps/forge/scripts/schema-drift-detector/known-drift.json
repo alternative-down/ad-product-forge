@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-06-04",
+  "lastUpdated": "2026-07-29",
   "description": "Schema-vs-migration drift that has been audited and intentionally accepted. New drift in PRs that is NOT in this list will fail CI (when in blocking mode).",
   "entries": [
     {
@@ -562,6 +562,55 @@
       "tracked_by": null,
       "added_at": "2026-06-04T10:30Z",
       "added_by": "aldric-zvqgom"
+    },
+    {
+      "id": "schema-column-agent_schedules.kind",
+      "type": "schema-only-column",
+      "table": "agent_schedules",
+      "column": "kind",
+      "schema_file": "schema-agents.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": "issue-#6171",
+      "added_at": "2026-07-29T10:35Z",
+      "added_by": "varek-iemmpd"
+    },
+    {
+      "id": "schema-column-agent_schedules.description",
+      "type": "schema-only-column",
+      "table": "agent_schedules",
+      "column": "description",
+      "schema_file": "schema-agents.ts",
+      "reason": "manual_addition_no_migration",
+      "introduced_in": {
+        "commit": "67685816",
+        "pr": 4928,
+        "summary": "refactor: split database/schema.ts into domain-specific files"
+      },
+      "tracked_by": "issue-#6172",
+      "added_at": "2026-07-29T10:35Z",
+      "added_by": "varek-iemmpd"
+    },
+    {
+      "id": "schema-column-company_cash_ledger.currency",
+      "type": "schema-only-column",
+      "table": "company_cash_ledger",
+      "column": "currency",
+      "schema_file": "schema-finance.ts",
+      "reason": "migration_0034_present_detector_false_positive",
+      "introduced_in": {
+        "commit": "d7e156e6",
+        "pr": 6165,
+        "summary": "fix(finance): add currency column to companyCashLedger (Closes #6108)"
+      },
+      "tracked_by": "issue-#6170",
+      "added_at": "2026-07-29T10:35Z",
+      "added_by": "varek-iemmpd",
+      "investigation_needed": "Detector regex ALTER TABLE fails to match when ADD COLUMN is on a separate line (migration 0034 has newline between ALTER TABLE and ADD COLUMN)."
     }
   ]
 }
