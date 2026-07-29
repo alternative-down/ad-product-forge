@@ -19,16 +19,17 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { HomeInternalChatGroupMember } from '@/lib/admin-api/index';
+import type { InternalChatParticipantRole } from '@/types';
 
 export function ParticipantsDialog(input: {
   open: boolean;
   members: HomeInternalChatGroupMember[];
   availableParticipantId: string;
-  availableParticipantRole: 'admin' | 'normal';
+  availableParticipantRole: InternalChatParticipantRole;
   availableParticipants: Array<{ accountId: string; displayName: string }>;
   onOpenChange(open: boolean): void;
   onAvailableParticipantIdChange(value: string): void;
-  onAvailableParticipantRoleChange(value: 'admin' | 'normal'): void;
+  onAvailableParticipantRoleChange(value: InternalChatParticipantRole): void;
   onAddParticipant(): void;
   onRoleToggle(participantId: string, nextIsAdmin: boolean): void;
   onRemoveParticipant(participantId: string): void;

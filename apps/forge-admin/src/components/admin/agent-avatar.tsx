@@ -1,9 +1,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { AvatarSize } from '@/types';
 
 type AgentAvatarProps = {
   agentId: string;
   name: string;
-  size?: 'sm' | 'default' | 'lg';
+  size?: AvatarSize;
   className?: string;
   fallbackClassName?: string;
 };

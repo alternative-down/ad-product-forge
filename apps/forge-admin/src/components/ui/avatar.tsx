@@ -4,13 +4,14 @@ import * as React from 'react';
 import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
 
 import { cn } from '@/lib/utils';
+import type { AvatarSize } from '@/types';
 
 function Avatar({
   className,
   size = 'default',
   ...props
 }: AvatarPrimitive.Root.Props & {
-  size?: 'default' | 'sm' | 'lg';
+  size?: AvatarSize;
 }) {
   return (
     <AvatarPrimitive.Root
