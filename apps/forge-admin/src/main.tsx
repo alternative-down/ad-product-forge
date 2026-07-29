@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
-import { AdminToaster } from './components/admin';
+import { Toaster } from '@/components/ui/sonner';
 import { router } from './router';
 
 const queryClient = new QueryClient({
@@ -20,7 +20,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-      <AdminToaster />
+      <Toaster position="top-right" closeButton richColors />
     </QueryClientProvider>
   </StrictMode>,
 );
