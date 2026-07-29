@@ -12,7 +12,6 @@ import {
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import {
   COMPANY_CASH_DIRECTIONS,
-  COMPANY_CASH_STATUSES,
   STATUS_CANCELED,
   STATUS_PLANNED,
   STATUS_POSTED,
