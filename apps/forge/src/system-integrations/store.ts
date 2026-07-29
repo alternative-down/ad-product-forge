@@ -47,6 +47,15 @@ export type SystemIntegrationSummary = {
   updatedAt: Date;
 };
 
+// L#NN-50 #35 helper: provider to typed config mapping for generic getConfigByProvider<T>
+// (DRY: previously 4 callsites cast to specific config type via as <Type> | null).
+type ConfigFor<T extends SystemIntegrationProviderType> =
+  T extends 'migadu' ? MigaduSystemIntegrationConfig :
+  T extends 'coolify' ? CoolifySystemIntegrationConfig :
+  T extends 'github' ? GitHubSystemIntegrationConfig :
+  T extends 'minimax' ? MinimaxSystemIntegrationConfig :
+  never;
+
 /** Fields that must not appear in list/summary API responses */
 export type SystemIntegrationStore = Awaited<ReturnType<typeof createSystemIntegrationStore>>;
 export function createSystemIntegrationStore(db: Database) {
@@ -85,21 +94,43 @@ export function createSystemIntegrationStore(db: Database) {
   }
 
   /**
+   * Boundary helper: maps a raw DB row to a typed Summary.
+   *
+   * Closes #6133 L#NN-50 #18 v2 atomic cast removal + L#NN-50 #35 structural-typing helper.
+   * The DB row has integer timestamps + providerType as PK; Summary uses
+   * Date timestamps + has an explicit id field (set to providerType since it
+   * IS the primary key). Closes the 34-day-old Day 24 candidate self-documented
+   * issue by typing the boundary instead of casting.
+   */
+  function mapDbRowToSummary(
+    row: SystemIntegration & { providerType: SystemIntegrationProviderType },
+  ): SystemIntegrationSummary {
+    return {
+      id: row.providerType,
+      providerType: row.providerType,
+      isEnabled: row.isEnabled === 1,
+      config: null, // list path does not decrypt; see get*Config() for full
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    };
+  }
+
+  /**
    * Single dispatcher for fetching + parsing the enabled config for a provider.
    * Returns null when the integration is missing or disabled.
    * Used by `getMigaduConfig` / `getCoolifyConfig` / `getGitHubConfig` / `getMinimaxConfig`
    * (kept as thin back-compat wrappers).
    */
-  async function getConfigByProvider(
-    providerType: SystemIntegrationProviderType,
-  ): Promise<unknown> {
+  async function getConfigByProvider<T extends SystemIntegrationProviderType>(
+    providerType: T,
+  ): Promise<ConfigFor<T> | null> {
     return await withDbErrorLogging({
       scope: 'system-integrations',
       op: `getConfig.${providerType}`,
       verb: 'read',
       fn: async () => {
         const row = await getEnabledIntegration(providerType);
-        return row != null ? parseConfigByProvider(providerType, row.encryptedConfig) : null;
+        return row != null ? (parseConfigByProvider(providerType, row.encryptedConfig) as ConfigFor<T>) : null;
       },
     });
   }
@@ -116,36 +147,28 @@ export function createSystemIntegrationStore(db: Database) {
       fn: async () => {
         const rows = await db.query.systemIntegrations.findMany();
 
-        // Structural mismatch: row has number timestamps + no id; Summary
-        // expects Date timestamps + id. Typed boundary cast is honest about
-        // the gap (vs Varek prior as any). Day 24 candidate: align Summary type with schema.
-        return rows.filter(isKnownProvider).map((row) => {
-          const { encryptedConfig, ...rest } = row;
-          void encryptedConfig; // intentionally not decrypted in list path
-          return {
-            ...rest,
-            isEnabled: row.isEnabled === 1,
-            config: null, // list path does not decrypt; see get*Config() for full
-          };
-        }) as unknown as SystemIntegrationSummary[];
+        // Closes #6133 L#NN-50 #18 v2 + #35: typed helper instead of as unknown as cast.
+        // Primary key (providerType) maps to Summary.id; DB uses integer timestamps,
+        // Summary uses Date — converted at the boundary by mapDbRowToSummary.
+        return rows.filter(isKnownProvider).map(mapDbRowToSummary);
       },
     });
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
-    return (await getConfigByProvider('migadu')) as MigaduSystemIntegrationConfig | null;
+    return await getConfigByProvider('migadu');
   }
 
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
-    return (await getConfigByProvider('coolify')) as CoolifySystemIntegrationConfig | null;
+    return await getConfigByProvider('coolify');
   }
 
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
-    return (await getConfigByProvider('github')) as GitHubSystemIntegrationConfig | null;
+    return await getConfigByProvider('github');
   }
 
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
-    return (await getConfigByProvider('minimax')) as MinimaxSystemIntegrationConfig | null;
+    return await getConfigByProvider('minimax');
   }
 
   async function upsertIntegration(
