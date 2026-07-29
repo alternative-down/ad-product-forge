@@ -156,19 +156,19 @@ export function createSystemIntegrationStore(db: Database) {
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
-    return getConfigByProvider('migadu');
+    return await getConfigByProvider('migadu');
   }
 
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
-    return getConfigByProvider('coolify');
+    return await getConfigByProvider('coolify');
   }
 
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
-    return getConfigByProvider('github');
+    return await getConfigByProvider('github');
   }
 
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
-    return getConfigByProvider('minimax');
+    return await getConfigByProvider('minimax');
   }
 
   async function upsertIntegration(
