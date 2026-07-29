@@ -59,7 +59,7 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['admin/routes/agents/provider-mcp.ts', 6],
   ['minimax/tools.ts', 4],
   ['communication/internal-chat-groups.ts', 4],
-  ['finance/payment-receivables.ts', 3],
+  ['finance/payment-receivables.ts', 2],
   // Single-site files (tracked, lower priority)
   ['agents/error-formatting.ts', 1],
   ['email-account.ts', 3],
@@ -81,7 +81,7 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['communication/internal-chat-participants.ts', 0],
   ['communication/internal-chat-service.ts', 1],
   ['database/error-logging.ts', 1],
-  ['finance/company-cash-ledger.ts', 1],
+  // #6108 L#NN-50 #33 (D59): cast removed — file no longer needs allowlist entry.
   ['github/apps.ts', 1],
   ['http/server.ts', 1],
   ['notifications/store.ts', 1],

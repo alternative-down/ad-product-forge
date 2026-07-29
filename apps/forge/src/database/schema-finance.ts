@@ -15,6 +15,8 @@ export const companyCashLedger = sqliteTable(
     type: text('type').notNull(),
     direction: text('direction').notNull(),
     amountUsd: real('amount_usd').notNull(),
+    // #6108 L#NN-50 #23 N=4 (D29): mirror currency column on payment_subscriptions + payment_transactions
+    currency: text('currency').notNull().default('usd'),
     description: text('description'),
     referenceType: text('reference_type'),
     referenceId: text('reference_id'),
