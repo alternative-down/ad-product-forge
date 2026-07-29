@@ -85,7 +85,6 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['github/apps.ts', 1],
   ['http/server.ts', 1],
   ['notifications/store.ts', 1],
-  ['system-integrations/store.ts', 1],
 ]);
 
 function findTsFiles(dir: string): string[] {
