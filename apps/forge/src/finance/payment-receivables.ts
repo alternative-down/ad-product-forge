@@ -415,13 +415,18 @@ export function createPaymentReceivablesStore(db: Database) {
             // - This was a silent accounting bug: payments entered the DB but balance = 0
             // #6015 Tier 2: capture ledger.id back to paymentTransactions so the
             // transaction↔ledger relationship is explicit and idempotent.
-            const ledgerRows = (await tx
+            // #6108 L#NN-50 #23 N=4 (D29): include currency in ledger INSERT (was missing —
+            // Asaas BRL amounts were silently summed as USD by getCurrentBalanceUsd).
+            // L#NN-50 #33: removed redundant 'as unknown as Array<{id:string}>' cast —
+            // added .all() terminal so drizzle returns Array<{id:string}> natively.
+            const ledgerRows = await tx
               .insert(companyCashLedger)
               .values({
                 id: createId(),
                 type: 'payment_received',
                 direction: 'in',
                 amountUsd: input.amountUsd,
+                currency: input.currency,
                 description: 'Payment ' + input.providerPaymentId,
                 referenceType: 'payment_transaction',
                 referenceId: txId,
@@ -430,7 +435,8 @@ export function createPaymentReceivablesStore(db: Database) {
                 createdAt: now,
                 updatedAt: now,
               })
-              .returning({ id: companyCashLedger.id })) as unknown as Array<{ id: string }>;
+              .returning({ id: companyCashLedger.id })
+              .all();
             const ledgerRow = ledgerRows[0];
             if (ledgerRows.length === 0) {
               throw new Error(

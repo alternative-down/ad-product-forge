@@ -1,0 +1,49 @@
+-- =============================================================================
+-- Migration 0034: company_cash_ledger currency column (#6108 P1)
+-- (L#NN-50 #23 N=4 continuation + L#NN-46 v4.6 atomicity — Day 29 finance)
+-- =============================================================================
+--
+-- ROOT CAUSE
+-- ---------
+-- The companyCashLedger schema was missing the currency column that #6013
+-- L#NN-50 #23 N=4 (D24) added to payment_subscriptions and payment_transactions.
+-- This caused silent financial balance corruption: Asaas BRL payments were
+-- summed into getCurrentBalanceUsd as if they were USD (because the column
+-- was currency-agnostic, defaulting to USD).
+--
+-- Precedent (already in codebase):
+--   0032_payment_receivables_currency_unique.sql — currency column on
+--     payment_subscriptions + payment_transactions + unique indexes
+--
+-- This migration extends the L#NN-50 #23 N=4 codification to the third
+-- financial-write target (companyCashLedger).
+--
+-- TABLES MODIFIED
+-- ---------------
+--   1. company_cash_ledger  (1 column added)
+--
+-- Total: 1 statement. Well below the 27 libsql batch transaction threshold.
+--
+-- IDEMPOTENCY
+-- -----------
+-- ALTER TABLE ADD COLUMN has no IF NOT EXISTS in SQLite (Postgres-only).
+-- We rely on Drizzle's __drizzle_migrations journal to prevent re-application.
+--
+-- BACKFILL NOTE
+-- -------------
+-- Existing company_cash_ledger rows backfill with currency='usd' (the
+-- previous implicit assumption). Asaas ledger entries recorded as 'usd'
+-- are known-bad historical data — see #6108 issue body for remediation
+-- steps. Same acknowledge-known-bad-state pattern as 0032.
+--
+-- REFERENCES
+-- ----------
+--   - #6108 (this issue — P1 financial balance corruption)
+--   - #6013 (D24 finance cluster — currency column prerequisite)
+--   - #6015 (sibling — TOCTOU + ledger linkage)
+--   - 0032_payment_receivables_currency_unique.sql (precedent)
+--   - L#NN-50 #23 N=4 (currency-aware amounts — extended to N=5 here)
+-- =============================================================================
+
+ALTER TABLE `company_cash_ledger`
+  ADD COLUMN `currency` text NOT NULL DEFAULT 'usd';--> statement-breakpoint

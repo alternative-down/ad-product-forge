@@ -8,7 +8,6 @@ import { type CompanyCashDirection, type CompanyCashStatus } from './company-cas
 
 
 export function createCompanyCashLedger(db: Database) {
-  interface BalanceTotalRow { total: number }
   async function getCurrentBalanceUsd(): Promise<number> {
     return await withDbErrorLogging({
       scope: 'company-cash-ledger',
@@ -16,6 +15,12 @@ export function createCompanyCashLedger(db: Database) {
       verb: 'read',
       context: {},
       fn: async () => {
+        // L#NN-50 #33 (D59): drizzle select({total: sql<number>...}) returns
+        // Array<{total: number}> natively — no BalanceTotalRow interface or
+        // 'as unknown as' cast needed.
+        // L#NN-50 #33 (D59): drizzle 0.26 chains need .all() terminal to get a
+        // native Array<{total:number}> — await alone leaves the type as SQLiteSelect.
+        // The 'as unknown as' cast that previously hid this issue is now removed.
         const rows = await db
           .select({
             total: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = 'in' then ${companyCashLedger.amountUsd} else -${companyCashLedger.amountUsd} end), 0)`,
@@ -24,12 +29,16 @@ export function createCompanyCashLedger(db: Database) {
           .where(
             and(
               eq(companyCashLedger.status, 'posted'),
+              // #6108 L#NN-50 #23 N=4 (D29): filter to currency='usd' so Asaas BRL
+              // entries do NOT inflate the USD balance. BRL conversion to USD is a
+              // separate concern tracked outside this fix.
+              eq(companyCashLedger.currency, 'usd'),
               isNotNull(companyCashLedger.effectiveAt),
               lte(companyCashLedger.effectiveAt, Date.now()),
             ),
-          );
-        const r = rows as unknown as BalanceTotalRow[];
-        return r?.[0]?.total ?? 0;
+          )
+          .all();
+        return rows[0]?.total ?? 0;
       },
     });
   }

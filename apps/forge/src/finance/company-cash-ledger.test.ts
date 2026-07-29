@@ -100,6 +100,9 @@ interface CashLedgerRow {
   type: string;
   direction: 'in' | 'out';
   amountUsd: number;
+  // #6108 L#NN-50 #23 N=4 (D29): currency column added to schema so BRL/USD
+  // entries are filterable in getCurrentBalanceUsd.
+  currency: 'usd' | 'brl';
   description?: string;
   referenceType?: string;
   referenceId?: string;
@@ -167,7 +170,11 @@ function createMockCashDb(initialRows: CashLedgerRow[] = []) {
           const total = filtered.reduce((acc, r) => {
             return acc + (r.direction === 'in' ? r.amountUsd : -r.amountUsd);
           }, 0);
-          return Promise.resolve([{ total }]);
+          // #6108 L#NN-50 #33 (D59): production code now uses .all() terminal.
+          // Support both forms for backward compatibility.
+          return {
+            all: () => Promise.resolve([{ total }]),
+          };
         },
       }),
     };
@@ -202,6 +209,9 @@ function makeEntry(overrides: Partial<CashLedgerRow> = {}): CashLedgerRow {
     type: 'test',
     direction: 'in',
     amountUsd: 100,
+    // #6108 L#NN-50 #23 N=4 (D29): default 'usd' — mirrors schema default in
+    // migration 0034_company_cash_ledger_currency.sql.
+    currency: 'usd',
     status: 'posted',
     effectiveAt: Date.now(),
     createdAt: Date.now(),
@@ -262,6 +272,24 @@ describe('company-cash-ledger', () => {
     ]);
     const { getCurrentBalanceUsd } = createCompanyCashLedger(db as never);
     await expect(getCurrentBalanceUsd()).resolves.toBe(100);
+  });
+
+  test('getCurrentBalanceUsd excludes BRL entries from USD sum (#6108, Asaas BRL regression)', async () => {
+    // #6108 L#NN-50 #23 N=4 (D29): the bug was that BRL payments (Asaas) were
+    // summed into getCurrentBalanceUsd as if they were USD. With the currency
+    // filter, only currency='usd' entries count.
+    const now = Date.now();
+    const { db } = createMockCashDb([
+      // Stripe USD entries — should be counted
+      makeEntry({ id: 'usd-1', direction: 'in', amountUsd: 100, currency: 'usd', effectiveAt: now }),
+      makeEntry({ id: 'usd-2', direction: 'out', amountUsd: 30, currency: 'usd', effectiveAt: now }),
+      // Asaas BRL entries — must NOT be counted in USD balance
+      makeEntry({ id: 'brl-1', direction: 'in', amountUsd: 500, currency: 'brl', effectiveAt: now }),
+      makeEntry({ id: 'brl-2', direction: 'in', amountUsd: 250, currency: 'brl', effectiveAt: now }),
+    ]);
+    const { getCurrentBalanceUsd } = createCompanyCashLedger(db as never);
+    // USD balance: 100 - 30 = 70 (BRL 500 + 250 = 750 must be excluded)
+    await expect(getCurrentBalanceUsd()).resolves.toBe(70);
   });
 
   test('postEntry inserts entry and returns void', async () => {

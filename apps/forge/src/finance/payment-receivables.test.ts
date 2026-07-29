@@ -29,9 +29,13 @@ function createMockDb(): any {
         if (isPaymentTransactions) txStore.push({ ...values });
         else if (isCompanyCashLedger) ledgerStore.push({ ...values });
         return {
+          // #6108 L#NN-50 #33 (D59): ledger insert chain uses .returning().all()
+          // (was Promise.resolve(...).as-unknown-as-Array-{} cast).
           returning: (cols: unknown) => {
             const result = { ...values, id: values['id'] ?? 'mock-id-' + txStore.length };
-            return Promise.resolve([result]);
+            return {
+              all: () => Promise.resolve([result]),
+            };
           },
           then: (resolve: any, reject: any) => {
             resolve({ rowCount: 1 });
@@ -302,7 +306,11 @@ describe('createPaymentReceivablesStore', () => {
                   return Promise.reject(new Error('Simulated tx insert failure'));
                 }
                 if (table === paymentTransactions) txStore.push(v);
-                return Promise.resolve([{ id: 'mock-ledger-id' }]);
+                // #6108 L#NN-50 #33 (D59): ledger insert chain uses .returning().all()
+                // (was Promise.resolve(...).as-unknown-as-Array-{} cast).
+                return {
+                  all: () => Promise.resolve([{ id: 'mock-ledger-id' }]),
+                };
               },
               then: (resolve: any, reject: any) => {
                 if (table === paymentTransactions && opts.rejectTxInsert) {
