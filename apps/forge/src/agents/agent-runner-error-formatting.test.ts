@@ -14,6 +14,7 @@ import {
   serializeError,
   formatAbsentErrorDetailValue,
   extractAbsentErrorDetails,
+  formatProgressTimestamp,
   formatAbsentExecutionError,
 } from './error-formatting';
 
@@ -233,6 +234,37 @@ describe('extractAbsentErrorDetails', () => {
   });
 });
 
+// ─── formatProgressTimestamp ─────────────────────────────────────────────────
+
+describe('formatProgressTimestamp', () => {
+  it('formats a finite number as ISO 8601', () => {
+    expect(formatProgressTimestamp(1_700_000_000_000)).toBe(
+      new Date(1_700_000_000_000).toISOString(),
+    );
+  });
+
+  it("returns 'invalid' for NaN", () => {
+    expect(formatProgressTimestamp(NaN)).toBe('invalid');
+  });
+
+  it("returns 'invalid' for Infinity", () => {
+    expect(formatProgressTimestamp(Infinity)).toBe('invalid');
+    expect(formatProgressTimestamp(-Infinity)).toBe('invalid');
+  });
+
+  it("returns 'invalid' for undefined", () => {
+    expect(formatProgressTimestamp(undefined)).toBe('invalid');
+  });
+
+  it("returns 'invalid' for null", () => {
+    expect(formatProgressTimestamp(null)).toBe('invalid');
+  });
+
+  it("returns 'invalid' for a string", () => {
+    expect(formatProgressTimestamp('not-a-number')).toBe('invalid');
+  });
+});
+
 // ─── formatAbsentExecutionError ───────────────────────────────────────────────
 
 describe('formatAbsentExecutionError', () => {
@@ -292,6 +324,40 @@ describe('formatAbsentExecutionError', () => {
     const error = new Error('boom');
     const result = formatAbsentExecutionError({ stage: null, error });
     expect(result).toContain('Stage: unknown');
+  });
+
+  it("does not throw when lastGenerateProgress.at is NaN", () => {
+    // Regression test for #6162: new Date(NaN).toISOString() throws RangeError,
+    // masking the original absent-execution error.
+    const error = new Error('boom');
+    expect(() =>
+      formatAbsentExecutionError({
+        stage: 'agent-generate',
+        lastGenerateProgress: { stage: 'fetching-tools', at: NaN, detail: null },
+        error,
+      }),
+    ).not.toThrow();
+  });
+
+  it("substitutes 'invalid' when lastGenerateProgress.at is NaN", () => {
+    const error = new Error('boom');
+    const result = formatAbsentExecutionError({
+      stage: 'agent-generate',
+      lastGenerateProgress: { stage: 'fetching-tools', at: NaN, detail: null },
+      error,
+    });
+    expect(result).toContain('Last progress at: invalid');
+  });
+
+  it("substitutes 'invalid' when lastGenerateProgress.at is undefined", () => {
+    const error = new Error('boom');
+    const result = formatAbsentExecutionError({
+      stage: 'agent-generate',
+      // Cast to satisfy the typed shape — simulates transit-time loss.
+      lastGenerateProgress: { stage: 'fetching-tools', at: undefined as unknown as number, detail: null },
+      error,
+    });
+    expect(result).toContain('Last progress at: invalid');
   });
 
   it('uses custom extractAbsentErrorDetails when provided', () => {

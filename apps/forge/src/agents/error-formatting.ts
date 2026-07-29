@@ -66,10 +66,11 @@ export function serializeError(error: unknown): Record<string, unknown> {
       value: error,
     };
   }
+  const e = getErrorExtras(error);
   const extra = Object.fromEntries(
-    Object.keys(getErrorExtras(error))
+    Object.keys(e)
       .filter((key) => !['name', 'message', 'stack'].includes(key))
-      .map((key) => [key, serializeUnknown(getErrorExtras(error)[key])]),
+      .map((key) => [key, serializeUnknown(e[key])]),
   );
 
   return {
@@ -170,6 +171,23 @@ export interface AbsentExecutionErrorInput {
 }
 
 /**
+ * Safely formats a progress timestamp for absent-execution error messages.
+ * - finite number  → ISO 8601 string
+ * - NaN/Infinity/negative/non-number → 'invalid'
+ *
+ * Prevents a RangeError when upstream fails to populate
+ * lastGenerateProgress.at with a valid timestamp. RangeError in this code path
+ * would mask the original absent-execution error with a stack trace from the
+ * error formatter itself.
+ */
+export function formatProgressTimestamp(at: unknown): string {
+  if (typeof at === 'number' && Number.isFinite(at)) {
+    return new Date(at).toISOString();
+  }
+  return 'invalid';
+}
+
+/**
  * Formats a structured absent-execution error message from inputs.
  * Returns a human-readable multi-line string suitable for agent storage.
  *
@@ -184,7 +202,7 @@ export function formatAbsentExecutionError(
   const progressLines = input.lastGenerateProgress
     ? [
         `Last progress stage: ${input.lastGenerateProgress.stage}`,
-        `Last progress at: ${new Date(input.lastGenerateProgress.at).toISOString()}`,
+        `Last progress at: ${formatProgressTimestamp(input.lastGenerateProgress.at)}`,
         ...(input.lastGenerateProgress.detail
           ? [`Last progress detail: ${JSON.stringify(input.lastGenerateProgress.detail)}`]
           : []),
