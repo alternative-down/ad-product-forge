@@ -33,6 +33,42 @@ export class MiniMaxClient {
     };
   }
 
+  /**
+   * Parses a raw response body as JSON. Returns null on parse failure
+   * (after logging). The single cast inside this helper is the documented
+   * L#NN-50 #18 type-lie — centralizing it eliminates the unsafe
+   * JSON.parse-as pattern at the call site.
+   */
+  private parseJsonResponse(rawBody: string): MiniMaxJsonResponse | null {
+    try {
+      const parsed: unknown = JSON.parse(rawBody);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as MiniMaxJsonResponse;
+    } catch (error) {
+      forgeDebug({
+        scope: 'minimax',
+        level: 'warn',
+        message: 'Failed to parse MiniMax response',
+        context: { error: errorMsg(error) },
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Bridges a MiniMaxResponse<T> to MiniMaxResponse<never> for the
+   * caller-known-failure branch (after `if (!response.success || !response.data)`).
+   *
+   * The single cast inside this helper is the documented L#NN-50 #18 type-lie.
+   * Centralizing it eliminates the six copies of the failure-cast that
+   * previously appeared at every error-early-return site in this class.
+   */
+  private asFailure<T>(response: MiniMaxResponse<T>): MiniMaxResponse<never> {
+    return response as MiniMaxResponse<never>;
+  }
+
   private async requestJson(
     endpoint: string,
     init: RequestInit,
@@ -50,7 +86,7 @@ export class MiniMaxClient {
       const body = rawBody.trim()
         ? (() => {
             try {
-              return JSON.parse(rawBody) as MiniMaxJsonResponse;
+              return this.parseJsonResponse(rawBody);
             } catch (error) {
               forgeDebug({
                 scope: 'minimax',
@@ -220,7 +256,7 @@ export class MiniMaxClient {
     });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
     const audioHex = this.getString(this.getObject(response.data.data)?.audio);
@@ -265,12 +301,10 @@ export class MiniMaxClient {
     const response = await this.requestJson(`/v1/t2a/list_voices?type=${type}`, { method: 'GET' });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
-    const apiData = (response.data as MiniMaxJsonResponse | undefined)?.data as
-      | Record<string, unknown>
-      | undefined;
+    const apiData = this.getObject(response.data.data) ?? undefined;
 
     if (apiData == null) {
       forgeDebug({
@@ -294,7 +328,7 @@ export class MiniMaxClient {
       const voiceId = this.getString(obj.voice_id);
       if (voiceId === undefined || voiceId === '') return null;
       const description = Array.isArray(obj.description)
-        ? (obj.description.filter((x) => typeof x === 'string') as string[])
+        ? obj.description.filter((x): x is string => typeof x === 'string')
         : [];
       return {
         voiceId,
@@ -350,7 +384,7 @@ export class MiniMaxClient {
     });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
     const images = this.getObject(response.data.data)?.image_base64;
@@ -392,7 +426,7 @@ export class MiniMaxClient {
     });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
     const taskId = this.getString(this.getObject(response.data.data)?.task_id);
@@ -425,7 +459,7 @@ export class MiniMaxClient {
     });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
     const d = this.getObject(response.data.data);
@@ -455,8 +489,8 @@ export class MiniMaxClient {
     return {
       success: true,
       data: {
-        taskId: outTaskId as string,
-        status: status as string,
+        taskId: outTaskId,
+        status,
         fileId: this.getString(d.file_id),
         failureReason: this.getString(d.failure_reason) ?? this.getString(d.error_message),
       },
@@ -476,7 +510,7 @@ export class MiniMaxClient {
     });
 
     if (!response.success || !response.data) {
-      return response as MiniMaxResponse<never>;
+      return this.asFailure(response);
     }
 
     const fileObj = this.getObject(response.data.data)?.file;
