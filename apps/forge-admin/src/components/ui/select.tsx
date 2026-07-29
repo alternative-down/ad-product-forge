@@ -5,6 +5,7 @@ import { Select as SelectPrimitive } from '@base-ui/react/select';
 
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react';
+import type { SelectSize } from '@/types';
 
 const Select = SelectPrimitive.Root;
 
@@ -34,7 +35,7 @@ function SelectTrigger({
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
-  size?: 'sm' | 'default';
+  size?: SelectSize;
 }) {
   return (
     <SelectPrimitive.Trigger

@@ -13,6 +13,9 @@ import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import {
   COMPANY_CASH_DIRECTIONS,
   COMPANY_CASH_STATUSES,
+  STATUS_CANCELED,
+  STATUS_PLANNED,
+  STATUS_POSTED,
   type CompanyCashDirection,
   type CompanyCashStatus,
 } from '../finance/company-cash-enums';
@@ -127,7 +130,7 @@ export function createMicroErpReadModel(db: Database) {
       .from(companyCashLedger)
       .where(
         and(
-          eq(companyCashLedger.status, COMPANY_CASH_STATUSES[1]),
+          eq(companyCashLedger.status, STATUS_POSTED),
           gte(companyCashLedger.effectiveAt, periodStart),
           lte(companyCashLedger.effectiveAt, periodEnd),
         ),
@@ -141,8 +144,8 @@ export function createMicroErpReadModel(db: Database) {
       .from(companyCashLedger)
       .where(
         and(
-          ne(companyCashLedger.status, COMPANY_CASH_STATUSES[2]),
-          eq(companyCashLedger.status, COMPANY_CASH_STATUSES[0]),
+          ne(companyCashLedger.status, STATUS_CANCELED),
+          eq(companyCashLedger.status, STATUS_PLANNED),
           gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
           lte(companyCashLedger.dueAt, periodEnd),
         ),

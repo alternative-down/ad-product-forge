@@ -27,6 +27,13 @@ export const COMPANY_CASH_STATUSES = ['planned', 'posted', 'canceled'] as const;
 export type CompanyCashStatus = (typeof COMPANY_CASH_STATUSES)[number];
 
 /**
+ * Named aliases for the magic-index sites in micro-erp/read-model.ts.
+ * Eliminates the L120/L130/L144/L145 legibility debt where callers had
+ * to count array indices to know which enum value they meant.
+ */
+export const [STATUS_PLANNED, STATUS_POSTED, STATUS_CANCELED] = COMPANY_CASH_STATUSES;
+
+/**
  * Type guard: narrows `string` to `CompanyCashDirection` after runtime validation.
  * Replaces the unsafe `as 'in' | 'out'` cast in micro-erp/read-model.ts L120.
  */

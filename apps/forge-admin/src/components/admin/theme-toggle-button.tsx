@@ -1,8 +1,9 @@
 import { Moon, Sun } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import type { ThemeMode } from '@/types';
 
-export function ThemeToggleButton(input: { theme: 'light' | 'dark'; onToggle(): void }) {
+export function ThemeToggleButton(input: { theme: ThemeMode; onToggle(): void }) {
   return (
     <Button
       type="button"

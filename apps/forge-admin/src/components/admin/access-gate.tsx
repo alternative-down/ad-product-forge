@@ -3,12 +3,13 @@ import { useState } from 'react';
 
 import { AdminButton, AdminInput } from '@/components/admin';
 import { ThemeToggleButton } from '@/components/admin/theme-toggle-button';
+import type { ThemeMode } from '@/types';
 
 export function AccessGate(input: {
   initialValue: string;
   warningMessage?: string | null;
   submitting?: boolean;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
   onThemeToggle(): void;
   onSave(value: string): void | Promise<void>;
 }) {
