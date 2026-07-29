@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
-import { XIcon } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin/forms/admin-button';
 import { AdminScrollArea } from '@/components/admin/system/admin-scroll-area';
+import { CloseIcon } from '@/components/ui/close-button';
 import {
   DialogClose,
   DialogContent,
@@ -62,8 +62,7 @@ export function AdminDialogHeader({
           />
         }
       >
-        <XIcon />
-        <span className="sr-only">Fechar</span>
+        <CloseIcon label="Fechar" />
       </DialogClose>
     </DialogHeader>
   );
@@ -73,6 +72,14 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
   return <DialogTitle className={cn('text-xl', className)} {...props} />;
 }
 
+/**
+ * AdminDialogBody intentionally uses raw ComponentProps<'div'> rather
+ * than a Dialog primitive because the body height calculation
+ * requires DOM-level ResizeObserver access. If a DialogBody primitive
+ * is added in the future, this can be migrated (L#NN-50 #34 follow-up).
+ *
+ * Related: #6157 type-asymmetry documentation.
+ */
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
@@ -87,14 +94,22 @@ export function AdminDialogBody({ className, children, ...props }: ComponentProp
         return;
       }
 
+      // L#NN-50 #34 — named alias for the magic 11/2 in #6156
+      // Sum of AdminDialogHeader + AdminDialogFooter vertical chrome
+      // (px-4 padding + content + py-3 padding + py-4 padding + content + py-4 padding).
+      // Update when AdminDialogHeader/Footer padding or margin changes.
+      const HEADER_FOOTER_CHROME_REM = 11;
+      // Padding buffer (2rem) below content inside AdminScrollArea.
+      const PADDING_REM = 2;
+
       const rootFontSize =
         Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const viewportHeight = window.innerHeight;
       const maxBodyHeight = window.matchMedia('(min-width: 640px)').matches
-        ? viewportHeight * 0.8 - rootFontSize * 11
-        : viewportHeight - rootFontSize * 11;
+        ? viewportHeight * 0.8 - rootFontSize * HEADER_FOOTER_CHROME_REM
+        : viewportHeight - rootFontSize * HEADER_FOOTER_CHROME_REM;
       const nextHeight = Math.min(
-        contentRef.current.scrollHeight + rootFontSize * 2,
+        contentRef.current.scrollHeight + rootFontSize * PADDING_REM,
         maxBodyHeight,
       );
 
