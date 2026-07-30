@@ -86,17 +86,38 @@ export function verifyWebhookSignature(
  */
 export type ParsePayloadResult =
   | { ok: true; payload: Record<string, unknown> }
-  | { ok: false };
+  | { ok: false; error: Error; reason: ParsePayloadFailureReason };
+
+/**
+ * Categorizes why parseWebhookPayload rejected the input.
+ * Useful for differential diagnosis in logs/forgeDebug.
+ */
+export type ParsePayloadFailureReason =
+  /** bodyText was non-empty but failed JSON.parse (e.g. truncated, wrong encoding) */
+  | 'invalid-json'
+  /** parsed JSON but the top-level value was not a non-null, non-array object */
+  | 'not-object';
 
 export function parseWebhookPayload(bodyText: string): ParsePayloadResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bodyText);
-  } catch {
-    return { ok: false };
+  } catch (err) {
+    // Surface the real JSON.parse error so callers can distinguish
+    // truncated bodies, encoding mismatches, etc. (was discarded by the
+    // original catch {} — see issue #6161).
+    return {
+      ok: false,
+      error: err instanceof Error ? err : new Error(String(err)),
+      reason: 'invalid-json',
+    };
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return { ok: false };
+    return {
+      ok: false,
+      error: new Error('payload must be a non-null, non-array object'),
+      reason: 'not-object',
+    };
   }
   return { ok: true, payload: parsed as Record<string, unknown> };
 }

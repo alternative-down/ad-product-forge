@@ -88,10 +88,13 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
 
     const parsed = parseWebhookPayload(request.bodyText);
     if (!parsed.ok) {
+      // Issue #6161: pass the REAL error from parseWebhookPayload instead
+      // of synthesizing a fake Error. The previous code discarded the
+      // actual diagnostic context (e.g., position of syntax error).
       forgeDebug({
         scope: 'webhooks-handler',
         level: 'error',
-        message: 'parseWebhookPayload failed: ' + errorMsg(new Error('invalid JSON')),
+        message: 'parseWebhookPayload failed (' + parsed.reason + '): ' + errorMsg(parsed.error),
       });
       return { status: 400, body: 'Invalid JSON payload' };
     }

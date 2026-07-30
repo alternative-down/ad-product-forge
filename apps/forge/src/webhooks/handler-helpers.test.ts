@@ -149,41 +149,77 @@ describe('parseWebhookPayload', () => {
     expect(result).toEqual({ ok: true, payload: { a: { b: 1 } } });
   });
 
-  it('returns ok: false for invalid JSON', () => {
-    expect(parseWebhookPayload('not json')).toEqual({ ok: false });
+  it('returns ok: false + reason=invalid-json for invalid JSON', () => {
+    const result = parseWebhookPayload('not json');
+    expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('invalid-json');
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error.message.length).toBeGreaterThan(0);
+    }
   });
 
-  it('returns ok: false for empty string', () => {
-    expect(parseWebhookPayload('')).toEqual({ ok: false });
+  it('returns ok: false + reason=invalid-json for empty string', () => {
+    const result = parseWebhookPayload('');
+    expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('invalid-json');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for trailing garbage', () => {
-    expect(parseWebhookPayload('{"a":1}garbage')).toEqual({ ok: false });
+  it('returns ok: false + reason=invalid-json for trailing garbage', () => {
+    const result = parseWebhookPayload('{"a":1}garbage');
+    expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('invalid-json');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for JSON arrays (#5964: must be non-array object)', () => {
+  it('returns ok: false + reason=not-object for JSON arrays (#5964)', () => {
     const result = parseWebhookPayload('[1,2,3]');
     expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('not-object');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for JSON null (#5964: must be non-null object)', () => {
+  it('returns ok: false + reason=not-object for JSON null (#5964)', () => {
     const result = parseWebhookPayload('null');
     expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('not-object');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for JSON number (#5964: must be non-number top-level)', () => {
+  it('returns ok: false + reason=not-object for JSON number (#5964)', () => {
     const result = parseWebhookPayload('42');
     expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('not-object');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for JSON string (#5964: must be non-string top-level)', () => {
+  it('returns ok: false + reason=not-object for JSON string (#5964)', () => {
     const result = parseWebhookPayload('"hello"');
     expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('not-object');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 
-  it('returns ok: false for JSON boolean (#5964: must be non-boolean top-level)', () => {
+  it('returns ok: false + reason=not-object for JSON boolean (#5964)', () => {
     const result = parseWebhookPayload('true');
     expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.reason).toBe('not-object');
+      expect(result.error).toBeInstanceOf(Error);
+    }
   });
 });
 
