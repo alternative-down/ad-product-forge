@@ -36,6 +36,18 @@ export type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | Http
 
 type RouteKey = `${string} ${string}`;
 
+/**
+ * Builds a RouteKey from an HTTP method and URL path.
+ *
+ * The `as RouteKey` cast is centralized here at the boundary between a
+ * template-string concatenation and the constrained `RouteKey` template
+ * literal type (L#NN-50 #18 v2 cast-CENTRALIZATION). All internal callers
+ * receive typed `RouteKey` values; no other site needs to cast.
+ */
+export function buildRouteKey(method: string, path: string): RouteKey {
+  return `${method} ${path}` as RouteKey;
+}
+
 const CORS_METHODS = 'GET,POST,PATCH,DELETE,OPTIONS';
 const CORS_ALLOWED_HEADERS = 'content-type,x-forge-admin-api-key';
 const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
@@ -197,7 +209,7 @@ export function createForgeHttpServer(
       return;
     }
 
-    const key = `${req.method.toUpperCase()} ${url.pathname}` as RouteKey;
+    const key = buildRouteKey(req.method.toUpperCase(), url.pathname);
     const handler = routes.get(key);
 
     if (!handler) {
@@ -330,7 +342,7 @@ export function createForgeHttpServer(
     path: string;
     handler: HttpHandler;
   }) {
-    const key = `${input.method} ${input.path}` as RouteKey;
+    const key = buildRouteKey(input.method, input.path);
     routes.set(key, input.handler);
 
     return () => {
