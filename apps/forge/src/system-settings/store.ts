@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { withDbErrorLogging } from '../database/error-logging';
 
 import type { Database } from '../database/client';
+import type { SystemSettings } from '../database/schema-config';
 import { systemSettings } from '../database/schema';
 
 const SYSTEM_SETTINGS_ID = 'global';
@@ -62,8 +63,8 @@ function resolveRecallSearchMode(
  * every field. Boolean columns (stored as 0/1 integers) are normalised to
  * booleans.
  */
-function mapRow(row: any | null): SystemSettingsValue {
-  if (row === null) {
+function mapRow(row: SystemSettings | null | undefined): SystemSettingsValue {
+  if (row == null) {
     return { ...DEFAULTS, updatedAt: null, createdAt: null };
   }
 
