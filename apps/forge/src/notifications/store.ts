@@ -58,7 +58,6 @@ export function createAgentNotificationStore(db: Database) {
       scope: 'notifications-store',
       op: 'createNotification',
       verb: 'write',
-      mode: 'return-null',
       context: { runtimeId: input.agentId, id: notification.id },
       fn: async () => {
         await db.insert(agentNotifications).values(notification);
@@ -80,7 +79,6 @@ export function createAgentNotificationStore(db: Database) {
       scope: 'notifications-store',
       op: 'listNotifications',
       verb: 'read',
-      mode: 'return-empty-array',
       context: { runtimeId: input.agentId, limit: input.limit, unreadOnly: input.unreadOnly },
       fn: () =>
         db.query.agentNotifications.findMany({
@@ -148,7 +146,6 @@ export function createAgentNotificationStore(db: Database) {
       scope: 'notifications-store',
       op: 'getNotification',
       verb: 'read',
-      mode: 'return-null',
       context: { runtimeId: agentId, notificationId },
       fn: () =>
         db.query.agentNotifications.findFirst({

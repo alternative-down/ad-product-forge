@@ -45,22 +45,46 @@
  * by scanning all `*store.ts` files and failing if any of them reverts to
  * Format B (`message` containing `errorMsg(err)`).
  *
+ * ─── Silent-failure removal (issue #5984) ─────────────────────────────────
+ *
+ * Previously the helper accepted a `mode: 'throw' | 'return-null' |
+ * 'return-empty-array'` parameter that allowed call-sites to silently
+ * swallow DB errors and return a placeholder value. This was the root
+ * cause of the silent-failure cluster (#5984 + #5975-#5978): read paths
+ * that caught DB errors and returned `null`/`[]` made it impossible for
+ * callers to distinguish "no record" from "DB is down".
+ *
+ * As of #5984, the helper ALWAYS re-throws after logging. Call-sites that
+ * previously used `mode: 'return-null'` / `'return-empty-array'` must rely
+ * on the underlying query's natural no-result contract (e.g., findFirst
+ * returning undefined for "not found") and let DB errors propagate.
+ *
+ *   - For reads that should be silent on "not found" but loud on DB error,
+ *     keep the type signature `Promise<T | null>` and only return null when
+ *     the underlying query genuinely returned no row.
+ *   - For reads that must guarantee a non-null row, use `findOrThrow` from
+ *     `./find-or-throw` (issue #5469).
+ *
  * ─── Related issues ───────────────────────────────────────────────────────
  *
  *   - #5485: this format spec (documentation + guard test)
  *   - #5483: PR that introduced the helper and migrated webhooks/store.ts
- *   - #5468: broader rollout of `withDbErrorLogging` to 7 store files
- *            (BLOCKED on this spec being documented first)
+ *   - #5469: findOrThrow companion helper for "findFirst + log + throw"
+ *   - #5984: SAF bundle — removed silent-failure modes from this helper
+ *   - #5975/#5976/#5977/#5978: cluster of silent-failures this PR closed
  */
 
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 /**
- * Wraps a DB operation with consistent error logging.
+ * Wraps a DB operation with consistent error logging and re-throws on failure.
  *
- * On success: returns the operation's result.
- * On failure: logs via forgeDebug (matching the previous try/catch format) and re-throws.
+ * Behavior:
+ *   - On success: returns the operation's result unchanged.
+ *   - On failure: logs via forgeDebug (Format A) and re-throws the original
+ *     error. The error is NOT swallowed, NOT converted to null, NOT converted
+ *     to an empty array — DB errors MUST propagate to the caller.
  *
  * The log message format is `${op} DB ${verb} failed` to match the legacy
  * inline pattern. Log consumers should be unchanged.
@@ -71,7 +95,7 @@ import { forgeDebug } from '@forge-runtime/core';
  * @param params.context - structured fields added to the log context
  * @param params.fn - the async DB operation to run
  * @returns the result of params.fn()
- * @throws whatever params.fn() throws, after logging
+ * @throws whatever params.fn() throws, after logging via forgeDebug
  *
  * @example
  *   await withDbErrorLogging({
@@ -82,30 +106,13 @@ import { forgeDebug } from '@forge-runtime/core';
  *     fn: () => db.insert(webhookRoutes).values(route),
  *   });
  */
-/**
- * Error handling mode for the helper.
- *
- * - 'throw' (default): re-throw the original error after logging. Use for
- *   write operations where the caller must know about failures.
- * - 'return-null': return null after logging. Use for read operations
- *   that expect a single result (findFirst-style).
- * - 'return-empty-array': return [] after logging. Use for read operations
- *   that expect a list (findMany-style).
- *
- * Issue #5468: Generalize the helper to support read-vs-write + return-vs-throw
- * variations across 7 store files (notifications, ltm, capabilities, etc.).
- */
-export type ErrorLoggingMode = 'throw' | 'return-null' | 'return-empty-array';
-
 export async function withDbErrorLogging<T>(params: {
   scope: string;
   op: string;
   verb: 'read' | 'write';
   context?: Record<string, unknown>;
-  mode?: ErrorLoggingMode;
   fn: () => T | PromiseLike<T>;
 }): Promise<T> {
-  const mode = params.mode ?? 'throw';
   try {
     return await params.fn();
   } catch (err) {
@@ -115,8 +122,6 @@ export async function withDbErrorLogging<T>(params: {
       message: `${params.op} DB ${params.verb} failed`,
       context: { ...(params.context ?? {}), error: errorMsg(err) },
     });
-    if (mode === 'return-null') return null as T;
-    if (mode === 'return-empty-array') return [] as unknown as T;
     throw err;
   }
 }
