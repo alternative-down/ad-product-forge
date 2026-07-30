@@ -40,13 +40,10 @@
  *   - docs/quality/casts-inventory.yaml (raw audit data)
  *   - docs/quality/5785-cast-inventory.yaml (categorical buckets)
  */
-
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-
 const FORGE_SRC = import.meta.dirname;
-
 // Comprehensive current-state allowlist. Each file is tracked for Phase 2
 // cleanup. The tripwire catches NEW additions (future regressions).
 //
@@ -80,13 +77,11 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['communication/internal-chat-accounts.ts', 1],
   ['communication/internal-chat-participants.ts', 0],
   ['communication/internal-chat-service.ts', 1],
-  ['database/error-logging.ts', 1],
   // #6108 L#NN-50 #33 (D59): cast removed — file no longer needs allowlist entry.
   ['github/apps.ts', 1],
   ['http/server.ts', 1],
   ['notifications/store.ts', 1],
 ]);
-
 function findTsFiles(dir: string): string[] {
   const results: string[] = [];
   let entries: string[];
@@ -112,7 +107,6 @@ function findTsFiles(dir: string): string[] {
   }
   return results;
 }
-
 function countMatches(content: string, pattern: RegExp): number {
   // L#NN-26 v3: strip comments BEFORE regex matching.
   const codeOnly = content
@@ -120,16 +114,12 @@ function countMatches(content: string, pattern: RegExp): number {
     .replace(/\/\/.*$/gm, '');
   return (codeOnly.match(pattern) ?? []).length;
 }
-
 const AS_UNKNOWN_AS_PATTERN = /\bas\s+unknown\s+as\b/g;
-
 describe('L#NN-50 #11 tripwire — no-as-unknown-as-pattern', () => {
   const tsFiles = findTsFiles(FORGE_SRC);
-
   it('finds at least one TS file to scan', () => {
     expect(tsFiles.length).toBeGreaterThan(0);
   });
-
   it('tripwire machinery detects as-unknown-as (sanity check)', () => {
     const fixture = `
       const a = x as unknown as Foo;
@@ -137,7 +127,6 @@ describe('L#NN-50 #11 tripwire — no-as-unknown-as-pattern', () => {
     `;
     expect(countMatches(fixture, AS_UNKNOWN_AS_PATTERN)).toBe(2);
   });
-
   it('every `as unknown as` site is in the allowlist', () => {
     const violations: { file: string; count: number }[] = [];
     for (const file of tsFiles) {
@@ -160,7 +149,6 @@ describe('L#NN-50 #11 tripwire — no-as-unknown-as-pattern', () => {
     }
     expect(violations).toHaveLength(0);
   });
-
   it('allowlist counts match current scan (no drift)', () => {
     // If a file's count drops below the allowlist entry, the entry can be
     // removed. If count exceeds, more sites were added without approval.

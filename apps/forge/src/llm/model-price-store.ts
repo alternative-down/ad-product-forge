@@ -10,7 +10,6 @@ export function createLlmModelPriceStore(db: Database) {
       op: 'listPrices',
       verb: 'read',
       context: {},
-      mode: 'return-empty-array',
       fn: async () => {
         const rows = await db.query.llmModelPrices.findMany({
           orderBy: (fields, { asc }) => [asc(fields.modelKey)],

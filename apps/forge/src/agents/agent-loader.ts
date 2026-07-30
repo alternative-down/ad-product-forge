@@ -142,11 +142,16 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     ),
   );
 
+  // #5978: collect all per-agent failures, surface them all (not just the first).
+  // Use Promise.allSettled so we can log AND report every failing agentId, then
+  // throw an aggregate error so callers can react to partial-failure as a unit.
+  const failures: Array<{ agentId: string; reason: unknown }> = [];
   results.forEach((result, index) => {
     const agentId = agentConfigs[index]!.id;
     if (result.status === 'fulfilled') {
       agents.set(agentId, result.value);
     } else {
+      failures.push({ agentId, reason: result.reason });
       forgeDebug({
         scope: 'agent-loader',
         level: 'error',
@@ -164,8 +169,21 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     context: {
       totalAgents: agentConfigs.length,
       loadedAgents: agents.size,
-      failedAgents: agentConfigs.length - agents.size,
+      failedAgents: failures.length,
     },
   });
+
+  // #5978: loadAgents MUST NOT silently swallow per-agent failures. If any
+  // agent failed to load, throw an aggregate error so callers can react.
+  if (failures.length > 0) {
+    const summary = failures
+      .map((f) => f.agentId + ':' + errorMsg(f.reason))
+      .join(', ');
+    throw new Error(
+      'loadAgents: ' + failures.length + ' of ' + agentConfigs.length +
+      ' agents failed to load (' + summary + ')'
+    );
+  }
+
   return agents;
 }

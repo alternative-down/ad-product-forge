@@ -126,7 +126,6 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listAgentSchedules',
       verb: 'read',
-      mode: 'return-empty-array',
       context: { agentId },
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -143,7 +142,6 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listActiveSchedules',
       verb: 'read',
-      mode: 'return-empty-array',
       context: {},
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -160,7 +158,6 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'listCreatedAgentSchedules',
       verb: 'read',
-      mode: 'return-empty-array',
       context: { creatorId, targetAgentId },
       fn: async () => {
         const rows = await db.query.agentSchedules.findMany({
@@ -183,7 +180,6 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'getAgentSchedule',
       verb: 'read',
-      mode: 'return-null',
       context: { agentId, scheduleId },
       fn: async () => {
         const row = await db.query.agentSchedules.findFirst({
@@ -208,7 +204,6 @@ export function createAgentScheduleStore(db: Database) {
       scope: 'schedules-store',
       op: 'getScheduleByKind',
       verb: 'read',
-      mode: 'return-null',
       context: { agentId, kind },
       fn: async () => {
         const row = await db.query.agentSchedules.findFirst({

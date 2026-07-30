@@ -271,7 +271,12 @@ describe('loadAgents', () => {
   });
 
   it('queries agents from the database', async () => {
-    const config = { workspaceBasePath: '/base' } as AgentLoaderConfig;
+    // #5978: loadAgents now throws on any per-agent failure. Provide a mock
+    // internalChat so loadAgent's registerAgentAccount call succeeds.
+    const config = {
+      workspaceBasePath: '/base',
+      internalChat: mockInternalChat as any,
+    } as unknown as AgentLoaderConfig;
 
     await loadAgents(mockDb, config);
 
@@ -372,7 +377,7 @@ describe('loadAgents', () => {
     expect(completeCall?.[0].context?.failedAgents).toBe(0);
   });
 
-  it('logs loading complete with failure count when some agents fail', async () => {
+  it('throws on per-agent failure (#5978 — no longer silent)', async () => {
     mockLoadAgentRuntimeData
       .mockRejectedValueOnce(new Error('agent-1-fail'))
       .mockResolvedValueOnce(mockRuntimeData);
@@ -386,8 +391,11 @@ describe('loadAgents', () => {
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
-    await loadAgents(mockDb, config);
+    await expect(loadAgents(mockDb, config)).rejects.toThrow(
+      /loadAgents: 1 of 2 agents failed to load \(agent-1:agent-1-fail\)/
+    );
 
+    // The Agent loading complete log is still emitted (with correct failure count).
     const completeCall = mockForgeDebug.mock.calls.find(
       (c) => c[0].message === 'Agent loading complete',
     );
@@ -396,7 +404,7 @@ describe('loadAgents', () => {
     expect(completeCall?.[0].context?.failedAgents).toBe(1);
   });
 
-  it('continues loading other agents when one fails', async () => {
+  it('throws on per-agent failure instead of returning partial result (#5978)', async () => {
     mockLoadAgentRuntimeData
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValueOnce(mockRuntimeData);
@@ -410,13 +418,21 @@ describe('loadAgents', () => {
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
-    const result = await loadAgents(mockDb, config);
+    // #5978: loadAgents must NOT return partial results when any agent fails.
+    // The aggregate error means callers can react as a unit instead of silently
+    // missing agents.
+    await expect(loadAgents(mockDb, config)).rejects.toThrow(/loadAgents: 1 of 2/);
 
-    expect(result.size).toBe(1);
-    expect(result.has('agent-2')).toBe(true);
+    // The per-agent error is still logged via forgeDebug before the throw.
+    const errorCall = mockForgeDebug.mock.calls.find(
+      (c) => c[0].message === 'Failed to load agent',
+    );
+    expect(errorCall?.[0].level).toBe('error');
+    expect(errorCall?.[0].agentId).toBe('agent-1');
+    expect(errorCall?.[0].context?.error).toBeDefined();
   });
 
-  it('logs error when agent loading fails', async () => {
+  it('logs error AND throws when agent loading fails (#5978)', async () => {
     mockLoadAgentRuntimeData.mockRejectedValueOnce(new Error('agent-1-error'));
     const config = {
       workspaceBasePath: '/workspace',
@@ -428,8 +444,9 @@ describe('loadAgents', () => {
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
-    await loadAgents(mockDb, config);
+    await expect(loadAgents(mockDb, config)).rejects.toThrow(/agent-1:agent-1-error/);
 
+    // Error log is emitted BEFORE the throw, for observability.
     const errorCall = mockForgeDebug.mock.calls.find(
       (c) => c[0].message === 'Failed to load agent',
     );
