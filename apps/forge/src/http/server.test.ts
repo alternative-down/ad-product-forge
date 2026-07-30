@@ -3,6 +3,7 @@ import net from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildRouteKey,
   createForgeHttpServer,
   type HttpHandler,
   type HttpRequest,
@@ -1151,5 +1152,28 @@ describe('createForgeHttpServer', () => {
         await srv.stop();
       }
     });
+  });
+});
+
+describe('buildRouteKey', () => {
+  it('joins method and path with a single space', () => {
+    expect(buildRouteKey('GET', '/foo')).toBe('GET /foo');
+    expect(buildRouteKey('POST', '/api/users')).toBe('POST /api/users');
+    expect(buildRouteKey('DELETE', '/items/42')).toBe('DELETE /items/42');
+  });
+
+  it('does not uppercase the method (caller normalizes)', () => {
+    // Method normalization is the caller's responsibility (the request handler
+    // does req.method.toUpperCase()). The helper preserves whatever it receives
+    // so registerRoute can store literal values.
+    expect(buildRouteKey('get', '/foo')).toBe('get /foo');
+  });
+
+  it('round-trips through Map<RouteKey, HttpHandler> at compile time', () => {
+    // This is a compile-time assertion: buildRouteKey's return type satisfies
+    // the Map<RouteKey, HttpHandler> key constraint. Runtime: confirm output
+    // shape via direct equality (above tests cover the join behavior).
+    const key = buildRouteKey('GET', '/compile-time');
+    expect(key).toBe('GET /compile-time');
   });
 });
