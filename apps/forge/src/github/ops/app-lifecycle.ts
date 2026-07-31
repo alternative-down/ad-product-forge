@@ -114,15 +114,15 @@ export function createAppLifecycleOps(
     };
 
     await ctx.saveCredentials(input.agentId, pendingCredentials);
-    ctx.opsRouting.registerAgentRoutes(input.agentId);
-    return ctx.opsRouting.buildProvisioning(input.agentId, pendingCredentials);
+    ctx.opsRouting!.registerAgentRoutes(input.agentId);
+    return ctx.opsRouting!.buildProvisioning(input.agentId, pendingCredentials);
   }
 
   async function getAgentProvisioning(agentId: string) {
     const existingCredentials = await credentials.getCredentials(agentId);
 
     if (existingCredentials) {
-      return ctx.opsRouting.buildProvisioning(agentId, existingCredentials);
+      return ctx.opsRouting!.buildProvisioning(agentId, existingCredentials);
     }
 
     if (!(await isConfigured())) {
@@ -166,7 +166,7 @@ export function createAppLifecycleOps(
     } satisfies GitHubAppCredentials;
 
     await ctx.saveCredentials(input.agentId, nextCredentials);
-    return ctx.opsRouting.buildProvisioning(input.agentId, nextCredentials);
+    return ctx.opsRouting!.buildProvisioning(input.agentId, nextCredentials);
   }
 
   async function loadAllAgents() {
@@ -187,7 +187,7 @@ export function createAppLifecycleOps(
         continue;
       }
 
-      ctx.opsRouting.registerAgentRoutes(providerRow.agentId);
+      ctx.opsRouting!.registerAgentRoutes(providerRow.agentId);
     }
   }
 

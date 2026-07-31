@@ -171,7 +171,7 @@ export interface OpsContext {
   normalizeGitHubAppCredentials: (raw: unknown) => GitHubAppCredentials;
   normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
 
-  opsRouting: {
+  opsRouting?: {
     buildProvisioning: (
       agentId: string,
       credentials: GitHubAppCredentials,
