@@ -2,6 +2,7 @@ import { errorMsg } from '../error-formatting';
 import { type ConversationStore, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { createAgentLongTermMemoryStore } from '../ltm/store';
+import type { LtmRecallSearchMode } from '../ltm/recall/types';
 import { createAgentLongTermMemoryRecall } from '../ltm/recall';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -28,7 +29,7 @@ export async function createAgentRuntimeMemory(input: {
   };
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   readRuntimeMemorySettings?: () => Promise<{
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallSearchMode: LtmRecallSearchMode;
     ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;

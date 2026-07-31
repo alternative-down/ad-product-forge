@@ -40,7 +40,7 @@ import {
   partitionRecallResults,
   buildNextRecallHistory,
 } from './snapshot';
-import type { RecallConfig } from './recall/types';
+import type { LtmRecallSearchMode, RecallConfig } from './recall/types';
 import {
   RecallOrchestrator,
   createRecallOrchestrator,
@@ -109,7 +109,7 @@ export class AgentLongTermMemoryRecall {
   private readonly agentWorkspacePath: string;
   private readonly workspaceEmbedder: WorkspaceEmbedderId;
   private readonly readRuntimeMemorySettings?: () => Promise<{
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallSearchMode: LtmRecallSearchMode;
     ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
@@ -142,7 +142,7 @@ export class AgentLongTermMemoryRecall {
     scoreThreshold?: number;
     documentCount?: number;
     readRuntimeMemorySettings?: () => Promise<{
-      ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+      ltmRecallSearchMode: LtmRecallSearchMode;
       ltmRecallWorkspaceTopK: number;
       ltmRecallGraphTopK: number;
       ltmRecallGraphThreshold: number;
@@ -468,7 +468,7 @@ export function createAgentLongTermMemoryRecall(input: {
   scoreThreshold?: number;
   documentCount?: number;
   readRuntimeMemorySettings?: () => Promise<{
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallSearchMode: LtmRecallSearchMode;
     ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;
