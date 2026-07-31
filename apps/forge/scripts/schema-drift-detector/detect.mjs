@@ -97,7 +97,7 @@ function parseMigrations() {
     const fileShort = file.replace(/^00\d\d_/, '');
 
     // Phase 1: CREATE TABLE (regex with global flag)
-    const tableRe = /CREATE TABLE (?:IF NOT EXISTS )?`(\w+)` \(([^;]+)\);/g;
+    const tableRe = /CREATE TABLE\s+(?:IF NOT EXISTS\s+)?`(\w+)`\s+\(([^;]+)\)\s*;/g;
     let m;
     while ((m = tableRe.exec(sql)) !== null) {
       const name = m[1];
@@ -112,7 +112,7 @@ function parseMigrations() {
     }
 
     // Phase 3: RENAME — moves __new_X to its final name
-    const renameRe = /ALTER TABLE `(\w+)` RENAME TO `(\w+)`/g;
+    const renameRe = /ALTER TABLE\s+`(\w+)`\s+RENAME TO\s+`(\w+)`/g;
     while ((m = renameRe.exec(sql)) !== null) {
       const oldName = m[1];
       const newName = m[2];
@@ -123,7 +123,7 @@ function parseMigrations() {
     }
 
     // Phase 4: ADD COLUMN — modifies existing tables
-    const alterRe = /ALTER TABLE `(\w+)` ADD COLUMN `(\w+)`/g;
+    const alterRe = /ALTER TABLE\s+`(\w+)`\s+ADD COLUMN\s+`(\w+)`/g;
     while ((m = alterRe.exec(sql)) !== null) {
       const tableName = m[1];
       const colName = m[2];
