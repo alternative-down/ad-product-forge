@@ -1,3 +1,20 @@
+/**
+ * Canonical 4-value union for the LTM recall search mode.
+ *
+ * Matches the production sources of truth:
+ * - Zod schema: admin/routes/schemas/llm.ts (z.enum(['hybrid', 'vector', 'graph', 'bm25']))
+ * - Drizzle column default: database/schema-config.ts ('hybrid')
+ * - SystemSettingsValue default: system-settings/store.ts (DEFAULTS.ltmRecallSearchMode)
+ *
+ * Centralised here so that consumers (system-settings/store.ts, agents/*
+ * types, runtime/memory.ts, runtime/types.ts) all reference the same union.
+ * Previously each file duplicated the 3-value form inline, which silently
+ * dropped 'graph' from the runtime type and forced a load-bearing
+ * as typeof DEFAULTS.ltmRecallSearchMode cast in resolveRecallSearchMode
+ * to make TSC happy. See #6179.
+ */
+export type LtmRecallSearchMode = 'hybrid' | 'vector' | 'graph' | 'bm25';
+
 export type RecallConfig = {
   searchMode: 'hybrid' | 'vector' | 'bm25';
   workspaceTopK: number;
@@ -20,7 +37,7 @@ export type RecallConfig = {
  * updating both call sites — see #5484.
  */
 export type LtmRecallRuntimeSettings = {
-  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallSearchMode: LtmRecallSearchMode;
   ltmRecallWorkspaceTopK: number;
   ltmRecallGraphTopK: number;
   ltmRecallGraphThreshold: number;

@@ -82,8 +82,16 @@ export class RecallOrchestrator {
       throw new Error('LTM recall requires runtime memory settings');
     }
 
+    // Narrow 4-value LtmRecallSearchMode to the 3-value shape accepted by
+    // the underlying retrievalWorkspace.search (forge-runtime-core
+    // SearchMode = 'hybrid' | 'vector' | 'bm25'). 'graph' falls back to
+    // 'hybrid' because graph-only recall is not yet wired through
+    // searchWorkspace. See #6179.
+    const ltmMode = runtimeSettings.ltmRecallSearchMode;
+    const orchestratorMode = ltmMode === 'graph' ? 'hybrid' : ltmMode;
+
     return {
-      searchMode: runtimeSettings.ltmRecallSearchMode,
+      searchMode: orchestratorMode,
       workspaceTopK: runtimeSettings.ltmRecallWorkspaceTopK,
       graphTopK: runtimeSettings.ltmRecallGraphTopK,
       graphThreshold: runtimeSettings.ltmRecallGraphThreshold,

@@ -12,6 +12,7 @@ import type {
   WorkspaceSkillsConfig,
 } from '../../database/schema';
 import type { AgentContractStore } from '../agent-contract-store';
+import type { LtmRecallSearchMode } from '../ltm/recall/types';
 import type {
   AgentLongTermMemoryRecallDebugSearchInput,
   AgentLongTermMemoryRecallDebugSearchResult,
@@ -71,7 +72,7 @@ export type CreateAgentOptions = {
     checkpointedOmObservationReflectionBatchTokens: number;
     checkpointedOmObservationSupportTokens: number;
     checkpointedOmReflectionSupportTokens: number;
-    ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+    ltmRecallSearchMode: LtmRecallSearchMode;
     ltmRecallWorkspaceTopK: number;
     ltmRecallGraphTopK: number;
     ltmRecallGraphThreshold: number;

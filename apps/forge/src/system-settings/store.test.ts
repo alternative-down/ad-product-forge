@@ -153,6 +153,49 @@ describe('createSystemSettingsStore', () => {
       expect(settings.ltmRecallSearchMode).toBe('vector');
     });
 
+    // #6179 — LtmRecallSearchMode widening: 'graph' is a valid mode in the
+    // canonical 4-value union (Zod schema in admin/routes/schemas/llm.ts),
+    // so resolveRecallSearchMode must pass it through without fallback.
+    test('resolves "graph" ltmRecallSearchMode (LtmRecallSearchMode widening, #6179)', async () => {
+      mockDb.query.systemSettings.findFirst.mockResolvedValue({
+        ...mockRow,
+        ltmRecallSearchMode: 'graph',
+      });
+      const store = createSystemSettingsStore(mockDb as any);
+      const settings = await store.getSettings();
+      expect(settings.ltmRecallSearchMode).toBe('graph');
+    });
+
+    test('resolves "bm25" ltmRecallSearchMode (LtmRecallSearchMode widening, #6179)', async () => {
+      mockDb.query.systemSettings.findFirst.mockResolvedValue({
+        ...mockRow,
+        ltmRecallSearchMode: 'bm25',
+      });
+      const store = createSystemSettingsStore(mockDb as any);
+      const settings = await store.getSettings();
+      expect(settings.ltmRecallSearchMode).toBe('bm25');
+    });
+
+    test('falls back to "hybrid" for unrecognised ltmRecallSearchMode (#6179)', async () => {
+      mockDb.query.systemSettings.findFirst.mockResolvedValue({
+        ...mockRow,
+        ltmRecallSearchMode: 'unknown',
+      });
+      const store = createSystemSettingsStore(mockDb as any);
+      const settings = await store.getSettings();
+      expect(settings.ltmRecallSearchMode).toBe('hybrid');
+    });
+
+    test('falls back to "hybrid" when ltmRecallSearchMode is null (#6179)', async () => {
+      mockDb.query.systemSettings.findFirst.mockResolvedValue({
+        ...mockRow,
+        ltmRecallSearchMode: null,
+      });
+      const store = createSystemSettingsStore(mockDb as any);
+      const settings = await store.getSettings();
+      expect(settings.ltmRecallSearchMode).toBe('hybrid');
+    });
+
     test('calls findFirst on systemSettings query', async () => {
       mockDb.query.systemSettings.findFirst.mockResolvedValue(null);
       const store = createSystemSettingsStore(mockDb as any);

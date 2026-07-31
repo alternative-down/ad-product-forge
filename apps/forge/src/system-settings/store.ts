@@ -4,6 +4,7 @@ import { withDbErrorLogging } from '../database/error-logging';
 import type { Database } from '../database/client';
 import type { SystemSettings } from '../database/schema-config';
 import { systemSettings } from '../database/schema';
+import type { LtmRecallSearchMode } from '../agents/ltm/recall/types';
 
 const SYSTEM_SETTINGS_ID = 'global';
 
@@ -26,7 +27,7 @@ const DEFAULTS = {
   checkpointedOmObservationReflectionBatchTokens: 5_000,
   checkpointedOmObservationSupportTokens: 2_000,
   checkpointedOmReflectionSupportTokens: 2_000,
-  ltmRecallSearchMode: 'hybrid' as const,
+  ltmRecallSearchMode: 'hybrid' as LtmRecallSearchMode,
   ltmRecallWorkspaceTopK: 3,
   ltmRecallGraphTopK: 3,
   ltmRecallGraphThreshold: 0.7,
@@ -52,9 +53,14 @@ function toBool(value: number | null | undefined): boolean {
 /** Normalises the LTM recall search mode. */
 function resolveRecallSearchMode(
   value: string | null | undefined,
-): typeof DEFAULTS.ltmRecallSearchMode {
+): LtmRecallSearchMode {
+  // The if-narrow produces 'vector' | 'graph' | 'bm25', which is now
+  // assignable to LtmRecallSearchMode (4-value union). Previously this
+  // required a load-bearing `as typeof DEFAULTS.ltmRecallSearchMode`
+  // cast because DEFAULTS.ltmRecallSearchMode was typed as the literal
+  // 'hybrid' (see #6179). The cast is removed; the if-narrow is sound.
   if (value === 'vector' || value === 'graph' || value === 'bm25')
-    return value as typeof DEFAULTS.ltmRecallSearchMode;
+    return value;
   return 'hybrid';
 }
 
