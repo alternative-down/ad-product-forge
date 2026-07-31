@@ -17,12 +17,12 @@ export interface AppProvisioningOps {
   createAgentApp: (input: {
     agentId: string;
     agentName: string;
-  }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
+  }) => Promise<ReturnType<NonNullable<OpsContext['opsRouting']>['buildProvisioning']>>;
   getAgentProvisioning: (agentId: string) => Promise<GitHubAppProvisioning | null>;
   updateAgentManifestConfig: (input: {
     agentId: string;
     manifestConfig: GitHubAppCredentials['manifestConfig'];
-  }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
+  }) => Promise<ReturnType<NonNullable<OpsContext['opsRouting']>['buildProvisioning']>>;
   loadAllAgents: () => Promise<Array<{ agentId: string; credentials: GitHubAppCredentials }>>;
   unloadAgent: (agentId: string) => void;
   deleteAgentApp: (agentId: string) => Promise<void>;
@@ -69,8 +69,8 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         createdAt: Date.now(),
       };
       await ctx.saveCredentials(input.agentId, pendingCredentials);
-      ctx.opsRouting.registerAgentRoutes(input.agentId);
-      return ctx.opsRouting.buildProvisioning(input.agentId, pendingCredentials);
+      ctx.opsRouting!.registerAgentRoutes(input.agentId);
+      return ctx.opsRouting!.buildProvisioning(input.agentId, pendingCredentials);
     } catch (err) {
       forgeDebug({
         scope: 'github-apps',
@@ -86,7 +86,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     const credentials = await ctx.getCredentials(agentId);
     if (!credentials) {
       if (await isConfigured()) {
-        return ctx.opsRouting.buildProvisioning(agentId, {
+        return ctx.opsRouting!.buildProvisioning(agentId, {
           status: 'pending',
           state: ctx.nanoid(16),
           appName: '',
@@ -96,7 +96,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       }
       return null;
     }
-    return ctx.opsRouting.buildProvisioning(agentId, credentials);
+    return ctx.opsRouting!.buildProvisioning(agentId, credentials);
   }
 
   async function updateAgentManifestConfig(input: {
@@ -119,7 +119,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         manifestConfig: ctx.normalizeManifestConfig(input.manifestConfig),
       };
       await ctx.saveCredentials(input.agentId, updated);
-      return ctx.opsRouting.buildProvisioning(input.agentId, updated);
+      return ctx.opsRouting!.buildProvisioning(input.agentId, updated);
     } catch (err) {
       forgeDebug({
         scope: 'github-apps',
@@ -223,7 +223,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     unloadAgent,
     deleteAgentApp,
     buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) =>
-      ctx.opsRouting.buildProvisioning(agentId, credentials),
+      ctx.opsRouting!.buildProvisioning(agentId, credentials),
     getCredentials: ctx.getCredentials,
     getActiveCredentials: ctx.getActiveCredentials,
     saveCredentials: ctx.saveCredentials,

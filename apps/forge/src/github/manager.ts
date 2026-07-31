@@ -175,7 +175,6 @@ export function createGitHubAppManager(config: {
       ),
     normalizeManifestConfig: (r) =>
       normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]),
-    opsRouting: null as unknown as ReturnType<typeof createRoutingOps>,
   };
 
   // ── Build credentials and github-app ops (no deps) ─────────────────────────
@@ -209,7 +208,8 @@ export function createGitHubAppManager(config: {
   opsCtx.getDefaultOwner = appLifecycle.getDefaultOwner;
 
   // ── Build other ops (depend on opsCtx.getInstallationOctokit etc.) ─────────
-  opsCtx.opsRouting = createRoutingOps(opsCtx as unknown as OpsContext);
+  opsCtx.opsRouting = createRoutingOps(opsCtx);
+  if (opsCtx.opsRouting == null) throw new Error('opsRouting not initialized');
   const opsRepos = createReposOps(opsCtx);
   const opsPullRequests = createPullRequestsOps(opsCtx);
   const opsIssues = createIssuesOps(opsCtx);
