@@ -13,9 +13,17 @@
  * - declaration files (.d.ts)
  */
 import { execSync } from 'node:child_process';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const REPO_ROOT = process.cwd();
+// Per #5835: vitest runs from `apps/forge/` cwd (turbo runs vitest per-workspace).
+// Using `process.cwd()` here is fragile — it works only when the test runs from the
+// repo root, and silently false-passes when run from the package cwd (because
+// `apps/forge/src` is then a relative path that doesn't resolve).
+//
+// Compute SEARCH_ROOT as an absolute path resolved from THIS file's directory
+// (import.meta.dirname), so the test is cwd-independent.
+const SEARCH_ROOT = join(import.meta.dirname, '..', '..');
 
 /**
  * Returns lines where a *_TIMEOUT_MS / *_INTERVAL_MS / *_DELAY_MS / *_TTL_MS const
@@ -26,8 +34,8 @@ const REPO_ROOT = process.cwd();
  */
 function findPureHardcodedMsConsts(): string {
   // Note: regex pattern is single-quoted to prevent shell interpretation of () | []
-  const cmd = `grep -rEn '(TIMEOUT|INTERVAL|DELAY|TTL)_MS[[:space:]]*=[[:space:]]*[0-9][0-9_]*[[:space:]]*[;),}]' apps/forge/src --include='*.ts' 2>/dev/null | grep -v 'time-constants.ts' | grep -v '.test.ts' | grep -v '.d.ts' || true`;
-  return execSync(cmd, { encoding: 'utf-8', cwd: REPO_ROOT }).trim();
+  const cmd = `grep -rEn '(TIMEOUT|INTERVAL|DELAY|TTL)_MS[[:space:]]*=[[:space:]]*[0-9][0-9_]*[[:space:]]*[;),}]' ${SEARCH_ROOT} --include='*.ts' 2>/dev/null | grep -v 'time-constants.ts' | grep -v '.test.ts' | grep -v '.d.ts' || true`;
+  return execSync(cmd, { encoding: 'utf-8' }).trim();
 }
 
 describe('L#NN-50 family #5: no hardcoded ms in named timeout consts', () => {
