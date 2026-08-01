@@ -47,7 +47,7 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P2 cleanup targets
   ['agents/create-forge-agent.ts', 5],
   // Phase 2 P3 cleanup targets (single-site files)
-  ['agents/hiring-requests-handler.ts', 2],
+  ['agents/hiring-requests-handler.ts', 0], // CLEARED #6199, was 2 sites (L166-L167 'as never' on Drizzle columns)
   ['agents/internal-agent-registry.ts', 2],
   ['forge-bootstrap.ts', 2],
   ['github/ops/routing.ts', 2],
