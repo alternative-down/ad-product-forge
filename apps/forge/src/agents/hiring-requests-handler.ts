@@ -97,6 +97,10 @@ function _getLastAssistantText(messages: NativeToolLoopMessage[]): string | null
 }
 
 function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
+  // L#NN-50 #36: legitimate DTE+R at AI SDK message part boundary. The NativeToolLoopMessage
+  // content array element type is a union where each variant has a discriminating 'type'
+  // field; we narrow inline via structural casts to read 'type' and 'text' fields. This
+  // pattern is intentional and NOT a workaround for upstream type erasure.
   return messages.map((msg, i) => {
     let hasToolCalls = false;
     let textLength = 0;
@@ -156,15 +160,12 @@ export async function generateHiredAgentInstructions(
   const companyCash = createCompanyCashLedger(db);
   const existingRoles = await db.query.agentRoles.findMany();
   const existingRoleNamesById = new Map(
-    existingRoles.map((role) => [
-      String((role as { id: unknown }).id),
-      String((role as { name: unknown }).name),
-    ]),
+    existingRoles.map((role) => [String(role.id), role.name]),
   );
   const existingAgents = await db.query.agents.findMany({
     columns: {
-      name: true as never,
-      roleId: true as never,
+      name: true,
+      roleId: true,
     },
     orderBy: (fields, { asc }) => [asc(fields.name)],
   });
@@ -175,12 +176,11 @@ export async function generateHiredAgentInstructions(
     ...input,
     companyName: companySettings.companyName,
     companyContext: companySettings.companyContext,
-    existingAgents: existingAgents.map((agent: object) => ({
-      name: (agent as { name: unknown }).name as string,
+    existingAgents: existingAgents.map((agent) => ({
+      name: agent.name,
       roleName:
-        (agent as { roleId: unknown }).roleId !== null &&
-        (agent as { roleId: unknown }).roleId !== undefined
-          ? (existingRoleNamesById.get(String((agent as { roleId: unknown }).roleId)) ?? null)
+        agent.roleId !== null && agent.roleId !== undefined
+          ? (existingRoleNamesById.get(String(agent.roleId)) ?? null)
           : null,
     })),
   });
@@ -349,9 +349,7 @@ export async function generateHiredAgentInstructions(
 
           if (
             currentAgents.some(
-              (currentAgent: object) =>
-                normalizeAgentName((currentAgent as { name: unknown }).name as string) ===
-                normalizedAgentName,
+              (currentAgent) => normalizeAgentName(currentAgent.name) === normalizedAgentName,
             ) === true
           ) {
             return {
