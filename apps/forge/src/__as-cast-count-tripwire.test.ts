@@ -19,7 +19,7 @@
  * Currently exceeds (tracked for Phase 2 cleanup):
  *   - apps/forge/src/admin/routes.ts (49 casts, threshold: 50)
  *   - apps/forge/src/communication/internal-chat-service.ts (38 casts, threshold: 50)
- *   - apps/forge/src/github/manager.ts (24 casts, threshold: 50)
+ *   - apps/forge/src/github/manager.ts (11 casts, threshold: 50; was 24 before #5816 Phase 2 cleanup)
  *
  * L#NN-26 v1 mutation: change default threshold to 0, tripwire should fail
  * (all files with casts). Restore to 20, tripwire passes.

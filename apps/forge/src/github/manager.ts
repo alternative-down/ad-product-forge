@@ -95,7 +95,13 @@ export function createGitHubAppManager(config: {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
 
-  // ── Build shared ops context ───────────────────────────────────────────────
+  // ── Build shared ops context ──────────────────
+  // Cast cleanup deferred to follow-up issues:
+  //   L111: forgeDebug — type drift wrapper unknown ↔ helper LogContext
+  //   L143: toIssueDetails — return-type milestone drift (IssueDetails)
+  //   L151: createAppName — 2-arg signature vs 1-arg adapter (load-bearing)
+  //   L165: isGitHubSelfEvent — same shape mismatch as L151 (load-bearing)
+  // See #5816 follow-ups: L111-deferred, L143-deferred, L151-deferred, L165-deferred.
   const opsCtx: OpsContext = {
     config,
     notifications,
@@ -108,6 +114,7 @@ export function createGitHubAppManager(config: {
     createId,
     nanoid,
     forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) =>
+      // L111: cast retained — runtime ForgeDebugOptions expects `context?: LogContext` (Record<string, unknown>) but OpsContext field uses `context?: unknown`. Cast suppresses a structural type drift; refactoring would ripple OpsContext + ops modules. See #5816 L111-deferred.
       forgeDebug(opts as Parameters<typeof forgeDebug>[0]),
     getGlobalConfig: () => Promise.reject(new Error('getGlobalConfig not initialized')),
     getDefaultOwner: () => Promise.reject(new Error('getDefaultOwner not initialized')),
@@ -139,7 +146,8 @@ export function createGitHubAppManager(config: {
     escapeHtml,
     normalizeAssignees,
     DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
-    toIssueSummary: (p) => toIssueSummary(p as Parameters<typeof toIssueSummary>[0]) as never,
+    toIssueSummary: (p) => toIssueSummary(p),
+    // L143: `as never` retained (TSC) — toIssueDetails return type has `milestone: { number; title } | null` which drifts from OpsContext IssueDetails (milestone: string | null). See #5816 L143-deferred for follow-up cleanup.
     toIssueDetails: (p) => toIssueDetails(p as Parameters<typeof toIssueDetails>[0]) as never,
     buildManifestEvents,
     buildManifestPermissions,
@@ -174,7 +182,7 @@ export function createGitHubAppManager(config: {
         r as Parameters<typeof normalizeGitHubAppCredentials>[0],
       ),
     normalizeManifestConfig: (r) =>
-      normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]),
+      normalizeManifestConfig(r),
   };
 
   // ── Build credentials and github-app ops (no deps) ─────────────────────────
