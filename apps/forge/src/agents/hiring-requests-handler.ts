@@ -18,7 +18,6 @@ import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
 import { createSystemSettingsStore } from '../system-settings/store';
-import type { RuntimeProfile } from '../llm/runtime-model';
 
 import {
   normalizeAgentName,
@@ -150,10 +149,10 @@ export async function generateHiredAgentInstructions(
   const systemSettings = createSystemSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
   const hiringRhRuntimeModel = await resolveProfileRuntimeModel(
-    defaults.hiringRhProfile as RuntimeProfile,
+    defaults.hiringRhProfile,
   );
   const companySettings = await systemSettings.getSettings();
-  const hiringRhModelKey = (defaults.hiringRhProfile as RuntimeProfile).modelKey;
+  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   const existingRoles = await db.query.agentRoles.findMany();
   const existingRoleNamesById = new Map(

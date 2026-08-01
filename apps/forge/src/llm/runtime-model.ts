@@ -6,12 +6,12 @@ import {
   wrapAnthropicPromptCacheModel,
 } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
+import type { LlmProfileRecord } from './settings-store';
 
-export type RuntimeProfile = {
-  modelKey: string;
-  baseUrl: string | null;
-  apiKey: string;
-};
+export type RuntimeProfile = Pick<
+  LlmProfileRecord,
+  'modelKey' | 'baseUrl' | 'apiKey'
+>;
 
 export async function resolveProfileRuntimeModel(
   profile: RuntimeProfile,

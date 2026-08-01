@@ -7,7 +7,6 @@ import { withDbErrorLogging } from '../database/error-logging';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
-import type { RuntimeProfile } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createCapabilityStore } from '../capabilities/store';
 import { decryptSecret } from '../encryption/crypto';
@@ -105,8 +104,8 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     capabilities.getAgentCapabilities(agent.id),
   ]);
   const [primaryRuntimeModel, omRuntimeModel] = await Promise.all([
-    resolveProfileRuntimeModel(primaryProfile as RuntimeProfile),
-    resolveProfileRuntimeModel(omProfile as RuntimeProfile),
+    resolveProfileRuntimeModel(primaryProfile),
+    resolveProfileRuntimeModel(omProfile),
   ]);
 
   const providers = await loadCommunicationProviders(providerCredentials, {
