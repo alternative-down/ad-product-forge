@@ -322,11 +322,17 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       }
     },
 
-    getSelfContact(): Promise<CommunicationProviderContact | null> {
+    // Async by interface contract (CommunicationProvider.getSelfContact).
+    // No await needed; the return value is auto-wrapped in a Promise.
+    // The polymorphic interface in packages/forge-runtime-core requires the
+    // async function shape (AsyncFunction constructor) — verified by
+    // email-account.test.ts:152-155 (failing since 2026-05-15).
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async getSelfContact(): Promise<CommunicationProviderContact | null> {
       return {
         slug: config.imap.user,
         displayName: config.imap.user,
-      } as unknown as Promise<CommunicationProviderContact | null>;
+      };
     },
 
     async listContacts(): Promise<CommunicationProviderContact[]> {
@@ -372,14 +378,24 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       const threads: CommunicationProviderConversation[] = [];
       for (const [threadKey, messages] of grouped.entries()) {
-        const _ordered = messages.sort(
+        const ordered = messages.sort(
           (left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt),
         );
+        // Map EmailMessage shape (from listRecentInboxEmails) to CommunicationProviderMessage.
+        // The EmailMessage type has threadKey/conversationName and missing provider; the
+        // polymorphic interface requires provider + standard message fields.
+        const providerMessages: CommunicationProviderMessage[] = ordered.map((m) => ({
+          ...m,
+          provider: 'email',
+        }));
         threads.push({
           targetKey: threadKey,
+          provider: 'email',
+          latestMessageAt: ordered[ordered.length - 1]?.createdAt ?? new Date(0).toISOString(),
+          unreadCount: 0,
+          messages: providerMessages,
           participants: [config.imap.user],
-          messages: [],
-        } as unknown as CommunicationProviderConversation);
+        });
       }
 
       return threads.slice(0, input.limit);
