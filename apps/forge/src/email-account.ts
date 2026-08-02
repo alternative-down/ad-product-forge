@@ -421,7 +421,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           if (parsedDateTo !== null && Date.parse(email.createdAt) > parsedDateTo) return false;
           return true;
         })
-        .slice(offset, offset + limit) as unknown as CommunicationProviderMessage[];
+        .slice(offset, offset + limit)
+        .map((email) => ({
+          ...email,
+          provider: 'email' as const,
+        }));
     },
 
     async sendMessage(input: {
