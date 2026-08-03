@@ -116,7 +116,7 @@ export function createAgentNotificationStore(db: Database) {
       return { updatedCount: 0 };
     }
     try {
-      const updated = (await db
+      const updated = await db
         .update(agentNotifications)
         .set({ readAt: Date.now(), updatedAt: Date.now() })
         .where(
@@ -125,7 +125,8 @@ export function createAgentNotificationStore(db: Database) {
             inArray(agentNotifications.id, input.notificationIds),
           ),
         )
-        .returning({ id: agentNotifications.id })) as unknown as Array<{ id: string }>;
+        .returning({ id: agentNotifications.id })
+        .all();
       return { updatedCount: updated.length };
     } catch (err) {
       // markNotificationsRead no longer silently swallows DB errors. We log

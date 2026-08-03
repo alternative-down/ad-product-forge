@@ -18,7 +18,8 @@ function createMockDb() {
             const generatedId = 'mock-id-' + Math.random().toString(36).slice(2, 8);
             const record: Record<string, unknown> = { ...values, id: generatedId };
             stored.push(record);
-            return Promise.resolve([record]);
+            // D34 L#NN-50 #36: .returning().all() pattern — returning returns a chain with .all()
+            return { all: () => Promise.resolve([record]) };
           },
         };
       },

@@ -173,7 +173,7 @@ export function createPaymentReceivablesStore(db: Database) {
               .where(eq(paymentCustomers.id, existing[0].id));
             return existing[0].id;
           }
-          const insertedRows = (await tx
+          const insertedRows = await tx
             .insert(paymentCustomers)
             .values({
               id: createId(),
@@ -184,7 +184,8 @@ export function createPaymentReceivablesStore(db: Database) {
               createdAt: now,
               updatedAt: now,
             })
-            .returning({ id: paymentCustomers.id })) as unknown as Array<{ id: string }>;
+            .returning({ id: paymentCustomers.id })
+            .all();
           const inserted = insertedRows[0];
           if (insertedRows.length === 0) {
             throw new Error(
@@ -257,7 +258,7 @@ export function createPaymentReceivablesStore(db: Database) {
             return existing[0].id;
           }
 
-          const insertedRows = (await tx
+          const insertedRows = await tx
             .insert(paymentSubscriptions)
             .values({
               id: createId(),
@@ -275,7 +276,8 @@ export function createPaymentReceivablesStore(db: Database) {
               createdAt: now,
               updatedAt: now,
             })
-            .returning({ id: paymentSubscriptions.id })) as unknown as Array<{ id: string }>;
+            .returning({ id: paymentSubscriptions.id })
+            .all();
           const inserted = insertedRows[0];
           if (insertedRows.length === 0) {
             throw new Error(
