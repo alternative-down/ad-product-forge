@@ -387,14 +387,42 @@ describe('registerAgentProviderMcpRoutes', () => {
         bodyText: JSON.stringify({
           serverId: 'srv-1',
           agentId: 'agent-42',
+          configId: 'cfg-1',
           name: 'Updated Server',
           isActive: true,
         }),
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
-      expect(parseBody(response)).toMatchObject({ success: true });
+      // D34 #6214: response contract now includes all 3 required fields directly (no ?? '' fallback).
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        agentId: 'agent-42',
+        configId: 'cfg-1',
+        serverId: 'srv-1',
+      });
       expect(db.update).toHaveBeenCalledTimes(2);
+    });
+
+    it('update returns exact agentId/configId/serverId without fallback coercion', async () => {
+      // D34 #6214: response no longer coerces undefined to empty string.
+      registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
+      const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/update');
+
+      const response = (await route!.handler({
+        bodyText: JSON.stringify({
+          serverId: 'srv-1',
+          agentId: 'agent-42',
+          configId: 'cfg-7',
+        }),
+      })) as { status: number; body: string };
+
+      const body = parseBody(response);
+      expect(body.agentId).toBe('agent-42');
+      expect(body.configId).toBe('cfg-7');
+      expect(body.serverId).toBe('srv-1');
+      expect(body.agentId).not.toBe(''); // not coerced
+      expect(body.configId).not.toBe(''); // not coerced
     });
 
     it('returns 500 on malformed JSON', async () => {
@@ -423,12 +451,31 @@ describe('registerAgentProviderMcpRoutes', () => {
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
+      // D34 #6214: response includes all 3 fields directly (no ?? '' fallback on agentId).
       expect(parseBody(response)).toMatchObject({
         success: true,
+        agentId: 'agent-42',
         configId: 'cfg-1',
         serverId: 'srv-1',
       });
       expect(db.delete).toHaveBeenCalledTimes(2);
+    });
+
+    it('delete response returns exact agentId without empty-string fallback', async () => {
+      // D34 #6214: agentId was previously coerced via '?? '''. Now returned directly.
+      db.query.agentMcpConfigs.findMany = vi.fn().mockResolvedValue([]);
+      registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
+      const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/delete');
+
+      const response = (await route!.handler({
+        bodyText: JSON.stringify({ configId: 'cfg-9', serverId: 'srv-9', agentId: 'agent-99' }),
+      })) as { status: number; body: string };
+
+      const body = parseBody(response);
+      expect(body.agentId).toBe('agent-99');
+      expect(body.agentId).not.toBe('');
+      expect(body.configId).toBe('cfg-9');
+      expect(body.serverId).toBe('srv-9');
     });
 
     it('keeps server when other agents still reference it', async () => {
