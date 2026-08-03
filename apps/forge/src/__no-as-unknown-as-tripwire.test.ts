@@ -59,7 +59,6 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Single-site files (tracked, lower priority)
   ['agents/error-formatting.ts', 1],
   ['email-account.ts', 0],  // D33 #6216+#6219+#6221: 3 casts removed (getSelfContact async, listConversations shape, getMessages filter/slice). email-account.ts cast cluster fully clean.
-  ['github/ops/routing.ts', 3],
   ['admin/routes/internal-chat/internal-chat-conversation-routes.ts', 2],
   ['agents/agent-runner.ts', 0],
   ['communication/internal-chat-connection.ts', 2],
