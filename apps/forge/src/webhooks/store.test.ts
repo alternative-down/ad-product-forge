@@ -260,7 +260,7 @@ describe('createWebhookStore', () => {
       };
       // update().set().where().returning() → chain ending with .returning() = [updatedRoute]
       const updateChain = makeChain();
-      updateChain.returning.mockReturnValueOnce(Promise.resolve([updatedRoute]));
+      updateChain.returning.mockReturnValueOnce({ all: vi.fn().mockResolvedValue([updatedRoute]) });
       db.update.mockReturnValueOnce(updateChain);
 
       const store = createWebhookStore(db as any);
@@ -275,7 +275,7 @@ describe('createWebhookStore', () => {
 
     it('throws when route does not exist (returning returns [])', async () => {
       const updateChain = makeChain();
-      updateChain.returning.mockReturnValueOnce(Promise.resolve([]));
+      updateChain.returning.mockReturnValueOnce({ all: vi.fn().mockResolvedValue([]) });
       db.update.mockReturnValueOnce(updateChain);
 
       const store = createWebhookStore(db as any);
@@ -342,7 +342,7 @@ describe('createWebhookStore', () => {
     it('returns kind: created with new eventId when idempotencyKey is provided AND INSERT succeeds (AC-4)', async () => {
       const NEW_EVENT_ID = 'new-event-abc';
       const insertChain = makeChain();
-      insertChain.returning = vi.fn().mockReturnValue([{ eventId: NEW_EVENT_ID }]);
+      insertChain.returning = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([{ eventId: NEW_EVENT_ID }]) });
       db.insert.mockReturnValueOnce(insertChain);
       const store = createWebhookStore(db as any);
       const result = await store.createEvent({
@@ -361,7 +361,7 @@ describe('createWebhookStore', () => {
     it('returns kind: duplicate with SAME eventId on replay (AC-1)', async () => {
       const EXISTING_EVENT_ID = 'existing-event-xyz';
       const insertChain = makeChain();
-      insertChain.returning = vi.fn().mockReturnValue([]);
+      insertChain.returning = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) });
       db.insert.mockReturnValueOnce(insertChain);
       // Custom chain: db.select().from().where().limit().all() resolves to EXISTING_EVENT_ID.
       const selectChain = makeChain();
@@ -384,7 +384,7 @@ describe('createWebhookStore', () => {
 
     it('throws when INSERT OR IGNORE returns 0 AND SELECT finds no existing row (race condition guard)', async () => {
       const insertChain = makeChain();
-      insertChain.returning = vi.fn().mockReturnValue([]);
+      insertChain.returning = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) });
       db.insert.mockReturnValueOnce(insertChain);
       // Custom chain: db.select().from().where().limit().all() resolves to [] (no existing row).
       const selectChain = makeChain();
@@ -407,7 +407,7 @@ describe('createWebhookStore', () => {
 
     it('uses the COMPOSITE (routeId, idempotencyKey) conflict target (AC-2: scoped per route)', async () => {
       const insertChain = makeChain();
-      insertChain.returning = vi.fn().mockReturnValue([]);
+      insertChain.returning = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) });
       db.insert.mockReturnValueOnce(insertChain);
       const selectChain = makeChain();
       const whereChain: Record<string, any> = {};
@@ -446,7 +446,7 @@ describe('createWebhookStore', () => {
 
     it('persists idempotencyKey as the provided string when present', async () => {
       const insertChain = makeChain();
-      insertChain.returning = vi.fn().mockReturnValue([{ eventId: 'X' }]);
+      insertChain.returning = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([{ eventId: 'X' }]) });
       db.insert.mockReturnValueOnce(insertChain);
       const store = createWebhookStore(db as any);
       await store.createEvent({

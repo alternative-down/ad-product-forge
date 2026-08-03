@@ -139,7 +139,7 @@ function createMockDb(initial: NotificationRow[] = []) {
             // yields the actual updated rows. The mock returns [] by default;
             // individual tests can override the chain to simulate partial updates
             // (e.g., requested 3, only 2 matched) or DB errors.
-            returning: vi.fn(async () => []),
+            returning: () => ({ all: vi.fn(async () => []) }),
           })),
         })),
       })),
@@ -384,7 +384,7 @@ describe('createAgentNotificationStore', () => {
       vi.mocked(mock.db.update).mockImplementationOnce(() => ({
         set: () => ({
           where: () => ({
-            returning: returningMock,
+            returning: () => ({ all: returningMock }),
           }),
         }),
       }) as unknown as ReturnType<typeof mock.db.update>);
@@ -407,7 +407,7 @@ describe('createAgentNotificationStore', () => {
       vi.mocked(mock.db.update).mockImplementationOnce(() => ({
         set: () => ({
           where: () => ({
-            returning: returningMock,
+            returning: () => ({ all: returningMock }),
           }),
         }),
       }) as unknown as ReturnType<typeof mock.db.update>);
