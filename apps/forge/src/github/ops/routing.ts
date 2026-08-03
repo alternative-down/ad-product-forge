@@ -6,9 +6,13 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 
 import type { HttpRequest } from '../../http/server';
-import { App } from 'octokit';
+import { App, Octokit } from 'octokit';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
+import {
+  githubAppInfoResponseSchema,
+  githubAppManifestConversionResponseSchema,
+} from '../types';
 
 // Subset of AppProvisioningOps fields actually used by routing.
 // createAppName/nanoid/normalizeManifestConfig/DEFAULT_GITHUB_APP_MANIFEST_CONFIG
@@ -129,37 +133,41 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     if (code === null || code === undefined || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
-    const anonymousOctokit = new App({} as unknown as any) as unknown as {
-      request: (url: string, opts?: unknown) => Promise<{ data: unknown }>;
-    };
+    // Unauthenticated Octokit is sufficient for the manifest-conversion
+    // endpoint (POST /app-manifests/{code}/conversions). The previous
+    // implementation instantiated an App with an empty config object and
+    // cast the result to a manually-typed shape, hiding the real Octokit
+    // surface (paginate, retry, hooks) and bypassing type safety.
+    const anonymousOctokit = new Octokit();
     try {
-      const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', {
-        code,
-      });
-      const {
-        pem,
-        id: appId,
-        webhook_secret,
-      } = response.data as { pem: string; id: number; webhook_secret: string };
+      const conversionResponse = await anonymousOctokit.request(
+        'POST /app-manifests/{code}/conversions',
+        { code },
+      );
+      // Runtime-validated destructure: throws ZodError on missing fields,
+      // surfaced as a 500 in the catch below.
+      const { pem, id: appId, webhook_secret } =
+        githubAppManifestConversionResponseSchema.parse(conversionResponse.data);
       const app = new App({ appId, privateKey: pem });
-      const appResponse = await (
-        app.octokit as unknown as { request: (url: string) => Promise<{ data: { slug?: string } }> }
-      ).request('GET /app');
-      const slug = (appResponse.data as { slug?: string }).slug ?? 'unknown';
+      const appInfoResponse = await app.octokit.request('GET /app');
+      // Runtime-validated app info: surfaces missing `name` (cast site E in
+      // the previous implementation) as a 500 instead of silently persisting
+      // undefined into the credentials store.
+      const appInfo = githubAppInfoResponseSchema.parse(appInfoResponse.data);
       const created = {
         status: 'created' as const,
         appId,
         privateKey: pem,
         webhookSecret: webhook_secret,
-        appSlug: slug,
-        appName: (appResponse.data as { name: string }).name,
+        appSlug: appInfo.slug ?? 'unknown',
+        appName: appInfo.name,
         manifestConfig: credentials.manifestConfig,
         createdAt: credentials.createdAt,
       };
       await ctx.saveCredentials(agentId, created);
       return html(
         200,
-        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(slug)}/installations/new">install the app</a>.</p>`,
+        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(appInfo.slug ?? 'unknown')}/installations/new">install the app</a>.</p>`,
       );
     } catch (err) {
       forgeDebug({

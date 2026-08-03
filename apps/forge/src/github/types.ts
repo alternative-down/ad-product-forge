@@ -63,8 +63,34 @@ export const githubAppCredentialsSchema = z.discriminatedUnion('status', [
   githubAppActiveCredentialsSchema,
 ]);
 
+// Response shape for POST /app-manifests/{code}/conversions.
+// Used by handleManifestCallback in apps/forge/src/github/ops/routing.ts.
+// Only the three fields consumed by the install flow are validated; the
+// GitHub API returns additional fields (client_id, owner, html_url) that
+// zod strips by default. See:
+// https://docs.github.com/en/rest/apps/apps#create-a-github-app-from-a-manifest
+export const githubAppManifestConversionResponseSchema = z.object({
+  id: z.number().int(),
+  pem: z.string(),
+  webhook_secret: z.string(),
+});
+
+// Subset of the GET /app response shape consumed by handleManifestCallback
+// in apps/forge/src/github/ops/routing.ts. slug is optional because some
+// GitHub Apps (e.g. user-level apps) may not have one. See:
+// https://docs.github.com/en/rest/apps/apps#get-the-authenticated-app
+export const githubAppInfoResponseSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  slug: z.string().optional(),
+});
+
 export type GitHubAppCredentials = z.infer<typeof githubAppCredentialsSchema>;
 export type GitHubAppManifestConfig = z.infer<typeof githubAppManifestConfigSchema>;
+export type GitHubAppManifestConversionResponse = z.infer<
+  typeof githubAppManifestConversionResponseSchema
+>;
+export type GitHubAppInfoResponse = z.infer<typeof githubAppInfoResponseSchema>;
 
 export type GitHubAppProvisioning = {
   agentId: string;
