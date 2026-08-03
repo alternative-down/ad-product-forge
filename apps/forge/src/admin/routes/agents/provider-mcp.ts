@@ -8,6 +8,7 @@ import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText }
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { adminRouteError } from './admin-route-error-helper';
+import { updateAgentMcpServer, deleteAgentMcpServer } from './mcp-server-helpers';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
 import { parseProviderCredentials } from '../../../communication/provider-loader';
 import { encryptSecret } from '../../../encryption/crypto';
@@ -37,8 +38,13 @@ const createAgentMcpServerSchema = z.object({
 });
 const updateAgentMcpServerSchema = z.object({
   serverId: z.string().min(1),
-  agentId: z.string().optional(),
-  configId: z.string().optional(),
+  // D34 #6214 L#NN-50 #36: agentId and configId made required. The update handler
+  // always uses them (configId for the where clause, agentId for reloadAgentMcp),
+  // and the previous optional declarations forced '?? ""' fallbacks that masked
+  // a silent-bug cluster. Required strings surface missing fields via zod parse
+  // error instead of silently matching zero rows.
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
   name: z.string().optional(),
   description: z.string().optional(),
   transport: z.enum(['stdio', 'http_streamable']).optional(),
@@ -248,58 +254,15 @@ export function registerAgentProviderMcpRoutes({
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-        await db
-          .update(mcpServerConfigs)
-          .set({
-            name: body.name,
-            description: normalizeOptionalText(body.description),
-            transport: body.transport,
-            command: body.transport === 'stdio' ? body.command : null,
-            args:
-              body.transport === 'stdio'
-                ? normalizeJsonText(body.argsText, 'argsText', 'array')
-                : null,
-            envVars:
-              body.transport === 'stdio'
-                ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
-                : null,
-            url: body.transport === 'http_streamable' ? body.url : null,
-            headers:
-              body.transport === 'http_streamable'
-                ? normalizeJsonText(body.headersText, 'headersText', 'object')
-                : null,
-            isActive: body.isActive === true ? 1 : 0,
-            updatedAt: Date.now(),
-          })
-          .where(eq(mcpServerConfigs.id, body.serverId));
+        // D34 #6214 L#NN-50 #36: extract updateAgentMcpServer helper (DRY).
+        // The helper at mcp-server-helpers.ts:74 was dormant until now.
+        await updateAgentMcpServer(db, body);
 
-        await db
-          .update(agentMcpConfigs)
-          .set({
-            isActive: body.isActive === true ? 1 : 0,
-            updatedAt: Date.now(),
-          })
-          .where(
-            and(
-              // D34 L#NN-50 #36: direct body access with empty-string fallback for optional fields.
-              // The previous 'as unknown as { configId: string }' cast was a type lie:
-              // zod schema declares configId/agentId as optional, so undefined is valid at runtime.
-              // eq(col, '') matches no rows — same effective behavior as the previous undefined case.
-              eq(agentMcpConfigs.id, body.configId ?? ''),
-              eq(agentMcpConfigs.agentId, body.agentId ?? ''),
-            ),
-          );
-
-        await reloadAgentMcp(
-          db,
-          loaderConfig,
-          // D34 L#NN-50 #36: direct body access (zod already typed as optional).
-          body.agentId ?? '',
-        );
+        await reloadAgentMcp(db, loaderConfig, body.agentId);
 
         return jsonResponse({
           success: true,
-          agentId: body.agentId ?? '',
+          agentId: body.agentId,
           configId: body.configId,
           serverId: body.serverId,
         });
@@ -315,34 +278,15 @@ export function registerAgentProviderMcpRoutes({
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+        // D34 #6214 L#NN-50 #36: extract deleteAgentMcpServer helper (DRY).
+        // The helper at mcp-server-helpers.ts:111 was dormant until now.
+        await deleteAgentMcpServer(db, body.configId, body.agentId, body.serverId);
 
-        await db
-          .delete(agentMcpConfigs)
-          .where(
-            and(
-              // D34 L#NN-50 #36: direct body access — configId now in schema (see top).
-              eq(agentMcpConfigs.id, body.configId),
-              eq(agentMcpConfigs.agentId, body.agentId),
-            ),
-          );
-
-        const remainingLinks = await db.query.agentMcpConfigs.findMany({
-          where: eq(agentMcpConfigs.serverId, body.serverId),
-          columns: {
-            id: true,
-          },
-        });
-
-        if (remainingLinks.length === 0) {
-          await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
-        }
-
-        await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+        await reloadAgentMcp(db, loaderConfig, body.agentId);
 
         return jsonResponse({
           success: true,
           agentId: body.agentId,
-          // D34 L#NN-50 #36: direct body access — configId now in schema.
           configId: body.configId,
           serverId: body.serverId,
         });
