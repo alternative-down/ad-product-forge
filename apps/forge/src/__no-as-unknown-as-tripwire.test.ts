@@ -53,7 +53,6 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   ['micro-erp/read-model.ts', 0],
   // Phase 2 P2 cleanup targets
   ['minimax/tools.ts', 1],
-  ['communication/internal-chat-groups.ts', 4],
   // Single-site files (tracked, lower priority)
   ['agents/error-formatting.ts', 1],
   ['email-account.ts', 0],  // D33 #6216+#6219+#6221: 3 casts removed (getSelfContact async, listConversations shape, getMessages filter/slice). email-account.ts cast cluster fully clean.

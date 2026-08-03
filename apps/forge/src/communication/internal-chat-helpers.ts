@@ -167,7 +167,13 @@ export function buildGroupRow(row: InternalChatGroupRow): {
  * Sorts participants so the self-account appears first, followed by
  * the rest sorted alphabetically by displayName.
  */
-export function sortParticipantsBySelfFirst<T extends InternalChatGroupParticipant>(
+export function sortParticipantsBySelfFirst<
+  // D34 L#NN-50 #36: widened constraint from InternalChatGroupParticipant to a structural
+  // minimum ({accountId, displayName}) so Drizzle's inferred select-builder result type
+  // is accepted without an 'as unknown as' cast at call sites. Function only accesses
+  // accountId + displayName, so the wider constraint is sound.
+  T extends { accountId: string; displayName: string },
+>(
   participants: T[],
   selfAccountId: string,
 ): T[] {

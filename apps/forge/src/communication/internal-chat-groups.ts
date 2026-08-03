@@ -390,7 +390,7 @@ export function createInternalChatGroups(
       await db.transaction(async (tx) => {
         if (input.groupId === null || input.groupId === undefined) {
           await createChatGroupIfNeeded(
-            tx as unknown as Database,
+            tx,
             groupId,
             input.name,
             actorAccount,
@@ -398,10 +398,10 @@ export function createInternalChatGroups(
           );
         }
         if (input.name !== undefined) {
-          await updateChatGroupName(tx as unknown as Database, groupId, input.name, now);
+          await updateChatGroupName(tx, groupId, input.name, now);
         }
         if (desiredMembers) {
-          await syncChatGroupMembers(tx as unknown as Database, groupId, desiredMembers, now);
+          await syncChatGroupMembers(tx, groupId, desiredMembers, now);
         }
       });
 
@@ -548,10 +548,11 @@ export function createInternalChatGroups(
           internalChatAccounts,
           eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
         )
-        .where(eq(internalChatConversationMembers.conversationId, conversationId));
+        .where(eq(internalChatConversationMembers.conversationId, conversationId))
+        .all();
 
       return sortParticipantsBySelfFirst(
-        rows as unknown as InternalChatGroupParticipant[],
+        rows,
         accountId,
       );
     } catch (err) {

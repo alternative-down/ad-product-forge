@@ -161,6 +161,29 @@ describe('sortParticipantsBySelfFirst', () => {
     const result = sortParticipantsBySelfFirst(extended, 'acc_2');
     expect(result[0]).toHaveProperty('extra', 'y');
   });
+
+  // D34 L#NN-50 #36: additional edge cases for sortParticipantsBySelfFirst
+  // (no-self and multi-self scenarios mentioned in #6215 dispatch).
+  it('handles empty participants array', () => {
+    const result = sortParticipantsBySelfFirst([], 'acc_1');
+    expect(result).toEqual([]);
+  });
+
+  it('places multiple matching-self participants at the front (multi-self edge case)', () => {
+    const multi = [
+      { accountId: 'acc_1', agentId: null, slug: 'alice', displayName: 'Alice' },
+      { accountId: 'acc_1', agentId: 'agent_other', slug: 'alice-2', displayName: 'Alice Two' },
+      { accountId: 'acc_2', agentId: null, slug: 'bob', displayName: 'Bob' },
+      { accountId: 'acc_1', agentId: null, slug: 'alice-3', displayName: 'Alice Three' },
+    ];
+    const result = sortParticipantsBySelfFirst(multi, 'acc_1');
+
+    // All three acc_1 should be at the front (in any order), then acc_2.
+    expect(result[0].accountId).toBe('acc_1');
+    expect(result[1].accountId).toBe('acc_1');
+    expect(result[2].accountId).toBe('acc_1');
+    expect(result[3].accountId).toBe('acc_2');
+  });
 });
 
 // ---------------------------------------------------------------------------
