@@ -52,7 +52,6 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
   ['micro-erp/read-model.ts', 0],
   // Phase 2 P2 cleanup targets
-  ['admin/routes/agents/provider-mcp.ts', 6],
   ['minimax/tools.ts', 1],
   ['communication/internal-chat-groups.ts', 4],
   // Single-site files (tracked, lower priority)

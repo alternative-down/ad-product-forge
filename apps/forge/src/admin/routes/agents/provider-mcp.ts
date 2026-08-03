@@ -50,6 +50,10 @@ const updateAgentMcpServerSchema = z.object({
   isActive: z.boolean().optional(),
 });
 const deleteAgentMcpServerSchema = z.object({
+  // D34 L#NN-50 #36: configId added to schema (handler uses it as row ID for delete).
+  // Previously missing from schema, which forced L313/L334 to use 'as unknown as' cast
+  // that hid the schema/code drift.
+  configId: z.string().min(1),
   agentId: z.string().min(1),
   serverId: z.string().min(1),
 });
@@ -132,14 +136,15 @@ export function registerAgentProviderMcpRoutes({
             })
             .where(eq(agentProviders.id, existing.id));
         } else {
-          await (
-            db.insert(agentProviders) as unknown as { values: (v: unknown) => Promise<unknown> }
-          ).values({
+          // D34 L#NN-50 #36: remove Drizzle 0.26 cast and add missing updatedAt
+          // (the cast was hiding a missing-column bug that Drizzle's typed chain now catches).
+          await db.insert(agentProviders).values({
             id: createId(),
             agentId: body.agentId,
             providerType: body.providerType,
             encryptedCredentials,
             createdAt: Date.now(),
+            updatedAt: Date.now(),
           });
         }
 
@@ -276,15 +281,20 @@ export function registerAgentProviderMcpRoutes({
           })
           .where(
             and(
-              eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId),
-              eq(agentMcpConfigs.agentId, (body as unknown as { agentId: string }).agentId),
+              // D34 L#NN-50 #36: direct body access with empty-string fallback for optional fields.
+              // The previous 'as unknown as { configId: string }' cast was a type lie:
+              // zod schema declares configId/agentId as optional, so undefined is valid at runtime.
+              // eq(col, '') matches no rows — same effective behavior as the previous undefined case.
+              eq(agentMcpConfigs.id, body.configId ?? ''),
+              eq(agentMcpConfigs.agentId, body.agentId ?? ''),
             ),
           );
 
         await reloadAgentMcp(
           db,
           loaderConfig,
-          (body as unknown as { agentId?: string }).agentId ?? '',
+          // D34 L#NN-50 #36: direct body access (zod already typed as optional).
+          body.agentId ?? '',
         );
 
         return jsonResponse({
@@ -310,7 +320,8 @@ export function registerAgentProviderMcpRoutes({
           .delete(agentMcpConfigs)
           .where(
             and(
-              eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId),
+              // D34 L#NN-50 #36: direct body access — configId now in schema (see top).
+              eq(agentMcpConfigs.id, body.configId),
               eq(agentMcpConfigs.agentId, body.agentId),
             ),
           );
@@ -331,7 +342,8 @@ export function registerAgentProviderMcpRoutes({
         return jsonResponse({
           success: true,
           agentId: body.agentId,
-          configId: (body as unknown as { configId: string }).configId,
+          // D34 L#NN-50 #36: direct body access — configId now in schema.
+          configId: body.configId,
           serverId: body.serverId,
         });
       } catch (err) {
