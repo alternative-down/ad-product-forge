@@ -99,13 +99,14 @@ export async function updateAgentMcpServer(
     })
     .where(eq(mcpServerConfigs.id, body.serverId));
 
+  // D34 L#NN-50 #36: agentId safety where clause added (handler in #6214 had this; helper didn't).
   await db
     .update(agentMcpConfigs)
     .set({
       isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
       updatedAt: now,
     })
-    .where(eq(agentMcpConfigs.id, body.configId));
+    .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
 }
 
 export async function deleteAgentMcpServer(
