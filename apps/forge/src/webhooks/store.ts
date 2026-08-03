@@ -189,7 +189,7 @@ export function createWebhookStore(db: Database) {
       verb: 'write',
       context: { routeId },
       fn: async () =>
-        (await db
+        await db
           .update(webhookRoutes)
           .set({
             secretEncrypted,
@@ -197,7 +197,8 @@ export function createWebhookStore(db: Database) {
             updatedAt: Date.now(),
           })
           .where(eq(webhookRoutes.routeId, routeId))
-          .returning()) as unknown as WebhookRoute[],
+          .returning()
+          .all(),
     });
 
     if (updated.length === 0) {
@@ -253,14 +254,15 @@ export function createWebhookStore(db: Database) {
       verb: 'write',
       context: eventContext,
       fn: async () =>
-        (await db
+        await db
           .insert(webhookEvents)
           .values(eventValues)
           .onConflictDoNothing({
             target: [webhookEvents.routeId, webhookEvents.idempotencyKey],
             where: sql`${webhookEvents.idempotencyKey} IS NOT NULL`,
           })
-          .returning({ eventId: webhookEvents.eventId })) as unknown as Array<{ eventId: string }>,
+          .returning({ eventId: webhookEvents.eventId })
+          .all(),
     });
 
     if (insertedRows.length > 0) {
