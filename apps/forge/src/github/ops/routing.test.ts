@@ -406,3 +406,213 @@ describe('createRoutingOps — handleWebhook', () => {
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'webhook-wake' });
   });
 });
+
+// Hoisted mock for the octokit module. The Octokit class is used directly
+// (new Octokit() for the unauthenticated manifest-conversion request) and
+// the App class is used for the authenticated GET /app request after
+// the conversion succeeds. Hoisting is required so vi.mock can reference
+// these values at module-load time without temporal-dead-zone errors.
+const {
+  mockConversionRequest,
+  mockAppRequest,
+  MockOctokit,
+  MockApp,
+} = vi.hoisted(() => {
+  const mockConversionRequest = vi.fn();
+  const mockAppRequest = vi.fn();
+  const MockOctokit = vi.fn().mockImplementation(function (this: unknown) {
+    return { request: mockConversionRequest };
+  });
+  const MockApp = vi.fn().mockImplementation(function (this: unknown) {
+    return { octokit: { request: mockAppRequest } };
+  });
+  return { mockConversionRequest, mockAppRequest, MockOctokit, MockApp };
+});
+
+vi.mock('octokit', () => ({
+  App: MockApp,
+  Octokit: MockOctokit,
+}));
+
+describe('createRoutingOps — handleManifestCallback', () => {
+  beforeEach(() => {
+    mockConversionRequest.mockReset();
+    mockAppRequest.mockReset();
+    MockOctokit.mockClear();
+    MockApp.mockClear();
+  });
+
+  const pendingCredentials = {
+    status: 'pending' as const,
+    state: 'state-abc',
+    appName: 'TestApp',
+    manifestConfig: manifestConfig as any,
+    createdAt: 1700000000000,
+    encryptedCredentials: 'x',
+  };
+
+  function makeManifestCtx(overrides: Partial<ReturnType<typeof makeCtx>> = {}) {
+    const ctx = makeCtx();
+    ctx.getCredentials = vi.fn().mockResolvedValue(pendingCredentials);
+    return { ...ctx, ...overrides };
+  }
+
+  it('returns 404 when no credentials exist for the agent', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeCtx();
+    ctx.getCredentials = vi.fn().mockResolvedValue(null);
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-missing', 'code-1', 'state-abc');
+    expect(result.status).toBe(404);
+    expect(result.body).toContain('not pending');
+    expect(mockConversionRequest).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when credentials are not in pending status', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeCtx();
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'created',
+      appId: 1,
+      privateKey: 'k',
+      webhookSecret: 's',
+      appSlug: 'app',
+      appName: 'App',
+      manifestConfig: manifestConfig as any,
+      createdAt: 1,
+      encryptedCredentials: 'x',
+    });
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-active', 'code-1', 'state-abc');
+    expect(result.status).toBe(404);
+    expect(mockConversionRequest).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when code query parameter is missing', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeManifestCtx();
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', null, 'state-abc');
+    expect(result.status).toBe(400);
+    expect(result.body).toContain('Invalid manifest callback');
+    expect(mockConversionRequest).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when state does not match the stored state', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeManifestCtx();
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'wrong-state');
+    expect(result.status).toBe(400);
+    expect(result.body).toContain('Invalid manifest callback');
+    expect(mockConversionRequest).not.toHaveBeenCalled();
+  });
+
+  it('returns 200, persists created credentials, and links the install URL on success', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeManifestCtx({ saveCredentials: saveMock });
+    mockConversionRequest.mockResolvedValue({
+      data: {
+        id: 4242,
+        pem: '-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----',
+        webhook_secret: 'whsec_x',
+      },
+    });
+    mockAppRequest.mockResolvedValue({
+      data: {
+        id: 4242,
+        name: 'My Test App',
+        slug: 'my-test-app',
+      },
+    });
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'state-abc');
+    expect(result.status).toBe(200);
+    expect(result.body).toContain('GitHub App created');
+    expect(result.body).toContain('my-test-app');
+    // The conversion request should hit the unauthenticated Octokit, not App.
+    expect(mockConversionRequest).toHaveBeenCalledWith(
+      'POST /app-manifests/{code}/conversions',
+      { code: 'code-1' },
+    );
+    // The authenticated GET /app call should go through app.octokit.request
+    // (typed, no recast) on the App instance constructed with the converted
+    // credentials.
+    expect(mockAppRequest).toHaveBeenCalledWith('GET /app');
+    expect(saveMock).toHaveBeenCalledWith(
+      'agent-1',
+      expect.objectContaining({
+        status: 'created',
+        appId: 4242,
+        privateKey: '-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----',
+        webhookSecret: 'whsec_x',
+        appSlug: 'my-test-app',
+        appName: 'My Test App',
+        manifestConfig: pendingCredentials.manifestConfig,
+        createdAt: pendingCredentials.createdAt,
+      }),
+    );
+  });
+
+  it('falls back to "unknown" appSlug and skips the slug in the install link when missing', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeManifestCtx({ saveCredentials: saveMock });
+    mockConversionRequest.mockResolvedValue({
+      data: { id: 1, pem: 'pem', webhook_secret: 'ws' },
+    });
+    mockAppRequest.mockResolvedValue({
+      data: { id: 1, name: 'NoSlugApp' /* slug missing */ },
+    });
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'state-abc');
+    expect(result.status).toBe(200);
+    expect(saveMock).toHaveBeenCalledWith(
+      'agent-1',
+      expect.objectContaining({ appSlug: 'unknown', appName: 'NoSlugApp' }),
+    );
+  });
+
+  it('returns 500 when the manifest conversion request rejects', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeManifestCtx({ saveCredentials: saveMock });
+    mockConversionRequest.mockRejectedValue(new Error('GitHub API down'));
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'state-abc');
+    expect(result.status).toBe(500);
+    expect(result.body).toContain('Failed');
+    expect(result.body).toContain('GitHub API down');
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when the GET /app request rejects after a successful conversion', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeManifestCtx({ saveCredentials: saveMock });
+    mockConversionRequest.mockResolvedValue({
+      data: { id: 1, pem: 'pem', webhook_secret: 'ws' },
+    });
+    mockAppRequest.mockRejectedValue(new Error('app info failed'));
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'state-abc');
+    expect(result.status).toBe(500);
+    expect(result.body).toContain('Failed');
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when the conversion response is missing required fields (zod failure)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeManifestCtx({ saveCredentials: saveMock });
+    // Missing pem and webhook_secret — these would have been silently
+    // accepted by the previous as-unknown-as cast cluster and produced
+    // undefined values persisted to the credentials store.
+    mockConversionRequest.mockResolvedValue({ data: { id: 1 } });
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleManifestCallback('agent-1', 'code-1', 'state-abc');
+    expect(result.status).toBe(500);
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+});
