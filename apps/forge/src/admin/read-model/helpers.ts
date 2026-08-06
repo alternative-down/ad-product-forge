@@ -3,6 +3,14 @@ import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
 import { withTimeout } from '../../utils/async';
 
+/**
+ * Type guard for non-null objects. Centralizes the defensive
+ * "is this a record?" check that appears at 20 sites in this file.
+ */
+function isNonNullObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && v !== undefined && typeof v === 'object' && !Array.isArray(v);
+}
+
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -147,9 +155,9 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
   }
 
   try {
-    const parsed = JSON.parse(value ?? '') as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(value ?? '');
 
-    if (parsed === null || parsed === undefined || typeof parsed !== 'object') {
+    if (!isNonNullObject(parsed)) {
       return null;
     }
 
@@ -173,11 +181,11 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
  * Render working memory value as markdown sections
  */
 export function renderWorkingMemoryMarkdown(value: unknown) {
-  if (value === null || value === undefined || typeof value !== 'object') {
+  if (!isNonNullObject(value)) {
     return null;
   }
 
-  const record = value as Record<string, unknown>;
+  const record = value;
   const sections = new Map<string, string[]>();
 
   for (const [key, item] of Object.entries(record)) {
@@ -229,19 +237,15 @@ export function toScheduleSummary(row: AgentSchedule) {
  * Extract preview text from message content (text, reasoning, or parts)
  */
 export function extractLatestMessagePreview(content: unknown) {
-  if (content === null || content === undefined || typeof content !== 'object') {
+  if (!isNonNullObject(content)) {
     return null;
   }
 
-  const record = content as {
-    content?: unknown;
-    reasoning?: unknown;
-    parts?: unknown;
-  };
+  const record = content;
   const parts = Array.isArray(record.parts) ? record.parts : [];
 
   for (const part of [...parts].reverse()) {
-    if (part === null || part === undefined || typeof part !== 'object') {
+    if (!isNonNullObject(part)) {
       continue;
     }
 
@@ -286,15 +290,11 @@ export function extractLatestMessagePreview(content: unknown) {
  * Extract tool badge from message content (memory-recall or tool invocations)
  */
 export function extractLatestMessageToolBadge(content: unknown) {
-  if (content === null || content === undefined || typeof content !== 'object') {
+  if (!isNonNullObject(content)) {
     return null;
   }
 
-  const record = content as {
-    parts?: unknown;
-    toolInvocations?: unknown;
-    content?: unknown;
-  };
+  const record = content;
   const parts = Array.isArray(record.parts) ? record.parts : [];
   const topLevelToolInvocations = Array.isArray(record.toolInvocations)
     ? record.toolInvocations
@@ -302,9 +302,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
   for (const part of [...parts].reverse()) {
     if (
-      part === null ||
-      part === undefined ||
-      typeof part !== 'object' ||
+      !isNonNullObject(part) ||
       !('type' in part) ||
       part.type !== 'text' ||
       typeof part.text !== 'string'
@@ -326,9 +324,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
   for (const part of [...parts].reverse()) {
     if (
-      part === null ||
-      part === undefined ||
-      typeof part !== 'object' ||
+      !isNonNullObject(part) ||
       !('type' in part) ||
       part.type !== 'tool-invocation'
     ) {
@@ -337,9 +333,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
     if (
       !('toolInvocation' in part) ||
-      part.toolInvocation === null ||
-      part.toolInvocation === undefined ||
-      typeof part.toolInvocation !== 'object'
+      !isNonNullObject(part.toolInvocation)
     ) {
       continue;
     }
@@ -356,9 +350,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
   for (const invocation of [...topLevelToolInvocations].reverse()) {
     if (
-      invocation === null ||
-      invocation === undefined ||
-      typeof invocation !== 'object' ||
+      !isNonNullObject(invocation) ||
       !('toolName' in invocation) ||
       typeof invocation.toolName !== 'string'
     ) {
@@ -454,9 +446,8 @@ function processToolInvocations(
 
   for (const toolInvocation of toolInvocations) {
     if (
-      typeof toolInvocation !== 'object' ||
-      toolInvocation === null ||
-      typeof (toolInvocation as Record<string, unknown>).toolName !== 'string'
+      !isNonNullObject(toolInvocation) ||
+      typeof toolInvocation.toolName !== 'string'
     ) {
       continue;
     }
@@ -499,7 +490,7 @@ function collectUnmatchedResults(toolResults: unknown[], matchedResultIndexes: S
   const parts: Array<Record<string, unknown>> = [];
 
   for (const [index, toolResult] of toolResults.entries()) {
-    if (matchedResultIndexes.has(index) || typeof toolResult !== 'object' || toolResult === null) {
+    if (matchedResultIndexes.has(index) || !isNonNullObject(toolResult)) {
       continue;
     }
 
