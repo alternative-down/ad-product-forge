@@ -12,6 +12,7 @@ import {
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
+import { ltmAgentWarn, ltmDebug } from './ltm-debug-helpers';
 import { z } from 'zod';
 
 import {
@@ -62,6 +63,7 @@ import {
   createMemoryAgentInstructions,
   getUsageFromGenerateResult,
 } from './ltm/generate-helpers';
+
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -105,7 +107,7 @@ async function snapshotTrackedFiles(agentWorkspacePath: string) {
     try {
       content = await fs.readFile(absolutePath, 'utf8');
     } catch (err) {
-      forgeDebug({ scope: 'agent-ltm', level: 'warn', message: 'readSnapshot failed: ' + errorMsg(err) });
+      ltmAgentWarn('readSnapshot failed: ' + errorMsg(err));
       /* file not readable */
     }
     snapshot.set(relativePath, content);
@@ -257,18 +259,15 @@ export function createAgentLongTermMemory(input: {
     const packagePath = path.resolve(checkpointsPath, packageId);
     const tempPackagePath = getTempPackagePath(packagePath);
 
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'checkpoint package write start',
-      context: {
-        agentId: input.agentId,
-        threadId: payload.threadId,
-        packageId,
-        checkpointGeneration: payload.toGeneration,
-        reflectionCount: (payload as any).reflections.length,
-        observationCount: (payload as any).observations.length,
-      },
+    const reflectionCount = (payload as { reflections: { length: number } }).reflections.length;
+    const observationCount = (payload as { observations: { length: number } }).observations.length;
+    ltmDebug('info', 'checkpoint package write start', {
+      agentId: input.agentId,
+      threadId: payload.threadId,
+      packageId,
+      checkpointGeneration: payload.toGeneration,
+      reflectionCount,
+      observationCount,
     });
 
     const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
@@ -282,16 +281,11 @@ export function createAgentLongTermMemory(input: {
     await markRecallIndexDirty('checkpoint-write');
     await refreshRecallIndex?.();
 
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'checkpoint package write complete',
-      context: {
-        agentId: input.agentId,
-        threadId: payload.threadId,
-        packageId,
-        checkpointGeneration: payload.toGeneration,
-      },
+    ltmDebug('info', 'checkpoint package write complete', {
+      agentId: input.agentId,
+      threadId: payload.threadId,
+      packageId,
+      checkpointGeneration: payload.toGeneration,
     });
 
     return manifest;
@@ -406,12 +400,7 @@ export function createAgentLongTermMemory(input: {
     await ensureInitialized();
 
     if (!memoryAgent) {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'warn',
-        message: 'initializeLtmSession: runtime not available',
-        context: { agentId: input.agentId },
-      });
+      ltmDebug('warn', 'initializeLtmSession: runtime not available', { agentId: input.agentId });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
 
@@ -438,16 +427,11 @@ export function createAgentLongTermMemory(input: {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
             onIterationComplete: async (iteration) => {
-              forgeDebug({
-                scope: 'ltm',
-                level: 'info',
-                message: 'memory workflow step complete',
-                context: {
-                  agentId: input.agentId,
-                  hasToolCalls: iteration.toolCalls.length > 0,
-                  outputLength: iteration.text.length,
-                  iteration: iteration.iteration,
-                },
+              ltmDebug('info', 'memory workflow step complete', {
+                agentId: input.agentId,
+                hasToolCalls: iteration.toolCalls.length > 0,
+                outputLength: iteration.text.length,
+                iteration: iteration.iteration,
               });
 
               if (iteration.toolCalls.length > 0) {
@@ -467,16 +451,11 @@ export function createAgentLongTermMemory(input: {
         );
         break;
       } catch (error) {
-        forgeDebug({
-          scope: 'ltm',
-          level: 'info',
-          message: 'memory workflow attempt failed',
-          context: {
-            agentId: input.agentId,
-            attempt,
-            maxAttempts: GENERATE_MAX_ATTEMPTS,
-            error: errorMsg(error),
-          },
+        ltmDebug('info', 'memory workflow attempt failed', {
+          agentId: input.agentId,
+          attempt,
+          maxAttempts: GENERATE_MAX_ATTEMPTS,
+          error: errorMsg(error),
         });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
@@ -490,12 +469,7 @@ export function createAgentLongTermMemory(input: {
     }
 
     if (!result) {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'error',
-        message: 'generateLtmSummary: no result produced',
-        context: { agentId: input.agentId },
-      });
+      ltmDebug('error', 'generateLtmSummary: no result produced', { agentId: input.agentId });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }
 
@@ -523,15 +497,10 @@ export function createAgentLongTermMemory(input: {
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
     try {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'memory workflow start',
-        context: {
-          agentId: input.agentId,
-          packageIds: availablePackages.map((entry: any) => entry.packageId),
-          packageCount: (state.packages ?? []).length,
-        },
+      ltmDebug('info', 'memory workflow start', {
+        agentId: input.agentId,
+        packageIds: availablePackages.map((entry: { packageId: string }) => entry.packageId),
+        packageCount: (state.packages ?? []).length,
       });
 
       const changedFiles = new Set<string>();
@@ -561,15 +530,10 @@ export function createAgentLongTermMemory(input: {
         changedFiles.add(filePath);
       }
 
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'memory workflow complete',
-        context: {
-          agentId: input.agentId,
-          packageIds: (state.packages ?? []).map((entry: any) => entry.packageId),
-          changedFiles: Array.from(changedFiles).sort(),
-        },
+      ltmDebug('info', 'memory workflow complete', {
+        agentId: input.agentId,
+        packageIds: (state.packages ?? []).map((entry: { packageId: string }) => entry.packageId),
+        changedFiles: Array.from(changedFiles).sort(),
       });
 
       if (changedFiles.size > 0) {
@@ -583,14 +547,9 @@ export function createAgentLongTermMemory(input: {
       state.lastRunError = errorMsg(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'memory workflow failed',
-        context: {
-          agentId: input.agentId,
-          error: state.lastRunError,
-        },
+      ltmDebug('info', 'memory workflow failed', {
+        agentId: input.agentId,
+        error: state.lastRunError,
       });
     } finally {
       running = false;
