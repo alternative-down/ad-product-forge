@@ -426,7 +426,7 @@ const eventFormatters: Record<string, EventFormatter> = {
  * making the function easy to test and extend.
  */
 export function summarizeGitHubEvent(input: GitHubEventInput): string {
-  const payloadRecord = isRecord(input.payload) ? (input.payload as Record<string, unknown>) : {};
+  const payloadRecord = isRecord(input.payload) ? input.payload : {};
   const suffix = buildSuffix(input.action, input.repository, input.sender);
   const formatter = eventFormatters[input.event];
   if (formatter !== undefined) {
