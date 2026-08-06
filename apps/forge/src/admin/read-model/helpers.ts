@@ -35,6 +35,29 @@ function partsOfContent(content: unknown): unknown[] {
   return Array.isArray(content.parts) ? content.parts : [];
 }
 
+/**
+ * Type guard for objects with a string `toolCallId` field. Narrows an
+ * unknown to `{ toolCallId: string }` so call sites can access
+ * `toolCallId` without an `as` cast. Replaces the defensive
+ * `as Record<string, unknown>` casts at original L427 and L429 of
+ * indexToolResultsByToolCallId, and the cast chain at L452-L453 of
+ * processToolInvocations (issue 6269, L#NN-50 33 N=6 STRENGTHENING).
+ */
+function hasToolCallId(value: unknown): value is { toolCallId: string } {
+  return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>).toolCallId === 'string';
+}
+
+/**
+ * Type guard for objects with a string `toolName` field. Narrows an
+ * unknown to `{ toolName: string }` so call sites can access
+ * `toolName` without an `as` cast. Replaces the defensive
+ * `as Record<string, unknown>` cast at original L459 of
+ * processToolInvocations (issue 6269, L#NN-50 33 N=6 STRENGTHENING).
+ */
+function hasToolName(value: unknown): value is { toolName: string } {
+  return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>).toolName === 'string';
+}
+
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -421,12 +444,8 @@ export function mergeToolLogMessages(
 function indexToolResultsByToolCallId(toolResults: unknown[]) {
   const resultIndexesByToolCallId = new Map<string, number>();
   for (const [index, toolResult] of toolResults.entries()) {
-    if (
-      typeof toolResult === 'object' &&
-      toolResult !== null &&
-      typeof (toolResult as Record<string, unknown>).toolCallId === 'string'
-    ) {
-      resultIndexesByToolCallId.set((toolResult as { toolCallId: string }).toolCallId, index);
+    if (hasToolCallId(toolResult)) {
+      resultIndexesByToolCallId.set(toolResult.toolCallId, index);
     }
   }
   return resultIndexesByToolCallId;
@@ -441,22 +460,16 @@ function processToolInvocations(
   const matchedResultIndexes = new Set<number>();
 
   for (const toolInvocation of toolInvocations) {
-    if (
-      !isNonNullObject(toolInvocation) ||
-      typeof toolInvocation.toolName !== 'string'
-    ) {
+    if (!hasToolName(toolInvocation)) {
       continue;
     }
 
-    const toolCallId =
-      typeof (toolInvocation as Record<string, unknown>).toolCallId === 'string'
-        ? ((toolInvocation as Record<string, unknown>).toolCallId as string)
-        : null;
+    const toolCallId = hasToolCallId(toolInvocation) ? toolInvocation.toolCallId : null;
     const matchingResultIndex =
-      (toolCallId ?? '') !== '' ? resultIndexesByToolCallId.get(toolCallId ?? '') : undefined;
+      toolCallId !== null ? resultIndexesByToolCallId.get(toolCallId) : undefined;
     const matchingResult =
-      matchingResultIndex !== undefined
-        ? (toolResults[matchingResultIndex] as Record<string, unknown> | null)
+      matchingResultIndex !== undefined && isNonNullObject(toolResults[matchingResultIndex])
+        ? toolResults[matchingResultIndex]
         : null;
 
     if (matchingResultIndex !== undefined) {
@@ -467,7 +480,7 @@ function processToolInvocations(
       type: 'tool-invocation',
       toolInvocation: {
         ...toolInvocation,
-        ...(typeof matchingResult === 'object' && matchingResult !== null
+        ...(matchingResult !== null
           ? {
               result: matchingResult.result,
               state: 'result',
@@ -493,8 +506,8 @@ function collectUnmatchedResults(toolResults: unknown[], matchedResultIndexes: S
     parts.push({
       type: 'tool-result',
       toolResult: {
-        toolCallId: (toolResult as Record<string, unknown>).toolCallId,
-        result: (toolResult as Record<string, unknown>).result,
+        toolCallId: toolResult.toolCallId,
+        result: toolResult.result,
       },
     });
   }
