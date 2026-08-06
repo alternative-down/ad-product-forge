@@ -17,12 +17,12 @@ import { createRunnerMessageManager } from './agent-runner-message-manager';
 
 import { errorMsg } from './error-formatting';
 
-import { withTimeout } from '../utils/async';
+import { rt } from './runtime-ops';
 
 import { advanceGenerateToken } from './agent-runner-state';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
-import { generateWithTimeoutRetries, RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
+import { generateWithTimeoutRetries } from './agent-runner-generate';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { executeStep as executeStepExtracted, type ExecuteStepDeps } from './agent-runner-execute';
@@ -101,16 +101,14 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
     }
 
     const previousRuntime = currentRuntime;
-    const nextRuntime = await withTimeout(
+    const nextRuntime = await rt(
       options.reloadRuntime(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent runtime reload timed out for ${runtime.id}`,
     );
 
     if (isStaleRun(_runEpoch)) {
-      await withTimeout(
+      await rt(
         nextRuntime.dispose(),
-        RUNNER_AWAIT_TIMEOUT_MS,
         `Agent runtime disposal timed out for ${runtime.id}`,
       );
       return;
@@ -120,9 +118,8 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(notifyExternalEvent);
     options.onRuntimeReloaded?.(nextRuntime);
-    await withTimeout(
+    await rt(
       previousRuntime.dispose(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Previous agent runtime disposal timed out for ${runtime.id}`,
     );
   }
@@ -147,9 +144,8 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
     scheduler.startHealthcheck();
     await refreshRunFlushSettings();
 
-    const executionState = await withTimeout(
+    const executionState = await rt(
       store.getExecutionState(runtime.id),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
@@ -179,9 +175,8 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
       return;
     }
 
-    const executionState = await withTimeout(
+    const executionState = await rt(
       store.getExecutionState(runtime.id),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
@@ -291,9 +286,8 @@ function stop() {
       currentRuntime.longTermMemory?.onAgentRunning();
 
       if (input.markRunning) {
-        await withTimeout(
+        await rt(
           store.setExecutionState(runtime.id, 'running'),
-          RUNNER_AWAIT_TIMEOUT_MS,
           `Agent execution state update timed out for ${runtime.id}`,
         );
       }
@@ -326,9 +320,8 @@ function stop() {
     }
 
     try {
-      const executionState = await withTimeout(
+      const executionState = await rt(
         store.getExecutionState(runtime.id),
-        RUNNER_AWAIT_TIMEOUT_MS,
         `Agent execution state lookup timed out for ${runtime.id}`,
       );
 
@@ -451,14 +444,12 @@ function stop() {
     clearTimer();
     scheduler.setInstant(false);
     resetLoopDetector();
-    void withTimeout(
+    void rt(
       store.setExecutionState(runtime.id, 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${runtime.id}`,
     );
-    void withTimeout(
+    void rt(
       currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent long-term memory idle transition timed out for ${runtime.id}`,
     );
   }
@@ -468,9 +459,8 @@ function stop() {
   }
 
   async function resetRunLastMessages() {
-    const settings = await withTimeout(
+    const settings = await rt(
       systemSettings.getSettings(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `System settings lookup timed out for ${runtime.id}`,
     );
 
@@ -483,9 +473,8 @@ function stop() {
   }
 
   async function refreshRunFlushSettings() {
-    const settings = await withTimeout(
+    const settings = await rt(
       systemSettings.getSettings(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `System settings lookup timed out for ${runtime.id}`,
     );
 
@@ -509,9 +498,8 @@ function stop() {
         delayMs: number;
       }
   > {
-    const contract = await withTimeout(
+    const contract = await rt(
       store.getRunnableContract(runtime.id),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent runnable contract lookup timed out for ${runtime.id}`,
     );
 
@@ -521,15 +509,13 @@ function stop() {
       };
     }
 
-    const spentUsd = await withTimeout(
+    const spentUsd = await rt(
       store.getContractSpend(contract.id),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent contract spend lookup timed out for ${runtime.id}`,
     );
     const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-    const estimatedStepUsd = await withTimeout(
+    const estimatedStepUsd = await rt(
       usage.estimateStepCostUsd(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `Agent step cost estimate timed out for ${runtime.id}`,
     );
 
@@ -540,9 +526,8 @@ function stop() {
     }
 
     scheduler.resetBackoff();
-    const settings = await withTimeout(
+    const settings = await rt(
       systemSettings.getSettings(),
-      RUNNER_AWAIT_TIMEOUT_MS,
       `System settings lookup timed out for ${runtime.id}`,
     );
 
