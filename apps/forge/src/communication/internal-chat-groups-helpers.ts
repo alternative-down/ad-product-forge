@@ -155,16 +155,16 @@ export async function syncChatGroupMembers(
         createdAt: now,
         updatedAt: now,
       } as NewInternalChatConversationMember);
-      if (existingMember.role !== desiredMember.role)
-        await tx
-          .update(internalChatConversationMembers)
-          .set({ role: desiredMember.role })
-          .where(
-            and(
-              eq(internalChatConversationMembers.conversationId, groupId),
-              eq(internalChatConversationMembers.accountId, desiredMember.accountId),
-            ),
-          );
+    } else if (existingMember.role !== desiredMember.role) {
+      await tx
+        .update(internalChatConversationMembers)
+        .set({ role: desiredMember.role })
+        .where(
+          and(
+            eq(internalChatConversationMembers.conversationId, groupId),
+            eq(internalChatConversationMembers.accountId, desiredMember.accountId),
+          ),
+        );
     }
   }
 
