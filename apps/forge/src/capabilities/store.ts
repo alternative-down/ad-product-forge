@@ -23,6 +23,29 @@ import {
   queryToolPermissionsBatch,
   queryWorkflowPermissionsBatch,
 } from './queries';
+/**
+ * capabilitiesStoreDebug — module-level helper for forgeDebug with the
+ * canonical 'capabilities-store' scope. Replaces 8 inline forgeDebug call
+ * sites that previously hand-rolled the same scope literal. Issue #6253.
+ *
+ * Contract:
+ *   - level: forgeDebug level ('debug' | 'info' | 'warn' | 'error')
+ *   - message: stable, parseable summary (NOT the error string — by L#NN-50 contract)
+ *   - context: optional structured call-site fields (frozen by reference, not deep-copied)
+ */
+export function capabilitiesStoreDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'capabilities-store',
+    level,
+    message,
+    context,
+  });
+}
+
 
 type CapabilitySet = {
   toolIds: string[];
@@ -92,12 +115,7 @@ export function createCapabilityStore(db: Database) {
   async function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
     const existing = await queryRole(db, input.roleId);
     if (existing == null) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'warn',
-        message: 'requireRole: not found',
-        context: { roleId: input.roleId },
-      });
+      capabilitiesStoreDebug('warn', 'requireRole: not found', { roleId: input.roleId });
       throw new Error(`Role not found: ${input.roleId}`);
     }
 
@@ -132,12 +150,7 @@ export function createCapabilityStore(db: Database) {
       });
 
       if (assigned != null) {
-        forgeDebug({
-          scope: 'capabilities-store',
-          level: 'warn',
-          message: 'deleteRole: cannot delete role with assigned agents',
-          context: { roleId },
-        });
+        capabilitiesStoreDebug('warn', 'deleteRole: cannot delete role with assigned agents', { roleId });
         const err = new Error(`Cannot delete role with assigned agents: ${roleId}`) as Error & { code: 'ROLE_HAS_ASSIGNED_AGENTS' };
         err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
         throw err;
@@ -338,11 +351,7 @@ export function createCapabilityStore(db: Database) {
   }) {
     if (input.action === 'create') {
       if (input.name == null || !input.name.trim()) {
-        forgeDebug({
-          scope: 'capabilities-store',
-          level: 'warn',
-          message: 'manageRole create: name required',
-        });
+        capabilitiesStoreDebug('warn', 'manageRole create: name required');
         throw new Error('Role name is required.');
       }
 
@@ -357,11 +366,7 @@ export function createCapabilityStore(db: Database) {
 
     if (input.action === 'delete') {
       if (input.roleId == null) {
-        forgeDebug({
-          scope: 'capabilities-store',
-          level: 'warn',
-          message: 'manageRole delete: roleId required',
-        });
+        capabilitiesStoreDebug('warn', 'manageRole delete: roleId required');
         throw new Error('roleId is required.');
       }
 
@@ -369,20 +374,12 @@ export function createCapabilityStore(db: Database) {
     }
 
     if (input.roleId == null) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'warn',
-        message: 'manageRole update: roleId required',
-      });
+      capabilitiesStoreDebug('warn', 'manageRole update: roleId required');
       throw new Error('roleId is required.');
     }
 
     if (input.name == null && input.description === undefined) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'warn',
-        message: 'manageRole update: no fields provided',
-      });
+      capabilitiesStoreDebug('warn', 'manageRole update: no fields provided');
       throw new Error('At least one field besides roleId must be provided.');
     }
 
@@ -420,22 +417,12 @@ export function createCapabilityStore(db: Database) {
     const agent = await queryAgent(db, agentId);
 
     if (agent == null) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'warn',
-        message: 'assignRoleToAgent: agent not found',
-        context: { agentId },
-      });
+      capabilitiesStoreDebug('warn', 'assignRoleToAgent: agent not found', { agentId });
       throw new Error(`Agent not found: ${agentId}`);
     }
 
     if (agent.roleId == null) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'warn',
-        message: 'assignRoleToAgent: agent missing roleId',
-        context: { agentId },
-      });
+      capabilitiesStoreDebug('warn', 'assignRoleToAgent: agent missing roleId', { agentId });
       throw new Error(`Agent is missing roleId: ${agentId}`);
     }
 
