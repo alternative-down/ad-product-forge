@@ -11,6 +11,19 @@ function isNonNullObject(v: unknown): v is Record<string, unknown> {
   return v !== null && v !== undefined && typeof v === 'object' && !Array.isArray(v);
 }
 
+/**
+ * Private helper for forgeDebug calls scoped to admin-read-model.
+ * Centralizes the scope boilerplate that appeared at L166 and L384.
+ * withTimeoutAndLog keeps its parameterized scope API (good).
+ */
+function adminDebug(
+  level: 'debug' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'admin-read-model', level, message, context });
+}
+
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -171,7 +184,7 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
 
     return entries.join('\n');
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'debug', message: 'entriesToMarkdown failed: ' + errorMsg(err) });
+    adminDebug('debug', 'entriesToMarkdown failed: ' + errorMsg(err));
     // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }
@@ -373,12 +386,7 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to parse credentials JSON: ' + errorMsg(err),
-      context: { err: errorMsg(err) },
-    });
+    adminDebug('error', 'Failed to parse credentials JSON: ' + errorMsg(err), { err: errorMsg(err) });
     throw new Error('Failed to parse credentials JSON: ' + errorMsg(err));
   }
 }
