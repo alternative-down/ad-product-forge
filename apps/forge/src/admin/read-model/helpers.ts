@@ -24,6 +24,17 @@ function adminDebug(
   forgeDebug({ scope: 'admin-read-model', level, message, context });
 }
 
+/**
+ * Extract the parts array from a message content object. Returns
+ * an empty array for any non-record input. Centralizes the prelude
+ * duplicated between extractLatestMessagePreview (L231) and
+ * extractLatestMessageToolBadge (L288).
+ */
+function partsOfContent(content: unknown): unknown[] {
+  if (!isNonNullObject(content)) return [];
+  return Array.isArray(content.parts) ? content.parts : [];
+}
+
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -234,12 +245,9 @@ export function toScheduleSummary(row: AgentSchedule) {
  * Extract preview text from message content (text, reasoning, or parts)
  */
 export function extractLatestMessagePreview(content: unknown) {
-  if (!isNonNullObject(content)) {
-    return null;
-  }
-
+  if (!isNonNullObject(content)) return null;
   const record = content;
-  const parts = Array.isArray(record.parts) ? record.parts : [];
+  const parts = partsOfContent(record);
 
   for (const part of [...parts].reverse()) {
     if (!isNonNullObject(part)) {
@@ -287,12 +295,9 @@ export function extractLatestMessagePreview(content: unknown) {
  * Extract tool badge from message content (memory-recall or tool invocations)
  */
 export function extractLatestMessageToolBadge(content: unknown) {
-  if (!isNonNullObject(content)) {
-    return null;
-  }
-
+  if (!isNonNullObject(content)) return null;
   const record = content;
-  const parts = Array.isArray(record.parts) ? record.parts : [];
+  const parts = partsOfContent(record);
   const topLevelToolInvocations = Array.isArray(record.toolInvocations)
     ? record.toolInvocations
     : [];
@@ -339,10 +344,9 @@ export function extractLatestMessageToolBadge(content: unknown) {
       'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
         ? part.toolInvocation.toolName
         : null;
+    if (toolName === null || toolName === '') continue;
 
-    if ((toolName ?? '') !== '') {
-      return toToolBadge(toolName);
-    }
+    return toToolBadge(toolName);
   }
 
   for (const invocation of [...topLevelToolInvocations].reverse()) {
