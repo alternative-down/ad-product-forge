@@ -162,27 +162,15 @@ export function humanizeMemoryKey(value: string) {
 /**
  * Format a working memory value (JSON string) to markdown bullet points
  */
-export function formatWorkingMemoryValue(value: string | null | undefined) {
-  if ((value ?? '') === '') {
-    return null;
-  }
-
+export function formatWorkingMemoryValue(value: string | null | undefined): string | null {
+  if ((value ?? '') === '') return null;
   try {
     const parsed: unknown = JSON.parse(value ?? '');
-
-    if (!isNonNullObject(parsed)) {
-      return null;
-    }
-
+    if (!isNonNullObject(parsed)) return null;
     const entries = Object.entries(parsed)
       .filter(([, item]) => item !== null && item !== undefined)
       .map(([fieldKey, item]) => `- **${humanizeMemoryKey(fieldKey)}**: ${String(item).trim()}`);
-
-    if (entries.length === 0) {
-      return null;
-    }
-
-    return entries.join('\n');
+    return entries.length > 0 ? entries.join('\n') : null;
   } catch (err) {
     adminDebug('debug', 'entriesToMarkdown failed: ' + errorMsg(err));
     // Safe: malformed JSON from external source — return null to signal no valid content
@@ -193,10 +181,8 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
 /**
  * Render working memory value as markdown sections
  */
-export function renderWorkingMemoryMarkdown(value: unknown) {
-  if (!isNonNullObject(value)) {
-    return null;
-  }
+export function renderWorkingMemoryMarkdown(value: unknown): string | null {
+  if (!isNonNullObject(value)) return null;
 
   const record = value;
   const sections = new Map<string, string[]>();
@@ -212,9 +198,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
     }
   }
 
-  if (sections.size === 0) {
-    return null;
-  }
+  if (sections.size === 0) return null;
 
   return Array.from(sections.entries())
     .map(([sectionKey, entries]) => {
