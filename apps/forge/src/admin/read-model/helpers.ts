@@ -3,6 +3,38 @@ import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
 import { withTimeout } from '../../utils/async';
 
+/**
+ * Type guard for non-null objects. Centralizes the defensive
+ * "is this a record?" check that appears at 20 sites in this file.
+ */
+function isNonNullObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && v !== undefined && typeof v === 'object' && !Array.isArray(v);
+}
+
+/**
+ * Private helper for forgeDebug calls scoped to admin-read-model.
+ * Centralizes the scope boilerplate that appeared at L166 and L384.
+ * withTimeoutAndLog keeps its parameterized scope API (good).
+ */
+function adminDebug(
+  level: 'debug' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'admin-read-model', level, message, context });
+}
+
+/**
+ * Extract the parts array from a message content object. Returns
+ * an empty array for any non-record input. Centralizes the prelude
+ * duplicated between extractLatestMessagePreview (L231) and
+ * extractLatestMessageToolBadge (L288).
+ */
+function partsOfContent(content: unknown): unknown[] {
+  if (!isNonNullObject(content)) return [];
+  return Array.isArray(content.parts) ? content.parts : [];
+}
+
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -141,29 +173,17 @@ export function humanizeMemoryKey(value: string) {
 /**
  * Format a working memory value (JSON string) to markdown bullet points
  */
-export function formatWorkingMemoryValue(value: string | null | undefined) {
-  if ((value ?? '') === '') {
-    return null;
-  }
-
+export function formatWorkingMemoryValue(value: string | null | undefined): string | null {
+  if ((value ?? '') === '') return null;
   try {
-    const parsed = JSON.parse(value ?? '') as Record<string, unknown>;
-
-    if (parsed === null || parsed === undefined || typeof parsed !== 'object') {
-      return null;
-    }
-
+    const parsed: unknown = JSON.parse(value ?? '');
+    if (!isNonNullObject(parsed)) return null;
     const entries = Object.entries(parsed)
       .filter(([, item]) => item !== null && item !== undefined)
       .map(([fieldKey, item]) => `- **${humanizeMemoryKey(fieldKey)}**: ${String(item).trim()}`);
-
-    if (entries.length === 0) {
-      return null;
-    }
-
-    return entries.join('\n');
+    return entries.length > 0 ? entries.join('\n') : null;
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'debug', message: 'entriesToMarkdown failed: ' + errorMsg(err) });
+    adminDebug('debug', 'entriesToMarkdown failed: ' + errorMsg(err));
     // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }
@@ -172,12 +192,10 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
 /**
  * Render working memory value as markdown sections
  */
-export function renderWorkingMemoryMarkdown(value: unknown) {
-  if (value === null || value === undefined || typeof value !== 'object') {
-    return null;
-  }
+export function renderWorkingMemoryMarkdown(value: unknown): string | null {
+  if (!isNonNullObject(value)) return null;
 
-  const record = value as Record<string, unknown>;
+  const record = value;
   const sections = new Map<string, string[]>();
 
   for (const [key, item] of Object.entries(record)) {
@@ -191,9 +209,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
     }
   }
 
-  if (sections.size === 0) {
-    return null;
-  }
+  if (sections.size === 0) return null;
 
   return Array.from(sections.entries())
     .map(([sectionKey, entries]) => {
@@ -229,19 +245,12 @@ export function toScheduleSummary(row: AgentSchedule) {
  * Extract preview text from message content (text, reasoning, or parts)
  */
 export function extractLatestMessagePreview(content: unknown) {
-  if (content === null || content === undefined || typeof content !== 'object') {
-    return null;
-  }
-
-  const record = content as {
-    content?: unknown;
-    reasoning?: unknown;
-    parts?: unknown;
-  };
-  const parts = Array.isArray(record.parts) ? record.parts : [];
+  if (!isNonNullObject(content)) return null;
+  const record = content;
+  const parts = partsOfContent(record);
 
   for (const part of [...parts].reverse()) {
-    if (part === null || part === undefined || typeof part !== 'object') {
+    if (!isNonNullObject(part)) {
       continue;
     }
 
@@ -286,25 +295,16 @@ export function extractLatestMessagePreview(content: unknown) {
  * Extract tool badge from message content (memory-recall or tool invocations)
  */
 export function extractLatestMessageToolBadge(content: unknown) {
-  if (content === null || content === undefined || typeof content !== 'object') {
-    return null;
-  }
-
-  const record = content as {
-    parts?: unknown;
-    toolInvocations?: unknown;
-    content?: unknown;
-  };
-  const parts = Array.isArray(record.parts) ? record.parts : [];
+  if (!isNonNullObject(content)) return null;
+  const record = content;
+  const parts = partsOfContent(record);
   const topLevelToolInvocations = Array.isArray(record.toolInvocations)
     ? record.toolInvocations
     : [];
 
   for (const part of [...parts].reverse()) {
     if (
-      part === null ||
-      part === undefined ||
-      typeof part !== 'object' ||
+      !isNonNullObject(part) ||
       !('type' in part) ||
       part.type !== 'text' ||
       typeof part.text !== 'string'
@@ -326,9 +326,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
   for (const part of [...parts].reverse()) {
     if (
-      part === null ||
-      part === undefined ||
-      typeof part !== 'object' ||
+      !isNonNullObject(part) ||
       !('type' in part) ||
       part.type !== 'tool-invocation'
     ) {
@@ -337,9 +335,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 
     if (
       !('toolInvocation' in part) ||
-      part.toolInvocation === null ||
-      part.toolInvocation === undefined ||
-      typeof part.toolInvocation !== 'object'
+      !isNonNullObject(part.toolInvocation)
     ) {
       continue;
     }
@@ -348,17 +344,14 @@ export function extractLatestMessageToolBadge(content: unknown) {
       'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
         ? part.toolInvocation.toolName
         : null;
+    if (toolName === null || toolName === '') continue;
 
-    if ((toolName ?? '') !== '') {
-      return toToolBadge(toolName);
-    }
+    return toToolBadge(toolName);
   }
 
   for (const invocation of [...topLevelToolInvocations].reverse()) {
     if (
-      invocation === null ||
-      invocation === undefined ||
-      typeof invocation !== 'object' ||
+      !isNonNullObject(invocation) ||
       !('toolName' in invocation) ||
       typeof invocation.toolName !== 'string'
     ) {
@@ -381,12 +374,7 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to parse credentials JSON: ' + errorMsg(err),
-      context: { err: errorMsg(err) },
-    });
+    adminDebug('error', 'Failed to parse credentials JSON: ' + errorMsg(err), { err: errorMsg(err) });
     throw new Error('Failed to parse credentials JSON: ' + errorMsg(err));
   }
 }
@@ -454,9 +442,8 @@ function processToolInvocations(
 
   for (const toolInvocation of toolInvocations) {
     if (
-      typeof toolInvocation !== 'object' ||
-      toolInvocation === null ||
-      typeof (toolInvocation as Record<string, unknown>).toolName !== 'string'
+      !isNonNullObject(toolInvocation) ||
+      typeof toolInvocation.toolName !== 'string'
     ) {
       continue;
     }
@@ -499,7 +486,7 @@ function collectUnmatchedResults(toolResults: unknown[], matchedResultIndexes: S
   const parts: Array<Record<string, unknown>> = [];
 
   for (const [index, toolResult] of toolResults.entries()) {
-    if (matchedResultIndexes.has(index) || typeof toolResult !== 'object' || toolResult === null) {
+    if (matchedResultIndexes.has(index) || !isNonNullObject(toolResult)) {
       continue;
     }
 
