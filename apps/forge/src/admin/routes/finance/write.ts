@@ -3,10 +3,10 @@
  * POST routes for finance operations (investment, payable, ledger, recurring)
  */
 
-import { z, ZodError } from 'zod';
+import { z } from 'zod';
 
 import type { HttpRequest, HttpHandler } from '../../../http/server';
-import { adminRouteError } from '../agents/admin-route-error-helper';
+import { safeRoute } from '../agents/admin-route-error-helper';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
 
@@ -114,148 +114,126 @@ export function registerFinanceWriteRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/finance/investment/create',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createInvestmentSchema);
-        const effectiveAt =
-          body.effectiveAt !== null && body.effectiveAt !== undefined
-            ? new Date(body.effectiveAt).getTime()
-            : Date.now();
+    handler: safeRoute('/admin/finance/investment/create', async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, createInvestmentSchema);
+      const effectiveAt =
+        body.effectiveAt !== null && body.effectiveAt !== undefined
+          ? new Date(body.effectiveAt).getTime()
+          : Date.now();
 
-        await input.companyCash.recordCashIn({
-          type: 'owner-investment',
-          amountUsd: body.amountUsd,
-          description: body.description ?? 'Manual owner investment',
-          effectiveAt,
-        });
+      await input.companyCash.recordCashIn({
+        type: 'owner-investment',
+        amountUsd: body.amountUsd,
+        description: body.description ?? 'Manual owner investment',
+        effectiveAt,
+      });
 
-        return jsonResponse({ success: true });
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        return adminRouteError(err, { path: '/admin/finance/investment/create' });
-      }
-    },
+      return jsonResponse({ success: true });
+    
+}),
   });
 
   // POST /admin/finance/payable/create
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/finance/payable/create',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createPayableSchema);
-        const dueAt = new Date(body.dueAt).getTime();
+    handler: safeRoute('/admin/finance/payable/create', async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, createPayableSchema);
+      const dueAt = new Date(body.dueAt).getTime();
 
-        if (!Number.isFinite(dueAt)) {
-          throw new Error('Invalid payable dueAt');
-        }
+      if (!Number.isFinite(dueAt)) {
+        throw new Error('Invalid payable dueAt');
+      }
 
-        if (body.kind === 'single') {
-          const result = await input.companyCash.scheduleCashOut({
-            type: 'manual-payable',
-            amountUsd: body.amountUsd,
-            description: body.description ?? body.name,
-            referenceType: 'manual-payable',
-            referenceId: createId(),
-            dueAt,
-          });
-
-          return jsonResponse(
-            {
-              kind: body.kind,
-              entryId: result.entryId,
-            },
-            201,
-          );
-        }
-
-        const result = await input.companyPayables.createRecurringPayable({
-          name: body.name,
-          description: body.description,
+      if (body.kind === 'single') {
+        const result = await input.companyCash.scheduleCashOut({
+          type: 'manual-payable',
           amountUsd: body.amountUsd,
-          recurrencePeriod: body.recurrencePeriod ?? 'monthly',
+          description: body.description ?? body.name,
+          referenceType: 'manual-payable',
+          referenceId: createId(),
           dueAt,
         });
 
         return jsonResponse(
           {
             kind: body.kind,
-            payableId: result.payableId,
             entryId: result.entryId,
           },
           201,
         );
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        return adminRouteError(err, { path: '/admin/finance/payable/create' });
       }
-    },
+
+      const result = await input.companyPayables.createRecurringPayable({
+        name: body.name,
+        description: body.description,
+        amountUsd: body.amountUsd,
+        recurrencePeriod: body.recurrencePeriod ?? 'monthly',
+        dueAt,
+      });
+
+      return jsonResponse(
+        {
+          kind: body.kind,
+          payableId: result.payableId,
+          entryId: result.entryId,
+        },
+        201,
+      );
+    
+}),
   });
 
   // POST /admin/finance/ledger/post
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/finance/ledger/post',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-        const effectiveAt =
-          body.effectiveAt !== null && body.effectiveAt !== undefined
-            ? new Date(body.effectiveAt).getTime()
-            : undefined;
-        const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
+    handler: safeRoute('/admin/finance/ledger/post', async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const effectiveAt =
+        body.effectiveAt !== null && body.effectiveAt !== undefined
+          ? new Date(body.effectiveAt).getTime()
+          : undefined;
+      const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
 
-        await input.companyPayables.syncRecurringPayableOccurrence({
-          entryId: body.entryId,
-        });
+      await input.companyPayables.syncRecurringPayableOccurrence({
+        entryId: body.entryId,
+      });
 
-        return jsonResponse(result);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { path: '/admin/finance/ledger/post' });
-      }
-    },
+      return jsonResponse(result);
+    
+}),
   });
 
   // POST /admin/finance/ledger/cancel
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/finance/ledger/cancel',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-        const result = await input.companyCash.cancelPlannedEntry(body.entryId);
+    handler: safeRoute('/admin/finance/ledger/cancel', async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const result = await input.companyCash.cancelPlannedEntry(body.entryId);
 
-        await input.companyPayables.syncRecurringPayableOccurrence({
-          entryId: body.entryId,
-        });
+      await input.companyPayables.syncRecurringPayableOccurrence({
+        entryId: body.entryId,
+      });
 
-        return jsonResponse(result);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { path: '/admin/finance/ledger/cancel' });
-      }
-    },
+      return jsonResponse(result);
+    
+}),
   });
 
   // POST /admin/finance/recurring-payable/set-active
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/finance/recurring-payable/set-active',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
-        const result = await input.companyPayables.setRecurringPayableActive(
-          body.payableId,
-          body.isActive,
-        );
-        return jsonResponse(result);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { path: '/admin/finance/recurring-payable/set-active' });
-      }
-    },
+    handler: safeRoute('/admin/finance/recurring-payable/set-active', async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
+      const result = await input.companyPayables.setRecurringPayableActive(
+        body.payableId,
+        body.isActive,
+      );
+      return jsonResponse(result);
+    
+}),
   });
 }
