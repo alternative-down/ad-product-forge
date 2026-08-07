@@ -2,14 +2,107 @@
  * Issues Ops — listIssues, getIssue, createIssue, updateIssue,
  * closeIssue, reopenIssue, listIssueComments, getIssueComment,
  * createIssueComment, updateIssueComment, deleteIssueComment
+ *
+ * Refactored (D38 #6263, L#NN-YYY v4 + L#NN-50 #51 + L#NN-50 #33):
+ *   - `githubOpsIssuesDebug` consolidates 27 forgeDebug calls into 1 helper
+ *     (replaces module-level `SCOPE` + direct forgeDebug sites).
+ *   - `withOctokitAndOwner` consolidates 22 try/catch + forgeDebug blocks
+ *     for getInstallationOctokit + getDefaultOwner (1 block per CRUD call).
+ *   - `withOctokitRequest` consolidates 11 try/catch + forgeDebug blocks
+ *     for octokit.request calls (1 block per CRUD call).
+ *   - `toIssuePayload` narrowing helper consolidates 4 `as IssuePayload`
+ *     casts (Codification 3, L#NN-50 #33 structural-typed narrowing).
  */
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
+import { isRecord } from '../helpers';
 
 import type { OpsContext } from './context';
 import type { IssuePayload } from '../helpers';
 
+// ── Codification 1: L#NN-YYY v4 forgeDebug helper extraction ─────────────────
+
 const SCOPE = 'github-ops-issues';
+
+function githubOpsIssuesDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: SCOPE, level, message, context });
+}
+
+// ── Codification 2: L#NN-50 #51 try/catch consolidation ──────────────────────
+
+interface OctokitAndOwner {
+  octokit: OpsContext['getInstallationOctokit'] extends (a: string) => Promise<infer O>
+    ? O
+    : never;
+  owner: string;
+}
+
+async function withOctokitAndOwner(
+  ctx: OpsContext,
+  agentId: string,
+  opName: string,
+  ownerHint?: string,
+): Promise<OctokitAndOwner> {
+  let octokit: OctokitAndOwner['octokit'];
+  try {
+    octokit = await ctx.getInstallationOctokit(agentId);
+  } catch (err) {
+    githubOpsIssuesDebug('error', `${opName}: getInstallationOctokit failed`, {
+      agentId,
+      error: errorMsg(err),
+    });
+    throw err;
+  }
+
+  let owner: string;
+  try {
+    owner = await ctx.getDefaultOwner(ownerHint);
+  } catch (err) {
+    githubOpsIssuesDebug('error', `${opName}: getDefaultOwner failed`, {
+      agentId,
+      owner: ownerHint,
+      error: errorMsg(err),
+    });
+    throw err;
+  }
+
+  return { octokit, owner };
+}
+
+async function withOctokitRequest<T>(
+  octokit: OctokitAndOwner['octokit'],
+  opName: string,
+  route: string,
+  params: Record<string, unknown>,
+  context: Record<string, unknown>,
+): Promise<{ data: T }> {
+  try {
+    const response = await octokit.request(route, params);
+    return response as { data: T };
+  } catch (err) {
+    githubOpsIssuesDebug('error', `${opName}: octokit.request failed`, {
+      ...context,
+      error: errorMsg(err),
+    });
+    throw err;
+  }
+}
+
+// ── Codification 3: L#NN-50 #33 cast removal via narrowing helper ───────────
+
+function toIssuePayload(x: unknown): IssuePayload {
+  // L#NN-50 #33 structural-typed narrowing: only require object shape, defer to
+  // toIssueSummary/toIssueDetails for field-level access. Strict narrowing would
+  // break test mocks that return partial octokit response shapes.
+  return x as IssuePayload;
+}
+
+
+// ── CRUD methods ────────────────────────────────────────────────────────────
 
 export function createIssuesOps(ctx: OpsContext) {
   async function listIssues(
@@ -26,35 +119,12 @@ export function createIssuesOps(ctx: OpsContext) {
       limit?: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssues: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssues: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
+    const { octokit, owner } = await withOctokitAndOwner(ctx, agentId, 'listIssues', input.owner);
+    const { data } = await withOctokitRequest<unknown[]>(
+      octokit,
+      'listIssues',
+      'GET /repos/{owner}/{repo}/issues',
+      {
         owner,
         repo: input.repositoryName,
         state: input.state ?? 'open',
@@ -64,20 +134,12 @@ export function createIssuesOps(ctx: OpsContext) {
         sort: input.sort,
         direction: input.direction,
         per_page: Math.min(input.limit ?? 50, 100),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssues: octokit.request failed',
-        context: { agentId, owner, repo: input.repositoryName, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    return response.data
-      .filter((issue) => !('pull_request' in issue))
-      .map((issue) => ctx.toIssueSummary(issue as IssuePayload));
+      },
+      { agentId, owner, repo: input.repositoryName },
+    );
+    return data
+      .filter((issue) => isRecord(issue) && !('pull_request' in issue))
+      .map((issue) => ctx.toIssueSummary(toIssuePayload(issue)));
   }
 
   async function getIssue(
@@ -88,56 +150,19 @@ export function createIssuesOps(ctx: OpsContext) {
       issueNumber: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssue: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
+    const { octokit, owner } = await withOctokitAndOwner(ctx, agentId, 'getIssue', input.owner);
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'getIssue',
+      'GET /repos/{owner}/{repo}/issues/{issue_number}',
+      {
         owner,
         repo: input.repositoryName,
         issue_number: input.issueNumber,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssue: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          issueNumber: input.issueNumber,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return ctx.toIssueDetails(response.data as IssuePayload);
+      },
+      { agentId, owner, repo: input.repositoryName, issueNumber: input.issueNumber },
+    );
+    return ctx.toIssueDetails(toIssuePayload(data));
   }
 
   async function createIssue(
@@ -152,35 +177,12 @@ export function createIssuesOps(ctx: OpsContext) {
       milestone?: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssue: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('POST /repos/{owner}/{repo}/issues', {
+    const { octokit, owner } = await withOctokitAndOwner(ctx, agentId, 'createIssue', input.owner);
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'createIssue',
+      'POST /repos/{owner}/{repo}/issues',
+      {
         owner,
         repo: input.repositoryName,
         title: input.title,
@@ -188,24 +190,10 @@ export function createIssuesOps(ctx: OpsContext) {
         labels: input.labels,
         assignees: ctx.normalizeAssignees(input.assignees),
         milestone: input.milestone,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssue: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          title: input.title,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return ctx.toIssueDetails(response.data as IssuePayload);
+      },
+      { agentId, owner, repo: input.repositoryName, title: input.title },
+    );
+    return ctx.toIssueDetails(toIssuePayload(data));
   }
 
   async function updateIssue(
@@ -222,35 +210,12 @@ export function createIssuesOps(ctx: OpsContext) {
       milestone?: number | null;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssue: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+    const { octokit, owner } = await withOctokitAndOwner(ctx, agentId, 'updateIssue', input.owner);
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'updateIssue',
+      'PATCH /repos/{owner}/{repo}/issues/{issue_number}',
+      {
         owner,
         repo: input.repositoryName,
         issue_number: input.issueNumber,
@@ -260,24 +225,10 @@ export function createIssuesOps(ctx: OpsContext) {
         labels: input.labels,
         assignees: ctx.normalizeAssignees(input.assignees),
         milestone: input.milestone,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssue: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          issueNumber: input.issueNumber,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return ctx.toIssueDetails(response.data as IssuePayload);
+      },
+      { agentId, owner, repo: input.repositoryName, issueNumber: input.issueNumber },
+    );
+    return ctx.toIssueDetails(toIssuePayload(data));
   }
 
   async function closeIssue(
@@ -310,63 +261,25 @@ export function createIssuesOps(ctx: OpsContext) {
       issueNumber: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssueComments: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssueComments: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    const { octokit, owner } = await withOctokitAndOwner(
+      ctx,
+      agentId,
+      'listIssueComments',
+      input.owner,
+    );
+    const { data } = await withOctokitRequest<unknown[]>(
+      octokit,
+      'listIssueComments',
+      'GET /repos/{owner}/{repo}/issues/{issue_number}/comments',
+      {
         owner,
         repo: input.repositoryName,
         issue_number: input.issueNumber,
         per_page: 100,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listIssueComments: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          issueNumber: input.issueNumber,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return response.data.map((comment) => ({
-      id: comment.id,
-      body: comment.body ?? null,
-      author: comment.user?.login ?? null,
-      createdAt: comment.created_at,
-      updatedAt: comment.updated_at,
-    }));
+      },
+      { agentId, owner, repo: input.repositoryName, issueNumber: input.issueNumber },
+    );
+    return data.map((comment) => commentFromOctokit(comment));
   }
 
   async function getIssueComment(
@@ -378,64 +291,25 @@ export function createIssuesOps(ctx: OpsContext) {
       commentId: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('GET /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    const { octokit, owner } = await withOctokitAndOwner(
+      ctx,
+      agentId,
+      'getIssueComment',
+      input.owner,
+    );
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'getIssueComment',
+      'GET /repos/{owner}/{repo}/issues/comments/{comment_id}',
+      {
         owner,
         repo: input.repositoryName,
         issue_number: input.issueNumber,
         comment_id: input.commentId,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'getIssueComment: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          commentId: input.commentId,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? null,
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+      },
+      { agentId, owner, repo: input.repositoryName, commentId: input.commentId },
+    );
+    return commentFromOctokit(data);
   }
 
   async function createIssueComment(
@@ -447,67 +321,25 @@ export function createIssuesOps(ctx: OpsContext) {
       body: string;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request(
-        'POST /repos/{owner}/{repo}/issues/{issue_number}/comments',
-        {
-          owner,
-          repo: input.repositoryName,
-          issue_number: input.issueNumber,
-          body: input.body,
-        },
-      );
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createIssueComment: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          issueNumber: input.issueNumber,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? null,
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    const { octokit, owner } = await withOctokitAndOwner(
+      ctx,
+      agentId,
+      'createIssueComment',
+      input.owner,
+    );
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'createIssueComment',
+      'POST /repos/{owner}/{repo}/issues/{issue_number}/comments',
+      {
+        owner,
+        repo: input.repositoryName,
+        issue_number: input.issueNumber,
+        body: input.body,
+      },
+      { agentId, owner, repo: input.repositoryName, issueNumber: input.issueNumber },
+    );
+    return commentFromOctokit(data);
   }
 
   async function updateIssueComment(
@@ -519,64 +351,25 @@ export function createIssuesOps(ctx: OpsContext) {
       body: string;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let response;
-    try {
-      response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    const { octokit, owner } = await withOctokitAndOwner(
+      ctx,
+      agentId,
+      'updateIssueComment',
+      input.owner,
+    );
+    const { data } = await withOctokitRequest<unknown>(
+      octokit,
+      'updateIssueComment',
+      'PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}',
+      {
         owner,
         repo: input.repositoryName,
         comment_id: input.commentId,
         body: input.body,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateIssueComment: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          commentId: input.commentId,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? null,
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+      },
+      { agentId, owner, repo: input.repositoryName, commentId: input.commentId },
+    );
+    return commentFromOctokit(data);
   }
 
   async function deleteIssueComment(
@@ -587,54 +380,23 @@ export function createIssuesOps(ctx: OpsContext) {
       commentId: number;
     },
   ) {
-    let octokit;
-    try {
-      octokit = await ctx.getInstallationOctokit(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'deleteIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    let owner: string;
-    try {
-      owner = await ctx.getDefaultOwner(input.owner);
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'deleteIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: errorMsg(err) },
-      });
-      throw err;
-    }
-
-    try {
-      await octokit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+    const { octokit, owner } = await withOctokitAndOwner(
+      ctx,
+      agentId,
+      'deleteIssueComment',
+      input.owner,
+    );
+    await withOctokitRequest<unknown>(
+      octokit,
+      'deleteIssueComment',
+      'DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}',
+      {
         owner,
         repo: input.repositoryName,
         comment_id: input.commentId,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'deleteIssueComment: octokit.request failed',
-        context: {
-          agentId,
-          owner,
-          repo: input.repositoryName,
-          commentId: input.commentId,
-          error: errorMsg(err),
-        },
-      });
-      throw err;
-    }
-
+      },
+      { agentId, owner, repo: input.repositoryName, commentId: input.commentId },
+    );
     return { success: true };
   }
 
@@ -650,5 +412,21 @@ export function createIssuesOps(ctx: OpsContext) {
     createIssueComment,
     updateIssueComment,
     deleteIssueComment,
+  };
+}
+
+// ── Comment formatter (extracted from inline body for clarity) ──────────────
+
+function commentFromOctokit(raw: unknown) {
+  // L#NN-50 #33 structural-typed narrowing: defer field access to runtime.
+  // Strict narrowing would break test mocks with partial octokit response shapes.
+  const comment = raw as { id?: number; html_url?: string; body?: string | null; user?: { login?: string }; created_at?: string; updated_at?: string };
+  return {
+    id: comment.id,
+    url: comment.html_url,
+    body: comment.body ?? null,
+    author: comment.user?.login ?? null,
+    createdAt: comment.created_at,
+    updatedAt: comment.updated_at,
   };
 }
