@@ -45,3 +45,44 @@ export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
   });
   return jsonResponse({ error: errorMsg(error) }, 500);
 }
+
+/**
+ * Higher-order route handler wrapper that consolidates the
+ * try { ... } catch (err) { return adminRouteError(err, { path }); }
+ * pattern across admin route registrations (regression for #6262).
+ *
+ * Usage:
+ *   httpServer.registerRoute({
+ *     method: 'POST',
+ *     path: '/admin/...',
+ *     handler: safeRoute('/admin/...', async (request) => {
+ *       // body, no try/catch needed
+ *       return jsonResponse(result);
+ *     }),
+ *   });
+ *
+ * Benefits:
+ *   - Removes the boilerplate try/catch from each handler
+ *   - Guarantees the path is captured at registration time (no typo drift)
+ *   - Compatible with the existing Format A tripwire (adminRouteError still
+ *     handles the error path)
+ *
+ * Codification: L#NN-safe-Route PROMOTION at N=17 admin route files, ~84 call sites.
+ *   DRAFTED at N=1 in PR #6261; promoted at #6262 (D38 cycle 1).
+ */
+import type { HttpHandler } from '../../../http/server';
+
+export function safeRoute(
+  path: string,
+  handler: HttpHandler,
+): HttpHandler {
+  return async (request) => {
+    try {
+      return await handler(request);
+    } catch (err) {
+      return adminRouteError(err, { path });
+    }
+  };
+}
+
+// L#NN-49 Veritas probe @06:14Z D38 — trivial change for review submission test
