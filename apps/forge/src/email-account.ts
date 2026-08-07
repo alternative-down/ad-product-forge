@@ -444,7 +444,6 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           message: 'send: targetKey missing',
           context: { targetKey: input.targetKey },
         });
-        forgeDebug({ scope: 'email-account', level: 'warn', message: 'send: targetKey missing' });
         throw new Error('[email] Cannot send without a targetKey');
       }
 
