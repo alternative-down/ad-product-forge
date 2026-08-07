@@ -253,6 +253,13 @@
       "when": 1785311443000,
       "tag": "0034_company_cash_ledger_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1786121624169,
+      "tag": "0036_create_payment_tables",
+      "breakpoints": true
     }
   ]
 }
