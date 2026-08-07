@@ -225,6 +225,34 @@
       "when": 1782120723420,
       "tag": "0027_encrypt_webhook_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1781902527000,
+      "tag": "0031_add_created_at_to_system_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1782335651000,
+      "tag": "0032_payment_receivables_currency_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1782345894000,
+      "tag": "0033_agent_schedules_creator_id_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1785311443000,
+      "tag": "0034_company_cash_ledger_currency",
+      "breakpoints": true
     }
   ]
 }
