@@ -133,7 +133,7 @@ describe('safeRoute (regression for #6262)', () => {
   it('calls the handler and returns its response on success', async () => {
     const handler = safeRoute('/admin/test', async () => ({
       status: 200,
-      body: { ok: true },
+      body: JSON.stringify({ ok: true }),
     }));
     const result = await handler({
       method: 'GET',
@@ -145,7 +145,7 @@ describe('safeRoute (regression for #6262)', () => {
       req: {} as never,
     });
     expect(result.status).toBe(200);
-    expect(result.body).toEqual({ ok: true });
+    expect(result.body).toBe('{"ok":true}');
   });
 
   it('catches errors and returns 500 via adminRouteError', async () => {
