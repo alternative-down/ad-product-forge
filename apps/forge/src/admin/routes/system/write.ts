@@ -8,7 +8,7 @@ import { syncOpenAICodexCredential, syncAnthropicCredential } from '@forge-runti
 import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
-import { adminRouteError } from '../agents/admin-route-error-helper';
+import { adminRouteError, safeRoute } from '../agents/admin-route-error-helper';
 import { jsonResponse, parseJsonBody, normalizeOptionalText, normalizeJsonText } from '../helpers';
 import { upsertSystemSettingsSchema, upsertLlmModelPriceSchema } from '../schemas/llm';
 import { upsertSystemMcpServerSchema, deleteSystemMcpServerSchema } from '../schemas/mcp';
@@ -195,122 +195,90 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/skills/upload',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/skills/upload', async (request) => {
         const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
         const installedSkillNames = await installGlobalSkillsFromZip({
           workspaceBasePath,
           zipBase64: body.archiveBase64,
         });
         return jsonResponse({ success: true, installedSkillNames }, 201);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/skills/upload' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/skills/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/skills/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/skills/delete', async (request) => {
         const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
         await deleteGlobalSkill({
           workspaceBasePath,
           skillName: body.skillName,
         });
         return jsonResponse({ success: true, skillName: body.skillName });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/skills/delete' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/llm/price/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/llm/price/upsert',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/llm/price/upsert', async (request) => {
         const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
         return jsonResponse(await llmModelPrices.upsertPrice(body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/llm/price/upsert' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/integration/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/integration/upsert',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/integration/upsert', async (request) => {
         const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
         return jsonResponse(await integrations.upsertIntegration(body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/integration/upsert' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/integration/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/integration/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/integration/delete', async (request) => {
         const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
         await integrations.deleteIntegration(body.providerType);
         return jsonResponse({ success: true, integrationId: body.integrationId });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/integration/delete' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/llm/profile/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/llm/profile/upsert',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/llm/profile/upsert', async (request) => {
         const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/llm/profile/upsert' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/llm/profile/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/llm/profile/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/llm/profile/delete', async (request) => {
         const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
         await llmSettings.deleteProfile(body.profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/llm/profile/delete' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/llm/defaults/update
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/llm/defaults/update',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/llm/defaults/update', async (request) => {
         const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/llm/defaults/update' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/oauth/sync
@@ -376,16 +344,12 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/reset',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/reset', async (request) => {
         const { confirm: _confirm } = parseJsonBody(request.bodyText, factoryResetSchema);
         // _confirm === "FACTORY_RESET" guaranteed by z.literal
         const result = await performFactoryReset();
         return jsonResponse(result);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/reset' });
-        }
-    },
+    }),
   });
 
 }

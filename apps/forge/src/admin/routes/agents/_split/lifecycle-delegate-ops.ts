@@ -10,7 +10,7 @@ import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
-import { adminRouteError } from '../admin-route-error-helper';
+import { safeRoute } from '../admin-route-error-helper';
 
 export function registerLifecycleDelegateOps(
   httpServer: {
@@ -35,8 +35,7 @@ export function registerLifecycleDelegateOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/hire',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/hire', async (request) => {
         const body = parseJsonBody(
           request.bodyText ?? '',
           z.object({
@@ -57,18 +56,14 @@ export function registerLifecycleDelegateOps(
           internalChat: input.internalChat,
         });
         return jsonResponse(result, 201);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/hire' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/terminate
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/terminate',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/terminate', async (request) => {
         const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string() }));
         return jsonResponse(
           await ops.runInternalTermination(input.db, {
@@ -81,18 +76,14 @@ export function registerLifecycleDelegateOps(
             internalChat: input.internalChat,
           }),
         );
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/terminate' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/change-role
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/change-role',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/change-role', async (request) => {
         const body = parseJsonBody(
           request.bodyText ?? '',
           z.object({ agentId: z.string(), roleId: z.string() }),
@@ -102,9 +93,6 @@ export function registerLifecycleDelegateOps(
           roleId: body.roleId,
         });
         return jsonResponse({ success: true });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/change-role' });
-      }
-    },
+    }),
   });
 }

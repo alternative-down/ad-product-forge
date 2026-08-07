@@ -20,7 +20,7 @@ import {
   agentExecutionContracts,
 } from '../../../database/schema';
 import { jsonResponse } from '../index';
-import { adminRouteError } from './admin-route-error-helper';
+import { adminRouteError, safeRoute } from './admin-route-error-helper';
 
 function extractAgentId(path: string): string {
   const match = path.match(/^\/admin\/agents\/([^/]+)/);
@@ -33,18 +33,14 @@ export function registerAgentBaseRoutes(httpServer: ForgeHttpServerAdapter, getA
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const agent = await getAgent(agentId);
         if (agent === null || agent === undefined)
           return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(agent);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId' });
-      }
-    },
+    }),
   });
 }
 
@@ -54,8 +50,7 @@ export function registerAgentStepsRoutes(httpServer: ForgeHttpServerAdapter, db:
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/steps',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/steps', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -67,10 +62,7 @@ export function registerAgentStepsRoutes(httpServer: ForgeHttpServerAdapter, db:
           offset,
         });
         return jsonResponse({ items: rows, hasMore: rows.length === limit });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/steps' });
-      }
-    },
+    }),
   });
 }
 
@@ -83,15 +75,11 @@ export function registerAgentConversationsRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/conversations',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/conversations', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         return jsonResponse(await listAgentRecentConversations(agentId));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/conversations' });
-      }
-    },
+    }),
   });
 }
 
@@ -104,15 +92,11 @@ export function registerAgentMemoryRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/memory',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/memory', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         return jsonResponse(await getAgentRuntimeMemory(agentId));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/memory' });
-      }
-    },
+    }),
   });
 }
 
@@ -122,8 +106,7 @@ export function registerAgentMetricsRoutes(httpServer: ForgeHttpServerAdapter, d
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/metrics',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/metrics', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -133,10 +116,7 @@ export function registerAgentMetricsRoutes(httpServer: ForgeHttpServerAdapter, d
           limit,
         });
         return jsonResponse({ items: rows });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/metrics' });
-      }
-    },
+    }),
   });
 }
 
@@ -146,18 +126,14 @@ export function registerAgentContractRoutes(httpServer: ForgeHttpServerAdapter, 
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/contracts',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/contracts', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const rows = await db.query.agentExecutionContracts.findMany({
           where: eq(agentExecutionContracts.agentId, agentId),
         });
         return jsonResponse({ items: rows });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/contracts' });
-      }
-    },
+    }),
   });
 }
 
@@ -214,18 +190,14 @@ export function registerAgentSchedulesRoutes(httpServer: ForgeHttpServerAdapter,
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/schedules',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/schedules', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const rows = await db.query.agentSchedules.findMany({
           where: eq(agentSchedules.agentId, agentId),
         });
         return jsonResponse({ items: rows });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/schedules' });
-      }
-    },
+    }),
   });
 }
 
@@ -235,8 +207,7 @@ export function registerAgentNotificationsRoutes(httpServer: ForgeHttpServerAdap
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId/notifications',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agents/:agentId/notifications', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
         const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -253,9 +224,6 @@ export function registerAgentNotificationsRoutes(httpServer: ForgeHttpServerAdap
             read: n.readAt !== null,
           })),
         });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agents/:agentId/notifications' });
-      }
-    },
+    }),
   });
 }

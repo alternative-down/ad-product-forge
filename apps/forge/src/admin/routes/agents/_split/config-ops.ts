@@ -16,7 +16,7 @@ import type { Database } from '../../../../database/client';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../../github/manager';
 
-import { adminRouteError } from '../admin-route-error-helper';
+import { safeRoute } from '../admin-route-error-helper';
 
 export function registerConfigOps(
   httpServer: {
@@ -32,8 +32,7 @@ export function registerConfigOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/github-manifest-config/update',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/github-manifest-config/update', async (request) => {
         const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
         if (!input.githubApps) {
           return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
@@ -43,18 +42,14 @@ export function registerConfigOps(
           manifestConfig: body.manifestConfig,
         });
         return jsonResponse({ success: true, agentId: body.agentId, provisioning });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/github-manifest-config/update' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/update-config
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/update-config',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/update-config', async (request) => {
         const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
@@ -77,9 +72,6 @@ export function registerConfigOps(
           .where(sql`id = ${body.agentId}`);
         await reloadAgentIfLoaded(db, input.loaderConfig as any, body.agentId);
         return jsonResponse({ success: true, agentId: body.agentId });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/update-config' });
-      }
-    },
+    }),
   });
 }

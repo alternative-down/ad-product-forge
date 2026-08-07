@@ -11,7 +11,7 @@ import {
   updateScheduleSchema,
   deleteScheduleSchema,
 } from '../schemas/schedules';
-import { adminRouteError } from './admin-route-error-helper';
+import { safeRoute } from './admin-route-error-helper';
 
 export function registerAgentSchedulesWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -23,8 +23,7 @@ export function registerAgentSchedulesWriteRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-schedule/create',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent-schedule/create', async (request) => {
         const body = parseJsonBody(request.bodyText, createScheduleSchema);
         const scheduleInput =
           body.scheduleType === 'cron'
@@ -48,18 +47,14 @@ export function registerAgentSchedulesWriteRoutes(
               };
         const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
         return jsonResponse(schedule, 201);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-schedule/create' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent-schedule/update
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-schedule/update',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent-schedule/update', async (request) => {
         const body = parseJsonBody(request.bodyText, updateScheduleSchema);
         const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
           name: body.name,
@@ -73,24 +68,17 @@ export function registerAgentSchedulesWriteRoutes(
           isActive: body.isActive,
         });
         return jsonResponse(schedule);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-schedule/update' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent-schedule/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-schedule/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent-schedule/delete', async (request) => {
         const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
         const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
         return jsonResponse(result);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-schedule/delete' });
-      }
-    },
+    }),
   });
 }
