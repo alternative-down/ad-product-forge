@@ -25,6 +25,22 @@ import { sendDiscordChunks } from './discord/outbound';
 import { downloadDiscordAttachments, extractDiscordMessageContent } from './discord/message-parser';
 import { getDiscordConversationName, getDiscordConversationParticipants } from './discord/helpers';
 
+// ─── module-level helpers ──────────────────────────────────────────────────────
+
+export function discordAccountDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'discord-account',
+    level,
+    message,
+    context,
+  });
+}
+
+
 export function createDiscordProvider(config: {
   token: string;
   channels?: Array<{
@@ -76,43 +92,25 @@ export function createDiscordProvider(config: {
     message: Message,
     botUserId: string,
   ): Promise<CommunicationInboundMessage | null> {
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'info',
-      message: 'MessageCreate received',
-      context: {
+    discordAccountDebug('info', 'MessageCreate received', {
         authorId: message.author.id,
         botUserId,
         channelType: message.channel.type,
         channelId: message.channelId,
-      },
-    });
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'info',
-      message: 'configuredChannels check',
-      context: {
+      });
+    discordAccountDebug('info', 'configuredChannels check', {
         size: configuredChannels.size,
         hasChannel: configuredChannels.has(message.channelId),
-      },
-    });
+      });
 
     if (message.author.id === botUserId) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'filtered: message from bot',
-      });
+      discordAccountDebug('info', 'filtered: message from bot');
       return null;
     }
 
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-        forgeDebug({
-          scope: 'discord-account',
-          level: 'info',
-          message: 'filtered: guild channel not in configuredChannels',
-        });
+        discordAccountDebug('info', 'filtered: guild channel not in configuredChannels');
         return null;
       }
     }
@@ -122,11 +120,7 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'filtered: guild channel requires mention but no mention',
-      });
+      discordAccountDebug('info', 'filtered: guild channel requires mention but no mention');
       return null;
     }
 
@@ -135,24 +129,16 @@ export function createDiscordProvider(config: {
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'filtered: empty content and no attachments',
-      });
+      discordAccountDebug('info', 'filtered: empty content and no attachments');
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'filtered: recent outbound echo',
-      });
+      discordAccountDebug('info', 'filtered: recent outbound echo');
       return null;
     }
 
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'message accepted' });
+    discordAccountDebug('info', 'message accepted');
 
     return {
       targetKey: message.channelId,
@@ -171,20 +157,10 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'info',
-      message: 'deliverMessage called',
-      context: { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length },
-    });
+    discordAccountDebug('info', 'deliverMessage called', { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length });
     if (!onInboundMessage) {
       pendingMessages.push(message);
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'pushed to pendingMessages',
-        context: { total: pendingMessages.length },
-      });
+      discordAccountDebug('info', 'pushed to pendingMessages', { total: pendingMessages.length });
       return;
     }
 
@@ -207,10 +183,10 @@ export function createDiscordProvider(config: {
     }
   }
 
-  forgeDebug({ scope: 'discord-account', level: 'info', message: 'Starting login' });
+  discordAccountDebug('info', 'Starting login');
 
   const ready = client.login(config.token).then(() => {
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'Login succeeded' });
+    discordAccountDebug('info', 'Login succeeded');
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
     }
@@ -220,52 +196,29 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'info',
-        message: 'MessageCreate received',
-        context: {
+      discordAccountDebug('info', 'MessageCreate received', {
           author: message.author.username,
           channelType: message.channel.type,
           guildId: message.guildId,
-        },
-      });
+        });
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
         if (!inboundMessage) {
-          forgeDebug({
-            scope: 'discord-account',
-            level: 'info',
-            message: 'toInboundMessage returned null',
-          });
+          discordAccountDebug('info', 'toInboundMessage returned null');
           return;
         }
 
-        forgeDebug({ scope: 'discord-account', level: 'info', message: 'calling deliverMessage' });
+        discordAccountDebug('info', 'calling deliverMessage');
         await deliverMessage(inboundMessage);
-        forgeDebug({
-          scope: 'discord-account',
-          level: 'info',
-          message: 'deliverMessage completed',
-        });
+        discordAccountDebug('info', 'deliverMessage completed');
       } catch (error) {
-        forgeDebug({
-          scope: 'discord-account',
-          level: 'error',
-          message: 'Error handling MessageCreate event',
-          context: { error: errorMsg(error) },
-        });
+        discordAccountDebug('error', 'Error handling MessageCreate event', { error: errorMsg(error) });
       }
     });
 
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'info',
-      message: 'logged in',
-      context: { tag: client.user.tag },
-    });
+    discordAccountDebug('info', 'logged in', { tag: client.user.tag });
 
     return client.user;
   });
@@ -294,12 +247,7 @@ export function createDiscordProvider(config: {
           rememberUser(member.user);
         }
       } catch (error) {
-        forgeDebug({
-          scope: 'discord-account',
-          level: 'warn',
-          message: 'Failed to fetch members for guild',
-          context: { guildId: guild.id, error: errorMsg(error) },
-        });
+        discordAccountDebug('warn', 'Failed to fetch members for guild', { guildId: guild.id, error: errorMsg(error) });
       }
     }
 
@@ -386,12 +334,7 @@ export function createDiscordProvider(config: {
       const channel = await client.channels.fetch(targetKey);
 
       if (channel === null || channel?.isTextBased() === false || channel?.isSendable() === false) {
-        forgeDebug({
-          scope: 'discord-account',
-          level: 'error',
-          message: 'getMessages discord target not readable',
-          context: { targetKey },
-        });
+        discordAccountDebug('error', 'getMessages discord target not readable', { targetKey });
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
