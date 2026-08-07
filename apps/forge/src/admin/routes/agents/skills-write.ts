@@ -23,7 +23,7 @@ import {
   deleteAgentSkillSchema,
   publishAgentSkillToGlobalSchema,
 } from '../schemas/skills';
-import { adminRouteError } from './admin-route-error-helper';
+import { safeRoute } from './admin-route-error-helper';
 
 export function registerAgentSkillsWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -37,138 +37,126 @@ export function registerAgentSkillsWriteRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-skills/upload',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
+    handler: safeRoute('/admin/agent-skills/upload', async (request) => {
+      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
 
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          zipBase64: body.archiveBase64,
-        });
-
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse(
-          {
-            success: true,
-            agentId: body.agentId,
-            installedSkillNames,
-          },
-          201,
-        );
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-skills/upload' });
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
       }
-    },
+
+      const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        zipBase64: body.archiveBase64,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse(
+        {
+          success: true,
+          agentId: body.agentId,
+          installedSkillNames,
+        },
+        201,
+      );
+    
+}),
   });
 
   // POST /admin/agent-skills/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-skills/delete',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
+    handler: safeRoute('/admin/agent-skills/delete', async (request) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
 
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        await deleteAgentWorkspaceSkill({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          skillName: body.skillName,
-        });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-skills/delete' });
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
       }
-    },
+
+      await deleteAgentWorkspaceSkill({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    
+}),
   });
 
   // POST /admin/agent-skills/install-global
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-skills/install-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
+    handler: safeRoute('/admin/agent-skills/install-global', async (request) => {
+      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
 
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        await installGlobalSkillToAgentWorkspace({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          skillName: body.skillName,
-        });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-skills/install-global' });
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
       }
-    },
+
+      await installGlobalSkillToAgentWorkspace({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        skillName: body.skillName,
+      });
+    
+}),
   });
 
   // POST /admin/agent-skills/publish-global
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-skills/publish-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
+    handler: safeRoute('/admin/agent-skills/publish-global', async (request) => {
+      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+      const agent = await input.db.query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+      });
 
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        const publishedSkillName = await publishAgentWorkspaceSkillToGlobalCatalog({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          publishedSkillName,
-        });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent-skills/publish-global' });
+      if (!agent) {
+        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
       }
-    },
+
+      const publishedSkillName = await publishAgentWorkspaceSkillToGlobalCatalog({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        publishedSkillName,
+      });
+    
+}),
   });
 }

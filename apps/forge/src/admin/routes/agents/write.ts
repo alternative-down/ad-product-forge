@@ -3,7 +3,6 @@
  * POST routes that perform agent write operations extracted from routes.ts
  */
 
-import { ZodError } from 'zod';
 import type { HttpHandler } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
@@ -11,7 +10,7 @@ import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
-import { adminRouteError } from './admin-route-error-helper';
+import { labeledRoute } from './admin-route-error-helper';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (
@@ -44,38 +43,30 @@ export function registerAgentWriteRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/clear-history',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          includeLongTermMemoryThread: body.includeLongTermMemoryThread,
-        });
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent clear-history route' });
-      }
-    },
+    handler: labeledRoute('Agent clear-history route', async (request) => {
+      const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+      });
+    
+}),
   });
 
   // POST /admin/agent/ltm-recall-search
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/ltm-recall-search',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
-        return jsonResponse(
-          await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
-            query: body.query,
-          }),
-        );
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent ltm-recall-search route' });
-      }
-    },
+    handler: labeledRoute('Agent ltm-recall-search route', async (request) => {
+      const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
+      return jsonResponse(
+        await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
+          query: body.query,
+        }),
+      );
+    
+}),
   });
 }

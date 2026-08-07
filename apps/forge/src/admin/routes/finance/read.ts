@@ -7,7 +7,7 @@ import { z as _z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/index';
 import { jsonResponse } from '../index';
-import { adminRouteError } from '../agents/admin-route-error-helper';
+import { labeledRoute } from '../agents/admin-route-error-helper';
 
 type CompanyCash = {
   getOverview: () => Promise<unknown>;
@@ -36,25 +36,19 @@ export function registerFinanceReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/finance',
-    handler: async () => {
-      try {
-        return jsonResponse(await finance?.companyCash.getOverview());
-      } catch (err) {
-        return adminRouteError(err, { label: 'Finance overview route' });
-      }
-    },
+    handler: labeledRoute('Finance overview route', async () => {
+      return jsonResponse(await finance?.companyCash.getOverview());
+    
+}),
   });
 
   // GET /admin/finance/contracts
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/finance/contracts',
-    handler: async () => {
-      try {
-        return jsonResponse(await finance?.companyCash.listContractSummaries());
-      } catch (err) {
-        return adminRouteError(err, { label: 'Finance contracts route' });
-      }
-    },
+    handler: labeledRoute('Finance contracts route', async () => {
+      return jsonResponse(await finance?.companyCash.listContractSummaries());
+    
+}),
   });
 }

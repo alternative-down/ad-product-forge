@@ -7,7 +7,7 @@ import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
-import { adminRouteError } from './admin-route-error-helper';
+import { safeRoute } from './admin-route-error-helper';
 import { updateAgentMcpServer, deleteAgentMcpServer } from './mcp-server-helpers';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
 import { parseProviderCredentials } from '../../../communication/provider-loader';
@@ -96,323 +96,299 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-provider/upsert',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-        if (body.providerType === 'discord') {
-          const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+      if (body.providerType === 'discord') {
+        const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
 
-          if (deleteSignal.token.trim().length === 0) {
-            await db
-              .delete(agentProviders)
-              .where(
-                and(
-                  eq(agentProviders.agentId, body.agentId),
-                  eq(agentProviders.providerType, body.providerType),
-                ),
-              );
-
-            await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
-
-            return jsonResponse({
-              success: true,
-              agentId: body.agentId,
-              providerType: body.providerType,
-            });
-          }
-        }
-
-        const credentials = parseProviderCredentials(
-          body.providerType as 'internal-chat' | 'discord' | 'email',
-          body.credentials,
-        );
-        const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
-        const existing = await db.query.agentProviders.findFirst({
-          where: and(
-            eq(agentProviders.agentId, body.agentId),
-            eq(agentProviders.providerType, body.providerType),
-          ),
-        });
-
-        if (existing) {
+        if (deleteSignal.token.trim().length === 0) {
           await db
-            .update(agentProviders)
-            .set({
-              encryptedCredentials,
-            })
-            .where(eq(agentProviders.id, existing.id));
-        } else {
-          // D34 L#NN-50 #36: remove Drizzle 0.26 cast and add missing updatedAt
-          // (the cast was hiding a missing-column bug that Drizzle's typed chain now catches).
-          await db.insert(agentProviders).values({
-            id: createId(),
+            .delete(agentProviders)
+            .where(
+              and(
+                eq(agentProviders.agentId, body.agentId),
+                eq(agentProviders.providerType, body.providerType),
+              ),
+            );
+
+          await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+
+          return jsonResponse({
+            success: true,
             agentId: body.agentId,
             providerType: body.providerType,
-            encryptedCredentials,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
           });
         }
+      }
 
-        await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+      const credentials = parseProviderCredentials(
+        body.providerType as 'internal-chat' | 'discord' | 'email',
+        body.credentials,
+      );
+      const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
+      const existing = await db.query.agentProviders.findFirst({
+        where: and(
+          eq(agentProviders.agentId, body.agentId),
+          eq(agentProviders.providerType, body.providerType),
+        ),
+      });
 
-        return jsonResponse({
-          success: true,
+      if (existing) {
+        await db
+          .update(agentProviders)
+          .set({
+            encryptedCredentials,
+          })
+          .where(eq(agentProviders.id, existing.id));
+      } else {
+        // D34 L#NN-50 #36: remove Drizzle 0.26 cast and add missing updatedAt
+        // (the cast was hiding a missing-column bug that Drizzle's typed chain now catches).
+        await db.insert(agentProviders).values({
+          id: createId(),
           agentId: body.agentId,
           providerType: body.providerType,
+          encryptedCredentials,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
-      } catch (err) {
-        return adminRouteError(err);
       }
-    },
+
+      await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        providerType: body.providerType,
+      });
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-provider/delete',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
 
-        await db
-          .delete(agentProviders)
-          .where(
-            and(
-              eq(agentProviders.agentId, body.agentId),
-              eq(agentProviders.providerType, body.providerType),
-            ),
-          );
+      await db
+        .delete(agentProviders)
+        .where(
+          and(
+            eq(agentProviders.agentId, body.agentId),
+            eq(agentProviders.providerType, body.providerType),
+          ),
+        );
 
-        await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+      await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
 
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          providerType: body.providerType,
-        });
-      } catch (err) {
-        return adminRouteError(err);
-      }
-    },
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        providerType: body.providerType,
+      });
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/create',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-        const serverId = createId();
-        const configId = createId();
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+      const serverId = createId();
+      const configId = createId();
 
-        await db.insert(mcpServerConfigs).values({
-          id: serverId,
-          name: body.name,
-          description: normalizeOptionalText(body.description),
-          transport: body.transport,
-          command: body.transport === 'stdio' ? body.command : null,
-          args:
-            body.transport === 'stdio'
-              ? normalizeJsonText(body.argsText, 'argsText', 'array')
-              : null,
-          envVars:
-            body.transport === 'stdio'
-              ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
-              : null,
-          url: body.transport === 'http_streamable' ? body.url : null,
-          headers:
-            body.transport === 'http_streamable'
-              ? normalizeJsonText(body.headersText, 'headersText', 'object')
-              : null,
-          version: 1,
-          isActive: body.isActive === true ? 1 : 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
+      await db.insert(mcpServerConfigs).values({
+        id: serverId,
+        name: body.name,
+        description: normalizeOptionalText(body.description),
+        transport: body.transport,
+        command: body.transport === 'stdio' ? body.command : null,
+        args:
+          body.transport === 'stdio'
+            ? normalizeJsonText(body.argsText, 'argsText', 'array')
+            : null,
+        envVars:
+          body.transport === 'stdio'
+            ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+            : null,
+        url: body.transport === 'http_streamable' ? body.url : null,
+        headers:
+          body.transport === 'http_streamable'
+            ? normalizeJsonText(body.headersText, 'headersText', 'object')
+            : null,
+        version: 1,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-        await db.insert(agentMcpConfigs).values({
-          id: configId,
-          agentId: body.agentId,
-          serverId,
-          isActive: body.isActive === true ? 1 : 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
+      await db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-        await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+      await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
 
-        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
-      } catch (err) {
-        return adminRouteError(err);
-      }
-    },
+      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/update',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-        // D34 #6214 L#NN-50 #36: extract updateAgentMcpServer helper (DRY).
-        // The helper at mcp-server-helpers.ts:74 was dormant until now.
-        await updateAgentMcpServer(db, body);
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+      // D34 #6214 L#NN-50 #36: extract updateAgentMcpServer helper (DRY).
+      // The helper at mcp-server-helpers.ts:74 was dormant until now.
+      await updateAgentMcpServer(db, body);
 
-        await reloadAgentMcp(db, loaderConfig, body.agentId);
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
 
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          configId: body.configId,
-          serverId: body.serverId,
-        });
-      } catch (err) {
-        return adminRouteError(err);
-      }
-    },
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        serverId: body.serverId,
+      });
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/delete',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
-        // D34 #6214 L#NN-50 #36: extract deleteAgentMcpServer helper (DRY).
-        // The helper at mcp-server-helpers.ts:111 was dormant until now.
-        await deleteAgentMcpServer(db, body.configId, body.agentId, body.serverId);
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+      // D34 #6214 L#NN-50 #36: extract deleteAgentMcpServer helper (DRY).
+      // The helper at mcp-server-helpers.ts:111 was dormant until now.
+      await deleteAgentMcpServer(db, body.configId, body.agentId, body.serverId);
 
-        await reloadAgentMcp(db, loaderConfig, body.agentId);
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
 
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          configId: body.configId,
-          serverId: body.serverId,
-        });
-      } catch (err) {
-        return adminRouteError(err);
-      }
-    },
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        serverId: body.serverId,
+      });
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/assign',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
-        const existing = await db.query.agentMcpConfigs.findFirst({
-          where: and(
-            eq(agentMcpConfigs.agentId, body.agentId),
-            eq(agentMcpConfigs.serverId, body.serverId),
-          ),
-        });
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+      const existing = await db.query.agentMcpConfigs.findFirst({
+        where: and(
+          eq(agentMcpConfigs.agentId, body.agentId),
+          eq(agentMcpConfigs.serverId, body.serverId),
+        ),
+      });
 
-        if (existing) {
-          await db
-            .update(agentMcpConfigs)
-            .set({
-              isActive: body.isActive === true ? 1 : 0,
-              updatedAt: Date.now(),
-            })
-            .where(eq(agentMcpConfigs.id, existing.id));
-
-          await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
-
-          return jsonResponse({
-            success: true,
-            agentId: body.agentId,
-            configId: existing.id,
-            serverId: body.serverId,
-          });
-        }
-
-        const configId = createId();
-
-        await db.insert(agentMcpConfigs).values({
-          id: configId,
-          agentId: body.agentId,
-          serverId: body.serverId,
-          isActive: body.isActive === true ? 1 : 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-
-        await reloadAgentMcp(db, loaderConfig, body.agentId);
-
-        return jsonResponse(
-          { success: true, agentId: body.agentId, configId, serverId: body.serverId },
-          201,
-        );
-      } catch (err) {
-        return adminRouteError(err);
-      }
-    },
-  });
-
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-mcp/set-active',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
-
+      if (existing) {
         await db
           .update(agentMcpConfigs)
           .set({
             isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
-          .where(
-            and(
-              eq(agentMcpConfigs.id, body.configId),
-              eq(agentMcpConfigs.agentId, body.agentId ?? ''),
-            ),
-          );
+          .where(eq(agentMcpConfigs.id, existing.id));
 
         await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
 
         return jsonResponse({
           success: true,
           agentId: body.agentId,
-          configId: body.configId,
-          isActive: body.isActive,
+          configId: existing.id,
+          serverId: body.serverId,
         });
-      } catch (err) {
-        return adminRouteError(err);
       }
-    },
+
+      const configId = createId();
+
+      await db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId: body.serverId,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse(
+        { success: true, agentId: body.agentId, configId, serverId: body.serverId },
+        201,
+      );
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/set-active',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+
+      await db
+        .update(agentMcpConfigs)
+        .set({
+          isActive: body.isActive === true ? 1 : 0,
+          updatedAt: Date.now(),
+        })
+        .where(
+          and(
+            eq(agentMcpConfigs.id, body.configId),
+            eq(agentMcpConfigs.agentId, body.agentId ?? ''),
+          ),
+        );
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        isActive: body.isActive,
+      });
+    
+}),
   });
 
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/detach',
-    handler: async (request: HttpRequest) => {
-      try {
-        const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
-        const config = await db.query.agentMcpConfigs.findFirst({
-          where: and(
-            eq(agentMcpConfigs.id, body.configId),
-            eq(agentMcpConfigs.agentId, body.agentId),
-          ),
-        });
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+      const config = await db.query.agentMcpConfigs.findFirst({
+        where: and(
+          eq(agentMcpConfigs.id, body.configId),
+          eq(agentMcpConfigs.agentId, body.agentId),
+        ),
+      });
 
-        if (!config) {
-          return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
-        }
-
-        await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
-        await reloadAgentMcp(db, loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          configId: body.configId,
-        });
-      } catch (err) {
-        return adminRouteError(err);
+      if (!config) {
+        return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
       }
-    },
+
+      await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+      });
+    
+}),
   });
 }

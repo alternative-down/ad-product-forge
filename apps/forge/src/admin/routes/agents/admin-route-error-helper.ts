@@ -1,6 +1,8 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../../agents/error-formatting';
+import { ZodError } from 'zod';
 import { jsonResponse } from '../helpers';
+import type { HttpHandler } from '../../../http/server';
 
 export type AdminRouteErrorOptions = {
   path?: string;
@@ -47,16 +49,32 @@ export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
 }
 
 /**
+ * Re-throws ZodError so that schema validation errors bubble up to the outer
+ * HTTP layer with their intended status code. Used by safeRoute and
+ * labeledRoute to preserve the pre-extraction behavior of sites that
+ * previously had inline `if (err instanceof ZodError) throw err;` guards.
+ */
+function isZodErrorToRethrow(err: unknown): boolean {
+  return err instanceof ZodError;
+}
+
+/**
  * Higher-order route handler wrapper that consolidates the
  * try { ... } catch (err) { return adminRouteError(err, { path }); }
  * pattern across admin route registrations (regression for #6262).
+ *
+ * Two overloads:
+ *   safeRoute(path, handler)  - for sites that already use { path: '...' }
+ *   safeRoute(handler)        - for sites that used bare adminRouteError(err)
+ *
+ * Both re-throw ZodError so validation errors propagate to the outer layer
+ * with their intended 4xx status code.
  *
  * Usage:
  *   httpServer.registerRoute({
  *     method: 'POST',
  *     path: '/admin/...',
  *     handler: safeRoute('/admin/...', async (request) => {
- *       // body, no try/catch needed
  *       return jsonResponse(result);
  *     }),
  *   });
@@ -70,17 +88,46 @@ export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
  * Codification: L#NN-safe-Route PROMOTION at N=17 admin route files, ~84 call sites.
  *   DRAFTED at N=1 in PR #6261; promoted at #6262 (D38 cycle 1).
  */
-import type { HttpHandler } from '../../../http/server';
-
+export function safeRoute(handler: HttpHandler): HttpHandler;
+export function safeRoute(path: string, handler: HttpHandler): HttpHandler;
 export function safeRoute(
-  path: string,
-  handler: HttpHandler,
+  pathOrHandler: string | HttpHandler,
+  handler?: HttpHandler,
 ): HttpHandler {
+  const isPath = typeof pathOrHandler === 'string';
+  const actualHandler = (isPath ? handler : pathOrHandler) as HttpHandler;
+  const path = isPath ? pathOrHandler : undefined;
+  return async (request) => {
+    try {
+      return await actualHandler(request);
+    } catch (err) {
+      if (isZodErrorToRethrow(err)) throw err;
+      return adminRouteError(err, path !== undefined ? { path } : undefined);
+    }
+  };
+}
+
+/**
+ * Higher-order route handler wrapper for sites that use a human-readable
+ * label (instead of a path) in adminRouteError. Re-throws ZodError so that
+ * schema validation errors bubble up to the outer HTTP layer with their
+ * intended status code (preserves pre-extraction behavior).
+ *
+ * Usage:
+ *   handler: labeledRoute('Agent list route', async (request) => {
+ *     return jsonResponse(await readModel.listAgents());
+ *   }),
+ *
+ * Regression for #6262 phase 2. Codification: L#NN-safe-Route PROMOTION
+ * label sub-pattern, N=15 sites across 4 files.
+ */
+export function labeledRoute(label: string, handler: HttpHandler): HttpHandler {
   return async (request) => {
     try {
       return await handler(request);
     } catch (err) {
-      return adminRouteError(err, { path });
+      if (isZodErrorToRethrow(err)) throw err;
+      return adminRouteError(err, { label });
     }
   };
 }

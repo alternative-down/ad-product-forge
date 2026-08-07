@@ -5,7 +5,7 @@
  */
 
 import { parseJsonBody, jsonResponse } from '../../index';
-import { adminRouteError } from '../admin-route-error-helper';
+import { safeRoute } from '../admin-route-error-helper';
 
 import {
   topUpAgentContractSchema,
@@ -28,41 +28,32 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/contract/top-up',
-    handler: async (request: { bodyText: string }) => {
-      try {
-        const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
-        return jsonResponse(await ops.topUpActiveAgentContract(db, body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/contract/top-up' });
-      }
-    },
+    handler: safeRoute('/admin/agent/contract/top-up', async (request: { bodyText: string }) => {
+      const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
+      return jsonResponse(await ops.topUpActiveAgentContract(db, body));
+    
+}),
   });
 
   // POST /admin/agent/contract/adjust-budget
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/contract/adjust-budget',
-    handler: async (request: { bodyText: string }) => {
-      try {
-        const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
-        return jsonResponse(await ops.adjustAgentContractBudget(db, body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/contract/adjust-budget' });
-      }
-    },
+    handler: safeRoute('/admin/agent/contract/adjust-budget', async (request: { bodyText: string }) => {
+      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
+      return jsonResponse(await ops.adjustAgentContractBudget(db, body));
+    
+}),
   });
 
   // POST /admin/agent/contract/renew
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/contract/renew',
-    handler: async (request: { bodyText: string }) => {
-      try {
-        const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
-        return jsonResponse(await ops.renewAgentContract(db, body));
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/contract/renew' });
-      }
-    },
+    handler: safeRoute('/admin/agent/contract/renew', async (request: { bodyText: string }) => {
+      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
+      return jsonResponse(await ops.renewAgentContract(db, body));
+    
+}),
   });
 }

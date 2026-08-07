@@ -3,7 +3,6 @@
  * Routes extracted from routes.ts for better maintainability
  */
 
-import { ZodError } from 'zod';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 import { jsonResponse } from '../index';
 import {
@@ -12,7 +11,7 @@ import {
   agentThreadMessagesQuerySchema,
   agentConversationMessagesQuerySchema,
 } from '../schemas/agents';
-import { adminRouteError } from './admin-route-error-helper';
+import { labeledRoute } from './admin-route-error-helper';
 
 interface ReadModel {
   listAgents: () => Promise<unknown>;
@@ -56,176 +55,141 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents',
-    handler: async () => {
-      try {
-        return jsonResponse(await readModel.listAgents());
-      } catch (err) {
-        return adminRouteError(err, { label: 'Agent list route' });
-      }
-    },
+    handler: labeledRoute('Agent list route', async () => {
+      return jsonResponse(await readModel.listAgents());
+    
+}),
   });
 
   // GET /admin/agent
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent',
-    handler: async (request) => {
-      try {
-        const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
-        const agent = await readModel.getAgent(agentId);
-        if (agent === null || agent === undefined)
-          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-        return jsonResponse(agent);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent get route' });
-      }
-    },
+    handler: labeledRoute('Agent get route', async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
+      const agent = await readModel.getAgent(agentId);
+      if (agent === null || agent === undefined)
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      return jsonResponse(agent);
+    
+}),
   });
 
   // GET /admin/agent/recent-conversations
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/recent-conversations',
-    handler: async (request) => {
-      try {
-        const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
-        const conversations = await readModel.listAgentRecentConversations(agentId);
-        if (conversations === null || conversations === undefined)
-          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-        return jsonResponse(conversations);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent conversations route' });
-      }
-    },
+    handler: labeledRoute('Agent conversations route', async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
+      const conversations = await readModel.listAgentRecentConversations(agentId);
+      if (conversations === null || conversations === undefined)
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      return jsonResponse(conversations);
+    
+}),
   });
 
   // GET /admin/agent/execution-steps
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/execution-steps',
-    handler: async (request) => {
-      try {
-        const query = agentExecutionStepsQuerySchema.parse({
-          agentId: request.query.get('agentId'),
-          limit: request.query.get('limit') ?? undefined,
-          offset: request.query.get('offset') ?? undefined,
-        });
-        return jsonResponse(await readModel.listAgentExecutionSteps(query));
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent execution-steps route' });
-      }
-    },
+    handler: labeledRoute('Agent execution-steps route', async (request) => {
+      const query = agentExecutionStepsQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+      return jsonResponse(await readModel.listAgentExecutionSteps(query));
+    
+}),
   });
 
   // GET /admin/agent/thread-messages
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/thread-messages',
-    handler: async (request) => {
-      try {
-        const query = agentThreadMessagesQuerySchema.parse({
-          agentId: request.query.get('agentId'),
-          page: request.query.get('page') ?? undefined,
-          perPage: request.query.get('perPage') ?? undefined,
-        });
-        return jsonResponse(await readModel.listAgentThreadMessages(query));
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent thread-messages route' });
-      }
-    },
+    handler: labeledRoute('Agent thread-messages route', async (request) => {
+      const query = agentThreadMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        page: request.query.get('page') ?? undefined,
+        perPage: request.query.get('perPage') ?? undefined,
+      });
+      return jsonResponse(await readModel.listAgentThreadMessages(query));
+    
+}),
   });
 
   // GET /admin/agent/ltm-thread-messages
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/ltm-thread-messages',
-    handler: async (request) => {
-      try {
-        const query = agentThreadMessagesQuerySchema.parse({
-          agentId: request.query.get('agentId'),
-          page: request.query.get('page') ?? undefined,
-          perPage: request.query.get('perPage') ?? undefined,
-        });
-        return jsonResponse(
-          await readModel.listAgentLongTermMemoryThreadMessages({
-            agentId: query.agentId,
-            page: query.page,
-            perPage: query.perPage,
-          }),
-        );
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent ltm-thread-messages route' });
-      }
-    },
+    handler: labeledRoute('Agent ltm-thread-messages route', async (request) => {
+      const query = agentThreadMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        page: request.query.get('page') ?? undefined,
+        perPage: request.query.get('perPage') ?? undefined,
+      });
+      return jsonResponse(
+        await readModel.listAgentLongTermMemoryThreadMessages({
+          agentId: query.agentId,
+          page: query.page,
+          perPage: query.perPage,
+        }),
+      );
+    
+}),
   });
 
   // GET /admin/agent/runtime-memory
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/runtime-memory',
-    handler: async (request) => {
-      try {
-        const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
-        const snapshot = await readModel.getAgentRuntimeMemory(agentId);
-        if (snapshot === null || snapshot === undefined)
-          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-        return jsonResponse(snapshot);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent runtime-memory route' });
-      }
-    },
+    handler: labeledRoute('Agent runtime-memory route', async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
+      const snapshot = await readModel.getAgentRuntimeMemory(agentId);
+      if (snapshot === null || snapshot === undefined)
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      return jsonResponse(snapshot);
+    
+}),
   });
 
   // GET /admin/agent/om-debug-export
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/om-debug-export',
-    handler: async (request) => {
-      try {
-        const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
-        const snapshot = await readModel.getAgentOmDebugExport(agentId);
-        if (snapshot === null || snapshot === undefined)
-          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-        return jsonResponse(snapshot);
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent om-debug-export route' });
-      }
-    },
+    handler: labeledRoute('Agent om-debug-export route', async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
+      const snapshot = await readModel.getAgentOmDebugExport(agentId);
+      if (snapshot === null || snapshot === undefined)
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      return jsonResponse(snapshot);
+    
+}),
   });
 
   // GET /admin/agent/conversation-messages
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/conversation-messages',
-    handler: async (request) => {
-      try {
-        const query = agentConversationMessagesQuerySchema.parse({
-          agentId: request.query.get('agentId'),
-          provider: request.query.get('provider'),
-          targetKey: request.query.get('targetKey'),
-          limit: request.query.get('limit') ?? undefined,
-          offset: request.query.get('offset') ?? undefined,
-        });
-        return jsonResponse(
-          await readModel.listAgentConversationMessages({
-            agentId: query.agentId,
-            provider: query.provider,
-            targetKey: query.targetKey,
-            limit: query.limit,
-            offset: query.offset,
-          }),
-        );
-      } catch (err) {
-        if (err instanceof ZodError) throw err;
-        return adminRouteError(err, { label: 'Agent conversation-messages route' });
-      }
-    },
+    handler: labeledRoute('Agent conversation-messages route', async (request) => {
+      const query = agentConversationMessagesQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+        provider: request.query.get('provider'),
+        targetKey: request.query.get('targetKey'),
+        limit: request.query.get('limit') ?? undefined,
+        offset: request.query.get('offset') ?? undefined,
+      });
+      return jsonResponse(
+        await readModel.listAgentConversationMessages({
+          agentId: query.agentId,
+          provider: query.provider,
+          targetKey: query.targetKey,
+          limit: query.limit,
+          offset: query.offset,
+        }),
+      );
+    
+}),
   });
 }

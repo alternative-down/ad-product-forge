@@ -10,7 +10,7 @@ import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
-import { adminRouteError } from './admin-route-error-helper';
+import { labeledRoute } from './admin-route-error-helper';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.
@@ -91,63 +91,57 @@ export function registerAgentOperationRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/wake',
-    handler: (request) => {
-      try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-        const entry = registry.get(agentId);
-        const timestamp = Date.now();
+    handler: labeledRoute('Agent wake route', (request) => {
+      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+      const entry = registry.get(agentId);
+      const timestamp = Date.now();
 
-        if (entry === null || entry === undefined) {
-          return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
-        }
-
-        (entry as { runner: { notifyExternalEvent: (event: unknown) => void; forceIdle: () => Promise<void> } }).runner.notifyExternalEvent({
-          type: 'manual-wake',
-          groupKey: `manual-wake:${agentId}`,
-          groupMetadata: {
-            Source: 'admin-console',
-            AgentId: agentId,
-          },
-          idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
-          text: 'Manual wake requested from admin console.',
-          timestamp,
-        });
-        return jsonResponse({ success: true });
-      } catch (err) {
-        return adminRouteError(err, { label: 'Agent wake route' });
+      if (entry === null || entry === undefined) {
+        return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
       }
-    },
+
+      (entry as { runner: { notifyExternalEvent: (event: unknown) => void; forceIdle: () => Promise<void> } }).runner.notifyExternalEvent({
+        type: 'manual-wake',
+        groupKey: `manual-wake:${agentId}`,
+        groupMetadata: {
+          Source: 'admin-console',
+          AgentId: agentId,
+        },
+        idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
+        text: 'Manual wake requested from admin console.',
+        timestamp,
+      });
+      return jsonResponse({ success: true });
+    
+}),
   });
 
   // POST /admin/agent/internal-chat/send
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/internal-chat/send',
-    handler: async (request) => {
-      try {
-        const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
-        const sender = await input.internalChat.registerExternalAccount({
-          slug: payload.senderSlug,
-          displayName: payload.senderDisplayName,
-        });
-        const sent = await input.internalChat.sendMessage({
-          accountId: sender.accountId,
-          targetKey: payload.targetKey ?? payload.agentId,
-          content: payload.content,
-          attachments: [],
-        });
-        if (!sent.valid) {
-          throw new Error(sent.error);
-        }
-
-        return jsonResponse({
-          success: true,
-          conversationKey: sent.data.conversationKey,
-          messageId: sent.data.messageId,
-        });
-      } catch (err) {
-        return adminRouteError(err, { label: 'Internal chat send route' });
+    handler: labeledRoute('Internal chat send route', async (request) => {
+      const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
+      const sender = await input.internalChat.registerExternalAccount({
+        slug: payload.senderSlug,
+        displayName: payload.senderDisplayName,
+      });
+      const sent = await input.internalChat.sendMessage({
+        accountId: sender.accountId,
+        targetKey: payload.targetKey ?? payload.agentId,
+        content: payload.content,
+        attachments: [],
+      });
+      if (!sent.valid) {
+        throw new Error(sent.error);
       }
-    },
+
+      return jsonResponse({
+        success: true,
+        conversationKey: sent.data.conversationKey,
+        messageId: sent.data.messageId,
+      });
+    
+}),
   });
 }
