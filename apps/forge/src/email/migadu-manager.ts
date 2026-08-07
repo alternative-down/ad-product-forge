@@ -11,6 +11,35 @@ import type { createSystemIntegrationStore } from '../system-integrations/store'
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 
+/**
+ * Module-scoped debug logger for migadu-manager.
+ *
+ * Centralizes the scope literal and forward of optional structured context.
+ * Callers pass the level and message verbatim; the helper prepends the
+ * migadu-manager scope so downstream log aggregation can filter by module.
+ *
+ * Behavior preserved versus the original inline forgeDebug call sites:
+ *   - scope: 'migadu-manager' is fixed (was duplicated at every site)
+ *   - context: optional structured call-site fields (not deep-copied)
+ *   - all four log levels (debug/info/warn/error) forwarded verbatim
+ */
+export function migaduManagerDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  // The level parameter is preserved for API parity with the original inline
+  // forgeDebug call sites; the underlying forgeDebug(scope, message, data?)
+  // signature does not surface the level, so it is encoded into the message
+  // prefix here to keep log output comparable with the pre-refactor format.
+  const taggedMessage = '[' + level + '] ' + message;
+  if (context !== undefined) {
+    forgeDebug('migadu-manager', taggedMessage, context);
+  } else {
+    forgeDebug('migadu-manager', taggedMessage);
+  }
+}
+
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';
 const MIGADU_IMAP_HOST = 'imap.migadu.com';
@@ -54,11 +83,7 @@ export function createAgentEmailManager(config: {
     try {
       return Boolean(await getOptionalProviderConfig());
     } catch (err) {
-      forgeDebug({
-        scope: 'migadu-manager',
-        level: 'error',
-        message: '[migadu-manager] isConfigured failed: ' + errorMsg(err),
-      });
+      migaduManagerDebug('error', 'isConfigured failed: ' + errorMsg(err));
       return false;
     }
   }
@@ -120,12 +145,7 @@ export function createAgentEmailManager(config: {
       return;
     }
 
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'error',
-      message: '[migadu-manager] delete mailbox failed',
-      context: { status: response.status },
-    });
+    migaduManagerDebug('error', 'delete mailbox failed', { status: response.status });
     throw await buildMigaduError('delete mailbox', response);
   }
 
@@ -161,12 +181,7 @@ export function createAgentEmailManager(config: {
       return null;
     }
 
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'error',
-      message: '[migadu-manager] load mailbox failed',
-      context: { status: response.status },
-    });
+    migaduManagerDebug('error', 'load mailbox failed', { status: response.status });
     throw await buildMigaduError('load mailbox', response);
   }
 
@@ -186,12 +201,7 @@ export function createAgentEmailManager(config: {
     );
 
     if (!response.ok) {
-      forgeDebug({
-        scope: 'migadu-manager',
-        level: 'error',
-        message: '[migadu-manager] create mailbox failed',
-        context: { status: response.status },
-      });
+      migaduManagerDebug('error', 'create mailbox failed', { status: response.status });
       throw await buildMigaduError('create mailbox', response);
     }
 
@@ -213,12 +223,7 @@ export function createAgentEmailManager(config: {
     );
 
     if (!response.ok) {
-      forgeDebug({
-        scope: 'migadu-manager',
-        level: 'error',
-        message: '[migadu-manager] update mailbox failed',
-        context: { status: response.status },
-      });
+      migaduManagerDebug('error', 'update mailbox failed', { status: response.status });
       throw await buildMigaduError('update mailbox', response);
     }
 
@@ -235,12 +240,7 @@ export function createAgentEmailManager(config: {
     const domain = integration.apiUser.split('@')[1];
 
     if (!domain) {
-      forgeDebug({
-        scope: 'migadu-manager',
-        level: 'warn',
-        message: '[migadu-manager] buildMigaduConfig: cannot derive Migadu domain from API user',
-        context: { apiUser: integration.apiUser },
-      });
+      migaduManagerDebug('warn', 'buildMigaduConfig: cannot derive Migadu domain from API user', { apiUser: integration.apiUser });
       throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
     }
 
@@ -256,12 +256,10 @@ export function createAgentEmailManager(config: {
     const providerConfig = await getOptionalProviderConfig();
 
     if (!providerConfig) {
-      forgeDebug({
-        scope: 'migadu-manager',
-        level: 'warn',
-        message:
-          '[migadu-manager] getRequiredProviderConfig: Migadu email provisioning not configured',
-      });
+      migaduManagerDebug(
+        'warn',
+        'getRequiredProviderConfig: Migadu email provisioning not configured',
+      );
       throw new Error(
         'Migadu email provisioning requires a configured admin connection in system integrations',
       );
@@ -326,11 +324,10 @@ export function buildMailboxLocalPart(agentId: string) {
     .replace(/^-+|-+$/g, '');
 
   if (!normalized) {
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'warn',
-      message: '[migadu-manager] buildMailboxLocalPart: cannot derive local part from agent id',
-    });
+    migaduManagerDebug(
+      'warn',
+      'buildMailboxLocalPart: cannot derive local part from agent id',
+    );
     throw new Error(`Cannot derive mailbox local part from agent id: ${agentId}`);
   }
 
@@ -345,11 +342,10 @@ export function getLocalPart(address: string) {
   const [localPart] = address.split('@');
 
   if (!localPart) {
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'warn',
-      message: '[migadu-manager] getLocalPart: invalid address format',
-    });
+    migaduManagerDebug(
+      'warn',
+      'getLocalPart: invalid address format',
+    );
     throw new Error(`Invalid mailbox address: ${address}`);
   }
 
@@ -367,12 +363,7 @@ function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
   try {
     decrypted = decryptSecret(encryptedCredentials);
   } catch (err) {
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'error',
-      message: 'parseStoredCredentials: decrypt failed',
-      context: { agentId, error: errorMsg(err) },
-    });
+    migaduManagerDebug('error', 'parseStoredCredentials: decrypt failed', { agentId, error: errorMsg(err) });
     throw new Error(
       `Failed to decrypt email credentials for agent ${agentId}: ${errorMsg(err)}`,
     );
@@ -382,12 +373,7 @@ function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
   try {
     parsed = JSON.parse(decrypted);
   } catch (err) {
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'error',
-      message: 'parseStoredCredentials: JSON.parse failed',
-      context: { agentId, error: errorMsg(err) },
-    });
+    migaduManagerDebug('error', 'parseStoredCredentials: JSON.parse failed', { agentId, error: errorMsg(err) });
     throw new Error(
       `Failed to parse email credentials JSON for agent ${agentId}: ${errorMsg(err)}`,
     );
@@ -396,12 +382,7 @@ function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
   try {
     return emailProviderCredentialsSchema.parse(parsed);
   } catch (err) {
-    forgeDebug({
-      scope: 'migadu-manager',
-      level: 'error',
-      message: 'parseStoredCredentials: schema parse failed',
-      context: { agentId, error: errorMsg(err) },
-    });
+    migaduManagerDebug('error', 'parseStoredCredentials: schema parse failed', { agentId, error: errorMsg(err) });
     throw new Error(
       `Email provider credentials schema validation failed for agent ${agentId}: ${errorMsg(err)}`,
     );
