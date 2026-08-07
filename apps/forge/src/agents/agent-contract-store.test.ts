@@ -182,16 +182,22 @@ function createMockDb(collections: MockCollections) {
     },
     select: vi.fn(() => ({
       from: vi.fn(() => ({
-        where: vi.fn(async (where: unknown) => {
+        // #6297 cycle 4 cherry-pick: production code now uses .all() terminal
+        // (Veritas Option A for L247). Mock returns { all: ... } to match.
+        where: vi.fn((where: unknown) => {
           const wh = extractWhere(where);
           if (wh.contractId) {
             const steps = [...collections.steps.values()].filter(
               (s) => s.contractId === wh.contractId,
             );
             const total = steps.reduce((sum, s) => sum + s.costUsd, 0);
-            return [{ total }];
+            return {
+              all: () => Promise.resolve([{ total }]),
+            };
           }
-          return [{ total: 0 }];
+          return {
+            all: () => Promise.resolve([{ total: 0 }]),
+          };
         }),
       })),
     })),
