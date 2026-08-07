@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { adminRouteError } from './admin-route-error-helper';
+import { adminRouteError, safeRoute } from './admin-route-error-helper';
 
 // Mock forgeDebug
 vi.mock('@forge-runtime/core', () => ({
@@ -126,5 +126,62 @@ describe('adminRouteError', () => {
         }),
       );
     });
+  });
+});
+
+describe('safeRoute (regression for #6262)', () => {
+  it('calls the handler and returns its response on success', async () => {
+    const handler = safeRoute('/admin/test', async () => ({
+      status: 200,
+      body: { ok: true },
+    }));
+    const result = await handler({
+      method: 'GET',
+      path: '/admin/test',
+      query: new URLSearchParams(),
+      headers: {},
+      body: Buffer.from(''),
+      bodyText: '',
+      req: {} as never,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ ok: true });
+  });
+
+  it('catches errors and returns 500 via adminRouteError', async () => {
+    const handler = safeRoute('/admin/test', async () => {
+      throw new Error('boom');
+    });
+    const result = await handler({
+      method: 'GET',
+      path: '/admin/test',
+      query: new URLSearchParams(),
+      headers: {},
+      body: Buffer.from(''),
+      bodyText: '',
+      req: {} as never,
+    });
+    expect(result.status).toBe(500);
+  });
+
+  it('passes the path string verbatim to adminRouteError context', async () => {
+    const { forgeDebug } = await import('@forge-runtime/core');
+    const handler = safeRoute('/admin/unique-path-xyz', async () => {
+      throw new Error('expected failure');
+    });
+    await handler({
+      method: 'POST',
+      path: '/admin/unique-path-xyz',
+      query: new URLSearchParams(),
+      headers: {},
+      body: Buffer.from(''),
+      bodyText: '',
+      req: {} as never,
+    });
+    expect(forgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({ path: '/admin/unique-path-xyz' }),
+      }),
+    );
   });
 });

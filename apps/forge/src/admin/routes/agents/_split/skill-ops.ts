@@ -14,7 +14,7 @@ import {
 import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 
-import { adminRouteError } from '../admin-route-error-helper';
+import { safeRoute } from '../admin-route-error-helper';
 
 const publishAgentSkillToGlobalSchema = z
   .object({
@@ -58,8 +58,7 @@ export function registerSkillOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/skills/publish-to-global',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/skills/publish-to-global', async (request) => {
         const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
@@ -76,18 +75,14 @@ export function registerSkillOps(
           success: true,
           skillName: body.skillName,
         });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/skills/publish-to-global' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/skills/install-global
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/skills/install-global',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/skills/install-global', async (request) => {
         const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
@@ -101,42 +96,31 @@ export function registerSkillOps(
           skillName: body.skillName,
         });
         return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/skills/install-global' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/skills/upload
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/skills/upload',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/skills/upload', async (request) => {
         const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
         const installedSkillNames = await installGlobalSkillsFromZip({
           workspaceBasePath,
           zipBase64: body.skillsZipBase64,
         });
         return jsonResponse({ success: true, skillNames: installedSkillNames });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/skills/upload' });
-      }
-    },
+    }),
   });
 
   // POST /admin/agent/skills/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/skills/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/agent/skills/delete', async (request) => {
         const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
         await deleteGlobalSkill({ workspaceBasePath, skillName: body.skillName });
         return jsonResponse({ success: true, skillName: body.skillName });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/agent/skills/delete' });
-      }
-    },
+    }),
   });
 }

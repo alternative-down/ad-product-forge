@@ -39,7 +39,7 @@ const roleToolPermissionSchema = z
   .strict();
 
 import { errorMsg } from '../../../../agents/error-formatting';
-import { adminRouteError } from '../admin-route-error-helper';
+import { adminRouteError, safeRoute } from '../admin-route-error-helper';
 
 export function registerRoleOps(
   httpServer: {
@@ -54,26 +54,21 @@ export function registerRoleOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/roles/create',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/roles/create', async (request) => {
         const body = parseJsonBody(request.bodyText, createRoleSchema);
         const result = await capabilities.createRole({
           name: body.name,
           description: body.description,
         });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/roles/create' });
-      }
-    },
+    }),
   });
 
   // POST /admin/roles/update
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/roles/update',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/roles/update', async (request) => {
         const body = parseJsonBody(request.bodyText, updateRoleSchema);
         const result = await capabilities.updateRole({
           roleId: body.roleId,
@@ -81,10 +76,7 @@ export function registerRoleOps(
           description: body.description,
         });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/roles/update' });
-      }
-    },
+    }),
   });
 
   // POST /admin/roles/delete
@@ -115,8 +107,7 @@ export function registerRoleOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/roles/tool-permissions',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/roles/tool-permissions', async (request) => {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const toolId = resolvePermissionId(body.toolName);
         if (body.allowed === true) {
@@ -125,9 +116,6 @@ export function registerRoleOps(
           await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/roles/tool-permissions' });
-      }
-    },
+    }),
   });
 }
