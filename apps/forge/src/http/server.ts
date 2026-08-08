@@ -209,6 +209,19 @@ export function createForgeHttpServer(
       return;
     }
 
+    // Public health endpoint for orchestrator probes (Coolify default healthcheck
+    // path is /healthz). Must run BEFORE auth middleware so that the proxy
+    // can verify container health without credentials. See L#NN-Coolify-Healthcheck-NoHealthz-Path v1.
+    if (url.pathname === '/healthz' && req.method.toUpperCase() === 'GET') {
+      res.writeHead(200, {
+        ...corsHeaders,
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
     const key = buildRouteKey(req.method.toUpperCase(), url.pathname);
     const handler = routes.get(key);
 
