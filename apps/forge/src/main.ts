@@ -11,9 +11,18 @@ process.on('uncaughtException', (error) => {
 });
 
 export async function main() {
+  console.log('[forge-startup] main: creating bootstrap');
   const bootstrap = await createForgeBootstrap();
 
+  console.log(`[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
   await bootstrap.httpServer.start();
+  console.log(`[forge-startup] main: HTTP server listening on port ${process.env.FORGE_HTTP_PORT}`);
+  forgeDebug({
+    scope: 'forge',
+    level: 'info',
+    message: `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`,
+  });
+
   forgeDebug({
     scope: 'forge',
     level: 'info',
@@ -43,6 +52,7 @@ export async function main() {
 import { serializeError } from './agents/error-formatting';
 
 main().catch((error) => {
+  console.error('[forge-startup] FATAL: app startup failed' );
   console.error('[forge-main] Fatal error during startup:', serializeError(error));
   if (error instanceof Error && error.stack !== null && error.stack !== undefined) {
     console.error(error.stack);

@@ -18,6 +18,22 @@ import { createInternalChatService } from './communication/internal-chat-service
 import { createAgentContractStore } from './agents/agent-contract-store';
 import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
 
+/**
+ * Always-emit startup log. Unlike forgeDebug, this writes to console.log
+ * regardless of FORGE_DEBUG environment variable. This is a FAILSAFE for
+ * diagnosing startup crashes in production where Coolify container logs
+ * are not easily accessible without SSH.
+ *
+ * See L#NN-Startup-Logging-Failsafe v1 (cycle 14c-3).
+ */
+function consoleStartupLog(message: string, context?: Record<string, unknown>): void {
+  if (context && Object.keys(context).length > 0) {
+    console.log(`[forge-startup] ${message}`, JSON.stringify(context));
+  } else {
+    console.log(`[forge-startup] ${message}`);
+  }
+}
+
 const envSchema = z.object({
   FORGE_DATA_PATH: z.string().default('./data'),
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
@@ -76,12 +92,21 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
  * Returns the fully wired application context ready for routes registration.
  */
 export async function createForgeBootstrap() {
+  consoleStartupLog('starting');
   forgeDebug({
     scope: 'forge-bootstrap',
     level: 'info',
     message: 'bootstrap: starting',
   });
   const env = envSchema.parse(process.env);
+  consoleStartupLog('env parsed', {
+    port: env.FORGE_HTTP_PORT,
+    dataPath: env.FORGE_DATA_PATH,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    publicBaseUrl: env.FORGE_PUBLIC_BASE_URL,
+    adminApiKeyConfigured: env.FORGE_ADMIN_API_KEY !== undefined,
+    allowInsecureLocal: env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL,
+  });
   forgeDebug({
     scope: 'forge-bootstrap',
     level: 'info',
@@ -106,6 +131,7 @@ export async function createForgeBootstrap() {
       : undefined;
 
   if (adminApiKey === undefined && !allowInsecureLocal) {
+    consoleStartupLog('CONFIGURATION CHECK FAILED: FORGE_ADMIN_API_KEY not configured');
     forgeDebug({ scope: 'main', level: 'error', message: 'main: configuration check failed' });
     throw new Error(
       'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set' +
@@ -114,6 +140,7 @@ export async function createForgeBootstrap() {
   }
 
   const db = getDatabase();
+  consoleStartupLog('db obtained, running migrations');
   forgeDebug({
     scope: 'forge-bootstrap',
     level: 'info',
@@ -121,7 +148,9 @@ export async function createForgeBootstrap() {
   });
   try {
     await runMigrations(db);
+    consoleStartupLog('migrations complete');
   } catch (err) {
+    consoleStartupLog('MIGRATIONS FAILED', { error: errorMsg(err) });
     forgeDebug({
       scope: 'forge-bootstrap',
       level: 'error',
