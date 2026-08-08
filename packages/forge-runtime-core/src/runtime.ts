@@ -76,7 +76,7 @@ export async function createForgeAgentRuntime(
     assistantAuthorId: config.assistantAuthorId,
     consolidateOverflow: config.consolidateConversationOverflow,
   });
-  const mcpToolset = options.mcpServers?.length
+  const mcpToolset = options.mcpServers && options.mcpServers.length > 0
     ? new ForgeMcpToolset({
         servers: options.mcpServers,
         runtimeActionOptions: options.mcpRuntimeActionOptions,
@@ -89,7 +89,7 @@ export async function createForgeAgentRuntime(
     observers.push(createForgeUsageObserver(options.usageSink));
   }
 
-  if (options.runtimeObservers?.length) {
+  if (options.runtimeObservers && options.runtimeObservers.length > 0) {
     observers.push(...options.runtimeObservers);
   }
 
