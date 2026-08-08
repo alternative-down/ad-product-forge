@@ -1,4 +1,3 @@
-import type { InternalChatAccount, InternalChatConversationMember, NewInternalChatConversationMember } from '../database/schema';
 import { and, eq, or } from 'drizzle-orm';
 import type { Database } from '../database/client';
 import {
