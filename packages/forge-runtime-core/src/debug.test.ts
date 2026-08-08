@@ -1,76 +1,126 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { logger } from './logger.js';
-import { forgeDebug, isForgeDebugEnabled } from './debug.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { forgeDebug, isForgeDebugEnabled } from './debug';
 
 describe('forgeDebug', () => {
+  const originalEnv = process.env.FORGE_DEBUG;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, 'log').mockReturnValue();
-    delete process.env.FORGE_DEBUG;
+    process.env.FORGE_DEBUG = '1';
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    process.env.FORGE_DEBUG = originalEnv;
+    consoleLogSpy.mockRestore();
   });
 
-  it('does not log when FORGE_DEBUG is not set', () => {
-    forgeDebug('test-scope', 'test message');
-    expect(consoleLogSpy).not.toHaveBeenCalled();
+  describe('3-positional-arg form (existing, backwards compat)', () => {
+    it('logs with [forge:scope] prefix when FORGE_DEBUG is enabled', () => {
+      forgeDebug('test-scope', 'test message');
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope]', 'test message');
+    });
+
+    it('logs with data argument when provided and non-empty', () => {
+      forgeDebug('test-scope', 'test message', { key: 'value' });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope]', 'test message', { key: 'value' });
+    });
+
+    it('omits data argument when empty object', () => {
+      forgeDebug('test-scope', 'test message', {});
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope]', 'test message');
+    });
   });
 
-  it('does not log when FORGE_DEBUG is false', () => {
-    process.env.FORGE_DEBUG = 'false';
-    forgeDebug('test-scope', 'test message');
-    expect(consoleLogSpy).not.toHaveBeenCalled();
+  describe('1-object-arg overload (L#NN-50 #18 v10)', () => {
+    it('logs with [forge:scope:level] prefix when FORGE_DEBUG is enabled', () => {
+      forgeDebug({ scope: 'test-scope', level: 'info', message: 'test message' });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope:info]', 'test message');
+    });
+
+    it('logs with context when provided and non-empty', () => {
+      forgeDebug({
+        scope: 'test-scope',
+        level: 'warn',
+        message: 'test message',
+        context: { key: 'value' },
+      });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope:warn]', 'test message', { key: 'value' });
+    });
+
+    it('omits context when empty object', () => {
+      forgeDebug({
+        scope: 'test-scope',
+        level: 'debug',
+        message: 'test message',
+        context: {},
+      });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:test-scope:debug]', 'test message');
+    });
+
+    it('supports all 4 levels: debug, info, warn, error', () => {
+      forgeDebug({ scope: 's', level: 'debug', message: 'm' });
+      forgeDebug({ scope: 's', level: 'info', message: 'm' });
+      forgeDebug({ scope: 's', level: 'warn', message: 'm' });
+      forgeDebug({ scope: 's', level: 'error', message: 'm' });
+      expect(consoleLogSpy).toHaveBeenCalledTimes(4);
+      expect(consoleLogSpy).toHaveBeenNthCalledWith(1, '[forge:s:debug]', 'm');
+      expect(consoleLogSpy).toHaveBeenNthCalledWith(2, '[forge:s:info]', 'm');
+      expect(consoleLogSpy).toHaveBeenNthCalledWith(3, '[forge:s:warn]', 'm');
+      expect(consoleLogSpy).toHaveBeenNthCalledWith(4, '[forge:s:error]', 'm');
+    });
+
+    it('accepts extra top-level fields like agentId (index signature)', () => {
+      forgeDebug({
+        scope: 'agent-loader',
+        level: 'info',
+        agentId: 'agent-123',
+        message: 'loading agent',
+      });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:agent-loader:info]', 'loading agent');
+    });
   });
 
-  it('logs when FORGE_DEBUG is true (subject to FORGE_LOG_LEVEL)', () => {
-    process.env.FORGE_DEBUG = 'true';
-    // With default INFO log level, DEBUG messages are suppressed
-    forgeDebug('scope', 'message');
-    // No assertion on call count — output depends on FORGE_LOG_LEVEL.
-    // Integration tests or manual verification needed for full log-level coverage.
+  describe('FORGE_DEBUG gating', () => {
+    it('returns early without logging when FORGE_DEBUG is unset', () => {
+      process.env.FORGE_DEBUG = undefined;
+      forgeDebug('test-scope', 'test message');
+      forgeDebug({ scope: 'test-scope', level: 'info', message: 'test message' });
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns early when FORGE_DEBUG is empty string', () => {
+      process.env.FORGE_DEBUG = '';
+      forgeDebug('test-scope', 'test message');
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+    });
+
+    it('enables when FORGE_DEBUG is true', () => {
+      process.env.FORGE_DEBUG = 'true';
+      forgeDebug({ scope: 's', level: 'info', message: 'm' });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:s:info]', 'm');
+    });
   });
 
-  it('isForgeDebugEnabled reflects FORGE_DEBUG env var', () => {
-    delete process.env.FORGE_DEBUG;
-    expect(isForgeDebugEnabled()).toBe(false);
+  describe('isForgeDebugEnabled', () => {
+    it('returns true when FORGE_DEBUG=1', () => {
+      process.env.FORGE_DEBUG = '1';
+      expect(isForgeDebugEnabled()).toBe(true);
+    });
 
-    process.env.FORGE_DEBUG = 'true';
-    expect(isForgeDebugEnabled()).toBe(true);
+    it('returns true when FORGE_DEBUG=true', () => {
+      process.env.FORGE_DEBUG = 'true';
+      expect(isForgeDebugEnabled()).toBe(true);
+    });
 
-    process.env.FORGE_DEBUG = '1';
-    expect(isForgeDebugEnabled()).toBe(true);
+    it('returns false when FORGE_DEBUG is unset', () => {
+      process.env.FORGE_DEBUG = undefined;
+      expect(isForgeDebugEnabled()).toBe(false);
+    });
 
-    process.env.FORGE_DEBUG = 'false';
-    expect(isForgeDebugEnabled()).toBe(false);
-  });
-
-  it('calls logger.debug when enabled (with DEBUG log level)', () => {
-    process.env.FORGE_DEBUG = 'true';
-    process.env.FORGE_LOG_LEVEL = 'DEBUG';
-    const loggerSpy = vi.spyOn(logger, 'debug').mockReturnValue();
-    forgeDebug('my-scope', 'my message', { foo: 'bar' });
-    expect(loggerSpy).toHaveBeenCalledTimes(1);
-    expect(loggerSpy).toHaveBeenCalledWith('my-scope', 'my message', { foo: 'bar' });
-    loggerSpy.mockRestore();
-  });
-
-  it('does not call logger.debug when disabled', () => {
-    const loggerSpy = vi.spyOn(logger, 'debug').mockReturnValue();
-    forgeDebug('my-scope', 'my message');
-    expect(loggerSpy).not.toHaveBeenCalled();
-    loggerSpy.mockRestore();
-  });
-
-  it('passes options object to logger.debug', () => {
-    process.env.FORGE_DEBUG = 'true';
-    process.env.FORGE_LOG_LEVEL = 'DEBUG';
-    const loggerSpy = vi.spyOn(logger, 'debug').mockReturnValue();
-    forgeDebug({ scope: 'opt-scope', message: 'opt message', data: { baz: 'qux' } });
-    expect(loggerSpy).toHaveBeenCalledTimes(1);
-    expect(loggerSpy).toHaveBeenCalledWith('opt-scope', 'opt message', { baz: 'qux' });
-    loggerSpy.mockRestore();
+    it('returns false when FORGE_DEBUG=0', () => {
+      process.env.FORGE_DEBUG = '0';
+      expect(isForgeDebugEnabled()).toBe(false);
+    });
   });
 });
