@@ -28,8 +28,9 @@ const mockCreateSystemIntegrationStore = vi.hoisted(() => vi.fn());
 const mockCreateInternalChatService = vi.hoisted(() => vi.fn());
 const mockCreateAgentContractStore = vi.hoisted(() => vi.fn());
 const mockForgeDebug = vi.hoisted(() => vi.fn());
+const mockErrorMsg = vi.hoisted(() => vi.fn((err: unknown) => String(err)));
 
-vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug }));
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug, errorMsg: mockErrorMsg }));
 
 vi.mock('./database/client', () => ({ getDatabase: mockGetDatabase }));
 vi.mock('./database/migrate', () => ({ runMigrations: mockRunMigrations }));
@@ -347,5 +348,128 @@ describe('decodeAdminApiKey (via admin API key env path)', () => {
     setEnv({ FORGE_ADMIN_API_KEY: '   ', FORGE_ADMIN_ALLOW_INSECURE_LOCAL: 'true' });
     const ctx = await createForgeBootstrap();
     expect(ctx.adminApiKey).toBe(undefined);
+  });
+});
+
+// ─── Defensive patches (cycle 9, #6308) ────────────────────────────────────────
+// PR #6308 added 2 try/catch blocks + 13 forgeDebug checkpoint invocations.
+// These tests verify the failure-handling semantics and the lifecycle logging.
+
+describe('createForgeBootstrap() — defensive patches (#6308)', () => {
+  beforeEach(() => {
+    mockRunMigrations.mockReset();
+    mockRunMigrations.mockResolvedValue(undefined);
+    mockPrepareAgentEmbedders.mockReset();
+    mockPrepareAgentEmbedders.mockResolvedValue(undefined);
+    mockForgeDebug.mockReset();
+    mockForgeDebug.mockResolvedValue(undefined);
+  });
+
+  describe('runMigrations failure path', () => {
+    it('re-throws when runMigrations rejects', async () => {
+      setEnv();
+      const migrationError = new Error('schema drift detected');
+      mockRunMigrations.mockRejectedValue(migrationError);
+      await expect(createForgeBootstrap()).rejects.toBe(migrationError);
+    });
+
+    it('logs an error-level checkpoint before re-throwing', async () => {
+      setEnv();
+      const migrationError = new Error('migration rolled back');
+      mockRunMigrations.mockRejectedValue(migrationError);
+      await expect(createForgeBootstrap()).rejects.toBe(migrationError);
+      const debugCalls = mockForgeDebug.mock.calls.map((call) => call[0] as Record<string, unknown>);
+      const failureCall = debugCalls.find((c) => c.message === 'bootstrap: runMigrations FAILED');
+      expect(failureCall).toBeDefined();
+      expect(failureCall?.level).toBe('error');
+      expect(failureCall?.scope).toBe('forge-bootstrap');
+    });
+
+    it('does not proceed to prepareAgentEmbeddersForStartup when migrations fail', async () => {
+      setEnv();
+      mockRunMigrations.mockRejectedValue(new Error('boom'));
+      await expect(createForgeBootstrap()).rejects.toThrow('boom');
+      expect(mockPrepareAgentEmbedders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('prepareAgentEmbeddersForStartup failure path', () => {
+    it('does NOT throw when prepareAgentEmbeddersForStartup rejects', async () => {
+      setEnv();
+      mockPrepareAgentEmbedders.mockRejectedValue(new Error('embedder index unavailable'));
+      await expect(createForgeBootstrap()).resolves.toBeDefined();
+    });
+
+    it('logs a warn-level checkpoint before continuing', async () => {
+      setEnv();
+      mockPrepareAgentEmbedders.mockRejectedValue(new Error('embedder recovery'));
+      await createForgeBootstrap();
+      const debugCalls = mockForgeDebug.mock.calls.map((call) => call[0] as Record<string, unknown>);
+      const warnCall = debugCalls.find((c) => c.message === 'bootstrap: prepareAgentEmbeddersForStartup FAILED (continuing)');
+      expect(warnCall).toBeDefined();
+      expect(warnCall?.level).toBe('warn');
+      expect(warnCall?.scope).toBe('forge-bootstrap');
+    });
+
+    it('continues wiring factories after embedder failure', async () => {
+      setEnv();
+      mockPrepareAgentEmbedders.mockRejectedValue(new Error('non-critical'));
+      await createForgeBootstrap();
+      expect(mockCreateSystemIntegrationStore).toHaveBeenCalled();
+      expect(mockRegisterAdminRoutes).toHaveBeenCalled();
+    });
+  });
+
+  describe('lifecycle forgeDebug checkpoints', () => {
+    it('emits exactly 13 checkpoint invocations on the happy path', async () => {
+      setEnv();
+      await createForgeBootstrap();
+      expect(mockForgeDebug).toHaveBeenCalledTimes(11);
+    });
+
+    it('emits checkpoints in documented order', async () => {
+      setEnv();
+      await createForgeBootstrap();
+      const messages = mockForgeDebug.mock.calls.map((call) => (call[0] as Record<string, unknown>).message);
+      expect(messages).toEqual([
+        'bootstrap: starting',
+        'bootstrap: env parsed',
+        'bootstrap: db obtained, running migrations',
+        'bootstrap: migrations complete',
+        'bootstrap: agent embedders ready',
+        'bootstrap: registry obtained',
+        'bootstrap: stores created',
+        'bootstrap: managers created',
+        'bootstrap: schedule manager created',
+        'bootstrap: read model created',
+        'bootstrap: bootstrap COMPLETE',
+      ]);
+    });
+
+    it('scopes every checkpoint to forge-bootstrap', async () => {
+      setEnv();
+      await createForgeBootstrap();
+      const debugCalls = mockForgeDebug.mock.calls.map((call) => call[0] as Record<string, unknown>);
+      for (const c of debugCalls) {
+        expect(c.scope).toBe('forge-bootstrap');
+      }
+    });
+
+    it('emits bootstrap COMPLETE with publicBaseUrl context', async () => {
+      setEnv({ FORGE_PUBLIC_BASE_URL: 'https://forge.example.com' });
+      await createForgeBootstrap();
+      const debugCalls = mockForgeDebug.mock.calls.map((call) => call[0] as Record<string, unknown>);
+      const completeCall = debugCalls.find((c) => c.message === 'bootstrap: bootstrap COMPLETE');
+      expect(completeCall).toBeDefined();
+      expect(completeCall?.context).toEqual({ publicBaseUrl: 'https://forge.example.com' });
+    });
+
+    it('falls back to localhost URL when FORGE_PUBLIC_BASE_URL is absent', async () => {
+      setEnv({ FORGE_PUBLIC_BASE_URL: undefined, FORGE_HTTP_PORT: '3011' });
+      await createForgeBootstrap();
+      const debugCalls = mockForgeDebug.mock.calls.map((call) => call[0] as Record<string, unknown>);
+      const completeCall = debugCalls.find((c) => c.message === 'bootstrap: bootstrap COMPLETE');
+      expect(completeCall?.context).toEqual({ publicBaseUrl: 'http://localhost:3011' });
+    });
   });
 });
