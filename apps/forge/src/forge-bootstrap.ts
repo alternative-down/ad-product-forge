@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agents/error-formatting';
 import { z } from 'zod';
 
 import { getDatabase } from './database/client';
@@ -75,7 +76,24 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
  * Returns the fully wired application context ready for routes registration.
  */
 export async function createForgeBootstrap() {
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: starting',
+  });
   const env = envSchema.parse(process.env);
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: env parsed',
+    context: {
+      port: env.FORGE_HTTP_PORT,
+      dataPath: env.FORGE_DATA_PATH,
+      workspaceBasePath: env.WORKSPACE_BASE_PATH,
+      adminApiKeyConfigured: env.FORGE_ADMIN_API_KEY !== undefined,
+      allowInsecureLocal: env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL,
+    },
+  });
 
   const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
   const allowInsecureLocal =
@@ -96,13 +114,52 @@ export async function createForgeBootstrap() {
   }
 
   const db = getDatabase();
-  await runMigrations(db);
-  await prepareAgentEmbeddersForStartup({
-    db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: db obtained, running migrations',
+  });
+  try {
+    await runMigrations(db);
+  } catch (err) {
+    forgeDebug({
+      scope: 'forge-bootstrap',
+      level: 'error',
+      message: 'bootstrap: runMigrations FAILED',
+      context: { error: errorMsg(err) },
+    });
+    throw err;
+  }
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: migrations complete',
+  });
+  try {
+    await prepareAgentEmbeddersForStartup({
+      db,
+      workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    });
+  } catch (err) {
+    forgeDebug({
+      scope: 'forge-bootstrap',
+      level: 'warn',
+      message: 'bootstrap: prepareAgentEmbeddersForStartup FAILED (continuing)',
+      context: { error: errorMsg(err) },
+    });
+  }
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: agent embedders ready',
   });
 
   const registry = getInternalAgentRegistry();
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: registry obtained',
+  });
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
     adminApiKey,
@@ -113,10 +170,20 @@ export async function createForgeBootstrap() {
   const integrations = createSystemIntegrationStore(db);
   const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: stores created',
+  });
 
   const coolifyManager = createCoolifyManager({ integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
   const githubApps = createGitHubAppManager({ db, httpServer, integrations });
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: managers created',
+  });
 
   // Scheduler for admin operations (route handlers, tool delegation).
   // Per-agent schedulers are created inside internal-agent-registry via
@@ -152,6 +219,11 @@ export async function createForgeBootstrap() {
       }
     },
   });
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: schedule manager created',
+  });
 
   const readModel = createAdminReadModel({
     db,
@@ -160,6 +232,11 @@ export async function createForgeBootstrap() {
     internalChat,
   });
 
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: read model created',
+  });
   registerAdminRoutes({
     httpServer,
     integrations,
@@ -180,6 +257,12 @@ export async function createForgeBootstrap() {
   });
 
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
+  forgeDebug({
+    scope: 'forge-bootstrap',
+    level: 'info',
+    message: 'bootstrap: bootstrap COMPLETE',
+    context: { publicBaseUrl },
+  });
 
   return {
     httpServer,
