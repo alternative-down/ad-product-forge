@@ -352,7 +352,7 @@ describe('decodeAdminApiKey (via admin API key env path)', () => {
 });
 
 // ─── Defensive patches (cycle 9, #6308) ────────────────────────────────────────
-// PR #6308 added 2 try/catch blocks + 13 forgeDebug checkpoint invocations.
+// PR #6308 added 2 try/catch blocks + 11 forgeDebug checkpoint invocations.
 // These tests verify the failure-handling semantics and the lifecycle logging.
 
 describe('createForgeBootstrap() — defensive patches (#6308)', () => {
@@ -421,7 +421,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
   });
 
   describe('lifecycle forgeDebug checkpoints', () => {
-    it('emits exactly 13 checkpoint invocations on the happy path', async () => {
+    it('emits exactly 11 checkpoint invocations on the happy path', async () => {
       setEnv();
       await createForgeBootstrap();
       expect(mockForgeDebug).toHaveBeenCalledTimes(11);
