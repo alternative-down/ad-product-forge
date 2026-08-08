@@ -17,10 +17,26 @@ import { createConversationModelMessages } from './conversation-model-messages.j
 const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
   'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.';
 
+/**
+ * Builds the autonomous-context ModelMessage that prepends every render call.
+ * Factory function avoids the `as ModelMessage` cast by making the structural
+ * type explicit at the construction site (L#NN-19 v1.5 + L#NN-50 #18 v10).
+ */
+function createAutonomousContextMessage(): ModelMessage {
+  return {
+    role: 'user',
+    content: [
+      {
+        type: 'text',
+        text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
+      },
+    ],
+  };
+}
+
 export type ForgeConversationMemoryOptions = {
   threadId: string;
   conversationStore: ConversationStore;
-  stateStore?: unknown;
   assistantAuthorId?: string;
   observer?: OperationalMemoryConversationObserver;
   recentTokenLimit?: number;
@@ -79,15 +95,7 @@ export function createForgeConversationMemory(
         : activeMessages;
 
       return [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text' as const,
-              text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
-            },
-          ],
-        } as ModelMessage,
+        createAutonomousContextMessage(),
         ...createConversationModelMessages(scopedMessages),
       ];
     },
@@ -100,12 +108,10 @@ export function createForgeConversationMemory(
       createOperationalMemoryConversationPlugin({
         memory,
         consolidateAfterStep: input.consolidateOverflow,
-        selectThreadId() {
-          return input.threadId;
-        },
+        selectThreadId: () => input.threadId,
       }),
     ],
-    observers: [] as RuntimeObserver[],
+    observers: [],
   };
 }
 
@@ -115,7 +121,7 @@ function selectRunScopedMessages(
     historyStartMessageId: string | null;
     historyEndMessageId: string | null;
   },
-) {
+): ConversationMessage[] {
   if (!historyWindow.historyStartMessageId) {
     return activeMessages;
   }
