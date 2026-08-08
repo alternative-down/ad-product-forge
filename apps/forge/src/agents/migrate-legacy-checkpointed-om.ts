@@ -3,8 +3,37 @@ import type { ConversationStore } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
+import { z } from 'zod';
+
 import type { Database } from '../database/client';
 import { agentCheckpointedOmStates } from '../database/schema';
+
+const LegacyCheckpointSummarySchema = z.object({
+  text: z.string(),
+  upToGeneration: z.number(),
+  updatedAt: z.string(),
+});
+
+const LegacyActiveReflectionBlockSchema = z.object({
+  recordId: z.string(),
+  text: z.string(),
+  generationCount: z.number(),
+  createdAt: z.string(),
+});
+
+const LegacyObservationBlockSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  createdAt: z.string(),
+  sourceMessageIds: z.array(z.string()),
+  reflectedGeneration: z.number().nullable(),
+});
+
+const LegacyCheckpointedOmStateSchema = z.object({
+  checkpointSummary: LegacyCheckpointSummarySchema.nullable(),
+  activeReflectionBlocks: z.array(LegacyActiveReflectionBlockSchema),
+  observationBlocks: z.array(LegacyObservationBlockSchema),
+});
 
 export async function migrateLegacyCheckpointedOmState(input: {
   db: Database;
@@ -20,14 +49,14 @@ export async function migrateLegacyCheckpointedOmState(input: {
     return;
   }
 
-  const state = JSON.parse(legacyRow.state as string) as any;
+  const state = LegacyCheckpointedOmStateSchema.parse(JSON.parse(legacyRow.state as string));
   const existingMessages = await input.conversationStore.listMessages({
     threadId: input.threadId,
     order: 'asc',
   });
   const existingMessageIds = new Set(existingMessages.map((message: { id: string }) => message.id));
   const checkpointSummary = state['checkpointSummary'];
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+   
   const checkpointSummaryId = checkpointSummary
     ? `checkpoint-summary:${input.agentId}:${checkpointSummary.upToGeneration}`
     : null;
@@ -106,7 +135,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       (item: any) => item['generationCount'] === observation.reflectedGeneration,
     );
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
     if (reflection) {
       await input.conversationStore.updateMessageReplacement({
         threadId: input.threadId,
