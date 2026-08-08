@@ -1,5 +1,6 @@
 import { errorMsg } from './error-formatting';
 import type { ConversationStore } from '@forge-runtime/core';
+import type { ConversationMessagePart } from 'agent-runtime-core/integrations';
 import { forgeDebug } from '@forge-runtime/core';
 
 function stripOperationalMemoryPrefix(text: string) {
@@ -26,7 +27,7 @@ export async function normalizeOperationalMemoryMessages(input: {
         continue;
       }
 
-      const normalizedParts = message.parts.map((part: { type?: string; text?: string }) => {
+      const normalizedParts = message.parts.map((part: ConversationMessagePart): ConversationMessagePart => {
         if ((part.type !== 'text' && part.type !== 'reasoning') || typeof part.text !== 'string') {
           return part;
         }
@@ -47,7 +48,7 @@ export async function normalizeOperationalMemoryMessages(input: {
         threadId: input.threadId,
         messageId: message.id,
         role: 'assistant',
-        parts: normalizedParts as any,
+        parts: normalizedParts,
       });
     }
   } catch (err) {
