@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import { z } from 'zod';
 import {
   McpSessionRegistry,
   SdkMcpGateway,
@@ -6,6 +6,8 @@ import {
   type RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 
+import { forgeDebug } from './debug.js';
+import { errorMsg } from './error-formatting.js';
 import { forgeMcpServerSchema, type ForgeMcpServerConfig } from './contracts.js';
 import { createTool, type Tool } from './tools.js';
 
@@ -16,6 +18,10 @@ export type ForgeMcpToolsetOptions = {
 
 export class ForgeMcpToolset {
   private readonly gateway = new SdkMcpGateway();
+  // The gateway is a stateless factory: each session owns its own SDK transport,
+  // and sessions.disposeAll() cascades to session.close() which closes the
+  // transport. The gateway itself holds no resources (no timers, no clients),
+  // so it does not require an explicit dispose. See #6309 Finding 3.
   private readonly sessions = new McpSessionRegistry({
     gateway: this.gateway,
   });
@@ -46,11 +52,8 @@ export class ForgeMcpToolset {
   async createTools(): Promise<Record<string, Tool<Record<string, unknown>, unknown>>> {
     const toolEntries = await Promise.all(
       this.servers.map(async (server) => {
-        const session = await this.sessions.getSession(
-          this.buildSessionKey(server),
-          mapServerToTransport(server),
-        );
-        const tools = await session.listTools();
+        const session = await this.getSessionWithLogging(server);
+        const tools = await this.listToolsWithLogging(session, server);
 
         return tools.map(
           (tool) =>
@@ -58,15 +61,10 @@ export class ForgeMcpToolset {
               tool.name,
               createTool({
                 id: tool.name,
-                description: tool.description?.trim() || `Call MCP tool ${tool.name}.`,
-                inputSchema: {
-                  parse(input: unknown) {
-                    return input as Record<string, unknown>;
-                  },
-                },
-                execute(input) {
-                  return session.callTool(tool.name, input);
-                },
+                description: tool.description?.trim() ?? `Call MCP tool ${tool.name}.`,
+                inputSchema: z.object({}).passthrough(),
+                execute: (input: Record<string, unknown>) =>
+                  this.callToolWithLogging(session, tool.name, input, server),
               }),
             ] as const,
         );
@@ -82,6 +80,67 @@ export class ForgeMcpToolset {
 
   private buildSessionKey(server: ForgeMcpServerConfig) {
     return `${server.id}:${server.name}`;
+  }
+
+  private async getSessionWithLogging(server: ForgeMcpServerConfig) {
+    try {
+      return await this.sessions.getSession(
+        this.buildSessionKey(server),
+        mapServerToTransport(server),
+      );
+    } catch (err) {
+      forgeDebug({
+        scope: 'mcp-toolset',
+        level: 'error',
+        message: `getSession failed for ${server.name}`,
+        serverId: server.id,
+        serverName: server.name,
+        error: errorMsg(err),
+      });
+      throw err;
+    }
+  }
+
+  private async listToolsWithLogging(
+    session: Awaited<ReturnType<typeof this.sessions.getSession>>,
+    server: ForgeMcpServerConfig,
+  ) {
+    try {
+      return await session.listTools();
+    } catch (err) {
+      forgeDebug({
+        scope: 'mcp-toolset',
+        level: 'error',
+        message: `listTools failed for ${server.name}`,
+        serverId: server.id,
+        serverName: server.name,
+        error: errorMsg(err),
+      });
+      throw err;
+    }
+  }
+
+  private async callToolWithLogging(
+    session: Awaited<ReturnType<typeof this.sessions.getSession>>,
+    toolName: string,
+    input: Record<string, unknown>,
+    server: ForgeMcpServerConfig,
+  ) {
+    try {
+      return await session.callTool(toolName, input);
+    } catch (err) {
+      forgeDebug({
+        scope: 'mcp-toolset',
+        level: 'error',
+        message: `callTool ${toolName} failed for ${server.name}`,
+        serverId: server.id,
+        serverName: server.name,
+        toolName,
+        inputKeys: Object.keys(input),
+        error: errorMsg(err),
+      });
+      throw err;
+    }
   }
 }
 

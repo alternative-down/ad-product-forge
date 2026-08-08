@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { z } from 'zod';
 import { ForgeMcpToolset } from './mcp.js';
 
 // vi.hoisted ensures these are available before vi.mock runs (hoisting)
-const { mockMcpSessionRegistry, mockMcpGateway } = vi.hoisted(() => {
+const { mockMcpSessionRegistry, mockMcpGateway, mockForgeDebug } = vi.hoisted(() => {
   const mockSessionRegistry = vi.fn(function MockSessionRegistry() {
     return {
       getActionDefinitions: vi.fn().mockResolvedValue([]),
@@ -18,7 +19,13 @@ const { mockMcpSessionRegistry, mockMcpGateway } = vi.hoisted(() => {
     return {};
   });
 
-  return { mockMcpSessionRegistry: mockSessionRegistry, mockMcpGateway: mockGateway };
+  const mockDebug = vi.fn();
+
+  return {
+    mockMcpSessionRegistry: mockSessionRegistry,
+    mockMcpGateway: mockGateway,
+    mockForgeDebug: mockDebug,
+  };
 });
 
 vi.mock('agent-runtime-core/integrations', async (original) => {
@@ -29,6 +36,10 @@ vi.mock('agent-runtime-core/integrations', async (original) => {
     SdkMcpGateway: mockMcpGateway,
   };
 });
+
+vi.mock('./debug.js', () => ({
+  forgeDebug: mockForgeDebug,
+}));
 
 describe('ForgeMcpToolset', () => {
   beforeEach(() => {
@@ -118,12 +129,12 @@ describe('ForgeMcpToolset', () => {
       expect(result).toEqual([]);
     });
 
-    it('registers a session for each server', async () => {
+    it('calls sessions.getActionDefinitions for each server', async () => {
       const ts = new ForgeMcpToolset({
         servers: [
           {
             id: 's1',
-            name: 'ServerOne',
+            name: 'Server1',
             transport: 'stdio',
             command: 'node',
             args: [],
@@ -157,12 +168,189 @@ describe('ForgeMcpToolset', () => {
       const result = await ts.createTools();
       expect(result).toEqual({});
     });
+
+    it('exposes tools with Zod inputSchema (Finding 1 fix)', async () => {
+      mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+        return {
+          getActionDefinitions: vi.fn().mockResolvedValue([]),
+          getSession: vi.fn().mockResolvedValue({
+            listTools: vi.fn().mockResolvedValue([
+              { name: 'greet', description: 'Greet someone' },
+            ]),
+            callTool: vi.fn().mockResolvedValue({ result: 'ok' }),
+          }),
+          disposeAll: vi.fn().mockResolvedValue(undefined),
+        };
+      });
+
+      const ts = new ForgeMcpToolset({
+        servers: [
+          {
+            id: 's1',
+            name: 'ToolServer',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
+      });
+      const tools = await ts.createTools();
+
+      // Verify the tool was created
+      expect(tools.greet).toBeDefined();
+
+      // Finding 1: inputSchema should be a ZodType (passthrough), not a parse wrapper
+      // We can't directly inspect the Tool's inputSchema here because it's stored
+      // as unknown, but we can verify the tool accepts arbitrary input via execute
+      await expect(
+        tools.greet.execute({ arbitrary: 'input' }, {} as never),
+      ).resolves.toEqual({ result: 'ok' });
+    });
+
+    it('forgeDebug called when getSession fails (Finding 4 observability)', async () => {
+      mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+        return {
+          getActionDefinitions: vi.fn().mockResolvedValue([]),
+          getSession: vi.fn().mockRejectedValue(new Error('connection refused')),
+          disposeAll: vi.fn().mockResolvedValue(undefined),
+        };
+      });
+
+      const ts = new ForgeMcpToolset({
+        servers: [
+          {
+            id: 's1',
+            name: 'BrokenServer',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
+      });
+
+      await expect(ts.createTools()).rejects.toThrow('connection refused');
+
+      // Verify forgeDebug was called with correct scope/level/message
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'mcp-toolset',
+          level: 'error',
+          message: expect.stringContaining('getSession failed'),
+          serverId: 's1',
+          serverName: 'BrokenServer',
+          error: expect.stringContaining('connection refused'),
+        }),
+      );
+    });
+
+    it('forgeDebug called when listTools fails (Finding 4 observability)', async () => {
+      mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+        return {
+          getActionDefinitions: vi.fn().mockResolvedValue([]),
+          getSession: vi.fn().mockResolvedValue({
+            listTools: vi.fn().mockRejectedValue(new Error('protocol error')),
+            callTool: vi.fn().mockResolvedValue({ result: 'ok' }),
+          }),
+          disposeAll: vi.fn().mockResolvedValue(undefined),
+        };
+      });
+
+      const ts = new ForgeMcpToolset({
+        servers: [
+          {
+            id: 's1',
+            name: 'ListFailServer',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
+      });
+
+      await expect(ts.createTools()).rejects.toThrow('protocol error');
+
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'mcp-toolset',
+          level: 'error',
+          message: expect.stringContaining('listTools failed'),
+          serverId: 's1',
+          serverName: 'ListFailServer',
+          error: expect.stringContaining('protocol error'),
+        }),
+      );
+    });
+
+    it('forgeDebug called when callTool fails (Finding 4 observability)', async () => {
+      const callToolError = new Error('tool execution failed');
+      mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+        return {
+          getActionDefinitions: vi.fn().mockResolvedValue([]),
+          getSession: vi.fn().mockResolvedValue({
+            listTools: vi.fn().mockResolvedValue([
+              { name: 'failingTool', description: 'Always fails' },
+            ]),
+            callTool: vi.fn().mockRejectedValue(callToolError),
+          }),
+          disposeAll: vi.fn().mockResolvedValue(undefined),
+        };
+      });
+
+      const ts = new ForgeMcpToolset({
+        servers: [
+          {
+            id: 's1',
+            name: 'ExecFailServer',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
+      });
+
+      const tools = await ts.createTools();
+
+      await expect(
+        tools.failingTool.execute({ x: 1 }, {} as never),
+      ).rejects.toThrow('tool execution failed');
+
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'mcp-toolset',
+          level: 'error',
+          message: expect.stringContaining('callTool failingTool failed'),
+          serverId: 's1',
+          serverName: 'ExecFailServer',
+          toolName: 'failingTool',
+          error: expect.stringContaining('tool execution failed'),
+        }),
+      );
+    });
   });
 
   describe('dispose', () => {
     it('resolves without error', async () => {
       const ts = new ForgeMcpToolset({ servers: [] });
       await expect(ts.dispose()).resolves.toBeUndefined();
+    });
+
+    it('calls sessions.disposeAll (gateway is stateless, no explicit dispose needed per #6309 Finding 3)', async () => {
+      const disposeAllSpy = vi.fn().mockResolvedValue(undefined);
+      mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+        return {
+          getActionDefinitions: vi.fn().mockResolvedValue([]),
+          getSession: vi.fn().mockResolvedValue({
+            listTools: vi.fn().mockResolvedValue([]),
+            callTool: vi.fn().mockResolvedValue({ result: 'ok' }),
+          }),
+          disposeAll: disposeAllSpy,
+        };
+      });
+
+      const ts = new ForgeMcpToolset({ servers: [] });
+      await ts.dispose();
+
+      expect(disposeAllSpy).toHaveBeenCalledTimes(1);
     });
   });
 
