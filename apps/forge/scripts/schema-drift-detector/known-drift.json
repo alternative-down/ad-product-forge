@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-07-29",
+  "lastUpdated": "2026-08-08",
   "description": "Schema-vs-migration drift that has been audited and intentionally accepted. New drift in PRs that is NOT in this list will fail CI (when in blocking mode).",
   "entries": [
     {
@@ -611,6 +611,70 @@
       "added_at": "2026-07-29T10:35Z",
       "added_by": "varek-iemmpd",
       "investigation_needed": "Detector regex ALTER TABLE fails to match when ADD COLUMN is on a separate line (migration 0034 has newline between ALTER TABLE and ADD COLUMN)."
+    },
+    {
+      "id": "migration-table-payment_providers",
+      "type": "migration-table",
+      "table": "payment_providers",
+      "schema_file": "finance/payment-schema.ts",
+      "reason": "schema_defined_in_finance_module_outside_database_scope",
+      "introduced_in": {
+        "commit": "9b6ef6a5",
+        "pr": 6331,
+        "summary": "fix(database): add migration 0035 to create payment tables BEFORE 0032 (P0 #6315)"
+      },
+      "tracked_by": "issue-#6332",
+      "added_at": "2026-08-08T16:26Z",
+      "added_by": "varek-iemmpd",
+      "investigation_needed": "Schema-detector scope is apps/forge/src/database/. The payment tables are defined in apps/forge/src/finance/payment-schema.ts (outside detector scope). The 0035 migration created the tables BEFORE 0032 ALTER TABLE ran. Future refactor: extend detector scope to include apps/forge/src/finance/ OR move schema definitions to database/."
+    },
+    {
+      "id": "migration-table-payment_customers",
+      "type": "migration-table",
+      "table": "payment_customers",
+      "schema_file": "finance/payment-schema.ts",
+      "reason": "schema_defined_in_finance_module_outside_database_scope",
+      "introduced_in": {
+        "commit": "9b6ef6a5",
+        "pr": 6331,
+        "summary": "fix(database): add migration 0035 to create payment tables BEFORE 0032 (P0 #6315)"
+      },
+      "tracked_by": "issue-#6332",
+      "added_at": "2026-08-08T16:26Z",
+      "added_by": "varek-iemmpd",
+      "investigation_needed": "Same as migration-table-payment_providers. Architectural choice: payment tables live in finance/payment-schema.ts."
+    },
+    {
+      "id": "migration-table-payment_subscriptions",
+      "type": "migration-table",
+      "table": "payment_subscriptions",
+      "schema_file": "finance/payment-schema.ts",
+      "reason": "schema_defined_in_finance_module_outside_database_scope",
+      "introduced_in": {
+        "commit": "9b6ef6a5",
+        "pr": 6331,
+        "summary": "fix(database): add migration 0035 to create payment tables BEFORE 0032 (P0 #6315)"
+      },
+      "tracked_by": "issue-#6332",
+      "added_at": "2026-08-08T16:26Z",
+      "added_by": "varek-iemmpd",
+      "investigation_needed": "Schema lives in finance/payment-schema.ts (outside detector scope). Architectural choice: payment tables defined in finance/, not database/. Same as migration-table-payment_providers. The 0032 ALTER TABLE ADD COLUMN currency targets this table — the 0035 fix places this CREATE TABLE before 0032 in the journal order."
+    },
+    {
+      "id": "migration-table-payment_transactions",
+      "type": "migration-table",
+      "table": "payment_transactions",
+      "schema_file": "finance/payment-schema.ts",
+      "reason": "schema_defined_in_finance_module_outside_database_scope",
+      "introduced_in": {
+        "commit": "9b6ef6a5",
+        "pr": 6331,
+        "summary": "fix(database): add migration 0035 to create payment tables BEFORE 0032 (P0 #6315)"
+      },
+      "tracked_by": "issue-#6332",
+      "added_at": "2026-08-08T16:26Z",
+      "added_by": "varek-iemmpd",
+      "investigation_needed": "Schema lives in finance/payment-schema.ts (outside detector scope). Architectural choice: payment tables defined in finance/, not database/. Same as migration-table-payment_providers. The 0034 ALTER TABLE ADD COLUMN currency targets this table — the 0035 fix prevents SQLITE_ERROR no such table at app startup."
     }
   ]
 }
