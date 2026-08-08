@@ -236,26 +236,33 @@
     {
       "idx": 33,
       "version": "6",
+      "when": 1782200000000,
+      "tag": "0035_create_payment_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
       "when": 1782335651000,
       "tag": "0032_payment_receivables_currency_unique",
       "breakpoints": true
     },
     {
-      "idx": 34,
+      "idx": 35,
       "version": "6",
       "when": 1782345894000,
       "tag": "0033_agent_schedules_creator_id_fk",
       "breakpoints": true
     },
     {
-      "idx": 35,
+      "idx": 36,
       "version": "6",
       "when": 1785311443000,
       "tag": "0034_company_cash_ledger_currency",
       "breakpoints": true
     },
     {
-      "idx": 36,
+      "idx": 37,
       "version": "6",
       "when": 1786121624169,
       "tag": "0036_create_payment_tables",
