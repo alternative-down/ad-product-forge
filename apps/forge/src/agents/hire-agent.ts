@@ -25,6 +25,7 @@ import { encryptSecret } from '../encryption/crypto';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
+import type { GitHubAppManager } from '../github/manager';
 import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
@@ -46,12 +47,9 @@ export const HireInternalAgentInputSchema = z.object({
   weeklyBudgetUsd: z.number().nonnegative('weeklyBudgetUsd must be non-negative'),
   providerCredentials: z.custom<ProviderCredentialsMap>().optional(),
   githubApps: z
-    .custom<{
-      installForRepo: (repo: string) => Promise<void>;
-      getInstallationId: (repo: string) => Promise<string>;
-    }>()
+    .custom<GitHubAppManager>()
     .optional()
-    .default({} as any),
+    .default({} as unknown as GitHubAppManager),  // runtime: empty object; loadAgent will fail if github features used without config
   emailMailboxes: z.custom<AgentEmailManager>().nullable(),
   coolify: z.custom<CoolifyManager>().nullable(),
   schedules: z.custom<AgentScheduleManager>(),
@@ -290,7 +288,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       runtime = await loadAgent(db, {
         agentId,
         workspaceBasePath: validated.workspaceBasePath,
-        githubApps: validated.githubApps as any,
+        githubApps: validated.githubApps,
         emailMailboxes: validated.emailMailboxes,
         coolify: validated.coolify,
         schedules: validated.schedules,
