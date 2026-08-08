@@ -27,14 +27,8 @@ import { extractRunnerControlDirective } from './agent-runner-control-directives
 import { formatAbsentExecutionError, errorMsg } from './error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
-import type {} from /*unused*/ '../database/schema';
-import type {} from /*unused*/ './runtime/types';
-import type {} from /*unused*/ './agent-contract-store';
-import type {} from /*unused*/ '../notifications/store';
-import type {} from /*unused*/ './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage as _AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler as _Scheduler } from './agent-runner-scheduler';
-import type {} from /*unused*/ './agent-runner-messages';
 import type { LoopDetector as _LoopDetector } from './agent-runner-loop-detector';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type {
