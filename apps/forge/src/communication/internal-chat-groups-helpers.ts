@@ -1,5 +1,5 @@
 import type { InternalChatAccount, InternalChatConversationMember, NewInternalChatConversationMember } from '../database/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { Database } from '../database/client';
 import {
   internalChatAccounts,
@@ -37,11 +37,11 @@ export async function resolveChatGroupMembers(
 
   for (const member of members) {
     const participant = (await db.query.internalChatAccounts.findFirst({
-      where: eq(
-        sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any,
-        member.participantKey,
+      where: or(
+        eq(internalChatAccounts.agentId, member.participantKey),
+        eq(internalChatAccounts.slug, member.participantKey),
       ),
-    })) as InternalChatAccount;
+    }));
 
     if (participant === null || participant === undefined) {
       throw new Error(`Internal chat participant not found: ${member.participantKey}`);
@@ -94,7 +94,7 @@ export async function createChatGroupIfNeeded(
     role: 'admin',
     createdAt: now,
     updatedAt: now,
-  } as NewInternalChatConversationMember);
+  });
 }
 
 /**
@@ -125,9 +125,9 @@ export async function syncChatGroupMembers(
 ): Promise<void> {
   const existingMembers = (await tx.query.internalChatConversationMembers.findMany({
     where: eq(internalChatConversationMembers.conversationId, groupId),
-  })) as InternalChatConversationMember[];
+  }));
 
-  const existingByAccountId = new Map(existingMembers.map((m: any) => [m.accountId, m]));
+  const existingByAccountId = new Map(existingMembers.map((m) => [m.accountId, m]));
 
   // Remove members not in desired set
   for (const existingMember of existingMembers) {
@@ -154,7 +154,7 @@ export async function syncChatGroupMembers(
         role: desiredMember.role,
         createdAt: now,
         updatedAt: now,
-      } as NewInternalChatConversationMember);
+      });
     } else if (existingMember.role !== desiredMember.role) {
       await tx
         .update(internalChatConversationMembers)
