@@ -92,8 +92,19 @@ function sendError(
     ...extraHeaders,
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
+    'x-forge-version': getVersionHeader(),
   });
   res.end(JSON.stringify(body));
+}
+
+/**
+ * Returns the version header value for x-forge-version. Reads from
+ * FORGE_GIT_SHA env var (set at deploy time) and falls back to "unknown".
+ * This enables deploy verification from outside without SSH access.
+ * See L#NN-Deploy-Verification-No-SSH v1.
+ */
+function getVersionHeader(): string {
+  return process.env.FORGE_GIT_SHA ?? 'unknown';
 }
 
 
@@ -204,21 +215,45 @@ export function createForgeHttpServer(
     const corsHeaders = buildCorsHeaders(origin, allowedOrigins);
 
     if (req.method.toUpperCase() === 'OPTIONS') {
-      res.writeHead(204, corsHeaders);
+      res.writeHead(204, { ...corsHeaders, 'x-forge-version': getVersionHeader() });
       res.end();
       return;
     }
 
-    // Public health endpoint for orchestrator probes (Coolify default healthcheck
-    // path is /healthz). Must run BEFORE auth middleware so that the proxy
-    // can verify container health without credentials. See L#NN-Coolify-Healthcheck-NoHealthz-Path v1.
-    if (url.pathname === '/healthz' && req.method.toUpperCase() === 'GET') {
+    // Public health endpoints for orchestrator probes (Coolify default /healthz,
+    // K8s default /healthcheck, generic /health). All run BEFORE auth middleware
+    // so the proxy can verify container health without credentials.
+    // See L#NN-Healthcheck-Aliases-Defensive v1.
+    if (
+      (url.pathname === '/healthz' || url.pathname === '/health' || url.pathname === '/healthcheck') &&
+      req.method.toUpperCase() === 'GET'
+    ) {
       res.writeHead(200, {
         ...corsHeaders,
         'content-type': 'application/json; charset=utf-8',
         'cache-control': 'no-store',
+        'x-forge-version': getVersionHeader(),
       });
       res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
+    // Public version endpoint for deploy verification without SSH.
+    // Returns commit SHA + deploy time. See L#NN-Deploy-Verification-No-SSH v1.
+    if (url.pathname === '/version' && req.method.toUpperCase() === 'GET') {
+      res.writeHead(200, {
+        ...corsHeaders,
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        'x-forge-version': getVersionHeader(),
+      });
+      res.end(
+        JSON.stringify({
+          sha: process.env.FORGE_GIT_SHA ?? 'unknown',
+          deployTime: process.env.FORGE_DEPLOY_TIME ?? 'unknown',
+          container: 'forge',
+        }),
+      );
       return;
     }
 
@@ -310,6 +345,7 @@ export function createForgeHttpServer(
           ...corsHeaders,
           ...rateLimitHeaders,
           ...(response.headers ?? {}),
+          'x-forge-version': getVersionHeader(),
           // Disable buffering so chunks go straight to the client
           'x-accel-buffering': 'no',
         });
@@ -322,6 +358,7 @@ export function createForgeHttpServer(
         ...corsHeaders,
         ...rateLimitHeaders,
         ...(response.headers ?? {}),
+        'x-forge-version': getVersionHeader(),
       });
       res.end(response.body);
     } catch (error) {
