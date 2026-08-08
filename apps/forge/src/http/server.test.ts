@@ -1218,6 +1218,113 @@ describe('createForgeHttpServer', () => {
       }
     });
   });
+
+  // Defensive healthcheck aliases + version endpoint (cycle 14b, #6315).
+  // Covers multiple platform defaults so a single path mismatch won't
+  // mark the container unhealthy.
+  describe('defensive healthcheck aliases + version (cycle 14b, #6315)', () => {
+    const originalGitSha = process.env.FORGE_GIT_SHA;
+    const originalDeployTime = process.env.FORGE_DEPLOY_TIME;
+
+    beforeEach(() => {
+      process.env.FORGE_GIT_SHA = 'abc123def456';
+      process.env.FORGE_DEPLOY_TIME = '2026-08-08T10:00:00.000Z';
+    });
+
+    afterEach(() => {
+      if (originalGitSha === undefined) {
+        delete process.env.FORGE_GIT_SHA;
+      } else {
+        process.env.FORGE_GIT_SHA = originalGitSha;
+      }
+      if (originalDeployTime === undefined) {
+        delete process.env.FORGE_DEPLOY_TIME;
+      } else {
+        process.env.FORGE_DEPLOY_TIME = originalDeployTime;
+      }
+    });
+
+    it('GET /health returns 200 OK + JSON { status: ok } (alias)', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/health', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.status).toBe('ok');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('GET /healthcheck returns 200 OK + JSON { status: ok } (alias)', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/healthcheck', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.status).toBe('ok');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('GET /version returns commit SHA + deploy time + container', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/version', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.sha).toBe('abc123def456');
+        expect(body.deployTime).toBe('2026-08-08T10:00:00.000Z');
+        expect(body.container).toBe('forge');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('all healthcheck responses include x-forge-version header', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        for (const path of ['/health', '/healthz', '/healthcheck']) {
+          const res = await makeRawRequest('GET', path, undefined, undefined, srv.port as number);
+          expect(res.headers['x-forge-version']).toBe('abc123def456');
+        }
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('error responses include x-forge-version header (404 Not Found)', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/unknown-route', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(404);
+        expect(res.headers['x-forge-version']).toBe('abc123def456');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('falls back to "unknown" when FORGE_GIT_SHA is unset', async () => {
+      delete process.env.FORGE_GIT_SHA;
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/version', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.sha).toBe('unknown');
+        expect(res.headers['x-forge-version']).toBe('unknown');
+      } finally {
+        await srv.stop();
+      }
+    });
+  });
 });
 
 describe('buildRouteKey', () => {
