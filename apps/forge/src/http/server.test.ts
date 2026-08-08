@@ -1153,6 +1153,71 @@ describe('createForgeHttpServer', () => {
       }
     });
   });
+
+  // Public healthz endpoint for orchestrator probes (Coolify default).
+  // Closes #6315: 7h+ dev env 503 outage rooted in missing /healthz route.
+  describe('public healthz endpoint (Coolify healthcheck, #6315)', () => {
+    it('returns 200 OK with JSON body { status: ok } on GET /healthz', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/healthz', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('application/json');
+        const body = JSON.parse(res.body);
+        expect(body.status).toBe('ok');
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('does NOT require admin API key (public endpoint)', async () => {
+      // No adminApiKey configured → /admin/* returns 503 but /healthz must work
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('GET', '/healthz', undefined, undefined, srv.port as number);
+        expect(res.status).toBe(200);
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('returns 404 for non-GET methods (POST/PATCH/DELETE on /healthz)', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      await srv.start();
+      try {
+        const res = await makeRawRequest('POST', '/healthz', '{}', undefined, srv.port as number);
+        expect(res.status).toBe(404);
+      } finally {
+        await srv.stop();
+      }
+    });
+
+    it('runs BEFORE auth middleware (even when adminApiKey is set)', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        adminApiKey: 'secret-key',
+      });
+      // Register a /admin route to confirm auth still required for /admin/*
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'admin-ok' }),
+      });
+      await srv.start();
+      try {
+        // /healthz works WITHOUT admin header
+        const healthzRes = await makeRawRequest('GET', '/healthz', undefined, undefined, srv.port as number);
+        expect(healthzRes.status).toBe(200);
+        // /admin/* requires admin header (still auth-protected)
+        const adminRes = await makeRawRequest('GET', '/admin/test', undefined, undefined, srv.port as number);
+        expect(adminRes.status).toBe(401);
+      } finally {
+        await srv.stop();
+      }
+    });
+  });
 });
 
 describe('buildRouteKey', () => {
