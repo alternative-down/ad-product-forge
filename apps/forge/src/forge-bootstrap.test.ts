@@ -472,4 +472,90 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
       expect(completeCall?.context).toEqual({ publicBaseUrl: 'http://localhost:3011' });
     });
   });
+
+  // Always-emit startup logging (cycle 14c-3, #6315 follow-up).
+  // FAILSafe LOGGING: console.log calls always run, even when FORGE_DEBUG
+  // is unset. This is critical for diagnosing startup crashes in production
+  // where Coolify container logs are not easily accessible without SSH.
+  // See L#NN-Startup-Logging-Failsafe v1.
+  describe('always-emit startup logging (#6315 cycle 14c-3)', () => {
+    let mockConsoleLog: ReturnType<typeof vi.spyOn>;
+    let mockConsoleError: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      mockForgeDebug.mockReset();
+      mockForgeDebug.mockResolvedValue(undefined);
+      mockRunMigrations.mockReset();
+      mockRunMigrations.mockResolvedValue(undefined);
+      mockPrepareAgentEmbedders.mockReset();
+      mockPrepareAgentEmbedders.mockResolvedValue(undefined);
+      mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      mockConsoleLog.mockRestore();
+      mockConsoleError.mockRestore();
+    });
+
+    function getStartupLogs(): string[] {
+      return mockConsoleLog.mock.calls
+        .map((call: unknown[]) => call[0])
+        .filter((msg: unknown): msg is string => typeof msg === 'string' && msg.startsWith('[forge-startup]'));
+    }
+
+    it('emits console.log even when FORGE_DEBUG is unset', async () => {
+      delete process.env.FORGE_DEBUG;
+      setEnv();
+      await createForgeBootstrap();
+      const logs = getStartupLogs();
+      expect(logs.length).toBeGreaterThan(0);
+      expect(logs).toContain('[forge-startup] starting');
+    });
+
+    it('emits env parsed line with critical env vars', async () => {
+      setEnv({ FORGE_HTTP_PORT: '3011', FORGE_DATA_PATH: '/data/test' });
+      await createForgeBootstrap();
+      const logs = getStartupLogs();
+      const envLine = logs.find((l) => l === '[forge-startup] env parsed');
+      expect(envLine).toBeDefined();
+      // The 2nd arg is JSON-stringified context
+      const contextCall = mockConsoleLog.mock.calls.find((call: unknown[]) => call[0] === '[forge-startup] env parsed');
+      expect(contextCall).toBeDefined();
+      const context = JSON.parse(contextCall?.[1] as string);
+      expect(context.port).toBe(3011);
+      expect(context.dataPath).toBe('/data/test');
+    });
+
+    it('emits db obtained, running migrations line', async () => {
+      setEnv();
+      await createForgeBootstrap();
+      const logs = getStartupLogs();
+      expect(logs).toContain('[forge-startup] db obtained, running migrations');
+    });
+
+    it('emits migrations complete line on happy path', async () => {
+      setEnv();
+      await createForgeBootstrap();
+      const logs = getStartupLogs();
+      expect(logs).toContain('[forge-startup] migrations complete');
+    });
+
+    it('emits MIGRATIONS FAILED line with error context on failure', async () => {
+      setEnv();
+      mockRunMigrations.mockRejectedValue(new Error('SQL syntax error'));
+      await expect(createForgeBootstrap()).rejects.toThrow('SQL syntax error');
+      const logs = getStartupLogs();
+      const failLines = logs.filter((l) => l.includes('MIGRATIONS FAILED'));
+      expect(failLines.length).toBeGreaterThan(0);
+    });
+
+    it('emits CONFIGURATION CHECK FAILED when FORGE_ADMIN_API_KEY missing', async () => {
+      setEnv({ FORGE_ADMIN_API_KEY: undefined });
+      await expect(createForgeBootstrap()).rejects.toThrow(/FORGE_ADMIN_API_KEY/);
+      const logs = getStartupLogs();
+      const configLines = logs.filter((l) => l.includes('CONFIGURATION CHECK FAILED'));
+      expect(configLines.length).toBeGreaterThan(0);
+    });
+  });
 });
