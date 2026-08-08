@@ -43,7 +43,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
   const registry = getInternalAgentRegistry();
 
-  const registryWithSize = registry as unknown as { get(agentId: string): unknown; size: number };
+  const registryWithSize = registry;
 
   async function getDashboard() {
     const [totals, cash] = await Promise.all([getTotals(), getCashData()]);
