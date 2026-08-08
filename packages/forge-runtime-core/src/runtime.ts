@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import {
   ConversationRuntimeBridge,
   createRuntimeHost,
+  type AgentRuntime,
   type ConversationStore,
   type McpRuntimeActionOptions,
   type RuntimeObserver,
@@ -50,6 +50,21 @@ export type ForgeAgentRuntime = {
   dispose(): Promise<void>;
 };
 
+/**
+ * Adapter that exposes only the dispatch surface required by
+ * `RuntimeInputTarget`, isolating the structural narrowing from the
+ * consumer (Finding 1 of #6307). The cast lives in one documented
+ * location instead of being inline at the call site. AgentRuntime's
+ * dispatch signature is structurally compatible with RuntimeInputTarget,
+ * but TypeScript cannot prove the variance through a generic forwarding
+ * function, so a single, justified cast is captured here.
+ */
+function toRuntimeInputTarget(runtime: AgentRuntime): RuntimeInputTarget {
+  return {
+    dispatch: (payload) => runtime.dispatch(payload) as Promise<void>,
+  };
+}
+
 export async function createForgeAgentRuntime(
   options: CreateForgeAgentRuntimeOptions,
 ): Promise<ForgeAgentRuntime> {
@@ -61,7 +76,7 @@ export async function createForgeAgentRuntime(
     assistantAuthorId: config.assistantAuthorId,
     consolidateOverflow: config.consolidateConversationOverflow,
   });
-  const mcpToolset = options.mcpServers?.length
+  const mcpToolset = options.mcpServers && options.mcpServers.length > 0
     ? new ForgeMcpToolset({
         servers: options.mcpServers,
         runtimeActionOptions: options.mcpRuntimeActionOptions,
@@ -74,7 +89,7 @@ export async function createForgeAgentRuntime(
     observers.push(createForgeUsageObserver(options.usageSink));
   }
 
-  if (options.runtimeObservers?.length) {
+  if (options.runtimeObservers && options.runtimeObservers.length > 0) {
     observers.push(...options.runtimeObservers);
   }
 
@@ -91,7 +106,7 @@ export async function createForgeAgentRuntime(
     messageStream: true,
   });
   const bridge = new ConversationRuntimeBridge({
-    runtime: host.runtime as RuntimeInputTarget,
+    runtime: toRuntimeInputTarget(host.runtime),
     store: options.conversationStore,
   });
 
@@ -101,6 +116,12 @@ export async function createForgeAgentRuntime(
     memory: conversationMemory.memory,
     mcpToolset,
     async dispose() {
+      // Finding 2 of #6307 (partial): only `mcpToolset` currently exposes
+      // a dispose contract. `host`, `bridge`, and `conversationMemory`
+      // hold no observable resources today (subsystem interfaces in
+      // `agent-runtime-core` do not yet declare a dispose method), so
+      // disposing them would require an interface-expansion follow-up
+      // (tracked separately).
       await mcpToolset?.dispose();
     },
   };

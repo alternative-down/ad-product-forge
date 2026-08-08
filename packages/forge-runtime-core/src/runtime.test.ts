@@ -181,4 +181,68 @@ describe('createForgeAgentRuntime', () => {
       await runtime.dispose();
     }
   });
+
+  it('resolves dispose without error when mcpToolset is null (Finding 2 partial)', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const runtime = await createForgeAgentRuntime({
+      config: {
+        agentId: 'agent-1',
+        threadId: 'thread-1',
+        consolidateConversationOverflow: true,
+      },
+      model: new FakeStepModelAdapter(() => ({
+        segments: [],
+        actionRequests: [],
+        continuation: 'stop',
+      })),
+      conversationStore,
+      memory: {},
+    });
+
+    expect(runtime.mcpToolset).toBeNull();
+    await expect(runtime.dispose()).resolves.toBeUndefined();
+  });
+
+  it('handles multi-step dispatch via toRuntimeInputTarget adapter (Finding 1)', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const runtime = await createForgeAgentRuntime({
+      config: {
+        agentId: 'agent-1',
+        threadId: 'thread-1',
+        consolidateConversationOverflow: true,
+      },
+      model: new FakeStepModelAdapter(() => ({
+        segments: [{ kind: 'message', text: 'Reply after cast removal.' }],
+        actionRequests: [],
+        continuation: 'stop',
+      })),
+      conversationStore,
+      memory: {},
+    });
+
+    try {
+      const now = new Date().toISOString();
+      await runtime.bridge.dispatchMessage({
+        thread: {
+          id: 'thread-1',
+          participantIds: ['agent-1'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        message: {
+          id: randomUUID(),
+          threadId: 'thread-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Hello after cast removal.' }],
+          createdAt: now,
+        },
+      });
+      const result = await runtime.host.runtime.step();
+      expect(result?.record.modelResponse.segments).toEqual([
+        { kind: 'message', text: 'Reply after cast removal.' },
+      ]);
+    } finally {
+      await runtime.dispose();
+    }
+  });
 });
