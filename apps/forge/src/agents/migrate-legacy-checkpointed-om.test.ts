@@ -84,7 +84,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: '  checkpoint text  ',
             upToGeneration: 5,
@@ -92,7 +92,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
           },
           activeReflectionBlocks: [],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -126,7 +126,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: '  summary text  ',
             upToGeneration: 3,
@@ -134,7 +134,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
           },
           activeReflectionBlocks: [],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -163,7 +163,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [
             {
@@ -174,7 +174,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
             },
           ],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -208,7 +208,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [
             {
@@ -219,7 +219,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
             },
           ],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -248,7 +248,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [],
           observationBlocks: [
@@ -260,7 +260,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: null,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -291,7 +291,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [],
           observationBlocks: [
@@ -303,7 +303,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: null,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -341,7 +341,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [
             {
@@ -360,7 +360,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: 2,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -389,7 +389,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: 'summary text',
             upToGeneration: 10,
@@ -405,7 +405,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: 5,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -434,7 +434,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: 'summary text',
             upToGeneration: 3,
@@ -450,7 +450,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: 7,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -481,7 +481,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: 'summary text',
             upToGeneration: 5,
@@ -504,7 +504,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
               reflectedGeneration: 4,
             },
           ],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -535,11 +535,11 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: null,
           activeReflectionBlocks: [],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -566,7 +566,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
         agentId: 'agent-1',
         threadId: 'thread-1',
         resourceId: 'resource-1',
-        state: {
+        state: JSON.stringify({
           checkpointSummary: {
             text: '   lots of space   ',
             upToGeneration: 1,
@@ -574,7 +574,7 @@ describe('migrateLegacyCheckpointedOmState', () => {
           },
           activeReflectionBlocks: [],
           observationBlocks: [],
-        },
+        }),
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
