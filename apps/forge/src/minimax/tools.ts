@@ -6,6 +6,18 @@ import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 
 import type { MiniMaxManager } from './manager';
 
+/**
+ * Private helper for forgeDebug calls scoped to minimax. Centralizes the
+ * scope string that appeared at 7 sites in this file (closes #6248).
+ */
+function minimaxDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'minimax', level, message, context });
+}
+
 /** Context shape expected by MiniMax tools (injected by forge runtime). */
 export interface MiniMaxToolContext {
   workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown>; readFile(path: string): Promise<Uint8Array | string> } };
@@ -142,11 +154,7 @@ async function writeBufferToWorkspace(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({
-      scope: 'minimax',
-      level: 'error',
-      message: 'minimax-tools: validation/requirement failed',
-    });
+    minimaxDebug('error', 'minimax-tools: validation/requirement failed');
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -159,12 +167,7 @@ async function downloadFileBuffer(downloadUrl: string) {
   const response = await fetch(downloadUrl);
 
   if (!response.ok) {
-    forgeDebug({
-      scope: 'minimax',
-      level: 'error',
-      message: 'downloadFileBuffer HTTP failure',
-      context: { status: response.status, downloadUrl },
-    });
+    minimaxDebug('error', 'downloadFileBuffer HTTP failure', { status: response.status, downloadUrl });
     throw new Error(`MiniMax file download failed with status ${response.status}`);
   }
 
@@ -179,11 +182,7 @@ async function readWorkspaceImageAsDataUrl(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({
-      scope: 'minimax',
-      level: 'error',
-      message: 'minimax-tools: validation/requirement failed',
-    });
+    minimaxDebug('error', 'minimax-tools: validation/requirement failed');
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -192,11 +191,7 @@ async function readWorkspaceImageAsDataUrl(
   const mimeType = resolveImageContentType(filePath);
 
   if (!mimeType || !mimeType.startsWith('image/')) {
-    forgeDebug({
-      scope: 'minimax',
-      level: 'error',
-      message: 'minimax-tools: validation/requirement failed',
-    });
+    minimaxDebug('error', 'minimax-tools: validation/requirement failed');
     throw new Error(`Reference image must be an image file: ${filePath}`);
   }
 
@@ -214,11 +209,7 @@ async function waitForVideoFile(minimax: MiniMaxManager, taskId: string) {
     const status = await minimax.queryVideoGeneration(taskId);
 
     if (!status.success) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'error',
-        message: 'minimax-tools: validation/requirement failed',
-      });
+      minimaxDebug('error', 'minimax-tools: validation/requirement failed');
       throw new Error(status.error?.message ?? 'Failed to query MiniMax video generation status');
     }
 
@@ -230,22 +221,14 @@ async function waitForVideoFile(minimax: MiniMaxManager, taskId: string) {
     }
 
     if (videoStatus === 'failed') {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'error',
-        message: 'minimax-tools: validation/requirement failed',
-      });
+      minimaxDebug('error', 'minimax-tools: validation/requirement failed');
       throw new Error(status.data?.failureReason ?? 'MiniMax video generation failed');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
-  forgeDebug({
-    scope: 'minimax',
-    level: 'error',
-    message: 'minimax-tools: validation/requirement failed',
-  });
+  minimaxDebug('error', 'minimax-tools: validation/requirement failed');
   throw new Error('MiniMax video generation did not finish within the expected time window');
 }
 
