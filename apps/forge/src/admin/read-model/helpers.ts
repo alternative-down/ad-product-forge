@@ -1,7 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
-import { withTimeout } from '../../utils/async';
 
 /**
  * Type guard for non-null objects. Centralizes the defensive
@@ -14,7 +13,7 @@ function isNonNullObject(v: unknown): v is Record<string, unknown> {
 /**
  * Private helper for forgeDebug calls scoped to admin-read-model.
  * Centralizes the scope boilerplate that appeared at L166 and L384.
- * withTimeoutAndLog keeps its parameterized scope API (good).
+ * withTimeoutAndLog now lives in utils/async (cross-file DRY, see #6245).
  */
 function adminDebug(
   level: 'debug' | 'warn' | 'error',
@@ -591,32 +590,4 @@ export interface ScheduleSummary {
   nextTriggerAt?: number;
   createdAt?: number;
   updatedAt?: number;
-}
-
-/**
- * Combines withTimeout with structured error logging. Intended for admin
- * observability endpoints where a slow or failing read should degrade
- * gracefully (return the fallback) but the underlying error must still be
- * logged so operators can diagnose blank charts (closes #6022).
- */
-export async function withTimeoutAndLog<T>(params: {
-  scope: string;
-  op: string;
-  promise: Promise<T>;
-  timeoutMs: number;
-  timeoutMessage: string;
-  fallback: T;
-}): Promise<T> {
-  return await withTimeout(params.promise, params.timeoutMs, params.timeoutMessage).catch(
-    (err) => {
-      const msg = errorMsg(err).slice(0, 100);
-      forgeDebug({
-        scope: params.scope,
-        level: 'warn',
-        message: params.op + ' failed: ' + msg,
-        context: { error: errorMsg(err) },
-      });
-      return params.fallback;
-    },
-  );
 }

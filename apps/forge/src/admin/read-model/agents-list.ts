@@ -29,9 +29,9 @@ import {
   toScheduleSummary as toScheduleSummaryHelper,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
-  withTimeoutAndLog,
   type ScheduleSummary,
 } from './helpers';
+import { withTimeoutAndLog } from '../../utils/async';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
 import type { Database } from '../../database/index';
