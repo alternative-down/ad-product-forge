@@ -6,7 +6,6 @@ import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
 import PostalMime from 'postal-mime';
 const { parse: parseEmail } = PostalMime;
-import { forgeDebug } from '@forge-runtime/core';
 import type {
   CommunicationFile,
   CommunicationInboundMessage,
@@ -25,6 +24,16 @@ import {
   toReplySubject,
 } from './email-account-helpers';
 import { parseFilterDate } from './communication/filter-helpers';
+import { forgeDebug } from '@forge-runtime/core';
+
+// L#NN-YYY v4 helper: scope-injection for email-account forgeDebug calls (10 sites)
+export function emailAccountDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'email-account', level, message, context });
+}
 
 type EmailProviderConfig = {
   id?: string;
@@ -68,17 +77,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   >();
 
   async function connectImap(): Promise<ImapFlow> {
-    forgeDebug({
-      scope: 'email-account',
-      level: 'warn',
-      message: 'connectImap: provider already disposed',
-    });
+    emailAccountDebug('warn', 'connectImap: provider already disposed');
     if (disposed) {
-      forgeDebug({
-        scope: 'email-account',
-        level: 'warn',
-        message: 'connectImap: provider disposed',
-      });
+      emailAccountDebug('warn', 'connectImap: provider disposed');
       throw new Error('Email provider is disposed');
     }
     if (client) return client;
@@ -99,11 +100,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       client = nextClient;
       reconnectDelayMs = 1000;
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'Connected to IMAP server' });
+      emailAccountDebug('info', 'Connected to IMAP server');
 
       nextClient.on('close', () => {
         if (client === nextClient) client = null;
-        forgeDebug({ scope: 'email-account', level: 'info', message: 'IMAP connection closed' });
+        emailAccountDebug('info', 'IMAP connection closed');
         if (!disposed) scheduleReconnect();
       });
 
@@ -140,12 +141,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug({
-          scope: 'email-account',
-          level: 'info',
-          message: 'Logout failed (best-effort)',
-          context: { error: errorMsg(error) },
-        });
+        emailAccountDebug('info', 'Logout failed (best-effort)', { error: errorMsg(error) });
       }
     }
   }
@@ -195,12 +191,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         } as CommunicationInboundMessage);
       }
     } catch (error) {
-      forgeDebug({
-        scope: 'email-account',
-        level: 'info',
-        message: 'Error processing message',
-        context: { uid, error },
-      });
+      emailAccountDebug('info', 'Error processing message', { uid, error });
     }
   }
 
@@ -288,12 +279,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
     } catch (error) {
-      forgeDebug({
-        scope: 'email-account',
-        level: 'info',
-        message: 'listen() failed',
-        context: { error: errorMsg(error) },
-      });
+      emailAccountDebug('info', 'listen() failed', { error: errorMsg(error) });
     }
   }
 
@@ -316,7 +302,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         try {
           await client.logout();
         } catch (err) {
-          forgeDebug({ scope: 'email-account', level: 'debug', message: 'logout failed: ' + errorMsg(err) });
+          emailAccountDebug('debug', 'logout failed: ' + errorMsg(err));
           client = null;
         }
       }
@@ -438,12 +424,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const recipientAddress = input.targetKey;
 
       if (!recipientAddress) {
-        forgeDebug({
-          scope: 'email-account',
-          level: 'warn',
-          message: 'send: targetKey missing',
-          context: { targetKey: input.targetKey },
-        });
+        emailAccountDebug('warn', 'send: targetKey missing', { targetKey: input.targetKey });
         throw new Error('[email] Cannot send without a targetKey');
       }
 
