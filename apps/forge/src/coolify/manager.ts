@@ -17,10 +17,21 @@ import {
   ServerSchema,
 } from './schemas';
 import { getProviderConfig, getApplicationsBaseDomain } from './provider-config';
+// Inline error extraction (errorMsg not exported from stale @forge-runtime/core dist);
 import { createHttpTransport } from './http';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
+
+/**
+ * Result of the tri-state deploy verification gate.
+ * Three phases: status (Coolify-side), health (App-side), version (App-side).
+ * P0 #6315 root-cause follow-up; completes the 6-layer Defense-in-Depth cascade.
+ */
+export type DeployVerificationResult =
+  | { status: 'verified-success'; sha: string | null; verifiedAt: string }
+  | { status: 'verified-failure'; phase: 'status' | 'health' | 'version'; error: string }
+  | { status: 'timeout'; phase: 'status' | 'health' | 'version'; elapsed: number };
 
 export function createCoolifyManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
@@ -283,6 +294,122 @@ export function createCoolifyManager(config: {
     };
   }
 
+  // ── Deploy Verification ─────────────────────────────────────────────────────
+
+  /**
+   * Tri-state deploy verification gate — 6-layer Defense-in-Depth cascade.
+   *
+   * P0 #6315 root-cause follow-up (Issue #6337). Catches the failure mode where
+   * Coolify reports "successfully deployed" but the app is still returning 503
+   * (startup crash, migration failure, upstream-pool dead container).
+   *
+   * Phase 1 — status (Coolify-side): getApplication -> status === "running"
+   * Phase 2 — health (App-side): HTTP GET {fqdn}/health -> 200 OK
+   * Phase 3 — version (App-side, conditional): HTTP GET {fqdn}/version -> x-forge-version header matches
+   *
+   * v1 limitation: each phase does a single shot (no polling, no retry). The
+   * issue spec calls for Phase 1 to poll up to 60s and Phase 2 to retry 3x with
+   * exponential backoff. Polling and retry are follow-up improvements.
+   */
+  async function verifyApplicationHealth(input: {
+    applicationUuid: string;
+    expectedSha?: string;
+  }): Promise<DeployVerificationResult> {
+    // Phase 1: Status check (Coolify-side)
+    let app: Awaited<ReturnType<typeof getApplication>>;
+    try {
+      app = await getApplication(input.applicationUuid);
+    } catch (err) {
+      return {
+        status: 'verified-failure',
+        phase: 'status',
+        error: `getApplication failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+
+    if (app.status !== 'running') {
+      return {
+        status: 'verified-failure',
+        phase: 'status',
+        error: `Application status is "${app.status ?? 'null'}", expected "running"`,
+      };
+    }
+
+    // Phase 2: Health probe (App-side)
+    if (app.fqdn == null) {
+      return {
+        status: 'verified-failure',
+        phase: 'health',
+        error: 'Application has no fqdn configured',
+      };
+    }
+
+    const baseUrl = app.fqdn.replace(/\/$/, '');
+
+    let healthResponse: Response;
+    try {
+      healthResponse = await fetch(`${baseUrl}/health`);
+    } catch (err) {
+      return {
+        status: 'verified-failure',
+        phase: 'health',
+        error: `Health probe fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+
+    if (healthResponse.ok !== true) {
+      return {
+        status: 'verified-failure',
+        phase: 'health',
+        error: `Health probe returned HTTP ${healthResponse.status}`,
+      };
+    }
+
+    // Phase 3: Version verification (App-side, conditional)
+    if (input.expectedSha !== undefined) {
+      let versionResponse: Response;
+      try {
+        versionResponse = await fetch(`${baseUrl}/version`);
+      } catch (err) {
+        return {
+          status: 'verified-failure',
+          phase: 'version',
+          error: `Version probe fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+
+      if (versionResponse.ok !== true) {
+        return {
+          status: 'verified-failure',
+          phase: 'version',
+          error: `Version probe returned HTTP ${versionResponse.status}`,
+        };
+      }
+
+      const actualSha = versionResponse.headers.get('x-forge-version');
+
+      if (actualSha !== input.expectedSha) {
+        return {
+          status: 'verified-failure',
+          phase: 'version',
+          error: `x-forge-version header "${actualSha ?? 'null'}" does not match expected sha "${input.expectedSha}"`,
+        };
+      }
+
+      return {
+        status: 'verified-success',
+        sha: actualSha,
+        verifiedAt: new Date().toISOString(),
+      };
+    }
+
+    return {
+      status: 'verified-success',
+      sha: null,
+      verifiedAt: new Date().toISOString(),
+    };
+  }
+
   // ── Environment Variables ──────────────────────────────────────────────────
 
   async function listApplicationEnvs(applicationUuid: string) {
@@ -476,6 +603,7 @@ export function createCoolifyManager(config: {
     setApplicationEnv,
     deleteApplicationEnv,
     buildApplicationDomain,
+    verifyApplicationHealth,
   };
 }
 

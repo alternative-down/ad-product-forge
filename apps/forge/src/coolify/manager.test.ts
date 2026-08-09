@@ -964,4 +964,189 @@ describe('createApplication', () => {
       expect(result).toBe('my-cool-app-v2.app.example.com');
     });
   });
+
+  describe('verifyApplicationHealth', () => {
+    // Helper: URL-based dispatch for verifyApplicationHealth fetch overrides
+    function setupVerifyMock(options: {
+      app?: { status?: string | null; fqdn?: string | null; httpStatus?: number; bodyOverride?: unknown };
+      health?: { ok: boolean; status: number };
+      version?: { ok: boolean; status: number; forgeVersionHeader?: string | null };
+    }) {
+      mockFetch.mockImplementation(async (url: string) => {
+        if (url.startsWith('https://coolify.example.com/api/v1/applications/app-001')) {
+          const appOpts = options.app ?? { status: 'running', fqdn: 'https://test.example.com' };
+          const httpStatus = appOpts.httpStatus ?? 200;
+          const body =
+            appOpts.bodyOverride !== undefined
+              ? appOpts.bodyOverride
+              : {
+                  application: {
+                    uuid: 'app-001',
+                    name: 'Test App',
+                    fqdn: appOpts.fqdn,
+                    status: appOpts.status,
+                    repository: 'org/repo',
+                    git_branch: 'main',
+                  },
+                };
+          return {
+            ok: httpStatus >= 200 && httpStatus < 300,
+            status: httpStatus,
+            text: () => Promise.resolve(JSON.stringify(body)),
+          } as unknown as Response;
+        }
+        if (url === 'https://test.example.com/health') {
+          const h = options.health ?? { ok: true, status: 200 };
+          return {
+            ok: h.ok,
+            status: h.status,
+            text: () => Promise.resolve(''),
+          } as unknown as Response;
+        }
+        if (url === 'https://test.example.com/version') {
+          const v = options.version ?? { ok: true, status: 200, forgeVersionHeader: null };
+          return {
+            ok: v.ok,
+            status: v.status,
+            headers: {
+              get: (name: string) => (name === 'x-forge-version' ? v.forgeVersionHeader : null),
+            },
+            text: () => Promise.resolve(''),
+          } as unknown as Response;
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('{}'),
+        } as unknown as Response;
+      });
+    }
+
+    it('returns verified-success when all 3 phases pass with expectedSha', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: 'abc123' },
+      });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'abc123',
+      });
+
+      expect(result).toMatchObject({ status: 'verified-success', sha: 'abc123' });
+      expect(result).toHaveProperty('verifiedAt');
+    });
+
+    it('returns verified-success with sha=null when no expectedSha is provided', async () => {
+      setupVerifyMock({ health: { ok: true, status: 200 } });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+      });
+
+      expect(result).toMatchObject({ status: 'verified-success', sha: null });
+    });
+
+    it('returns verified-failure status when app status is not running', async () => {
+      setupVerifyMock({ app: { status: 'stopped', fqdn: 'https://test.example.com' } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'status',
+        error: expect.stringContaining('stopped'),
+      });
+    });
+
+    it('returns verified-failure status when getApplication throws (HTTP 500)', async () => {
+      setupVerifyMock({ app: { httpStatus: 500, bodyOverride: { error: 'fail' } } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toMatchObject({
+        status: 'verified-failure',
+        phase: 'status',
+        error: expect.stringContaining('getApplication failed'),
+      });
+    });
+
+    it('returns verified-failure health when /health returns 503', async () => {
+      setupVerifyMock({ health: { ok: false, status: 503 } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'health',
+        error: 'Health probe returned HTTP 503',
+      });
+    });
+
+    it('returns verified-failure health when fqdn is null', async () => {
+      setupVerifyMock({ app: { status: 'running', fqdn: null } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'health',
+        error: 'Application has no fqdn configured',
+      });
+    });
+
+    it('returns verified-failure version when x-forge-version header does not match', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: 'actual-sha' },
+      });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'x-forge-version header "actual-sha" does not match expected sha "expected-sha"',
+      });
+    });
+
+    it('returns verified-failure version when x-forge-version header is missing', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: null },
+      });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'x-forge-version header "null" does not match expected sha "expected-sha"',
+      });
+    });
+
+    it('returns verified-failure version when /version returns 500', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: false, status: 500 },
+      });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'Version probe returned HTTP 500',
+      });
+    });
+  });
 });
