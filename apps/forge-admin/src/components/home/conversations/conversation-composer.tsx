@@ -1,7 +1,7 @@
 import { SendHorizontal } from 'lucide-react';
 
-import { AdminButton, AdminTextarea } from '@/components/admin';
-
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 export function ConversationComposer(input: {
   messageDraft: string;
   attachmentDrafts: File[];
@@ -12,7 +12,7 @@ export function ConversationComposer(input: {
 }) {
   return (
     <section className="space-y-3 border-t border-border pt-4">
-      <AdminTextarea
+      <Textarea
         id="home-conversations-message"
         rows={4}
         value={input.messageDraft}
@@ -31,10 +31,10 @@ export function ConversationComposer(input: {
           />
           <span className="cursor-pointer">Adicionar anexos</span>
         </label>
-        <AdminButton size="icon-sm" disabled={input.disabled} onClick={input.onSend}>
+        <Button size="icon-sm" disabled={input.disabled} onClick={input.onSend}>
           <SendHorizontal className="h-4 w-4" />
           <span className="sr-only">Enviar</span>
-        </AdminButton>
+        </Button>
       </div>
 
       {input.attachmentDrafts.length > 0 ? (

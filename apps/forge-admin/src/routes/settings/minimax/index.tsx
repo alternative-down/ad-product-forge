@@ -8,8 +8,8 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { PageHeader } from '@/components/admin/layout/page-header';
-import { AdminInput } from '@/components/admin/forms/admin-input';
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/minimax/')({
   component: SettingsMinimaxRoute,
 });
@@ -71,7 +71,7 @@ function SettingsMinimaxRoute() {
             <label className="text-sm font-medium" htmlFor="minimax-api-key">
               API key
             </label>
-            <AdminInput
+            <Input
               id="minimax-api-key"
               type="password"
               value={apiKey}
@@ -109,9 +109,9 @@ function SettingsMinimaxRoute() {
             <div className="text-sm text-destructive">{mutation.error.message}</div>
           ) : null}
           <div className="flex justify-end">
-            <AdminButton type="submit" disabled={mutation.isPending || !apiKey.trim()}>
+            <Button type="submit" disabled={mutation.isPending || !apiKey.trim()}>
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>

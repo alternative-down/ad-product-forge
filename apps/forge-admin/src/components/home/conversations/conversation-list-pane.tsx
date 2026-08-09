@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { ChevronRight, Pencil, Plus } from 'lucide-react';
 
-import { AdminButton, AdminScrollArea } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Select,
@@ -54,7 +55,7 @@ export function ConversationListPane(input: {
                 ))}
               </SelectContent>
             </Select>
-            <AdminButton
+            <Button
               variant="outline"
               size="icon-sm"
               disabled={!input.selectedAccountId}
@@ -62,17 +63,17 @@ export function ConversationListPane(input: {
             >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar conta</span>
-            </AdminButton>
-            <AdminButton variant="outline" size="icon-sm" onClick={input.onCreateAccount}>
+            </Button>
+            <Button variant="outline" size="icon-sm" onClick={input.onCreateAccount}>
               <Plus className="h-4 w-4" />
               <span className="sr-only">Nova conta</span>
-            </AdminButton>
+            </Button>
           </div>
         </div>
       </section>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <AdminButton
+        <Button
           variant="outline"
           className="w-full justify-center"
           disabled={!input.selectedAccountId}
@@ -80,7 +81,7 @@ export function ConversationListPane(input: {
         >
           <Plus className="h-4 w-4" />
           Nova conversa
-        </AdminButton>
+        </Button>
 
         <AdminScrollArea className="h-full" contentClassName="space-y-2">
           {input.selectedAccountId ? (

@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 
-import { AdminButton, PageHeader } from '@/components/admin';
-
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/admin';
 import { ThreadMessageArticle } from '@/components/agents/log/thread-message-content';
 import { useAgentLogData } from './use-agent-log-data';
 import { AgentRuntimeMemorySection } from './-agent-runtime-memory-section';
@@ -52,13 +52,13 @@ function AgentLogIndexRoute() {
       <PageHeader
         title="Log"
         actions={
-          <AdminButton
+          <Button
             variant="outline"
             onClick={() => void clearHistoryMutation.mutateAsync()}
             disabled={clearHistoryMutation.isPending}
           >
             {clearHistoryMutation.isPending ? 'Limpando...' : 'Limpar histórico'}
-          </AdminButton>
+          </Button>
         }
       />
 

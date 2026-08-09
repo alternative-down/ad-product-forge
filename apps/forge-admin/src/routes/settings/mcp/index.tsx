@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -83,14 +84,14 @@ function SettingsMcpIndexRoute() {
             </div>
           </div>
 
-          <AdminButton
+          <Button
             onClick={() => {
               setMcpForm(createEmptyMcpForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -120,7 +121,7 @@ function SettingsMcpIndexRoute() {
                   <TableCell className="px-4 py-3">{server.isActive ? 'Sim' : 'Não'}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -130,8 +131,8 @@ function SettingsMcpIndexRoute() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={deleteMutation.isPending}
@@ -139,7 +140,7 @@ function SettingsMcpIndexRoute() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,4 +1,6 @@
-import { AdminButton, AdminInput, AdminTextarea } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { SettingsMutation, SettingsQuery } from './settings-types';
 import type { CompanyDraft } from './settings-types';
 
@@ -37,7 +39,7 @@ export function CompanySettingsSection({
           <label className="text-sm font-medium" htmlFor="settings-company-name">
             Nome
           </label>
-          <AdminInput
+          <Input
             id="settings-company-name"
             value={companySettings.companyName}
             onChange={(event) =>
@@ -54,7 +56,7 @@ export function CompanySettingsSection({
           <label className="text-sm font-medium" htmlFor="settings-company-context">
             Descrição
           </label>
-          <AdminTextarea
+          <Textarea
             id="settings-company-context"
             rows={8}
             value={companySettings.companyContext}
@@ -76,9 +78,9 @@ export function CompanySettingsSection({
         ) : null}
 
         <div className="flex justify-end">
-          <AdminButton type="submit" disabled={settingsMutation.isPending}>
+          <Button type="submit" disabled={settingsMutation.isPending}>
             {settingsMutation.isPending ? 'Salvando...' : 'Salvar empresa'}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </section>

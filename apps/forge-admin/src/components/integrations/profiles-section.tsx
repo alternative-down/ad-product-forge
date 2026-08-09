@@ -1,6 +1,6 @@
 import { Pencil, Power, PowerOff } from 'lucide-react';
 
-import { AdminButton } from '@/components/admin';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -52,7 +52,7 @@ export function ProfilesSection(input: {
           </TabsList>
         </Tabs>
 
-        <AdminButton onClick={input.onCreate}>Novo</AdminButton>
+        <Button onClick={input.onCreate}>Novo</Button>
       </div>
 
       <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -69,11 +69,11 @@ export function ProfilesSection(input: {
                 <TableCell className="px-4 py-3">{profile.name}</TableCell>
                 <TableCell className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <AdminButton variant="ghost" size="icon" onClick={() => input.onEdit(profile)}>
+                    <Button variant="ghost" size="icon" onClick={() => input.onEdit(profile)}>
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Editar</span>
-                    </AdminButton>
-                    <AdminButton
+                    </Button>
+                    <Button
                       variant="ghost"
                       size="icon"
                       disabled={input.pending}
@@ -85,7 +85,7 @@ export function ProfilesSection(input: {
                         <Power className="h-4 w-4" />
                       )}
                       <span className="sr-only">{profile.isEnabled ? 'Inativar' : 'Ativar'}</span>
-                    </AdminButton>
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

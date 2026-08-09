@@ -3,13 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  AgentAvatar,
-  AdminButton,
-  AdminLoadingState,
-  HireAgentDialog,
-  PageHeader,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AgentAvatar, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -36,7 +31,7 @@ function AgentsIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="Agentes"
-        actions={<AdminButton onClick={() => setHireOpen(true)}>Contratar</AdminButton>}
+        actions={<Button onClick={() => setHireOpen(true)}>Contratar</Button>}
       />
 
       <section className="space-y-5">
@@ -124,12 +119,12 @@ function AgentsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton asChild variant="ghost" size="icon">
+                      <Button asChild variant="ghost" size="icon">
                         <Link to="/agents/$agentId" params={{ agentId: agent.agentId }}>
                           <Pencil className="h-4 w-4" />
                           <span className="sr-only">Abrir agente</span>
                         </Link>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

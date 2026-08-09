@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -60,7 +54,7 @@ export function AgentProfileDialog(input: {
                 <label className="text-sm font-medium" htmlFor="agent-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="agent-name"
                   value={form.name}
                   onChange={(event) =>
@@ -102,7 +96,7 @@ export function AgentProfileDialog(input: {
                 <label className="text-sm font-medium" htmlFor="agent-description">
                   Descrição
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="agent-description"
                   value={form.description}
                   onChange={(event) =>
@@ -170,7 +164,7 @@ export function AgentProfileDialog(input: {
                 <label className="text-sm font-medium" htmlFor="agent-instructions">
                   Instruções
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="agent-instructions"
                   value={form.instructions}
                   onChange={(event) =>
@@ -190,7 +184,7 @@ export function AgentProfileDialog(input: {
             </AdminDialogBody>
 
             <AdminDialogFooter>
-              <AdminButton
+              <Button
                 type="submit"
                 disabled={
                   input.pending ||
@@ -201,7 +195,7 @@ export function AgentProfileDialog(input: {
                 }
               >
                 {input.pending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
+              </Button>
             </AdminDialogFooter>
           </form>
         ) : null}

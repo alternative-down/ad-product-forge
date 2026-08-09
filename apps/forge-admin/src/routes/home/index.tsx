@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import { AgentAvatar, AdminButton, AdminLoadingState, HireAgentDialog } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AgentAvatar, AdminLoadingState, HireAgentDialog } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 
@@ -34,7 +35,7 @@ function HomeIndexRoute() {
             <AdminLoadingState label="Carregando empresa..." />
           ) : null}
         </div>
-        <AdminButton onClick={() => setHireOpen(true)}>Contratar</AdminButton>
+        <Button onClick={() => setHireOpen(true)}>Contratar</Button>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

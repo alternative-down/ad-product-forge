@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -52,7 +46,7 @@ export function ScheduleDialog(input: {
                 <label className="text-sm font-medium" htmlFor="schedule-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="schedule-name"
                   value={input.form.name}
                   onChange={(event) =>
@@ -66,7 +60,7 @@ export function ScheduleDialog(input: {
                 <label className="text-sm font-medium" htmlFor="schedule-description">
                   Descrição
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="schedule-description"
                   rows={4}
                   value={input.form.description}
@@ -105,7 +99,7 @@ export function ScheduleDialog(input: {
                   <label className="text-sm font-medium" htmlFor="schedule-timezone">
                     Timezone
                   </label>
-                  <AdminInput
+                  <Input
                     id="schedule-timezone"
                     value={input.form.timezone}
                     onChange={(event) =>
@@ -122,7 +116,7 @@ export function ScheduleDialog(input: {
                     <label className="text-sm font-medium" htmlFor="schedule-cron">
                       Expressão cron
                     </label>
-                    <AdminInput
+                    <Input
                       id="schedule-cron"
                       value={input.form.cronExpression}
                       onChange={(event) =>
@@ -155,7 +149,7 @@ export function ScheduleDialog(input: {
                   <label className="text-sm font-medium" htmlFor="schedule-date">
                     Data
                   </label>
-                  <AdminInput
+                  <Input
                     id="schedule-date"
                     type="datetime-local"
                     value={input.form.scheduledDate}
@@ -171,7 +165,7 @@ export function ScheduleDialog(input: {
                 <label className="text-sm font-medium" htmlFor="schedule-content">
                   Conteúdo
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="schedule-content"
                   rows={6}
                   value={input.form.content}
@@ -198,7 +192,7 @@ export function ScheduleDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton
+            <Button
               type="submit"
               disabled={
                 input.pending ||
@@ -211,7 +205,7 @@ export function ScheduleDialog(input: {
               }
             >
               {input.pending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

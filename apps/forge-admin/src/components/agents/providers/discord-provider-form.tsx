@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/admin';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -83,7 +85,7 @@ export function DiscordProviderForm(input: {
             <label className="text-sm font-medium" htmlFor="discord-token">
               Token
             </label>
-            <AdminInput
+            <Input
               id="discord-token"
               type="password"
               value={credentials.token}
@@ -111,7 +113,7 @@ export function DiscordProviderForm(input: {
                     <label className="text-sm font-medium" htmlFor="discord-channel-name">
                       Nome do canal
                     </label>
-                    <AdminInput
+                    <Input
                       id="discord-channel-name"
                       value={newChannelName}
                       onChange={(event) => setNewChannelName(event.target.value)}
@@ -123,7 +125,7 @@ export function DiscordProviderForm(input: {
                     <label className="text-sm font-medium" htmlFor="discord-channel-id">
                       Código do canal
                     </label>
-                    <AdminInput
+                    <Input
                       id="discord-channel-id"
                       value={newChannelId}
                       onChange={(event) => setNewChannelId(event.target.value)}
@@ -150,7 +152,7 @@ export function DiscordProviderForm(input: {
                     </div>
                   </div>
 
-                  <AdminButton
+                  <Button
                     type="button"
                     disabled={pending || !newChannelId.trim()}
                     onClick={() => {
@@ -186,7 +188,7 @@ export function DiscordProviderForm(input: {
                     }}
                   >
                     Incluir
-                  </AdminButton>
+                  </Button>
                 </div>
               </div>
 
@@ -205,7 +207,7 @@ export function DiscordProviderForm(input: {
                             >
                               Nome do canal
                             </label>
-                            <AdminInput
+                            <Input
                               id={`discord-channel-name-${index}`}
                               value={channel.channelName ?? ''}
                               onChange={(event) =>
@@ -231,7 +233,7 @@ export function DiscordProviderForm(input: {
                             >
                               Código do canal
                             </label>
-                            <AdminInput
+                            <Input
                               id={`discord-channel-id-${index}`}
                               value={channel.channelId}
                               onChange={(event) =>
@@ -281,7 +283,7 @@ export function DiscordProviderForm(input: {
                           </div>
 
                           <div className="pt-6">
-                            <AdminButton
+                            <Button
                               type="button"
                               variant="outline"
                               size="icon-sm"
@@ -297,7 +299,7 @@ export function DiscordProviderForm(input: {
                             >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Remover</span>
-                            </AdminButton>
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -321,16 +323,16 @@ export function DiscordProviderForm(input: {
 
           <div className="flex justify-end gap-3">
             {input.configured ? (
-              <AdminButton
+              <Button
                 type="button"
                 variant="outline"
                 disabled={pending}
                 onClick={() => deleteMutation.mutate()}
               >
                 {deleteMutation.isPending ? 'Removendo...' : 'Remover'}
-              </AdminButton>
+              </Button>
             ) : null}
-            <AdminButton
+            <Button
               type="submit"
               disabled={pending || (!input.configured && !credentials.token.trim())}
             >
@@ -341,7 +343,7 @@ export function DiscordProviderForm(input: {
                   : !credentials.token.trim()
                     ? 'Remover'
                     : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>

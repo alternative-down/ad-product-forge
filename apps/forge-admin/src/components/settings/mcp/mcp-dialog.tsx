@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -127,7 +121,7 @@ export function McpDialog(input: {
                 <label className="text-sm font-medium" htmlFor="settings-mcp-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="settings-mcp-name"
                   value={input.form.name}
                   onChange={(event) =>
@@ -141,7 +135,7 @@ export function McpDialog(input: {
                 <label className="text-sm font-medium" htmlFor="settings-mcp-description">
                   Descrição
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="settings-mcp-description"
                   rows={4}
                   value={input.form.description}
@@ -179,7 +173,7 @@ export function McpDialog(input: {
                     <label className="text-sm font-medium" htmlFor="settings-mcp-command">
                       Command
                     </label>
-                    <AdminInput
+                    <Input
                       id="settings-mcp-command"
                       value={input.form.command}
                       onChange={(event) =>
@@ -192,7 +186,7 @@ export function McpDialog(input: {
                     <label className="text-sm font-medium" htmlFor="settings-mcp-args">
                       Args JSON
                     </label>
-                    <AdminTextarea
+                    <Textarea
                       id="settings-mcp-args"
                       rows={4}
                       value={input.form.argsText}
@@ -206,7 +200,7 @@ export function McpDialog(input: {
                     <label className="text-sm font-medium" htmlFor="settings-mcp-env">
                       Env vars JSON
                     </label>
-                    <AdminTextarea
+                    <Textarea
                       id="settings-mcp-env"
                       rows={4}
                       value={input.form.envVarsText}
@@ -223,7 +217,7 @@ export function McpDialog(input: {
                     <label className="text-sm font-medium" htmlFor="settings-mcp-url">
                       URL
                     </label>
-                    <AdminInput
+                    <Input
                       id="settings-mcp-url"
                       value={input.form.url}
                       onChange={(event) =>
@@ -236,7 +230,7 @@ export function McpDialog(input: {
                     <label className="text-sm font-medium" htmlFor="settings-mcp-headers">
                       Headers JSON
                     </label>
-                    <AdminTextarea
+                    <Textarea
                       id="settings-mcp-headers"
                       rows={4}
                       value={input.form.headersText}
@@ -263,7 +257,7 @@ export function McpDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton
+            <Button
               type="submit"
               disabled={
                 input.pending ||
@@ -274,7 +268,7 @@ export function McpDialog(input: {
               }
             >
               {input.pending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

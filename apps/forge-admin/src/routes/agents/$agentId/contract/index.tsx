@@ -10,7 +10,8 @@ import {
   renewAgentContract,
   topUpAgentContract,
 } from '@/lib/admin-api/index';
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -151,7 +152,7 @@ function AgentContractIndexRoute() {
           actions={
             activeContract ? (
               <>
-                <AdminButton
+                <Button
                   onClick={() => {
                     setContractForm({
                       action: 'adjust-budget',
@@ -161,10 +162,10 @@ function AgentContractIndexRoute() {
                   }}
                 >
                   Editar
-                </AdminButton>
-                <AdminButton variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
+                </Button>
+                <Button variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
                   Demitir
-                </AdminButton>
+                </Button>
               </>
             ) : undefined
           }

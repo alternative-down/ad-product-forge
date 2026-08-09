@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -94,7 +88,7 @@ export function MovementDialog(input: {
                 <label className="text-sm font-medium" htmlFor="finance-entry-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="finance-entry-name"
                   value={input.form.name}
                   onChange={(event) =>
@@ -110,7 +104,7 @@ export function MovementDialog(input: {
                 <label className="text-sm font-medium" htmlFor="finance-entry-amount">
                   Valor
                 </label>
-                <AdminInput
+                <Input
                   id="finance-entry-amount"
                   type="number"
                   step="0.01"
@@ -129,7 +123,7 @@ export function MovementDialog(input: {
                 <label className="text-sm font-medium" htmlFor="finance-entry-date">
                   Data
                 </label>
-                <AdminInput
+                <Input
                   id="finance-entry-date"
                   type="datetime-local"
                   value={input.form.date}
@@ -171,7 +165,7 @@ export function MovementDialog(input: {
               <label className="text-sm font-medium" htmlFor="finance-entry-description">
                 Descrição
               </label>
-              <AdminTextarea
+              <Textarea
                 id="finance-entry-description"
                 rows={4}
                 value={input.form.description}
@@ -184,9 +178,9 @@ export function MovementDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton type="submit" disabled={input.pending}>
+            <Button type="submit" disabled={input.pending}>
               {input.pending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

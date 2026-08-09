@@ -1,14 +1,8 @@
 import { Check } from 'lucide-react';
 
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import {
@@ -86,7 +80,7 @@ export function NewConversationDialog(input: {
                 <label className="text-sm font-medium" htmlFor="internal-chat-conversation-name">
                   Nome do grupo
                 </label>
-                <AdminInput
+                <Input
                   id="internal-chat-conversation-name"
                   value={input.form.name}
                   onChange={(event) =>
@@ -104,7 +98,7 @@ export function NewConversationDialog(input: {
                 >
                   Participantes
                 </label>
-                <AdminInput
+                <Input
                   id="internal-chat-conversation-participant-filter"
                   value={input.form.participantQuery}
                   onChange={(event) =>
@@ -170,7 +164,7 @@ export function NewConversationDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton
+            <Button
               type="submit"
               disabled={
                 !input.selectedAccount ||
@@ -180,7 +174,7 @@ export function NewConversationDialog(input: {
               }
             >
               Criar
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

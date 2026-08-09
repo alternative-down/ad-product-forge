@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -128,14 +129,14 @@ export function RolesPage() {
         </div>
 
         <div className="flex justify-end">
-          <AdminButton
+          <Button
             onClick={() => {
               setRoleForm(createEmptyRoleForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -152,7 +153,7 @@ export function RolesPage() {
                   <TableCell className="px-4 py-3">{role.name}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -162,8 +163,8 @@ export function RolesPage() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={deleteMutation.isPending || role.assignedAgentCount > 0}
@@ -173,7 +174,7 @@ export function RolesPage() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

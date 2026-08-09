@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
-import { AgentAvatar, AdminButton, AdminLoadingState, AdminScrollArea } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AgentAvatar, AdminLoadingState, AdminScrollArea } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import {
   changeAgentRole,
@@ -145,7 +146,7 @@ function AgentDetailIndexRoute() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
-                    <AdminButton
+                    <Button
                       variant="ghost"
                       size="icon"
                       disabled={reloadMutation.isPending}
@@ -153,8 +154,8 @@ function AgentDetailIndexRoute() {
                     >
                       <RotateCw className="h-4 w-4" />
                       <span className="sr-only">Recarregar agente</span>
-                    </AdminButton>
-                    <AdminButton
+                    </Button>
+                    <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => {
@@ -164,28 +165,28 @@ function AgentDetailIndexRoute() {
                     >
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Editar perfil</span>
-                    </AdminButton>
+                    </Button>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {agent.role?.name ?? 'Sem papel'}
                   </div>
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <AdminButton
+                    <Button
                       variant="outline"
                       size="sm"
                       disabled={forceIdleMutation.isPending}
                       onClick={() => forceIdleMutation.mutate()}
                     >
                       Forçar ocioso
-                    </AdminButton>
-                    <AdminButton
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       disabled={rewakeupMutation.isPending}
                       onClick={() => rewakeupMutation.mutate()}
                     >
                       Rewakeup
-                    </AdminButton>
+                    </Button>
                   </div>
                 </div>
               </div>

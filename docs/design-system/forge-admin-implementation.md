@@ -41,10 +41,6 @@ on the same navigation pattern.
 ## Shared Admin Primitives
 
 Use these admin wrappers when the app needs a consistent admin-specific variation:
-
-- `AdminButton`
-- `AdminInput`
-- `AdminTextarea`
 - `AdminDialogContent`
 - `AdminDialogBody`
 - `AdminDialogFooter`

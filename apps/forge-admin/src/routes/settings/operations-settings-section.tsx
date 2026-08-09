@@ -1,4 +1,4 @@
-import { AdminButton } from '@/components/admin';
+import { Button } from '@/components/ui/button';
 import type { SettingsMutation, SettingsQuery } from './settings-types';
 import type { OperationsDraft } from './settings-types';
 
@@ -107,9 +107,9 @@ export function OperationsSettingsSection({
         ) : null}
 
         <div className="flex justify-end">
-          <AdminButton type="submit" disabled={settingsMutation.isPending}>
+          <Button type="submit" disabled={settingsMutation.isPending}>
             {settingsMutation.isPending ? 'Salvando...' : 'Salvar operação'}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </section>

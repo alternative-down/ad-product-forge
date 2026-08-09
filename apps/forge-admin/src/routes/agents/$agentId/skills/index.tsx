@@ -1,7 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -122,20 +123,20 @@ function AgentSkillsIndexRoute() {
                     </TableCell>
                     <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <AdminButton
+                        <Button
                           variant="outline"
                           disabled={busy}
                           onClick={() => publishMutation.mutate(skill.skillName)}
                         >
                           {inCatalog ? 'Atualizar catálogo' : 'Publicar no catálogo'}
-                        </AdminButton>
-                        <AdminButton
+                        </Button>
+                        <Button
                           variant="outline"
                           disabled={busy}
                           onClick={() => deleteMutation.mutate(skill.skillName)}
                         >
                           Remover local
-                        </AdminButton>
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -196,20 +197,20 @@ function AgentSkillsIndexRoute() {
                     <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         {installed ? (
-                          <AdminButton
+                          <Button
                             variant="outline"
                             disabled={busy}
                             onClick={() => deleteMutation.mutate(skill.skillName)}
                           >
                             Remover
-                          </AdminButton>
+                          </Button>
                         ) : (
-                          <AdminButton
+                          <Button
                             disabled={busy}
                             onClick={() => installMutation.mutate(skill.skillName)}
                           >
                             Instalar
-                          </AdminButton>
+                          </Button>
                         )}
                       </div>
                     </TableCell>

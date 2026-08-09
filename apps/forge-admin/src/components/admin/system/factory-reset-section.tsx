@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-import { AdminButton } from '@/components/admin/forms/admin-button';
-
+import { Button } from '@/components/ui/button';
 import { FactoryResetModal } from './factory-reset-modal';
 
 /**
@@ -33,9 +32,9 @@ export function FactoryResetSection() {
       </div>
 
       <div className="flex justify-end">
-        <AdminButton variant="destructive" onClick={() => setModalOpen(true)}>
+        <Button variant="destructive" onClick={() => setModalOpen(true)}>
           Iniciar factory reset
-        </AdminButton>
+        </Button>
       </div>
 
       <FactoryResetModal open={modalOpen} onOpenChange={setModalOpen} />

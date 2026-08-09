@@ -1,12 +1,6 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -50,7 +44,7 @@ export function LlmProfileDialog(input: {
                 <label className="text-sm font-medium" htmlFor="llm-profile-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="llm-profile-name"
                   value={input.profileForm.name}
                   onChange={(event) =>
@@ -100,7 +94,7 @@ export function LlmProfileDialog(input: {
               <label className="text-sm font-medium" htmlFor="llm-base-url">
                 Base URL
               </label>
-              <AdminInput
+              <Input
                 id="llm-base-url"
                 value={input.profileForm.baseUrl ?? ''}
                 onChange={(event) =>
@@ -113,7 +107,7 @@ export function LlmProfileDialog(input: {
               <label className="text-sm font-medium" htmlFor="llm-api-key">
                 API key
               </label>
-              <AdminInput
+              <Input
                 id="llm-api-key"
                 type="password"
                 value={input.profileForm.apiKey}
@@ -127,7 +121,7 @@ export function LlmProfileDialog(input: {
               <label className="text-sm font-medium" htmlFor="llm-contract-multiplier">
                 Multiplicador de custo
               </label>
-              <AdminInput
+              <Input
                 id="llm-contract-multiplier"
                 type="number"
                 min="0"
@@ -147,9 +141,9 @@ export function LlmProfileDialog(input: {
             ) : null}
           </AdminDialogBody>
           <AdminDialogFooter>
-            <AdminButton type="submit" disabled={input.pending}>
+            <Button type="submit" disabled={input.pending}>
               {input.pending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

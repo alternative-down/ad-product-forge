@@ -2,7 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import { getAgent, updateAgentGitHubManifestConfig } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
@@ -39,24 +40,24 @@ function AgentGithubIndexRoute() {
         actions={
           <>
             {registrationUrl ? (
-              <AdminButton asChild>
+              <Button asChild>
                 <a href={registrationUrl} target="_blank" rel="noreferrer">
                   Criar app
                 </a>
-              </AdminButton>
+              </Button>
             ) : (
-              <AdminButton disabled>Criar app</AdminButton>
+              <Button disabled>Criar app</Button>
             )}
             {installUrl ? (
-              <AdminButton asChild variant="outline">
+              <Button asChild variant="outline">
                 <a href={installUrl} target="_blank" rel="noreferrer">
                   Instalar app
                 </a>
-              </AdminButton>
+              </Button>
             ) : (
-              <AdminButton variant="outline" disabled>
+              <Button variant="outline" disabled>
                 Instalar app
-              </AdminButton>
+              </Button>
             )}
           </>
         }

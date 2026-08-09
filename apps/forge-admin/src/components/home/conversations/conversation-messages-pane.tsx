@@ -1,7 +1,8 @@
 import { ArrowDown } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
-import { AgentAvatar, AdminButton, AdminScrollArea } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AgentAvatar, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { HomeInternalChatConversationMessage } from '@/lib/admin-api/index';
 import { getInitials } from './context';
@@ -85,7 +86,7 @@ export function ConversationMessagesPane(input: {
         })}
       </AdminScrollArea>
       {!autoScrollEnabled ? (
-        <AdminButton
+        <Button
           variant="outline"
           size="icon-sm"
           className="absolute bottom-3 right-1"
@@ -93,7 +94,7 @@ export function ConversationMessagesPane(input: {
         >
           <ArrowDown className="h-4 w-4" />
           <span className="sr-only">Ir para o final</span>
-        </AdminButton>
+        </Button>
       ) : null}
     </div>
   );
