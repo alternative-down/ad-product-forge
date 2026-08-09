@@ -2,7 +2,19 @@ import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
 
-import { withTimeout } from '../utils/async';
+import { withTimeout, withTimeoutAndLog } from '../utils/async';
+
+/**
+ * Private helper for forgeDebug calls scoped to scheduler. Centralizes the
+ * scope string that appeared at 7 sites in this file (closes #6245).
+ */
+function schedulerDebug(
+  level: 'debug' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'scheduler', level, message, context });
+}
 import {
   nextBackoff as backoffNextBackoff,
   resetBackoff as backoffResetBackoff,
@@ -225,11 +237,9 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
     } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'planNextStepDelay failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
+      schedulerDebug('error', 'planNextStepDelay failed', {
+        runtimeId: deps.runtimeId,
+        error: errorMsg(error),
       });
       return -1;
     }
@@ -325,11 +335,9 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         markRunning: false,
       });
     } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'start failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
+      schedulerDebug('error', 'start failed', {
+        runtimeId: deps.runtimeId,
+        error: errorMsg(error),
       });
     }
   }
@@ -362,34 +370,22 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     clearTimer();
     flushManager.resetFlushedRunEventKeys();
     state.instant = false;
-    try {
-      await withTimeout(
-        setExecutionState(deps.runtimeId, 'idle'),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state update timed out for ${deps.runtimeId}`,
-      );
-    } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'forceIdle setExecutionState failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
-      });
-    }
-    try {
-      await withTimeout(
-        deps.onAgentIdle?.() ?? Promise.resolve(),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
-      );
-    } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'forceIdle onAgentIdle failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
-      });
-    }
+    await withTimeoutAndLog<void>({
+      scope: 'scheduler',
+      op: 'forceIdle.setExecutionState',
+      promise: setExecutionState(deps.runtimeId, 'idle'),
+      timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
+      timeoutMessage: `Agent execution state update timed out for ${deps.runtimeId}`,
+      fallback: undefined,
+    });
+    await withTimeoutAndLog<void>({
+      scope: 'scheduler',
+      op: 'forceIdle.onAgentIdle',
+      promise: deps.onAgentIdle?.() ?? Promise.resolve(),
+      timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
+      timeoutMessage: `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      fallback: undefined,
+    });
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -413,34 +409,22 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     clearTimer();
     invalidateInFlightGenerate();
     state.instant = false;
-    try {
-      await withTimeout(
-        setExecutionState(deps.runtimeId, 'idle'),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state update timed out for ${deps.runtimeId}`,
-      );
-    } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'transitionToIdle setExecutionState failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
-      });
-    }
-    try {
-      await withTimeout(
-        deps.onAgentIdle?.() ?? Promise.resolve(),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
-      );
-    } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'transitionToIdle onAgentIdle failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
-      });
-    }
+    await withTimeoutAndLog<void>({
+      scope: 'scheduler',
+      op: 'transitionToIdle.setExecutionState',
+      promise: setExecutionState(deps.runtimeId, 'idle'),
+      timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
+      timeoutMessage: `Agent execution state update timed out for ${deps.runtimeId}`,
+      fallback: undefined,
+    });
+    await withTimeoutAndLog<void>({
+      scope: 'scheduler',
+      op: 'transitionToIdle.onAgentIdle',
+      promise: deps.onAgentIdle?.() ?? Promise.resolve(),
+      timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
+      timeoutMessage: `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      fallback: undefined,
+    });
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -453,11 +437,9 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     try {
       await onRunnerIdle();
     } catch (error) {
-      forgeDebug({
-        scope: 'scheduler',
-        level: 'error',
-        message: 'transitionToIdle onRunnerIdle failed',
-        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
+      schedulerDebug('error', 'transitionToIdle onRunnerIdle failed', {
+        runtimeId: deps.runtimeId,
+        error: errorMsg(error),
       });
     }
   }
