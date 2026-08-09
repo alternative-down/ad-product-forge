@@ -14,6 +14,16 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
+// L#NN-50 #34 + #6156 — named constants for the magic 11/2 chrome calculations.
+// Sum of AdminDialogHeader (py-4 + content + py-4) + AdminDialogFooter (px-4 + content + py-3)
+// plus the AdminScrollArea pb-4 padding buffer. Update when AdminDialogHeader/Footer/AdminScrollArea
+// padding or margin changes — otherwise AdminDialogBody max-height will silently miscalculate.
+const HEADER_FOOTER_CHROME_REM = 11;
+const PADDING_BUFFER_REM = 2;
+// Wide-screen breakpoint matches Tailwind's `sm:` default (640px). Below this threshold the
+// dialog uses full viewport height instead of 80% (see `isWide` derivation in AdminDialogBody).
+const WIDE_SCREEN_MIN_WIDTH_PX = 640;
+
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
   return (
     <DialogContent
@@ -73,12 +83,15 @@ export function AdminDialogTitle({ className, ...props }: ComponentProps<typeof 
 }
 
 /**
- * AdminDialogBody intentionally uses raw ComponentProps<'div'> rather
- * than a Dialog primitive because the body height calculation
- * requires DOM-level ResizeObserver access. If a DialogBody primitive
- * is added in the future, this can be migrated (L#NN-50 #34 follow-up).
+ * AdminDialogBody intentionally uses raw ComponentProps<'div'> rather than a Dialog primitive.
  *
- * Related: #6157 type-asymmetry documentation.
+ * The body height calculation requires direct DOM access via ResizeObserver + window.innerHeight
+ * to dynamically compute maxBodyHeight. A future DialogBody primitive in @/components/ui/dialog
+ * would need to expose a `ref` typed as HTMLDivElement (or richer) for this ResizeObserver
+ * pattern to work — at that point AdminDialogBody can be migrated to ComponentProps<typeof DialogBody>.
+ *
+ * Type asymmetry vs the other 4 AdminDialog* siblings (Content/Footer/Header/Title all typed via
+ * `ComponentProps<typeof DialogX>`) is therefore INTENTIONAL, not accidental. Tracking: #6157.
  */
 export function AdminDialogBody({ className, children, ...props }: ComponentProps<'div'>) {
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -94,22 +107,16 @@ export function AdminDialogBody({ className, children, ...props }: ComponentProp
         return;
       }
 
-      // L#NN-50 #34 — named alias for the magic 11/2 in #6156
-      // Sum of AdminDialogHeader + AdminDialogFooter vertical chrome
-      // (px-4 padding + content + py-3 padding + py-4 padding + content + py-4 padding).
-      // Update when AdminDialogHeader/Footer padding or margin changes.
-      const HEADER_FOOTER_CHROME_REM = 11;
-      // Padding buffer (2rem) below content inside AdminScrollArea.
-      const PADDING_REM = 2;
-
       const rootFontSize =
         Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const viewportHeight = window.innerHeight;
-      const maxBodyHeight = window.matchMedia('(min-width: 640px)').matches
-        ? viewportHeight * 0.8 - rootFontSize * HEADER_FOOTER_CHROME_REM
-        : viewportHeight - rootFontSize * HEADER_FOOTER_CHROME_REM;
+      const chromeHeight = rootFontSize * HEADER_FOOTER_CHROME_REM;
+      const paddingHeight = rootFontSize * PADDING_BUFFER_REM;
+      const isWide = window.matchMedia(`(min-width: ${WIDE_SCREEN_MIN_WIDTH_PX}px)`).matches;
+
+      const maxBodyHeight = (isWide ? viewportHeight * 0.8 : viewportHeight) - chromeHeight;
       const nextHeight = Math.min(
-        contentRef.current.scrollHeight + rootFontSize * PADDING_REM,
+        contentRef.current.scrollHeight + paddingHeight,
         maxBodyHeight,
       );
 
