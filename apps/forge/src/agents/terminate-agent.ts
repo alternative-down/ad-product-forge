@@ -1,6 +1,6 @@
 import {  errorMsg } from './error-formatting';
 import { rm } from 'node:fs/promises';
-import { forgeDebug } from '@forge-runtime/core';
+import { terminateInternalAgentDebug } from './terminate-agent-debug-helpers';
 import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
@@ -33,22 +33,12 @@ export async function terminateInternalAgent(
       where: eq(agents.id, input.agentId),
     });
   } catch (err) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'error',
-      message: 'terminateAgent DB read failed',
-      context: { agentId: input.agentId, error: errorMsg(err) },
-    });
+    terminateInternalAgentDebug('error', 'terminateAgent DB read failed', { agentId: input.agentId, error: errorMsg(err) });
     throw err;
   }
 
   if (agent === null || agent === undefined) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'warn',
-      message: 'terminateAgent: agent not found',
-      context: { agentId: input.agentId },
-    });
+    terminateInternalAgentDebug('warn', 'terminateAgent: agent not found', { agentId: input.agentId });
     throw new Error(`Agent not found: ${input.agentId}`);
   }
 
@@ -56,13 +46,7 @@ export async function terminateInternalAgent(
   try {
     await contractStore.refundActiveContractBalance(input.agentId);
   } catch (err) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'warn',
-      context: { agentId: input.agentId },
-      message:
-        'refundActiveContractBalance failed (non-fatal): ' + errorMsg(err),
-    });
+    terminateInternalAgentDebug('warn', 'refundActiveContractBalance failed (non-fatal): ' + errorMsg(err), { agentId: input.agentId });
   }
 
   // Perform external operations — compensating transaction on any failure
@@ -79,35 +63,18 @@ export async function terminateInternalAgent(
     try {
       await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
     } catch (chatErr) {
-      forgeDebug({
-        scope: 'terminate-agent',
-        level: 'warn',
-        context: { agentId: input.agentId },
-        message:
-          'internal chat cleanup failed (non-fatal): ' + errorMsg(chatErr),
-      });
+      terminateInternalAgentDebug('warn', 'internal chat cleanup failed (non-fatal): ' + errorMsg(chatErr), { agentId: input.agentId });
     }
   } catch (err) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'error',
-      context: { agentId: input.agentId },
-      message: 'external cleanup failed during terminate: ' + errorMsg(err),
-    });
+    terminateInternalAgentDebug('error', 'external cleanup failed during terminate: ' + errorMsg(err), { agentId: input.agentId });
 
     // Compensating transaction: attempt cleanup of whatever succeeded before the failure.
     // Best effort — failures are logged but do not re-throw.
     try {
       await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
     } catch (chatErr) {
-      forgeDebug({
-        scope: 'terminate-agent',
-        level: 'warn',
-        context: { agentId: input.agentId },
-        message:
-          'internal chat cleanup failed during rollback: ' +
-          errorMsg(chatErr),
-      });
+      terminateInternalAgentDebug('warn', 'internal chat cleanup failed during rollback: ' +
+          errorMsg(chatErr), { agentId: input.agentId });
     }
 
     try {
@@ -119,14 +86,8 @@ export async function terminateInternalAgent(
         await tx.delete(agents).where(eq(agents.id, input.agentId));
       });
     } catch (deleteErr) {
-      forgeDebug({
-        scope: 'terminate-agent',
-        level: 'error',
-        context: { agentId: input.agentId },
-        message:
-          'db cleanup transaction failed during rollback: ' +
-          errorMsg(deleteErr),
-      });
+      terminateInternalAgentDebug('error', 'db cleanup transaction failed during rollback: ' +
+          errorMsg(deleteErr), { agentId: input.agentId });
     }
     getInternalAgentRegistry().remove(input.agentId);
     throw err;
@@ -136,12 +97,7 @@ export async function terminateInternalAgent(
   try {
     await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
   } catch (err) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'warn',
-      context: { agentId: input.agentId },
-      message: 'internal chat cleanup failed (non-fatal): ' + errorMsg(err),
-    });
+    terminateInternalAgentDebug('warn', 'internal chat cleanup failed (non-fatal): ' + errorMsg(err), { agentId: input.agentId });
   }
 
   // Delete execution contracts (cascade handles steps); delete providers explicitly.
@@ -162,12 +118,7 @@ export async function terminateInternalAgent(
       force: true,
     });
   } catch (rmErr) {
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'warn',
-      context: { agentId: input.agentId },
-      message: 'workspace rm failed (non-fatal): ' + errorMsg(rmErr),
-    });
+    terminateInternalAgentDebug('warn', 'workspace rm failed (non-fatal): ' + errorMsg(rmErr), { agentId: input.agentId });
   }
 
   return {
