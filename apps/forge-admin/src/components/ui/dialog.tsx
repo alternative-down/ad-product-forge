@@ -5,7 +5,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { CloseIcon } from '@/components/ui/close-button';
+import { CloseButton } from '@/components/ui/close-button';
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -59,10 +59,8 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
-          >
-            <CloseIcon />
-          </DialogPrimitive.Close>
+            render={<CloseButton position="top-2 right-2" />}
+          />
         )}
       </DialogPrimitive.Popup>
     </DialogPortal>
