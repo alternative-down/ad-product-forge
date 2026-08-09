@@ -1,6 +1,6 @@
 import { Check, Power, PowerOff, X } from 'lucide-react';
 
-import { AdminButton } from '@/components/admin';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -72,7 +72,7 @@ export function MovementAgendaTable(input: {
                 <div className="flex justify-end gap-2">
                   {item.kind === 'planned' ? (
                     <>
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={input.pending}
@@ -80,8 +80,8 @@ export function MovementAgendaTable(input: {
                       >
                         <Check className="h-4 w-4" />
                         <span className="sr-only">Postar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={input.pending}
@@ -89,12 +89,12 @@ export function MovementAgendaTable(input: {
                       >
                         <X className="h-4 w-4" />
                         <span className="sr-only">Cancelar</span>
-                      </AdminButton>
+                      </Button>
                     </>
                   ) : null}
 
                   {item.kind === 'recurring-payable' ? (
-                    <AdminButton
+                    <Button
                       variant="ghost"
                       size="icon"
                       disabled={input.pending}
@@ -106,7 +106,7 @@ export function MovementAgendaTable(input: {
                         <Power className="h-4 w-4" />
                       )}
                       <span className="sr-only">{item.isActive ? 'Inativar' : 'Ativar'}</span>
-                    </AdminButton>
+                    </Button>
                   ) : null}
                 </div>
               </TableCell>

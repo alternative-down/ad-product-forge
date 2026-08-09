@@ -1,7 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import {
   Table,
@@ -138,20 +139,20 @@ function AgentMcpIndexRoute() {
                     <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         {assigned ? (
-                          <AdminButton
+                          <Button
                             variant="outline"
                             disabled={busy}
                             onClick={() => detachMutation.mutate(assigned.configId)}
                           >
                             Remover
-                          </AdminButton>
+                          </Button>
                         ) : (
-                          <AdminButton
+                          <Button
                             disabled={busy || !server.isActive}
                             onClick={() => assignMutation.mutate(server.serverId)}
                           >
                             Habilitar
-                          </AdminButton>
+                          </Button>
                         )}
                       </div>
                     </TableCell>

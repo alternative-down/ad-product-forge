@@ -16,8 +16,8 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { PageHeader } from '@/components/admin/layout/page-header';
-import { AdminInput } from '@/components/admin/forms/admin-input';
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/skills/')({
   component: SettingsSkillsIndexRoute,
 });
@@ -84,7 +84,7 @@ function SettingsSkillsIndexRoute() {
             <label className="text-sm font-medium" htmlFor="system-skill-archive">
               Arquivo zip
             </label>
-            <AdminInput
+            <Input
               id="system-skill-archive"
               type="file"
               accept=".zip,application/zip"
@@ -93,12 +93,12 @@ function SettingsSkillsIndexRoute() {
             />
           </div>
 
-          <AdminButton
+          <Button
             disabled={!skillFile || uploadSkillMutation.isPending}
             onClick={() => uploadSkillMutation.mutate()}
           >
             {uploadSkillMutation.isPending ? 'Enviando...' : 'Incluir no catálogo'}
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -126,7 +126,7 @@ function SettingsSkillsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={!skill.editable || deleteSkillMutation.isPending}
@@ -134,7 +134,7 @@ function SettingsSkillsIndexRoute() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

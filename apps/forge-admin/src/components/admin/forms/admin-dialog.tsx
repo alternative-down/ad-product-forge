@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
 
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Button } from '@/components/ui/button';
 import { AdminScrollArea } from '@/components/admin/system/admin-scroll-area';
 import { CloseIcon } from '@/components/ui/close-button';
 import {
@@ -65,7 +65,7 @@ export function AdminDialogHeader({
       {children}
       <DialogClose
         render={
-          <AdminButton
+          <Button
             variant="ghost"
             size="icon-sm"
             className="absolute top-4 right-4 rounded-full bg-destructive/20 text-foreground hover:bg-destructive/30 hover:text-foreground"

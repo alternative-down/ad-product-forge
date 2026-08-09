@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   Table,
   TableBody,
@@ -112,7 +113,7 @@ function AgentSchedulesIndexRoute() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Heartbeat</div>
-            <AdminButton
+            <Button
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -122,7 +123,7 @@ function AgentSchedulesIndexRoute() {
             >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar heartbeat</span>
-            </AdminButton>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
@@ -156,14 +157,14 @@ function AgentSchedulesIndexRoute() {
 
       <section className="space-y-5">
         <div className="flex justify-end">
-          <AdminButton
+          <Button
             onClick={() => {
               setForm(createEmptyScheduleForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -196,7 +197,7 @@ function AgentSchedulesIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -206,8 +207,8 @@ function AgentSchedulesIndexRoute() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={deleteMutation.isPending}
@@ -215,7 +216,7 @@ function AgentSchedulesIndexRoute() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

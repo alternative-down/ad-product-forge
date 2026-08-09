@@ -2,7 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   cancelPlannedLedgerEntry,
   createInvestment,
@@ -173,14 +174,14 @@ function FinanceAccountsIndexRoute() {
         </div>
 
         <div className="flex justify-end">
-          <AdminButton
+          <Button
             onClick={() => {
               setMovementForm(createEmptyMovementForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         {createMutation.error ? (

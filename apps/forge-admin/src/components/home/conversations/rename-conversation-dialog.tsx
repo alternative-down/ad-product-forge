@@ -1,12 +1,6 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 
 export function RenameConversationDialog(input: {
@@ -34,7 +28,7 @@ export function RenameConversationDialog(input: {
               <label className="text-sm font-medium" htmlFor="home-conversation-name">
                 Nome do grupo
               </label>
-              <AdminInput
+              <Input
                 id="home-conversation-name"
                 value={input.groupNameDraft}
                 onChange={(event) => input.onGroupNameDraftChange(event.target.value)}
@@ -42,7 +36,7 @@ export function RenameConversationDialog(input: {
             </div>
           </AdminDialogBody>
           <AdminDialogFooter>
-            <AdminButton type="submit">Salvar</AdminButton>
+            <Button type="submit">Salvar</Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

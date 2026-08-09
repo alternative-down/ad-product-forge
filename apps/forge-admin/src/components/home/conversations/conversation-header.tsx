@@ -1,7 +1,6 @@
 import { Archive, ArrowLeft, Pencil, Settings2 } from 'lucide-react';
 
-import { AdminButton } from '@/components/admin';
-
+import { Button } from '@/components/ui/button';
 import type { LocalConversation } from './context';
 
 export function ConversationHeader({
@@ -28,21 +27,21 @@ export function ConversationHeader({
         </button>
         <div className="text-base font-semibold tracking-[-0.03em]">{conversation.name}</div>
         {canManageGroup ? (
-          <AdminButton variant="outline" size="icon-sm" onClick={onRenameOpen}>
+          <Button variant="outline" size="icon-sm" onClick={onRenameOpen}>
             <Pencil className="h-4 w-4" />
             <span className="sr-only">Editar nome da conversa</span>
-          </AdminButton>
+          </Button>
         ) : null}
         {canManageGroup ? (
-          <AdminButton variant="outline" size="icon-sm" onClick={onParticipantsOpen}>
+          <Button variant="outline" size="icon-sm" onClick={onParticipantsOpen}>
             <Settings2 className="h-4 w-4" />
             <span className="sr-only">Participantes</span>
-          </AdminButton>
+          </Button>
         ) : null}
-        <AdminButton variant="outline" size="icon-sm" onClick={onArchive}>
+        <Button variant="outline" size="icon-sm" onClick={onArchive}>
           <Archive className="h-4 w-4" />
           <span className="sr-only">Arquivar conversa</span>
-        </AdminButton>
+        </Button>
       </div>
     </div>
   );

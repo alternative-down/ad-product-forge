@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
  * because both sites render the same Button variant="ghost" + size="icon-sm"
  * + absolute-positioned + CloseIcon composition.
  *
- * The AdminDialogHeader (admin/forms/admin-dialog.tsx) site uses AdminButton
- * (different wrapper) so it stays inline — see admin-dialog.tsx for the
- * AdminButton-specific render pattern.
+ * The AdminDialogHeader (admin/forms/admin-dialog.tsx) site uses Button
+ * (different position classes, top-4 right-4 + custom destructive styles)
+ * so the inline render pattern stays there.
  *
  * The text-only close (DialogFooter L98, which renders "Close" as a
  * label rather than an icon) is NOT covered here — it is a distinct

@@ -1,14 +1,8 @@
 import { TriangleAlert } from 'lucide-react';
 
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -83,7 +77,7 @@ export function ContractAdjustDialog(input: {
                       ? 'Novo valor semanal do novo contrato'
                       : 'Novo valor semanal'}
                 </label>
-                <AdminInput
+                <Input
                   id="agent-contract-amount"
                   type="number"
                   step="0.01"
@@ -100,9 +94,9 @@ export function ContractAdjustDialog(input: {
             </AdminDialogBody>
 
             <AdminDialogFooter>
-              <AdminButton type="submit" disabled={input.pending}>
+              <Button type="submit" disabled={input.pending}>
                 {input.pending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
+              </Button>
             </AdminDialogFooter>
           </form>
         ) : null}
@@ -143,16 +137,16 @@ export function ContractTerminateDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton
+            <Button
               variant="ghost"
               onClick={() => input.onOpenChange(false)}
               disabled={input.pending}
             >
               Cancelar
-            </AdminButton>
-            <AdminButton variant="destructive" onClick={input.onConfirm} disabled={input.pending}>
+            </Button>
+            <Button variant="destructive" onClick={input.onConfirm} disabled={input.pending}>
               {input.pending ? 'Demitindo...' : 'Confirmar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </div>
       </AdminDialogContent>

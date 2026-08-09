@@ -1,5 +1,4 @@
-import { AdminButton } from '@/components/admin';
-
+import { Button } from '@/components/ui/button';
 export type OauthProviderView = {
   providerId: string;
   synced: boolean;
@@ -38,13 +37,13 @@ export function OauthSection(input: {
               </div>
             </div>
 
-            <AdminButton
+            <Button
               variant="outline"
               disabled={input.pending}
               onClick={() => input.onSync(provider.providerId)}
             >
               Sincronizar
-            </AdminButton>
+            </Button>
           </div>
         ))}
       </div>

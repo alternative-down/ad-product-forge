@@ -4,7 +4,7 @@ import type { ChangeEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Button } from '@/components/ui/button';
 import {
   AdminDialogContent,
   AdminDialogBody,
@@ -12,7 +12,7 @@ import {
   AdminDialogHeader,
   AdminDialogTitle,
 } from '@/components/admin/forms/admin-dialog';
-import { AdminInput } from '@/components/admin/forms/admin-input';
+import { Input } from '@/components/ui/input';
 import { triggerFactoryReset } from '@/lib/admin-api/system';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 import { Dialog, DialogDescription } from '@/components/ui/dialog';
@@ -121,44 +121,44 @@ export function FactoryResetModal({ open, onOpenChange }: FactoryResetModalProps
         <AdminDialogFooter>
           {state.step === 'warning' ? (
             <>
-              <AdminButton variant="ghost" onClick={() => handleOpenChange(false)}>
+              <Button variant="ghost" onClick={() => handleOpenChange(false)}>
                 Cancelar
-              </AdminButton>
-              <AdminButton variant="destructive" onClick={handleConfirmClick}>
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmClick}>
                 Continuar
-              </AdminButton>
+              </Button>
             </>
           ) : null}
 
           {state.step === 'confirmation' || state.step === 'error' ? (
             <>
-              <AdminButton
+              <Button
                 variant="ghost"
                 onClick={handleBackToWarning}
                 disabled={state.step === 'submitting'}
               >
                 Voltar
-              </AdminButton>
-              <AdminButton
+              </Button>
+              <Button
                 variant="destructive"
                 onClick={handleSubmit}
                 disabled={!isConfirmationValid(state) || state.step === 'submitting'}
               >
                 {state.step === 'submitting' ? 'Resetando...' : 'Confirmar reset'}
-              </AdminButton>
+              </Button>
             </>
           ) : null}
 
           {state.step === 'submitting' ? (
-            <AdminButton variant="destructive" disabled>
+            <Button variant="destructive" disabled>
               Resetando...
-            </AdminButton>
+            </Button>
           ) : null}
 
           {state.step === 'success' ? (
-            <AdminButton variant="default" onClick={handleCloseAfterSuccess}>
+            <Button variant="default" onClick={handleCloseAfterSuccess}>
               Fechar
-            </AdminButton>
+            </Button>
           ) : null}
         </AdminDialogFooter>
       </AdminDialogContent>
@@ -215,7 +215,7 @@ function ConfirmationStep({ state, onInputChange, onBack }: ConfirmationStepProp
         abaixo. A confirmação diferencia maiúsculas de minúsculas.
       </p>
 
-      <AdminInput
+      <Input
         type="text"
         autoComplete="off"
         spellCheck={false}

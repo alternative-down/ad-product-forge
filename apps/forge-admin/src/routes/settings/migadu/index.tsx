@@ -8,8 +8,8 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { PageHeader } from '@/components/admin/layout/page-header';
-import { AdminInput } from '@/components/admin/forms/admin-input';
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/migadu/')({
   component: SettingsMigaduRoute,
 });
@@ -74,7 +74,7 @@ function SettingsMigaduRoute() {
             <label className="text-sm font-medium" htmlFor="migadu-api-user">
               API user
             </label>
-            <AdminInput
+            <Input
               id="migadu-api-user"
               value={apiUser}
               onChange={(event) =>
@@ -91,7 +91,7 @@ function SettingsMigaduRoute() {
             <label className="text-sm font-medium" htmlFor="migadu-api-key">
               API key
             </label>
-            <AdminInput
+            <Input
               id="migadu-api-key"
               type="password"
               value={apiKey}
@@ -131,12 +131,12 @@ function SettingsMigaduRoute() {
             <div className="text-sm text-destructive">{mutation.error.message}</div>
           ) : null}
           <div className="flex justify-end">
-            <AdminButton
+            <Button
               type="submit"
               disabled={mutation.isPending || !apiUser.trim() || !apiKey.trim()}
             >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>

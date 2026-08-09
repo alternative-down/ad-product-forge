@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput, PageHeader } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import {
   deleteAgentProvider,
@@ -100,18 +102,18 @@ export function EmailProviderForm(input: {
 
           <div className="flex justify-end gap-3">
             {input.configured ? (
-              <AdminButton
+              <Button
                 type="button"
                 variant="outline"
                 disabled={pending}
                 onClick={() => deleteMutation.mutate()}
               >
                 {deleteMutation.isPending ? 'Removendo...' : 'Remover'}
-              </AdminButton>
+              </Button>
             ) : null}
-            <AdminButton type="submit" disabled={pending || !isEmailCredentialsValid(credentials)}>
+            <Button type="submit" disabled={pending || !isEmailCredentialsValid(credentials)}>
               {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>
@@ -131,7 +133,7 @@ function EmailConnectionFields(input: {
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-host`}>
           Host
         </label>
-        <AdminInput
+        <Input
           id={`${input.prefix}-host`}
           value={input.value.host}
           onChange={(event) => input.onChange({ ...input.value, host: event.target.value })}
@@ -143,7 +145,7 @@ function EmailConnectionFields(input: {
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-port`}>
           Porta
         </label>
-        <AdminInput
+        <Input
           id={`${input.prefix}-port`}
           type="number"
           value={String(input.value.port)}
@@ -158,7 +160,7 @@ function EmailConnectionFields(input: {
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-user`}>
           Usuário
         </label>
-        <AdminInput
+        <Input
           id={`${input.prefix}-user`}
           value={input.value.user}
           onChange={(event) => input.onChange({ ...input.value, user: event.target.value })}
@@ -170,7 +172,7 @@ function EmailConnectionFields(input: {
         <label className="text-sm font-medium" htmlFor={`${input.prefix}-password`}>
           Senha
         </label>
-        <AdminInput
+        <Input
           id={`${input.prefix}-password`}
           type="password"
           value={input.value.password}

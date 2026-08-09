@@ -3,17 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import {
-  AdminDialogBody,
-  AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminLoadingState,
-  AdminDialogTitle,
-  AdminInput,
-  PageHeader,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminLoadingState, AdminDialogTitle, PageHeader } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
@@ -80,14 +72,14 @@ function SettingsPricesRoute() {
       <PageHeader title="Preços" />
 
       <div className="flex justify-end">
-        <AdminButton
+        <Button
           onClick={() => {
             setPriceForm(createEmptyPriceForm());
             setDialogOpen(true);
           }}
         >
           Novo
-        </AdminButton>
+        </Button>
       </div>
 
       <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -103,7 +95,7 @@ function SettingsPricesRoute() {
               <TableRow key={price.modelKey}>
                 <TableCell className="px-4 py-3">{price.modelKey}</TableCell>
                 <TableCell className="px-4 py-3 text-right">
-                  <AdminButton
+                  <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => {
@@ -119,7 +111,7 @@ function SettingsPricesRoute() {
                   >
                     <Pencil className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
-                  </AdminButton>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -161,7 +153,7 @@ function SettingsPricesRoute() {
                 <label className="text-sm font-medium" htmlFor="llm-price-model-key">
                   Model key
                 </label>
-                <AdminInput
+                <Input
                   id="llm-price-model-key"
                   value={priceForm.modelKey}
                   onChange={(event) =>
@@ -175,7 +167,7 @@ function SettingsPricesRoute() {
                   <label className="text-sm font-medium" htmlFor="llm-input-price">
                     Input / 1M
                   </label>
-                  <AdminInput
+                  <Input
                     id="llm-input-price"
                     type="number"
                     step="0.000001"
@@ -193,7 +185,7 @@ function SettingsPricesRoute() {
                   <label className="text-sm font-medium" htmlFor="llm-cache-price">
                     Cache / 1M
                   </label>
-                  <AdminInput
+                  <Input
                     id="llm-cache-price"
                     type="number"
                     step="0.000001"
@@ -211,7 +203,7 @@ function SettingsPricesRoute() {
                   <label className="text-sm font-medium" htmlFor="llm-output-price">
                     Output / 1M
                   </label>
-                  <AdminInput
+                  <Input
                     id="llm-output-price"
                     type="number"
                     step="0.000001"
@@ -234,9 +226,9 @@ function SettingsPricesRoute() {
               ) : null}
             </AdminDialogBody>
             <AdminDialogFooter>
-              <AdminButton type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Salvando...' : 'Salvar'}
-              </AdminButton>
+              </Button>
             </AdminDialogFooter>
           </form>
         </AdminDialogContent>

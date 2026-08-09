@@ -8,8 +8,8 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { PageHeader } from '@/components/admin/layout/page-header';
-import { AdminInput } from '@/components/admin/forms/admin-input';
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/github/')({
   component: SettingsGithubRoute,
 });
@@ -74,7 +74,7 @@ function SettingsGithubRoute() {
             <label className="text-sm font-medium" htmlFor="github-organization">
               Organização
             </label>
-            <AdminInput
+            <Input
               id="github-organization"
               value={organization}
               onChange={(event) =>
@@ -91,7 +91,7 @@ function SettingsGithubRoute() {
             <label className="text-sm font-medium" htmlFor="github-app-home-url">
               App home URL
             </label>
-            <AdminInput
+            <Input
               id="github-app-home-url"
               value={appHomeUrl}
               onChange={(event) =>
@@ -130,12 +130,12 @@ function SettingsGithubRoute() {
             <div className="text-sm text-destructive">{mutation.error.message}</div>
           ) : null}
           <div className="flex justify-end">
-            <AdminButton
+            <Button
               type="submit"
               disabled={mutation.isPending || !organization.trim() || !appHomeUrl.trim()}
             >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>

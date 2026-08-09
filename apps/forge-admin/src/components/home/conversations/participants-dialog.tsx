@@ -1,14 +1,8 @@
 import { Check, Trash2 } from 'lucide-react';
 
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import {
   Select,
@@ -94,10 +88,10 @@ export function ParticipantsDialog(input: {
                   />
                 </div>
               </div>
-              <AdminButton type="submit" variant="outline" size="icon-sm">
+              <Button type="submit" variant="outline" size="icon-sm">
                 <Check className="h-4 w-4" />
                 <span className="sr-only">Incluir participante</span>
-              </AdminButton>
+              </Button>
             </div>
 
             <div className="space-y-2">
@@ -107,7 +101,7 @@ export function ParticipantsDialog(input: {
                     key={participant.participantId}
                     className="flex items-center justify-between gap-3 border-b border-border pb-2"
                   >
-                    <AdminInput value={participant.participantName} disabled />
+                    <Input value={participant.participantName} disabled />
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>Admin</span>
@@ -118,7 +112,7 @@ export function ParticipantsDialog(input: {
                           }
                         />
                       </div>
-                      <AdminButton
+                      <Button
                         type="button"
                         variant="outline"
                         size="icon-sm"
@@ -126,7 +120,7 @@ export function ParticipantsDialog(input: {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Remover participante</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -136,9 +130,9 @@ export function ParticipantsDialog(input: {
             </div>
           </AdminDialogBody>
           <AdminDialogFooter>
-            <AdminButton type="button" onClick={() => input.onOpenChange(false)}>
+            <Button type="button" onClick={() => input.onOpenChange(false)}>
               Fechar
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

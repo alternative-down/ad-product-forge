@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 
 import type { AccountDialogMode, AccountForm } from './context';
@@ -44,7 +38,7 @@ export function AccountDialog(input: {
               <label className="text-sm font-medium" htmlFor="internal-chat-account-name">
                 Nome
               </label>
-              <AdminInput
+              <Input
                 id="internal-chat-account-name"
                 value={input.form.displayName}
                 onChange={(event) =>
@@ -59,7 +53,7 @@ export function AccountDialog(input: {
               <label className="text-sm font-medium" htmlFor="internal-chat-account-slug">
                 Usuário
               </label>
-              <AdminInput
+              <Input
                 id="internal-chat-account-slug"
                 value={input.form.slug}
                 disabled={input.mode === 'edit'}
@@ -76,7 +70,7 @@ export function AccountDialog(input: {
               <label className="text-sm font-medium" htmlFor="internal-chat-account-description">
                 Descrição
               </label>
-              <AdminTextarea
+              <Textarea
                 id="internal-chat-account-description"
                 rows={4}
                 value={input.form.description}
@@ -94,21 +88,21 @@ export function AccountDialog(input: {
           </AdminDialogBody>
           <AdminDialogFooter>
             {input.mode === 'edit' && input.form.accountId && input.onDelete ? (
-              <AdminButton
+              <Button
                 type="button"
                 variant="outline"
                 className="mr-auto"
                 onClick={input.onDelete}
               >
                 Excluir
-              </AdminButton>
+              </Button>
             ) : null}
-            <AdminButton
+            <Button
               type="submit"
               disabled={!input.form.slug.trim() || !input.form.displayName.trim() || input.saving}
             >
               {input.saving ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

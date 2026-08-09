@@ -1,13 +1,7 @@
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import {
   Accordion,
   AccordionContent,
@@ -57,7 +51,7 @@ export function RoleDialog(input: {
                 <label className="text-sm font-medium" htmlFor="role-name">
                   Nome
                 </label>
-                <AdminInput
+                <Input
                   id="role-name"
                   value={input.form.name}
                   onChange={(event) =>
@@ -71,7 +65,7 @@ export function RoleDialog(input: {
                 <label className="text-sm font-medium" htmlFor="role-description">
                   Descrição
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="role-description"
                   rows={5}
                   value={input.form.description}
@@ -150,9 +144,9 @@ export function RoleDialog(input: {
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton type="submit" disabled={input.pending || !input.form.name.trim()}>
+            <Button type="submit" disabled={input.pending || !input.form.name.trim()}>
               {input.pending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

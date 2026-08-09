@@ -1,4 +1,4 @@
-import { AdminButton } from '@/components/admin';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -71,7 +71,7 @@ export function ProfileDefaultsSection(input: {
           <div className="text-sm text-destructive">{input.errorMessage}</div>
         ) : null}
         <div className="flex justify-end">
-          <AdminButton
+          <Button
             type="submit"
             disabled={
               input.loading ||
@@ -83,7 +83,7 @@ export function ProfileDefaultsSection(input: {
             }
           >
             {input.pending ? 'Salvando...' : 'Salvar'}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </section>

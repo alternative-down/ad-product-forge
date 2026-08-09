@@ -10,8 +10,8 @@ import { buildCoolifyFormValues, type CoolifyFormValues } from './coolify-form-s
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { PageHeader } from '@/components/admin/layout/page-header';
-import { AdminInput } from '@/components/admin/forms/admin-input';
-import { AdminButton } from '@/components/admin/forms/admin-button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/coolify/')({
   component: SettingsCoolifyRoute,
 });
@@ -160,9 +160,9 @@ function SettingsCoolifyRoute() {
             <div className="text-sm text-destructive">{mutation.error.message}</div>
           ) : null}
           <div className="flex justify-end">
-            <AdminButton type="submit" disabled={submitDisabled}>
+            <Button type="submit" disabled={submitDisabled}>
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>
@@ -185,7 +185,7 @@ function TextField({ id, label, value, onChange, type, disabled }: TextFieldProp
       <label className="text-sm font-medium" htmlFor={id}>
         {label}
       </label>
-      <AdminInput
+      <Input
         id={id}
         type={type}
         value={value}

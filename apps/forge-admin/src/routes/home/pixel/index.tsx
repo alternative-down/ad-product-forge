@@ -3,7 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 
-import { AdminButton, AdminLoadingState } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState } from '@/components/admin';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 import type { AgentListItem } from '@/lib/admin-api/index/types';
 import { buildSceneAgents } from './agents/build-scene-agents';
@@ -483,7 +484,7 @@ function HomePixelRoute() {
           ) : null}
         </div>
 
-        <AdminButton
+        <Button
           type="button"
           variant="outline"
           onClick={() => {
@@ -493,7 +494,7 @@ function HomePixelRoute() {
         >
           <RefreshCw className="mr-2 h-4 w-4" />
           Atualizar
-        </AdminButton>
+        </Button>
       </section>
 
       <section className="min-h-0 flex-1 overflow-hidden">

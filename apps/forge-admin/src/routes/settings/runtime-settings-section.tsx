@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { CircleHelp } from 'lucide-react';
-import { AdminButton } from '@/components/admin/./forms/admin-button';
-import { AdminInput } from '@/components/admin/./forms/admin-input';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SettingsMutation, SettingsQuery } from './settings-types';
@@ -88,7 +88,7 @@ export function RuntimeSettingsSection({
             description="Janela base de mensagens recentes que entra no modelo quando o full load está desligado. Valor maior preserva mais contexto; valor menor reduz custo e ruído."
             tooltip="Na prática é o tamanho inicial da janela recente da thread."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.memoryLastMessagesCount}
               onChange={(event) =>
@@ -120,7 +120,7 @@ export function RuntimeSettingsSection({
             description="Teto aproximado de tokens permitido para a entrada depois da montagem de contexto. Use como freio global para evitar steps muito pesadas."
             tooltip="Quanto menor, mais agressivo o corte do contexto; quanto maior, mais contexto entra no generate."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.tokenCountFilterLimit}
               onChange={(event) =>
@@ -152,7 +152,7 @@ export function RuntimeSettingsSection({
             description="Teto de tokens para o contexto total da OM. Define o budget máximo antes de comprimir ou cortar."
             tooltip="Grosso modo: quanto maior, mais espaço para reflexão e memória de trabalho."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmTotalContextTokens}
               onChange={(event) =>
@@ -170,7 +170,7 @@ export function RuntimeSettingsSection({
             description="Budget de tokens para o bloco raw recente dentro da OM. Controla quanta informação recente entra antes da compressão."
             tooltip="É o primeiro segmento que é comprimido quando a OM se aproxima do limite total."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmRecentRawTokens}
               onChange={(event) =>
@@ -188,7 +188,7 @@ export function RuntimeSettingsSection({
             description="Tamanho do batch para o batch de observação raw. Controla quantas observations brutas entram por ciclo."
             tooltip="Batches maiores capturam mais detalhe por ciclo; batches menores mantêm a OM mais leve."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmRawObservationBatchTokens}
               onChange={(event) =>
@@ -206,7 +206,7 @@ export function RuntimeSettingsSection({
             description="Tamanho do batch para o resultado da reflexão sobre a observation. Influencia o peso da compressão reflexiva."
             tooltip="Controla o espaço alocado para a reflexão de cada batch de observation."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmObservationReflectionBatchTokens}
               onChange={(event) =>
@@ -224,7 +224,7 @@ export function RuntimeSettingsSection({
             description="Tokens de suporte para a observation. Espaço adicional para contexto de suporte quando a observation é gerada."
             tooltip="São os tokens que entram como contexto auxiliar para cada observation."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmObservationSupportTokens}
               onChange={(event) =>
@@ -242,7 +242,7 @@ export function RuntimeSettingsSection({
             description="Tokens de suporte para a reflexão. Espaço auxiliar para manter contexto relevante durante a reflexão."
             tooltip="São os tokens de suporte que entram durante a fase de reflexão."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.checkpointedOmReflectionSupportTokens}
               onChange={(event) =>
@@ -260,7 +260,7 @@ export function RuntimeSettingsSection({
             description="Threshold mínimo de score para incluir resultados do recall LTM. Quanto maior, mais restritivo; quanto menor, mais resultados entram."
             tooltip="Define a barreira de relevância para o recall de longo termo."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.ltmRecallScoreThreshold}
               onChange={(event) =>
@@ -278,7 +278,7 @@ export function RuntimeSettingsSection({
             description="Número máximo de documentos a recuperar do LTM por generate. Controla o volume de memória de longo prazo injetada no contexto."
             tooltip="Cada documento pode conter centenas de tokens — use com cuidado para não inflar o prompt."
           >
-            <AdminInput
+            <Input
               type="number"
               value={runtimeSettings.ltmRecallDocumentCount}
               onChange={(event) =>
@@ -297,9 +297,9 @@ export function RuntimeSettingsSection({
         ) : null}
 
         <div className="flex justify-end">
-          <AdminButton type="submit" disabled={settingsMutation.isPending}>
+          <Button type="submit" disabled={settingsMutation.isPending}>
             {settingsMutation.isPending ? 'Salvando...' : 'Salvar memória e OM'}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </section>
