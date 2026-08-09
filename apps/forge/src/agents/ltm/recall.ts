@@ -5,7 +5,6 @@ import {
   embedTextWithWorkspaceEmbedder,
   FilesystemDocumentSource,
   forgeDebug,
-  
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
@@ -99,6 +98,24 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   graphError: string | null;
   injectedSystemMessage: string | null;
 };
+
+// L#NN-YYY v4 helper: scope-injection for ltm forgeDebug calls (3 sites)
+export function ltmDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'ltm', level, message, context });
+}
+
+// L#NN-YYY v4 helper: scope-injection for ltm-recall forgeDebug calls (2 sites)
+export function ltmRecallDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'ltm-recall', level, message, context });
+}
 
 export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
@@ -237,15 +254,10 @@ export class AgentLongTermMemoryRecall {
         return null;
       }
 
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall step start',
-        context: {
-          agentId: this.agentId,
-          threadId: input.threadId,
-          resourceId: input.resourceId ?? null,
-        },
+      ltmDebug('info', 'ltm recall step start', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        resourceId: input.resourceId ?? null,
       });
       const queryText = buildRecallQueryFromStep(input.step);
       const recallThreadState = await this.persistence.readRecallThreadState(input.threadId, this.recentRawTokens);
@@ -308,39 +320,24 @@ export class AgentLongTermMemoryRecall {
           { queryText, recallConfig, indexStats, dedupedGraph: graph, filteredResults: results, history: nextHistory }
         );
 
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall step complete',
-        context: {
-          agentId: this.agentId,
-          threadId: input.threadId,
-          durationMs: Date.now() - recallStartedAt,
-          graphHit: graph.hit,
-          resultCount: graph.hit ? 0 : results.length,
-        },
+      ltmDebug('info', 'ltm recall step complete', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        durationMs: Date.now() - recallStartedAt,
+        graphHit: graph.hit,
+        resultCount: graph.hit ? 0 : results.length,
       });
 
       return recallText;
     } catch (error) {
-      forgeDebug({
-        scope: 'ltm-recall',
-        level: 'error',
-        message: 'recall failed',
-        context: {
-          error: errorMsg(error),
-        },
+      ltmRecallDebug('error', 'recall failed', {
+        error: errorMsg(error),
       });
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall step failed',
-        context: {
-          agentId: this.agentId,
-          threadId: input.threadId,
-          durationMs: Date.now() - recallStartedAt,
-          error: errorMsg(error),
-        },
+      ltmDebug('info', 'ltm recall step failed', {
+        agentId: this.agentId,
+        threadId: input.threadId,
+        durationMs: Date.now() - recallStartedAt,
+        error: errorMsg(error),
       });
       const persistedState = await this.persistenceStore.readRecallState();
       const snapshotError = errorMsg(error);
@@ -354,15 +351,10 @@ export class AgentLongTermMemoryRecall {
           },
         );
       } catch (e) {
-        forgeDebug({
-          scope: 'ltm-recall',
-          level: 'warn',
-          message: 'persistRecallSnapshot failed',
-          context: {
-            threadId: input.threadId,
-            resourceId: input.resourceId,
-            error: errorMsg(e),
-          },
+        ltmRecallDebug('warn', 'persistRecallSnapshot failed', {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+          error: errorMsg(e),
         });
       }
       return null;
