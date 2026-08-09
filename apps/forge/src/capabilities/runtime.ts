@@ -11,6 +11,15 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
+// L#NN-YYY v4 helper: scope-injection for capabilities-runtime forgeDebug calls
+export function capabilitiesRuntimeDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'capabilities-runtime', level, message, context });
+}
+
 export async function reloadAgentIfLoaded(
   db: Database,
   config: AgentLoaderConfig,
@@ -19,12 +28,7 @@ export async function reloadAgentIfLoaded(
   const registry = getInternalAgentRegistry();
 
   if (!registry.get(agentId)) {
-    forgeDebug({
-      scope: 'capabilities-runtime',
-      level: 'debug',
-      message: 'Agent not in registry, skipping reload',
-      context: { agentId },
-    });
+    capabilitiesRuntimeDebug('debug', 'Agent not in registry, skipping reload', { agentId });
     return;
   }
 
@@ -34,12 +38,7 @@ export async function reloadAgentIfLoaded(
   });
 
   await registry.add(db, runtime);
-  forgeDebug({
-    scope: 'capabilities-runtime',
-    level: 'info',
-    message: 'Agent reloaded',
-    context: { agentId },
-  });
+  capabilitiesRuntimeDebug('info', 'Agent reloaded', { agentId });
 }
 
 export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfig, roleId: string) {
@@ -50,12 +49,7 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
     },
   });
 
-  forgeDebug({
-    scope: 'capabilities-runtime',
-    level: 'info',
-    message: 'Reloading agents for role',
-    context: { roleId, agentCount: assignedAgents.length },
-  });
+  capabilitiesRuntimeDebug('info', 'Reloading agents for role', { roleId, agentCount: assignedAgents.length });
 
   await Promise.all(assignedAgents.map((agent) => reloadAgentIfLoaded(db, config, agent.id)));
 }
@@ -93,12 +87,7 @@ export async function updateInternalChatProviderProfile(
   });
 
   if (provider === undefined) {
-    forgeDebug({
-      scope: 'capabilities-runtime',
-      level: 'debug',
-      message: 'No internal-chat provider found for agent',
-      context: { agentId: input.agentId },
-    });
+    capabilitiesRuntimeDebug('debug', 'No internal-chat provider found for agent', { agentId: input.agentId });
     return { updated: false, reason: 'no-provider' };
   }
 
@@ -130,12 +119,7 @@ export async function updateInternalChatProviderProfile(
         encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
       })
       .where(eq(agentProviders.id, provider.id));
-    forgeDebug({
-      scope: 'capabilities-runtime',
-      level: 'info',
-      message: 'Internal chat provider profile updated',
-      context: { agentId: input.agentId },
-    });
+    capabilitiesRuntimeDebug('info', 'Internal chat provider profile updated', { agentId: input.agentId });
   } catch (err) {
     throw new Error(
       `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${errorMsg(err)}`,
@@ -208,15 +192,10 @@ async function _changeAgentRoleInternal(input: ChangeAgentRoleInternalInput): Pr
     return { targetAgent, agentRole };
   });
 
-  forgeDebug({
-    scope: 'capabilities-runtime',
-    level: 'info',
-    message: `Changing agent role (${input.source})`,
-    context: {
+  capabilitiesRuntimeDebug('info', `Changing agent role (${input.source})`, {
       targetAgentId: input.targetAgentId,
       roleId: input.roleId,
-    },
-  });
+    });
 
   // Side effects OUTSIDE transaction.
   // Provider profile update (closes #5974): catches and logs partial failures.
@@ -227,20 +206,10 @@ async function _changeAgentRoleInternal(input: ChangeAgentRoleInternalInput): Pr
       description: agentRole.description ?? agentRole.name,
     });
     if (!result.updated) {
-      forgeDebug({
-        scope: 'capabilities-runtime',
-        level: 'info',
-        message: 'No internal-chat provider to update; role change committed',
-        context: { targetAgentId: input.targetAgentId },
-      });
+      capabilitiesRuntimeDebug('info', 'No internal-chat provider to update; role change committed', { targetAgentId: input.targetAgentId });
     }
   } catch (err) {
-    forgeDebug({
-      scope: 'capabilities-runtime',
-      level: 'error',
-      message: 'Provider profile update failed; role change still committed',
-      context: { targetAgentId: input.targetAgentId, error: errorMsg(err) },
-    });
+    capabilitiesRuntimeDebug('error', 'Provider profile update failed; role change still committed', { targetAgentId: input.targetAgentId, error: errorMsg(err) });
   }
 
   const notifications = createAgentNotificationStore(input.db);
@@ -274,12 +243,7 @@ async function _changeAgentRoleInternal(input: ChangeAgentRoleInternalInput): Pr
     timestamp: changeTimestamp,
   });
 
-  forgeDebug({
-    scope: 'capabilities-runtime',
-    level: 'info',
-    message: 'Agent role changed',
-    context: { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name, source: input.source },
-  });
+  capabilitiesRuntimeDebug('info', 'Agent role changed', { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name, source: input.source });
 
   return {
     agentId: input.targetAgentId,
@@ -312,16 +276,11 @@ export async function changeAgentRole(input: {
   const actorIsSelf = input.actorAgentId === input.targetAgentId;
   const actorIsAdmin = actorAgent.roleId === 'admin';
   if (!actorIsSelf && !actorIsAdmin) {
-    forgeDebug({
-      scope: 'capabilities-runtime',
-      level: 'warn',
-      message: 'changeAgentRole: actor lacks permission',
-      context: {
+    capabilitiesRuntimeDebug('warn', 'changeAgentRole: actor lacks permission', {
         actorAgentId: input.actorAgentId,
         actorRoleId: actorAgent.roleId,
         targetAgentId: input.targetAgentId,
-      },
-    });
+      });
     throw new Error(
       `Agent ${input.actorAgentId} cannot change role for ${input.targetAgentId}`,
     );

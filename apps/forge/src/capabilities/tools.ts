@@ -10,6 +10,15 @@ import { createCapabilityStore } from './store';
 import { forgeCapabilityIds, hasToolPermission } from './catalog';
 import { withToolErrorLogging } from './tools/error-wrapper';
 
+// L#NN-YYY v4 helper: scope-injection for tools:capabilities forgeDebug calls
+export function capabilitiesToolsDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'tools:capabilities', level, message, context });
+}
+
 const capabilityIdSchema = z.enum(forgeCapabilityIds);
 
 export function createCapabilityTools(
@@ -27,11 +36,7 @@ export function createCapabilityTools(
       description: 'List the roles available in the system.',
       inputSchema: z.object({}),
       execute: async () => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'list_agent_roles called',
-        });
+        capabilitiesToolsDebug('info', 'list_agent_roles called');
 
         return await withToolErrorLogging({
           scope: 'tools:capabilities',
@@ -39,18 +44,13 @@ export function createCapabilityTools(
           hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
           fn: async () => {
             const result = await capabilities.listRoles();
-            forgeDebug({
-              scope: 'tools:capabilities',
-              level: 'info',
-              message: 'list_agent_roles result',
-              context: {
+            capabilitiesToolsDebug('info', 'list_agent_roles result', {
                 count: result.length,
                 roles: result.map((role: any) => ({
                   roleId: (role as any).roleId,
                   name: (role as any).name,
                 })),
-              },
-            });
+              });
             return result;
           },
         });
@@ -87,12 +87,7 @@ export function createCapabilityTools(
           .describe('Provide this object only when action is delete.'),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'manage_agent_role called',
-          context: { input },
-        });
+        capabilitiesToolsDebug('info', 'manage_agent_role called', { input });
 
         if (input.action === 'create') {
           if (!input.create) {
@@ -127,12 +122,7 @@ export function createCapabilityTools(
                 await reloadAgentsForRole(db, loaderConfig, result.roleId);
               }
 
-              forgeDebug({
-                scope: 'tools:capabilities',
-                level: 'info',
-                message: 'manage_agent_role success',
-                context: { result },
-              });
+              capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
               return result;
             },
           });
@@ -172,12 +162,7 @@ export function createCapabilityTools(
                 await reloadAgentsForRole(db, loaderConfig, result.roleId);
               }
 
-              forgeDebug({
-                scope: 'tools:capabilities',
-                level: 'info',
-                message: 'manage_agent_role success',
-                context: { result },
-              });
+              capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
               return result;
             },
           });
@@ -214,12 +199,7 @@ export function createCapabilityTools(
               await reloadAgentsForRole(db, loaderConfig, result.roleId);
             }
 
-            forgeDebug({
-              scope: 'tools:capabilities',
-              level: 'info',
-              message: 'manage_agent_role success',
-              context: { result },
-            });
+            capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
             return result;
           },
         });
@@ -236,12 +216,7 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('The new roleId that should be assigned to that agent.'),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'change_agent_role called',
-          context: { input },
-        });
+        capabilitiesToolsDebug('info', 'change_agent_role called', { input });
 
         return await withToolErrorLogging({
           scope: 'tools:capabilities',
@@ -255,12 +230,7 @@ export function createCapabilityTools(
               targetAgentId: input.agentId,
               roleId: input.roleId,
             });
-            forgeDebug({
-              scope: 'tools:capabilities',
-              level: 'info',
-              message: 'change_agent_role success',
-              context: { result },
-            });
+            capabilitiesToolsDebug('info', 'change_agent_role success', { result });
             return result;
           },
         });
@@ -284,12 +254,7 @@ export function createCapabilityTools(
           .describe('Optional execution state filter. Use idle or running.'),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'list_agent_statuses called',
-          context: { input },
-        });
+        capabilitiesToolsDebug('info', 'list_agent_statuses called', { input });
 
         return await withToolErrorLogging({
           scope: 'tools:capabilities',
@@ -300,12 +265,7 @@ export function createCapabilityTools(
               agentId: input.agentId ?? undefined,
               executionState: input.executionState ?? undefined,
             });
-            forgeDebug({
-              scope: 'tools:capabilities',
-              level: 'info',
-              message: 'list_agent_statuses result',
-              context: { count: result.length },
-            });
+            capabilitiesToolsDebug('info', 'list_agent_statuses result', { count: result.length });
             return result;
           },
         });
@@ -322,12 +282,7 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'list_role_capabilities called',
-          context: { roleId: input.roleId },
-        });
+        capabilitiesToolsDebug('info', 'list_role_capabilities called', { roleId: input.roleId });
 
         return await withToolErrorLogging({
           scope: 'tools:capabilities',
@@ -352,12 +307,7 @@ export function createCapabilityTools(
         capabilityId: capabilityIdSchema.describe('The capabilityId to grant or revoke.'),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:capabilities',
-          level: 'info',
-          message: 'manage_role_capabilities called',
-          context: { input },
-        });
+        capabilitiesToolsDebug('info', 'manage_role_capabilities called', { input });
 
         return await withToolErrorLogging({
           scope: 'tools:capabilities',
@@ -366,12 +316,7 @@ export function createCapabilityTools(
           fn: async () => {
             const result = await capabilities.manageRoleCapability(input);
             await reloadAgentsForRole(db, loaderConfig, input.roleId);
-            forgeDebug({
-              scope: 'tools:capabilities',
-              level: 'info',
-              message: 'manage_role_capabilities success',
-              context: { result },
-            });
+            capabilitiesToolsDebug('info', 'manage_role_capabilities success', { result });
             return result;
           },
         });
