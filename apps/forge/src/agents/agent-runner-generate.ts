@@ -91,6 +91,13 @@ import {
   type ProgressState,
 } from './agent-runner-generate-timeout';
 
+export function isAbortedError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === 'AbortError') return true;
+  return 'code' in err && typeof (err as { code?: unknown }).code === 'string' && (err as { code: string }).code === 'ABORT_ERROR';
+}
+
+
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = FIVE_SECONDS_MS;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
@@ -365,9 +372,7 @@ export async function generateWithTimeoutRetries(
         return undefined;
       }
 
-      const error = err as Error & { code?: string };
-
-      if (error?.code === 'ABORT_ERROR' || error?.name === 'AbortError') {
+      if (isAbortedError(err)) {
         forgeDebug({
           scope: 'agent-runner',
           level: 'info',
