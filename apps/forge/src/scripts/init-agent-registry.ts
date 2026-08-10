@@ -109,39 +109,12 @@ async function initAgentRegistry() {
     for (const config of agentConfigs) {
       const now = Date.now();
 
-      // Check if agent exists
-      const existing = await db.query.agents.findFirst({
-        where: eq(schema.agents.id, config.id),
-      });
-
-      if (existing) {
-        // Update existing agent
-        await db
-          .update(schema.agents)
-          .set({
-            name: config.name,
-            description: config.description,
-            modelProfileId: config.modelProfileId,
-            omModelProfileId: config.omModelProfileId,
-            instructions: config.instructions,
-            workspaceAutoSync: config.workspaceAutoSync,
-            workspaceBm25: config.workspaceBm25,
-            workspaceEmbedder: config.workspaceEmbedder,
-            workspaceFilesystem: config.workspaceFilesystem,
-            workspaceSandbox: config.workspaceSandbox,
-            updatedAt: now,
-          })
-          .where(eq(schema.agents.id, config.id));
-
-        forgeDebug({
-          scope: 'init-agent-registry',
-          level: 'info',
-          message: 'Updated agent',
-          context: { agentId: config.id },
-        });
-      } else {
-        // Insert new agent
-        await db.insert(schema.agents).values({
+      // Atomic upsert: insert if not exists, otherwise update the 10 mutable
+      // fields. Replaces the prior existence-check + if/else split that
+      // duplicated the field mapping across two paths (#6169).
+      await db
+        .insert(schema.agents)
+        .values({
           id: config.id,
           name: config.name,
           description: config.description,
@@ -155,15 +128,30 @@ async function initAgentRegistry() {
           workspaceSandbox: config.workspaceSandbox,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: schema.agents.id,
+          set: {
+            name: config.name,
+            description: config.description,
+            modelProfileId: config.modelProfileId,
+            omModelProfileId: config.omModelProfileId,
+            instructions: config.instructions,
+            workspaceAutoSync: config.workspaceAutoSync,
+            workspaceBm25: config.workspaceBm25,
+            workspaceEmbedder: config.workspaceEmbedder,
+            workspaceFilesystem: config.workspaceFilesystem,
+            workspaceSandbox: config.workspaceSandbox,
+            updatedAt: now,
+          },
         });
 
-        forgeDebug({
-          scope: 'init-agent-registry',
-          level: 'info',
-          message: 'Created agent',
-          context: { agentId: config.id },
-        });
-      }
+      forgeDebug({
+        scope: 'init-agent-registry',
+        level: 'info',
+        message: 'Registered agent',
+        context: { agentId: config.id },
+      });
     }
 
     // Register communication providers for agents
