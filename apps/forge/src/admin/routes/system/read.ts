@@ -23,6 +23,15 @@ import type { SystemIntegrationStore } from '../../../system-integrations/store'
 import type { LlmSettingsStore } from '../../../llm/settings-store';
 import type { LlmModelPriceStore } from '../../../llm/model-price-store';
 import type { SystemSettingsStore } from '../../../system-settings/store';
+function adminSystemReadDebug(message: string, error: unknown): void {
+  forgeDebug({
+    scope: 'admin',
+    level: 'error',
+    message,
+    context: { error: errorMsg(error) },
+  });
+}
+
 
 interface SystemReadRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;
@@ -64,12 +73,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         const healthcheck = await buildSystemHealthcheck(registry, readModel);
         return jsonResponse(healthcheck);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/healthcheck',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'Admin route failed: /admin/system/healthcheck',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -83,12 +90,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await integrations.listIntegrations());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'System integrations route failed',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'System integrations route failed',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -102,12 +107,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await systemSettings.getSettings());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'System settings route failed',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'System settings route failed',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -126,12 +129,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         ]);
         return jsonResponse({ profiles, defaults, prices });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/llm',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'Admin route failed: /admin/system/llm',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -162,12 +163,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           .sort((a, b) => a.name.localeCompare(b.name));
         return jsonResponse(formatted);
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'Admin route failed: /admin/system/mcp',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'Admin route failed: /admin/system/mcp',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -181,12 +180,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await readModel.getApplicationMigrations());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'System migrations route failed',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'System migrations route failed',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -200,12 +197,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await listGlobalSkills(workspaceBasePath));
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'System skills route failed',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'System skills route failed',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
@@ -219,12 +214,10 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await buildOauthState());
       } catch (err) {
-        forgeDebug({
-          scope: 'admin',
-          level: 'error',
-          message: 'System oauth route failed',
-          context: { error: errorMsg(err) },
-        });
+        adminSystemReadDebug(
+          'System oauth route failed',
+          errorMsg(err),
+        );
         return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
