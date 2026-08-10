@@ -8,6 +8,15 @@ import type { createAgentScheduleManager } from '../manager/manager';
 
 type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 
+// L#NN-YYY v4 helper: scope-injection for tools:schedules forgeDebug calls (6 sites)
+function toolsScheduleDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'tools:schedules', level, message, context });
+}
+
 export function validationError(error: string, hint: string): {
   valid: false;
   error: string;
@@ -285,24 +294,14 @@ export function createAgentScheduleTools(
       'List all crons that belong to you. This includes crons you created yourself and crons created for you by other agents. Use this to understand your scheduled work and get the cronId for any cron you are allowed to inspect.',
     inputSchema: z.object({}),
     execute: async () => {
-      forgeDebug({
-        scope: 'tools:schedules',
-        level: 'info',
-        message: 'list_self_crons called',
-        context: { agentId },
-      });
+      toolsScheduleDebug('info', 'list_self_crons called', { agentId });
       return await withToolErrorLogging({
         scope: 'tools:schedules',
         op: 'list_self_crons',
         hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
         fn: async () => {
           const result = await schedules.listSchedules(agentId);
-          forgeDebug({
-            scope: 'tools:schedules',
-            level: 'info',
-            message: 'list_self_crons result',
-            context: { count: result.length },
-          });
+          toolsScheduleDebug('info', 'list_self_crons result', { count: result.length });
           return result.map(toCronOutput);
         },
       });
@@ -316,12 +315,7 @@ export function createAgentScheduleTools(
         'Use this to create, update, or delete automatic tasks for yourself. Do not rely on your own memory to remember future work. Use crons proactively to trigger your future and recurring work dynamically, and prefer simple, directed tasks.',
       inputSchema: manageSelfCronsInputSchema,
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:schedules',
-          level: 'info',
-          message: 'manage_self_crons called',
-          context: { agentId, action: input.action, input },
-        });
+        toolsScheduleDebug('info', 'manage_self_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
           const createInput = input.create ?? null;
@@ -455,24 +449,14 @@ export function createAgentScheduleTools(
           ),
       }),
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:schedules',
-          level: 'info',
-          message: 'list_crons called',
-          context: { agentId, targetAgentId: input.targetAgentId },
-        });
+        toolsScheduleDebug('info', 'list_crons called', { agentId, targetAgentId: input.targetAgentId });
         return await withToolErrorLogging({
           scope: 'tools:schedules',
           op: 'list_crons',
           hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
           fn: async () => {
             const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
-            forgeDebug({
-              scope: 'tools:schedules',
-              level: 'info',
-              message: 'list_crons result',
-              context: { count: result.length },
-            });
+            toolsScheduleDebug('info', 'list_crons result', { count: result.length });
             return result.map(toCronOutput);
           },
         });
@@ -487,12 +471,7 @@ export function createAgentScheduleTools(
         'Use this to create, update, or delete automatic tasks for other agents. Use delegated crons proactively when another agent should receive future or recurring work without relying on someone to remember manually. Prefer simple, directed tasks.',
       inputSchema: manageCronsInputSchema,
       execute: async (input) => {
-        forgeDebug({
-          scope: 'tools:schedules',
-          level: 'info',
-          message: 'manage_crons called',
-          context: { agentId, action: input.action, input },
-        });
+        toolsScheduleDebug('info', 'manage_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
           const createInput = input.create ?? null;
