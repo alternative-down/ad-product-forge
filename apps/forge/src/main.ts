@@ -17,22 +17,10 @@ export async function main() {
   console.log(`[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
   await bootstrap.httpServer.start();
   console.log(`[forge-startup] main: HTTP server listening on port ${process.env.FORGE_HTTP_PORT}`);
-  forgeDebug({
-    scope: 'forge',
-    level: 'info',
-    message: `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`,
-  });
+  mainDebug('info', `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`);
 
-  forgeDebug({
-    scope: 'forge',
-    level: 'info',
-    message: `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`,
-  });
-  forgeDebug({
-    scope: 'forge',
-    level: 'info',
-    message: `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`,
-  });
+  mainDebug('info', `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`);
+  mainDebug('info', `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`);
   if (bootstrap.allowInsecureLocal) {
     console.warn(
       '[forge-main] WARNING: Admin routes served WITHOUT authentication.' +
@@ -41,7 +29,7 @@ export async function main() {
   }
 
   const shutdown = async () => {
-    forgeDebug({ scope: 'forge', level: 'info', message: 'Shutting down gracefully...' });
+    mainDebug('info', 'Shutting down gracefully...');
     await bootstrap.httpServer.stop();
     process.exit(0);
   };
@@ -50,6 +38,19 @@ export async function main() {
   process.on('SIGINT', shutdown);
 }
 import { serializeError } from './agents/error-formatting';
+
+/**
+ * Module-local debug helper. Centralizes the forge scope
+ * so call sites only specify the level, message, and context.
+ */
+function mainDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'forge', level, message, context });
+}
+
 
 main().catch((error) => {
   console.error('[forge-startup] FATAL: app startup failed' );
