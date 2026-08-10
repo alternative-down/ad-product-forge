@@ -14,6 +14,19 @@ import { forgeDebug } from '@forge-runtime/core';
 import type { DiscordSendableChannel } from '../discord-types';
 import { downloadDiscordAttachments, extractDiscordMessageContent } from './message-parser';
 
+/**
+ * Module-local debug helper. Centralizes the discord-account scope
+ * so call sites only specify the level, message, and context.
+ */
+function discordAccountDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'discord-account', level, message, context });
+}
+
+
 const MEMBER_FETCH_LIMIT = 100;
 
 export type ChannelFetchResult = {
@@ -74,23 +87,13 @@ export async function listCandidateChannels(
       channels.push(channel as DiscordSendableChannel);
     } catch (error) {
       const errMsg = errorMsg(error);
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'error',
-        message: 'Failed to fetch channel',
-        context: { channelId, error: errMsg },
-      });
+      discordAccountDebug('error', 'Failed to fetch channel', { channelId, error: errMsg });
       failed.push({ channelId, error: errMsg });
     }
   }
 
   if (failed.length > 0) {
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'error',
-      message: 'listCandidateChannels: some channels failed to fetch',
-      context: { failedCount: failed.length, totalRequested: channelIds.size },
-    });
+    discordAccountDebug('error', 'listCandidateChannels: some channels failed to fetch', { failedCount: failed.length, totalRequested: channelIds.size });
   }
 
   return { channels, failed };
@@ -114,12 +117,7 @@ export async function resolveDiscordTargetChannel(
 
       return channel as DiscordSendableChannel;
     } catch (error) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'error',
-        message: 'Failed to fetch Discord channel by ID',
-        context: { targetKey, error: errorMsg(error) },
-      });
+      discordAccountDebug('error', 'Failed to fetch Discord channel by ID', { targetKey, error: errorMsg(error) });
       throw error;
     }
   }
@@ -135,12 +133,7 @@ export async function resolveDiscordTargetChannel(
     const channel = await matchedUser.createDM();
     return channel as DiscordSendableChannel;
   } catch (error) {
-    forgeDebug({
-      scope: 'discord-account',
-      level: 'error',
-      message: 'Failed to create DM with user',
-      context: { targetKey, error: errorMsg(error) },
-    });
+    discordAccountDebug('error', 'Failed to create DM with user', { targetKey, error: errorMsg(error) });
     throw error;
   }
 }
@@ -179,12 +172,7 @@ export async function listChannelMessages(input: {
         ...((before ?? '') !== '' ? { before } : {}),
       });
     } catch (error) {
-      forgeDebug({
-        scope: 'discord-account',
-        level: 'error',
-        message: 'listChannelMessages: failed to fetch message batch',
-        context: { channelId: input.channel.id, error: errorMsg(error) },
-      });
+      discordAccountDebug('error', 'listChannelMessages: failed to fetch message batch', { channelId: input.channel.id, error: errorMsg(error) });
       break;
     }
 
