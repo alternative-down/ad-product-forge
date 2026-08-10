@@ -50,6 +50,11 @@ function toBool(value: number | null | undefined): boolean {
   return value === 1;
 }
 
+/** Inverse of toBool: converts boolean (or null/undefined) to 0 or 1 for sqlite integer columns. */
+function toInt(value: boolean | null | undefined): 0 | 1 {
+  return value === true ? 1 : 0;
+}
+
 /** Normalises the LTM recall search mode. */
 function resolveRecallSearchMode(
   value: string | null | undefined,
@@ -134,14 +139,14 @@ export function createSystemSettingsStore(db: Database) {
       createdAt: now,
       companyName: input.companyName,
       companyContext: input.companyContext,
-      stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
-      communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
-      communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
-      memoryLastMessagesFullEnabled: input.memoryLastMessagesFullEnabled ? 1 : 0,
+      stepDelayEnabled: toInt(input.stepDelayEnabled),
+      communicationDmFlushingEnabled: toInt(input.communicationDmFlushingEnabled),
+      communicationGroupFlushingEnabled: toInt(input.communicationGroupFlushingEnabled),
+      memoryLastMessagesFullEnabled: toInt(input.memoryLastMessagesFullEnabled),
       memoryLastMessagesCount: input.memoryLastMessagesCount,
-      tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
+      tokenCountFilterEnabled: toInt(input.tokenCountFilterEnabled),
       tokenCountFilterLimit: input.tokenCountFilterLimit,
-      checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
+      checkpointedOmEnabled: toInt(input.checkpointedOmEnabled),
       checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
       checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
       checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
@@ -154,7 +159,7 @@ export function createSystemSettingsStore(db: Database) {
       ltmRecallGraphTopK: input.ltmRecallGraphTopK,
       ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
       ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
-      ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
+      ltmRecallGraphIncludeSources: toInt(input.ltmRecallGraphIncludeSources),
       ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
       ltmRecallDocumentCount: input.ltmRecallDocumentCount,
       updatedAt: now,
