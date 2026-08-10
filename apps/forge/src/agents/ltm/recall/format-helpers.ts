@@ -33,7 +33,7 @@ export function formatStructuredValue(value: unknown, indentLevel = 0): string {
       .join('\n');
   }
 
-  if (value === null || value === undefined || typeof value !== 'object') {
+  if (value == null || typeof value !== 'object') {
     return '';
   }
 
@@ -60,7 +60,7 @@ export function formatStructuredValue(value: unknown, indentLevel = 0): string {
  * Accepts string or string[]; returns null for anything else.
  */
 export function readGraphRelevantContext(result: unknown): string | null {
-  if (result === null || result === undefined || typeof result !== 'object') {
+  if (result == null || typeof result !== 'object') {
     return null;
   }
 
@@ -85,7 +85,7 @@ export function readGraphRelevantContext(result: unknown): string | null {
  * Returns an empty array if the field is missing or not an array.
  */
 export function readGraphSources(result: unknown): unknown[] {
-  if (result === null || result === undefined || typeof result !== 'object') {
+  if (result == null || typeof result !== 'object') {
     return [];
   }
 
@@ -98,7 +98,7 @@ export function readGraphSources(result: unknown): unknown[] {
  * Returns an empty string when missing or non-string.
  */
 export function readGraphSourceDocument(source: unknown): string {
-  if (source === null || source === undefined || typeof source !== 'object') {
+  if (source == null || typeof source !== 'object') {
     return '';
   }
 
@@ -112,7 +112,7 @@ export function readGraphSourceDocument(source: unknown): string {
  * and `toolResults` (using `result` or `output`) into a single trimmed string.
  */
 export function buildRecallQueryFromStep(step: unknown): string {
-  if (step === null || step === undefined || typeof step !== 'object') {
+  if (step == null || typeof step !== 'object') {
     return '';
   }
 
@@ -125,7 +125,7 @@ export function buildRecallQueryFromStep(step: unknown): string {
     typeof record.reasoningText === 'string' ? record.reasoningText : '',
     toolCalls
       .map((toolCall) => {
-        if (toolCall === null || toolCall === undefined || typeof toolCall !== 'object') {
+        if (toolCall == null || typeof toolCall !== 'object') {
           return '';
         }
 
@@ -146,7 +146,7 @@ export function buildRecallQueryFromStep(step: unknown): string {
       .join('\n\n'),
     toolResults
       .map((toolResult) => {
-        if (toolResult === null || toolResult === undefined || typeof toolResult !== 'object') {
+        if (toolResult == null || typeof toolResult !== 'object') {
           return '';
         }
 
