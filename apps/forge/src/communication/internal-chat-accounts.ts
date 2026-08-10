@@ -24,7 +24,6 @@ import {
   buildAgentAccountDescription,
   createInternalChatSlug,
   sortParticipantsBySelfFirst,
-  type InternalChatGroupParticipant,
 } from './internal-chat-helpers';
 import { InternalChatAccountNotFoundError, InternalChatError } from './internal-chat-errors';
 
@@ -407,9 +406,10 @@ export function createInternalChatAccounts(db: Database) {
           internalChatAccounts,
           eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
         )
-        .where(eq(internalChatConversationMembers.conversationId, conversationId));
+        .where(eq(internalChatConversationMembers.conversationId, conversationId))
+        .all();
 
-      return sortParticipantsBySelfFirst((rows as unknown as InternalChatGroupParticipant[]), accountId);
+      return sortParticipantsBySelfFirst(rows, accountId);
     } catch (err) {
       internalChatAccountsDebug('error', 'Failed to execute listGroupMembersOrDmPeersByAccount', { error: errorMsg(err) });
       throw err;
