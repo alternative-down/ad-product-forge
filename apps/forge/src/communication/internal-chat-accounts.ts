@@ -28,6 +28,20 @@ import {
 } from './internal-chat-helpers';
 import { InternalChatAccountNotFoundError, InternalChatError } from './internal-chat-errors';
 
+function internalChatAccountsDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'internal-chat-accounts',
+    level,
+    message,
+    context,
+  });
+}
+
+
 export function createInternalChatAccounts(db: Database) {
   // ── Account registration ──────────────────────────────────────────────
 
@@ -104,12 +118,7 @@ export function createInternalChatAccounts(db: Database) {
         description,
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute registerAgentAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute registerAgentAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -132,12 +141,7 @@ export function createInternalChatAccounts(db: Database) {
       });
       return { accountId, slug: input.slug };
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute registerExternalAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute registerExternalAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -158,12 +162,7 @@ export function createInternalChatAccounts(db: Database) {
         })
         .where(eq(internalChatAccounts.id, input.accountId));
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute updateExternalAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute updateExternalAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -172,12 +171,7 @@ export function createInternalChatAccounts(db: Database) {
     try {
       await db.delete(internalChatAccounts).where(eq(internalChatAccounts.id, input.accountId));
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute deleteExternalAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute deleteExternalAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -194,12 +188,7 @@ export function createInternalChatAccounts(db: Database) {
       }
       return await db.query.internalChatAccounts.findMany({});
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute listAccounts',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute listAccounts', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -210,12 +199,7 @@ export function createInternalChatAccounts(db: Database) {
         where: eq(internalChatAccounts.slug, slug),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getAccountBySlug',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getAccountBySlug', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -226,12 +210,7 @@ export function createInternalChatAccounts(db: Database) {
         where: eq(internalChatAccounts.agentId, agentId),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getAccountByAgentId',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getAccountByAgentId', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -248,12 +227,7 @@ export function createInternalChatAccounts(db: Database) {
         }));
       return account ?? null;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getAccountByTargetKey',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getAccountByTargetKey', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -264,22 +238,12 @@ export function createInternalChatAccounts(db: Database) {
         where: eq(internalChatAccounts.id, accountId),
       });
       if (account == null) {
-        forgeDebug({
-          scope: 'internal-chat-accounts',
-          level: 'warn',
-          message: 'deleteInternalChatAccount: not found',
-          context: { accountId },
-        });
+        internalChatAccountsDebug('warn', 'deleteInternalChatAccount: not found', { accountId });
         throw new InternalChatAccountNotFoundError(accountId);
       }
       return account;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getRequiredAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getRequiredAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -297,12 +261,7 @@ export function createInternalChatAccounts(db: Database) {
       });
       return new Map(accounts.map((a) => [a.id, a]));
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getAccountsById',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getAccountsById', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -313,12 +272,7 @@ export function createInternalChatAccounts(db: Database) {
         where: eq(internalChatAccounts.agentId, agentId),
       });
       if (account == null) {
-        forgeDebug({
-          scope: 'internal-chat-accounts',
-          level: 'warn',
-          message: 'getAgentInternalChatAccount: not found',
-          context: { agentId },
-        });
+        internalChatAccountsDebug('warn', 'getAgentInternalChatAccount: not found', { agentId });
         throw new InternalChatAccountNotFoundError(
           agentId,
           `Internal chat account not found for agent: ${agentId}`,
@@ -326,12 +280,7 @@ export function createInternalChatAccounts(db: Database) {
       }
       return account;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getRequiredAgentAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getRequiredAgentAccount', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -346,12 +295,7 @@ export function createInternalChatAccounts(db: Database) {
       }
       return account;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getRequiredAccountBySlug',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getRequiredAccountBySlug', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -378,12 +322,7 @@ export function createInternalChatAccounts(db: Database) {
       }
       return conversation;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute getConversationForAgent',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute getConversationForAgent', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -449,12 +388,7 @@ export function createInternalChatAccounts(db: Database) {
       })) as InternalChatConversation;
       return conversation!;
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute ensureDirectConversation',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute ensureDirectConversation', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -477,12 +411,7 @@ export function createInternalChatAccounts(db: Database) {
 
       return sortParticipantsBySelfFirst((rows as unknown as InternalChatGroupParticipant[]), accountId);
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: 'Failed to execute listGroupMembersOrDmPeersByAccount',
-        context: { error: errorMsg(err) },
-      });
+      internalChatAccountsDebug('error', 'Failed to execute listGroupMembersOrDmPeersByAccount', { error: errorMsg(err) });
       throw err;
     }
   }
