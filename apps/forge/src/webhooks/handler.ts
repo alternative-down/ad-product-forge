@@ -37,6 +37,19 @@ type NotifyAgent = (input: {
 
 import type { WebhookRouteWithSecret } from './store';
 
+/**
+ * Module-local debug helper. Centralizes the webhooks-handler scope
+ * so call sites only specify the level, message, and context.
+ */
+function webhooksHandlerDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'webhooks-handler', level, message, context });
+}
+
+
 export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyAgent }) {
   async function handleWebhook(request: HttpRequest): Promise<HttpResponse> {
     const routeId = extractRouteId(request.path);
@@ -56,12 +69,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     // secret means the route is misconfigured — fail closed with 500 rather
     // than silently accepting unsigned requests.
     if (route.secret === null || route.secret === undefined || route.secret === '') {
-      forgeDebug({
-        scope: 'webhooks-handler',
-        level: 'error',
-        message: 'Route has no secret — misconfigured, refusing request',
-        context: { routeId, agentId: route.agentId },
-      });
+      webhooksHandlerDebug('error', 'Route has no secret — misconfigured, refusing request', { routeId, agentId: route.agentId });
       return { status: 500, body: 'Route misconfigured' };
     }
 
@@ -77,12 +85,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       return { status: 401, body: 'Missing signature' };
     }
     if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
-      forgeDebug({
-        scope: 'webhooks-handler',
-        level: 'warn',
-        message: 'Invalid signature',
-        context: { routeId },
-      });
+      webhooksHandlerDebug('warn', 'Invalid signature', { routeId });
       return { status: 401, body: 'Invalid signature' };
     }
 
@@ -91,11 +94,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       // Issue #6161: pass the REAL error from parseWebhookPayload instead
       // of synthesizing a fake Error. The previous code discarded the
       // actual diagnostic context (e.g., position of syntax error).
-      forgeDebug({
-        scope: 'webhooks-handler',
-        level: 'error',
-        message: 'parseWebhookPayload failed (' + parsed.reason + '): ' + errorMsg(parsed.error),
-      });
+      webhooksHandlerDebug('error', `parseWebhookPayload failed (${parsed.reason}): ${errorMsg(parsed.error)}`);
       return { status: 400, body: 'Invalid JSON payload' };
     }
 
@@ -111,12 +110,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     // Notification is SKIPPED (design decision: avoid duplicate agent notifications;
     // the first call already notified).
     if (result.kind === 'duplicate') {
-      forgeDebug({
-        scope: 'webhooks-handler',
-        level: 'info',
-        message: 'Idempotent replay — skipping notification',
-        context: { routeId, eventId: result.eventId },
-      });
+      webhooksHandlerDebug('info', 'Idempotent replay — skipping notification', { routeId, eventId: result.eventId });
       return {
         status: 200,
         body: JSON.stringify({ eventId: result.eventId, deduplicated: true }),
