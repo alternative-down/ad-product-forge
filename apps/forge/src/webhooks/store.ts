@@ -39,7 +39,7 @@ function lastFourOf(plaintext: string): string {
  * surface, not silently fail open.
  */
 function decryptRouteSecretOrThrow(encrypted: string | null): string | null {
-  if (encrypted === null || encrypted === undefined) return null;
+  if (encrypted == null) return null;
   return decryptSecret(encrypted);
 }
 
@@ -103,7 +103,7 @@ export function createWebhookStore(db: Database) {
         if (route === undefined) return null;
 
         // Path A: new encrypted column populated → decrypt normally.
-        if (route.secretEncrypted !== null && route.secretEncrypted !== undefined) {
+        if (route.secretEncrypted != null) {
           return {
             ...route,
             secret: decryptRouteSecretOrThrow(route.secretEncrypted),
@@ -114,7 +114,7 @@ export function createWebhookStore(db: Database) {
         // lazy backfill. Encrypt and update on first read so subsequent
         // reads use Path A. Original plaintext is returned to caller
         // for THIS read only.
-        if (route.secret !== null && route.secret !== undefined && route.secret !== '') {
+        if (route.secret != null && route.secret !== '') {
           const encrypted = encryptSecret(route.secret);
           const lastFour = lastFourOf(route.secret);
           await db
