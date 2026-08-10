@@ -229,7 +229,7 @@ export function createInternalChatGroups(
         where: eq(internalChatConversations.id, input.conversationKey),
       })) as InternalChatConversation | null;
 
-      if (existing !== null && existing !== undefined) {
+      if (existing != null) {
         forgeDebug({
           scope: 'internal-chat-groups',
           level: 'warn',
@@ -293,7 +293,7 @@ export function createInternalChatGroups(
         ),
       })) as InternalChatConversationMember | null;
 
-      if (existing !== null && existing !== undefined) {
+      if (existing != null) {
         throw new Error(`Group member already exists: ${input.participantSlug}`);
       }
 
@@ -368,7 +368,7 @@ export function createInternalChatGroups(
     }
 
     // ── Access control ──────────────────────────────────────────────────────────
-    if (input.groupId !== null && input.groupId !== undefined) {
+    if (input.groupId != null) {
       await getRequiredGroupForAgent(input.agentId, groupId);
       const membership = (await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -376,11 +376,11 @@ export function createInternalChatGroups(
           eq(internalChatConversationMembers.accountId, actorAccount.id),
         ),
       })) as InternalChatConversationMember | null;
-      if (membership === null || membership === undefined || membership.role !== 'admin') {
+      if (membership == null || membership.role !== 'admin') {
         throw new Error('Only admins can update the group.');
       }
     } else {
-      if (input.name === null || input.name === undefined) {
+      if (input.name == null) {
         throw new Error('name is required when creating a group.');
       }
     }
@@ -388,7 +388,7 @@ export function createInternalChatGroups(
     // ── Persist ────────────────────────────────────────────────────────────────
     try {
       await db.transaction(async (tx) => {
-        if (input.groupId === null || input.groupId === undefined) {
+        if (input.groupId == null) {
           await createChatGroupIfNeeded(
             tx,
             groupId,
