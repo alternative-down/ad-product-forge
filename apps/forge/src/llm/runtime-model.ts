@@ -8,6 +8,19 @@ import {
 import { forgeDebug } from '@forge-runtime/core';
 import type { LlmProfileRecord } from './settings-store';
 
+/**
+ * Module-local debug helper. Centralizes the llm-runtime-model scope
+ * so call sites only specify the level, message, and context.
+ */
+function runtimeModelDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'llm-runtime-model', level, message, context });
+}
+
+
 export type RuntimeProfile = Pick<
   LlmProfileRecord,
   'modelKey' | 'baseUrl' | 'apiKey'
@@ -21,12 +34,7 @@ export async function resolveProfileRuntimeModel(
     const modelId = modelIdParts.join('/');
 
     if (!providerId || !modelId) {
-      forgeDebug({
-        scope: 'llm-runtime-model',
-        level: 'error',
-        message: 'resolveRuntimeModel: invalid OAuth model key',
-        context: { modelKey: profile.modelKey },
-      });
+      runtimeModelDebug('error', 'resolveRuntimeModel: invalid OAuth model key', { modelKey: profile.modelKey });
       throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
     }
 
@@ -35,12 +43,7 @@ export async function resolveProfileRuntimeModel(
     // unknown providerIds at runtime instead of casting past the type
     // system.
     if (providerId !== 'openai-codex' && providerId !== 'claude-code') {
-      forgeDebug({
-        scope: 'llm-runtime-model',
-        level: 'error',
-        message: 'resolveRuntimeModel: unsupported OAuth providerId',
-        context: { providerId, modelKey: profile.modelKey },
-      });
+      runtimeModelDebug('error', 'resolveRuntimeModel: unsupported OAuth providerId', { providerId, modelKey: profile.modelKey });
       throw new Error(`Unsupported OAuth providerId: ${providerId}`);
     }
 
@@ -59,12 +62,7 @@ export async function resolveProfileRuntimeModel(
     const modelId = modelIdParts.join('/');
 
     if (!modelId) {
-      forgeDebug({
-        scope: 'llm-runtime-model',
-        level: 'error',
-        message: 'resolveRuntimeModel: invalid MiniMax model key',
-        context: { modelKey: profile.modelKey },
-      });
+      runtimeModelDebug('error', 'resolveRuntimeModel: invalid MiniMax model key', { modelKey: profile.modelKey });
       throw new Error(`Invalid MiniMax coding model key: ${profile.modelKey}`);
     }
 
@@ -89,12 +87,7 @@ export async function resolveProfileRuntimeModel(
   // downstream consumers that rely on the provider/model contract.
   const slashIdx = profile.modelKey.indexOf('/');
   if (slashIdx <= 0 || slashIdx === profile.modelKey.length - 1) {
-    forgeDebug({
-      scope: 'llm-runtime-model',
-      level: 'error',
-      message: 'resolveRuntimeModel: invalid default model key (expected provider/model)',
-      context: { modelKey: profile.modelKey },
-    });
+    runtimeModelDebug('error', 'resolveRuntimeModel: invalid default model key (expected provider/model)', { modelKey: profile.modelKey });
     throw new Error(
       `Invalid account model key (expected provider/model format): ${profile.modelKey}`,
     );
