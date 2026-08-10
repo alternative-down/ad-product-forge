@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { buildIterationFeedback } from './agent-runner-feedback';
+import { isAbortedError } from './agent-runner-generate';
 import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 
 const MOCK_RUNTIME_ID = 'agent-42';
@@ -492,5 +493,31 @@ describe('mapStepsToFeedback', () => {
     const result = mapStepsToFeedback(steps);
     expect(result.toolCalls).toEqual([{ name: 't', args: {} }]);
     expect(result.toolResults).toEqual([{ name: 'r', error: err }]);
+  });
+});
+
+
+describe('isAbortedError', () => {
+  it('returns true for an Error with name AbortError', () => {
+    const err = new Error('aborted');
+    err.name = 'AbortError';
+    expect(isAbortedError(err)).toBe(true);
+  });
+
+  it('returns true for an Error with code ABORT_ERROR', () => {
+    const err = new Error('aborted') as Error & { code?: string };
+    err.code = 'ABORT_ERROR';
+    expect(isAbortedError(err)).toBe(true);
+  });
+
+  it('returns false for an unrelated Error', () => {
+    expect(isAbortedError(new Error('boom'))).toBe(false);
+  });
+
+  it('returns false for non-Error values', () => {
+    expect(isAbortedError(null)).toBe(false);
+    expect(isAbortedError(undefined)).toBe(false);
+    expect(isAbortedError('string error')).toBe(false);
+    expect(isAbortedError({ code: 'ABORT_ERROR' })).toBe(false);
   });
 });
