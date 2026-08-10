@@ -262,8 +262,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
   // ── Codification: L#NN-XXX sub-concern decomposition ────────────────────────
   // Phase 1 of #6239: listAgents decomposed into 6 single-concern helpers (5 loaders + 1 builder). The
   // coordinator below calls each helper in order and assembles the result.
-  // Phases 2-4 (#6239) deferred to future cycles (getAgent decomposition
-  // data-access helpers, L663 cast cleanup).
+  // Phase 2 of #6239: getAgent decomposed into 4 single-concern helpers (3 loaders + 1 builder). The
+  // getAgent coordinator below calls each helper in order and assembles the result.
+  // Phases 3-4 (#6239) deferred to future cycles (data-access helpers, L735 cast cleanup).
 
   async function loadAgentListRowsAndMetadata(): Promise<{
     agentRows: Awaited<ReturnType<typeof db.query.agents.findMany>>;
@@ -574,19 +575,15 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     );
   }
 
-    async function getAgent(agentId: string): Promise<AgentDetail | null> {
-    let agent;
-    // eslint-disable-next-line prefer-const
-    agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (!agent) return null;
-
-    // L#NN-50 #35: extract structural-typed alias for `(agent as Agent).X` cluster (3 sites)
-    const agentTyped = agent as Agent;
-    const loadedAgent = registry.get(agentId) as
-      | { runner?: { getSnapshot: () => unknown } }
-      | undefined;
-    const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
-
+  async function loadAgentAndDetailData(agentId: string): Promise<{
+    agentMcpRows: Awaited<ReturnType<typeof db.query.agentMcpConfigs.findMany>>;
+    agentScheduleRows: Awaited<ReturnType<typeof db.query.agentSchedules.findMany>>;
+    recentSteps: Awaited<ReturnType<typeof db.query.agentExecutionSteps.findMany>>;
+    recentNotifications: Awaited<ReturnType<typeof db.query.agentNotifications.findMany>>;
+    activeContractRows: Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>;
+    allRoles: { id: string; name: string; description: string | null }[];
+    allProfiles: { id: string; name: string; modelKey: string }[];
+  }> {
     const [
       agentMcpRows,
       agentScheduleRows,
@@ -614,51 +611,39 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       db.query.agentRoles.findMany({ columns: { id: true, name: true, description: true } }),
       db.query.llmProfiles.findMany({ columns: { id: true, name: true, modelKey: true } }),
     ]);
+    return { agentMcpRows, agentScheduleRows, recentSteps, recentNotifications, activeContractRows, allRoles, allProfiles };
+  }
 
+  async function loadMcpServerRowsForAgent(
+    agentMcpRows: Awaited<ReturnType<typeof db.query.agentMcpConfigs.findMany>>,
+  ): Promise<Awaited<ReturnType<typeof db.query.mcpServerConfigs.findMany>>> {
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
-    let agentMcpServerRows: any[];
-    if (mcpServerIds.length > 0) {
-      agentMcpServerRows = await db.query.mcpServerConfigs.findMany({
-        where: inArray(mcpServerConfigs.id, mcpServerIds),
-      });
-    } else {
-      agentMcpServerRows = [];
-    }
-
-    let spentUsd = 0;
-    if (activeContractRows.length > 0) {
-      const currentPeriodStart = new Date();
-      currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
-      let steps;
-      // eslint-disable-next-line prefer-const
-      steps = await db.query.agentExecutionSteps.findMany({
-        where: and(
-          eq(agentExecutionSteps.agentId, agentId),
-          gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
-        ),
-        columns: { costUsd: true },
-      });
-      spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
-    }
-
-    const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
-    const githubProvisioning = null;
-
-    const recentSteps_ = recentSteps.map((step) => {
-      const { id, ...rest } = step;
-      return { ...rest, stepId: id };
+    if (mcpServerIds.length === 0) return [];
+    return await db.query.mcpServerConfigs.findMany({
+      where: inArray(mcpServerConfigs.id, mcpServerIds),
     });
+  }
 
-    const recentNotifications_ = recentNotifications.map((n) => ({
-      notificationId: n.id,
-      content: n.content,
-      timestamp: n.createdAt,
-      read: n.readAt !== null,
-    }));
-
+  function buildMcpServerSummaries(
+    agentMcpRows: Awaited<ReturnType<typeof db.query.agentMcpConfigs.findMany>>,
+    agentMcpServerRows: Awaited<ReturnType<typeof db.query.mcpServerConfigs.findMany>>,
+  ): Array<{
+    configId: string | null;
+    serverId: string;
+    name: string;
+    description: string | undefined;
+    transport: 'stdio' | 'http_streamable';
+    command: string;
+    argsText: string;
+    envVarsText: string;
+    url: string;
+    headersText: string;
+    isActive: boolean;
+    createdAt: number;
+    updatedAt: number;
+  }> {
     const serverIdToLink = new Map(agentMcpRows.map((link) => [link.serverId, link]));
-
-    const mcpServers = agentMcpServerRows.map((server) => {
+    return agentMcpServerRows.map((server) => {
       const link = serverIdToLink.get(server.id);
       return {
         configId: link?.id ?? null,
@@ -676,19 +661,61 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         updatedAt: server.updatedAt,
       };
     });
+  }
 
-    const roleMap = new Map(allRoles.map((r) => [r.id, r]));
-    const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
-    const agentRoleId = agentTyped.roleId;
-    const agentModelProfileId = agentTyped.modelProfileId;
-    const agentOmModelProfileId = agentTyped.omModelProfileId;
+  async function calculateSpentUsd(
+    activeContractRows: Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>,
+    agentId: string,
+  ): Promise<number> {
+    if (activeContractRows.length === 0) return 0;
+    const currentPeriodStart = new Date();
+    currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
+    const steps = await db.query.agentExecutionSteps.findMany({
+      where: and(
+        eq(agentExecutionSteps.agentId, agentId),
+        gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
+      ),
+      columns: { costUsd: true },
+    });
+    return steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
+  }
 
-    const activeContractRow = activeContractRows[0] ?? null;
+  interface BuildAgentDetailCtx {
+    agent: Agent;
+    agentTyped: Agent;
+    runnerSnapshot: unknown;
+    agentMcpRows: Awaited<ReturnType<typeof db.query.agentMcpConfigs.findMany>>;
+    mcpServers: ReturnType<typeof buildMcpServerSummaries>;
+    activeContractRow: Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>[number] | null;
+    spentUsd: number;
+    recentSteps_: Array<Omit<AgentExecutionStep, 'id'> & { stepId: string }>;
+    recentNotifications_: Array<{
+      notificationId: string;
+      content: string;
+      timestamp: number;
+      read: boolean;
+    }>;
+    agentScheduleRows: Awaited<ReturnType<typeof db.query.agentSchedules.findMany>>;
+    heartbeat: Awaited<ReturnType<typeof db.query.agentSchedules.findMany>>[number] | undefined;
+    roleMap: Map<string, { name: string }>;
+    profileMap: Map<string, { name: string }>;
+    githubProvisioning: null;
+    skillsByAgentId: Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>;
+  }
 
+  // L#NN-50 #18 v6 BLOCK detection: `as unknown as AgentDetail` cast KEEP (Phase 1 decision,
+  // Veritas CR 4567062953 Option B). Cast at complex-interface assembly requires wrapper OR
+  // interface change — both out of scope for Phase 2 atomic decomposition.
+  function buildAgentDetail(ctx: BuildAgentDetailCtx): AgentDetail {
+    const roleMap = ctx.roleMap;
+    const profileMap = ctx.profileMap;
+    const agentRoleId = ctx.agentTyped.roleId;
+    const agentModelProfileId = ctx.agentTyped.modelProfileId;
+    const agentOmModelProfileId = ctx.agentTyped.omModelProfileId;
     return {
-      id: agent.id,
-      name: agent.name ?? null,
-      description: agent.description ?? null,
+      id: ctx.agent.id,
+      name: ctx.agent.name ?? null,
+      description: ctx.agent.description ?? null,
       role: agentRoleId ?? null,
       roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId ?? '')?.name ?? null) : null,
       modelProfile:
@@ -699,40 +726,103 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         (agentOmModelProfileId ?? '') !== ''
           ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null)
           : null,
-      workspaceFilesystem: agent.workspaceFilesystem ?? null,
-      lastExecutionError: agent.lastExecutionError ?? null,
-      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-      loaded: Boolean(loadedAgent),
-      runner: runnerSnapshot,
-      mcpConfigIds: agentMcpRows.map((r) => r.id),
-      mcpServers,
-      recentExecutionSteps: recentSteps_,
-      recentNotifications: recentNotifications_,
-      githubProvisioning,
-      skills: skillsByAgentId.get(agent.id) ?? [],
+      workspaceFilesystem: ctx.agent.workspaceFilesystem ?? null,
+      lastExecutionError: ctx.agent.lastExecutionError ?? null,
+      lastExecutionErrorAt: ctx.agent.lastExecutionErrorAt ?? null,
+      loaded: Boolean(ctx.agentTyped),
+      runner: ctx.runnerSnapshot,
+      mcpConfigIds: ctx.agentMcpRows.map((r) => r.id),
+      mcpServers: ctx.mcpServers,
+      recentExecutionSteps: ctx.recentSteps_,
+      recentNotifications: ctx.recentNotifications_,
+      githubProvisioning: ctx.githubProvisioning,
+      skills: ctx.skillsByAgentId.get(ctx.agent.id) ?? [],
       activeContract:
-        activeContractRow !== null && activeContractRow !== undefined
+        ctx.activeContractRow !== null && ctx.activeContractRow !== undefined
           ? {
-              contractId: activeContractRow.id,
-              agentId: activeContractRow.agentId,
-              agentName: agent.name ?? '',
-              startsAt: activeContractRow.startsAt,
-              endsAt: activeContractRow.endsAt,
-              weeklyValueUsd: activeContractRow.budgetUsd,
-              spentUsd,
+              contractId: ctx.activeContractRow.id,
+              agentId: ctx.activeContractRow.agentId,
+              agentName: ctx.agent.name ?? '',
+              startsAt: ctx.activeContractRow.startsAt,
+              endsAt: ctx.activeContractRow.endsAt,
+              weeklyValueUsd: ctx.activeContractRow.budgetUsd,
+              spentUsd: ctx.spentUsd,
               spentPercent:
-                activeContractRow.budgetUsd > 0
-                  ? (spentUsd / activeContractRow.budgetUsd) * 100
+                ctx.activeContractRow.budgetUsd > 0
+                  ? (ctx.spentUsd / ctx.activeContractRow.budgetUsd) * 100
                   : 0,
-              autoRenew: Boolean(activeContractRow.autoRenew),
+              autoRenew: Boolean(ctx.activeContractRow.autoRenew),
             }
           : null,
-      schedules: agentScheduleRows
+      schedules: ctx.agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map((row): ScheduleSummary => toScheduleSummaryHelper(row)),
-      heartbeat: heartbeat ? toScheduleSummaryHelper(heartbeat) : null,
+      heartbeat: ctx.heartbeat ? toScheduleSummaryHelper(ctx.heartbeat) : null,
     } as unknown as AgentDetail;
   }
+
+    async function getAgent(agentId: string): Promise<AgentDetail | null> {
+    const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    if (!agent) return null;
+
+    // L#NN-50 #35: extract structural-typed alias for `(agent as Agent).X` cluster (3 sites)
+    const agentTyped = agent as Agent;
+    const loadedAgent = registry.get(agentId) as
+      | { runner?: { getSnapshot: () => unknown } }
+      | undefined;
+    const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
+
+    const {
+      agentMcpRows,
+      agentScheduleRows,
+      recentSteps,
+      recentNotifications,
+      activeContractRows,
+      allRoles,
+      allProfiles,
+    } = await loadAgentAndDetailData(agentId);
+
+    const agentMcpServerRows = await loadMcpServerRowsForAgent(agentMcpRows);
+    const mcpServers = buildMcpServerSummaries(agentMcpRows, agentMcpServerRows);
+    const spentUsd = await calculateSpentUsd(activeContractRows, agentId);
+
+    const recentSteps_ = recentSteps.map((step) => {
+      const { id, ...rest } = step;
+      return { ...rest, stepId: id };
+    });
+
+    const recentNotifications_ = recentNotifications.map((n) => ({
+      notificationId: n.id,
+      content: n.content,
+      timestamp: n.createdAt,
+      read: n.readAt !== null,
+    }));
+
+    const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
+    const roleMap = new Map(allRoles.map((r) => [r.id, r]));
+    const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
+    const activeContractRow = activeContractRows[0] ?? null;
+
+    return buildAgentDetail({
+      agent,
+      agentTyped,
+      runnerSnapshot,
+      agentMcpRows,
+      mcpServers,
+      activeContractRow,
+      spentUsd,
+      recentSteps_,
+      recentNotifications_,
+      agentScheduleRows,
+      heartbeat,
+      roleMap,
+      profileMap,
+      githubProvisioning: null,
+      skillsByAgentId,
+    });
+  }
+
+
 
   return { listAgents, getAgent };
 }
