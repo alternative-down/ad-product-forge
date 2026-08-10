@@ -13,6 +13,7 @@
  *
  * MIGRATED (uses 3-positional-arg internally):
  * - apps/forge/src/email/migadu-manager.ts (D38 #6300, Aldric)
+ * - apps/forge/src/scripts/init-agent-registry.ts (D41 #6389, Kaelen)
  *
  * CANDIDATES (uses 1-object-arg internally, NOT yet migrated):
  * - apps/forge/src/capabilities/store.ts (D37 #6270, Aldric)
@@ -39,6 +40,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
   {
     // D38 #6300 migaduManagerDebug: uses 3-positional-arg internally
     path: 'email/migadu-manager.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D41 #6389 initAgentRegistryDebug: uses 3-positional-arg internally
+    path: 'scripts/init-agent-registry.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];

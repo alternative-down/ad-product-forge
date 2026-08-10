@@ -12,8 +12,9 @@ import { runMigrations } from '../database/migrate';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { forgeDebug, type WorkspaceEmbedderId } from '@forge-runtime/core';
+import { type WorkspaceEmbedderId } from '@forge-runtime/core';
 import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
+import { initAgentRegistryDebug } from './init-agent-registry-debug';
 
 /**
  * Agent configuration - hardcoded once, then managed via database
@@ -42,13 +43,9 @@ async function initAgentRegistry() {
     // Get database connection
     const db = getDatabase();
 
-    forgeDebug({
-      scope: 'init-agent-registry',
-      level: 'info',
-      message: 'Running database migrations',
-    });
+    initAgentRegistryDebug('info', 'Running database migrations');
     await runMigrations(db);
-    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Migrations completed' });
+    initAgentRegistryDebug('info', 'Migrations completed');
 
     // Prepare agent configs
     const llmSettings = createLlmSettingsStore(db);
@@ -101,11 +98,7 @@ async function initAgentRegistry() {
     ];
 
     // Register agents
-    forgeDebug({
-      scope: 'init-agent-registry',
-      level: 'info',
-      message: 'Registering agents in database',
-    });
+    initAgentRegistryDebug('info', 'Registering agents in database');
     for (const config of agentConfigs) {
       const now = Date.now();
 
@@ -146,20 +139,11 @@ async function initAgentRegistry() {
           },
         });
 
-      forgeDebug({
-        scope: 'init-agent-registry',
-        level: 'info',
-        message: 'Registered agent',
-        context: { agentId: config.id },
-      });
+      initAgentRegistryDebug('info', 'Registered agent', { agentId: config.id });
     }
 
     // Register communication providers for agents
-    forgeDebug({
-      scope: 'init-agent-registry',
-      level: 'info',
-      message: 'Registering communication providers',
-    });
+    initAgentRegistryDebug('info', 'Registering communication providers');
 
     // Configure internal-chat provider for both agents
     const agentProviderConfigs = [
@@ -197,12 +181,7 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agentProviders.id, existing.id));
 
-        forgeDebug({
-          scope: 'init-agent-registry',
-          level: 'info',
-          message: 'Updated provider',
-          context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType },
-        });
+        initAgentRegistryDebug('info', 'Updated provider', { agentId: providerConfig.agentId, providerType: providerConfig.providerType });
       } else {
         // Insert new provider
         await db.insert(schema.agentProviders).values({
@@ -214,28 +193,14 @@ async function initAgentRegistry() {
           updatedAt: now,
         });
 
-        forgeDebug({
-          scope: 'init-agent-registry',
-          level: 'info',
-          message: 'Created provider',
-          context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType },
-        });
+        initAgentRegistryDebug('info', 'Created provider', { agentId: providerConfig.agentId, providerType: providerConfig.providerType });
       }
     }
 
-    forgeDebug({
-      scope: 'init-agent-registry',
-      level: 'info',
-      message: 'Agent registry initialized successfully',
-    });
+    initAgentRegistryDebug('info', 'Agent registry initialized successfully');
     process.exit(0);
   } catch (error) {
-    forgeDebug({
-      scope: 'init-agent-registry',
-      level: 'error',
-      message: 'Error initializing agent registry',
-      context: { error: errorMsg(error) },
-    });
+    initAgentRegistryDebug('error', 'Error initializing agent registry', { error: errorMsg(error) });
     process.exit(1);
   }
 }
