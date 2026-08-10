@@ -13,6 +13,26 @@ import { createAgentContractStore } from './agent-contract-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 /**
+ * Module-local debug helper. Centralizes the agent-loader scope.
+ *
+ * Pass-through options for agentId, agentName, and context so call sites can
+ * attach top-level structured fields without re-stating the scope (L#NN-50 #50
+ * log retention: helpers must preserve all original forgeDebug fields).
+ */
+function agentLoaderDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  options?: { agentId?: string; agentName?: string; context?: Record<string, unknown> },
+) {
+  if (options === undefined) {
+    forgeDebug({ scope: 'agent-loader', level, message });
+  } else {
+    forgeDebug({ scope: 'agent-loader', level, message, ...options });
+  }
+}
+
+
+/**
  * Load agent configuration from database and create agent instance
  *
  * @param db - Database connection
@@ -25,20 +45,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtimeData = await loadAgentRuntimeData(db, config);
   const allowedToolIds = new Set(runtimeData.capabilitySet.toolIds);
 
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    agentId: runtimeData.agent.id,
-    agentName: runtimeData.agent.name,
-    message: 'Loading agent',
-  });
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    agentId: runtimeData.agent.id,
-    message: 'Allowed tool IDs',
-    context: { toolIdCount: allowedToolIds.size },
-  });
+  agentLoaderDebug('info', 'Loading agent', { agentId: runtimeData.agent.id, agentName: runtimeData.agent.name });
+  agentLoaderDebug('info', 'Allowed tool IDs', { agentId: runtimeData.agent.id, context: { toolIdCount: allowedToolIds.size } });
   await config.internalChat.registerAgentAccount({
     agentId: runtimeData.agent.id,
     displayName:
@@ -56,13 +64,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     allowedToolIds,
   });
 
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    agentId: runtimeData.agent.id,
-    message: 'Tools loaded',
-    context: toolset.breakdown,
-  });
+  agentLoaderDebug('info', 'Tools loaded', { agentId: runtimeData.agent.id, context: toolset.breakdown });
 
   const runtime = await createInternalAgentRuntime(
     buildAgentRuntimeConfig(config, runtimeData, toolset),
@@ -93,12 +95,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     },
   );
 
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    agentId: runtimeData.agent.id,
-    message: 'Agent loaded successfully',
-  });
+  agentLoaderDebug('info', 'Agent loaded successfully', { agentId: runtimeData.agent.id });
   return runtime;
 }
 
@@ -114,16 +111,11 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   const agentConfigs = await db.query.agents.findMany();
 
   if (agentConfigs.length === 0) {
-    forgeDebug({ scope: 'agent-loader', level: 'info', message: 'No agents found in registry' });
+    agentLoaderDebug('info', 'No agents found in registry');
     return new Map<string, InternalAgentRuntime>();
   }
 
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    message: 'Loading agents from registry',
-    context: { agentCount: agentConfigs.length },
-  });
+  agentLoaderDebug('info', 'Loading agents from registry', { context: { agentCount: agentConfigs.length } });
 
   const agents = new Map<string, InternalAgentRuntime>();
 
@@ -152,26 +144,11 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       agents.set(agentId, result.value);
     } else {
       failures.push({ agentId, reason: result.reason });
-      forgeDebug({
-        scope: 'agent-loader',
-        level: 'error',
-        agentId,
-        message: 'Failed to load agent',
-        context: { error: errorMsg(result.reason) },
-      });
+      agentLoaderDebug('error', 'Failed to load agent', { agentId, context: { error: errorMsg(result.reason) } });
     }
   });
 
-  forgeDebug({
-    scope: 'agent-loader',
-    level: 'info',
-    message: 'Agent loading complete',
-    context: {
-      totalAgents: agentConfigs.length,
-      loadedAgents: agents.size,
-      failedAgents: failures.length,
-    },
-  });
+  agentLoaderDebug('info', 'Agent loading complete', { context: { totalAgents: agentConfigs.length, loadedAgents: agents.size, failedAgents: failures.length } });
 
   // #5978: loadAgents MUST NOT silently swallow per-agent failures. If any
   // agent failed to load, throw an aggregate error so callers can react.
