@@ -19,7 +19,6 @@ export async function main() {
   console.log(`[forge-startup] main: HTTP server listening on port ${process.env.FORGE_HTTP_PORT}`);
   mainDebug('info', `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`);
 
-  mainDebug('info', `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`);
   mainDebug('info', `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`);
   if (bootstrap.allowInsecureLocal) {
     console.warn(
