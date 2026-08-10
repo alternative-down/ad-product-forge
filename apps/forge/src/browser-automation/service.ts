@@ -16,6 +16,19 @@ import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { THIRTY_SECONDS_MS } from '../agents/time-constants';
 
+/**
+ * Module-local debug helper. Centralizes the browser-automation-service scope
+ * so call sites only specify the level, message, and context.
+ */
+function browserAutomationServiceDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'browser-automation-service', level, message, context });
+}
+
+
 const DEFAULT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 
 export interface BrowserPageSession {
@@ -82,12 +95,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       browser = await chromium.launch({ headless: true });
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `chromium.launch failed: ${errorMsg(err)}`,
-      });
+      browserAutomationServiceDebug('error', `chromium.launch failed: ${errorMsg(err)}`);
       throw err;
     }
     agentBrowsers.set(agentId, {
@@ -118,13 +126,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       context = await browser.newContext();
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `newContext failed: ${errorMsg(err)}`,
-        context: { url },
-      });
+      browserAutomationServiceDebug('error', `newContext failed: ${errorMsg(err)}`, { url });
       return { pageId: 'unknown', error: errorMsg(err) };
     }
     const page = await context.newPage();
@@ -158,13 +160,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       agentBrowsers.get(agentId)?.sessions.set(pageId, session);
       return result;
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `navigate failed: ${errorMsg(err)}`,
-        context: { url, timeout, waitForSelector: options.waitForSelector },
-      });
+      browserAutomationServiceDebug('error', `navigate failed: ${errorMsg(err)}`, { url, timeout, waitForSelector: options.waitForSelector });
       await context.close();
       return { pageId, error: errorMsg(err) };
     }
@@ -191,13 +187,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `click failed: ${errorMsg(err)}`,
-        context: { selector, pageId: session.pageId },
-      });
+      browserAutomationServiceDebug('error', `click failed: ${errorMsg(err)}`, { selector, pageId: session.pageId });
       return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
@@ -225,13 +215,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `fill failed: ${errorMsg(err)}`,
-        context: { selector, valueLength: value.length, pageId: session.pageId },
-      });
+      browserAutomationServiceDebug('error', `fill failed: ${errorMsg(err)}`, { selector, valueLength: value.length, pageId: session.pageId });
       return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
@@ -252,13 +236,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `screenshot failed: ${errorMsg(err)}`,
-        context: { pageId: session.pageId },
-      });
+      browserAutomationServiceDebug('error', `screenshot failed: ${errorMsg(err)}`, { pageId: session.pageId });
       return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
@@ -301,13 +279,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `query failed: ${errorMsg(err)}`,
-        context: { selector, pageId: session.pageId },
-      });
+      browserAutomationServiceDebug('error', `query failed: ${errorMsg(err)}`, { selector, pageId: session.pageId });
       return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
@@ -339,13 +311,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `wait failed: ${errorMsg(err)}`,
-        context: { selector, timeout, pageId: session.pageId },
-      });
+      browserAutomationServiceDebug('error', `wait failed: ${errorMsg(err)}`, { selector, timeout, pageId: session.pageId });
       return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
@@ -360,13 +326,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       await session.context.close();
       instance?.sessions.delete(pageId);
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `closePage failed: ${errorMsg(err)}`,
-        context: { pageId },
-      });
+      browserAutomationServiceDebug('error', `closePage failed: ${errorMsg(err)}`, { pageId });
       instance?.sessions.delete(pageId);
     }
   }
@@ -381,12 +341,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       agentBrowsers.delete(agentId);
       agentLastAccess.delete(agentId);
     } catch (err) {
-      forgeDebug({
-        scope: 'browser-automation-service',
-        level: 'error',
-        agentId,
-        message: `closeAgentBrowser failed: ${errorMsg(err)}`,
-      });
+      browserAutomationServiceDebug('error', `closeAgentBrowser failed: ${errorMsg(err)}`);
       agentBrowsers.delete(agentId);
       agentLastAccess.delete(agentId);
     }
