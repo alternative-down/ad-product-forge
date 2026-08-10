@@ -24,6 +24,19 @@ import { toScheduleRecord } from './store';
 import type { ScheduleLifecycle } from '../lifecycle/lifecycle';
 
 /**
+ * Module-local debug helper. Centralizes the schedules-manager scope
+ * so call sites only specify the level, message, and context.
+ */
+function schedulesManagerDebug(
+  level: "debug" | "info" | "warn" | "error",
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: "schedules-manager", level, message, context });
+}
+
+
+/**
  * schedules/manager/mutations.ts
  *
  * Mutating operations (create/update/delete) for the agent schedule manager.
@@ -159,12 +172,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const existing = await store.getAgentSchedule(agentId, scheduleId);
 
     if (existing === null) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'updateSchedule schedule not found',
-        context: { agentId, scheduleId },
-      });
+      schedulesManagerDebug('error', 'updateSchedule schedule not found', { agentId, scheduleId });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
@@ -328,12 +336,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
 
     if (reloaded === null) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'updateOwnedSchedule: not found after update',
-        context: { scheduleId },
-      });
+      schedulesManagerDebug('error', 'updateOwnedSchedule: not found after update', { scheduleId });
       throw new Error(`Schedule not found after update: ${scheduleId}`);
     }
 
@@ -385,12 +388,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
 
     if (scheduleRecord === null) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'createScheduleForAgent failed to load schedule',
-        context: { agentId: parsed.targetAgentId, recordId: record.id },
-      });
+      schedulesManagerDebug('error', 'createScheduleForAgent failed to load schedule', { agentId: parsed.targetAgentId, recordId: record.id });
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
