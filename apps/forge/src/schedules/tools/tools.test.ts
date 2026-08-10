@@ -51,6 +51,7 @@ vi.mock('../manager', () => ({
 // Import the module under test
 // ---------------------------------------------------------------------------
 import * as toolsModule from './tools';
+import { validationError } from './tools';
 
 // ---------------------------------------------------------------------------
 // Pure function mirrors — verified against tools.ts source
@@ -426,5 +427,26 @@ describe('createAgentScheduleTools', () => {
     expect(tools).toHaveProperty('manage_self_crons');
     expect(tools).toHaveProperty('list_crons');
     expect(tools).toHaveProperty('manage_crons');
+  });
+});
+
+
+describe('validationError', () => {
+  it('returns a frozen-shape object with valid false literal', () => {
+    const result = validationError('test error', 'test hint');
+    expect(result).toEqual({ valid: false, error: 'test error', hint: 'test hint' });
+  });
+
+  it('preserves exact error and hint strings', () => {
+    const result = validationError('create is required when action is create', 'Send the create object with name.');
+    expect(result.error).toBe('create is required when action is create');
+    expect(result.hint).toBe('Send the create object with name.');
+  });
+
+  it('uses the valid false literal type for discriminated union narrowing', () => {
+    const result = validationError('x', 'y');
+    // valid must be exactly the literal false, not just boolean false
+    const discriminated: { valid: false; error: string; hint: string } = result;
+    expect(discriminated.valid).toBe(false);
   });
 });
