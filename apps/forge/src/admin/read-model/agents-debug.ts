@@ -14,6 +14,19 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
+/**
+ * Module-local debug helper. Centralizes the admin-read-model scope
+ * so call sites only specify the level, message, and context.
+ */
+function adminReadModelAgentsDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'admin-read-model', level, message, context });
+}
+
+
 export interface AgentDebugReadModelDeps {
   db: Database;
   workspaceBasePath: string;
@@ -54,24 +67,14 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
           return null;
         })
       )(agentId).catch((err) => {
-        forgeDebug({
-          scope: 'admin-read-model',
-          level: 'warn',
-          message: 'getAgentRuntimeStatus: agent not loaded',
-          context: { agentId, error: errorMsg(err) },
-        });
+        adminReadModelAgentsDebug('warn', 'getAgentRuntimeStatus: agent not loaded', { agentId, error: errorMsg(err) });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
     if (agent === null || agent === undefined) return null;
     const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'warn',
-        message: 'getAgentRuntimeStatus: LTM recall not available',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelAgentsDebug('warn', 'getAgentRuntimeStatus: LTM recall not available', { agentId, error: errorMsg(err) });
       return null;
     });
     return { agent, runtimeMemory, snapshots, ltm };
