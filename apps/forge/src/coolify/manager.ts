@@ -21,6 +21,17 @@ import { getProviderConfig, getApplicationsBaseDomain } from './provider-config'
 import { createHttpTransport } from './http';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 
+export function setOptional(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  options: { rejectNull?: boolean } = { rejectNull: true },
+): void {
+  if (value === undefined) return;
+  if (options.rejectNull === true && value === null) return;
+  target[key] = value;
+}
+
 export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
 
 /**
@@ -145,29 +156,17 @@ export function createCoolifyManager(config: {
       name: input.name,
     };
 
-    if (input.githubAppUuid !== null && input.githubAppUuid !== undefined) {
-      payload.github_app_uuid = input.githubAppUuid;
-    }
+    setOptional(payload, 'github_app_uuid', input.githubAppUuid);
 
-    if (input.buildCommand !== null && input.buildCommand !== undefined) {
-      payload.build_command = input.buildCommand;
-    }
+    setOptional(payload, 'build_command', input.buildCommand);
 
-    if (input.publishDirectory !== null && input.publishDirectory !== undefined) {
-      payload.publish_directory = input.publishDirectory;
-    }
+    setOptional(payload, 'publish_directory', input.publishDirectory);
 
-    if (input.branch !== null && input.branch !== undefined) {
-      payload.branch = input.branch;
-    }
+    setOptional(payload, 'branch', input.branch);
 
-    if (input.port !== undefined) {
-      payload.port = input.port;
-    }
+    setOptional(payload, 'port', input.port, { rejectNull: false });
 
-    if (input.domain !== null && input.domain !== undefined) {
-      payload.domain = input.domain;
-    }
+    setOptional(payload, 'domain', input.domain);
 
     const defaultContext = await loadDefaultDeploymentContext();
     const data = await requestJson('POST', '/applications/private-github-app', {
@@ -191,11 +190,11 @@ export function createCoolifyManager(config: {
   }) {
     const body: Record<string, unknown> = {};
 
-    if (input.name !== undefined) body.name = input.name;
-    if (input.buildCommand !== undefined) body.build_command = input.buildCommand;
-    if (input.publishDirectory !== undefined) body.publish_directory = input.publishDirectory;
-    if (input.branch !== undefined) body.branch = input.branch;
-    if (input.port !== undefined) body.port = input.port;
+    setOptional(body, 'name', input.name, { rejectNull: false });
+    setOptional(body, 'build_command', input.buildCommand, { rejectNull: false });
+    setOptional(body, 'publish_directory', input.publishDirectory, { rejectNull: false });
+    setOptional(body, 'branch', input.branch, { rejectNull: false });
+    setOptional(body, 'port', input.port, { rejectNull: false });
 
     const data = await requestJson(
       'PATCH',

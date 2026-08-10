@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createCoolifyManager } from './manager';
+import { createCoolifyManager, setOptional } from './manager';
 
 // ─── Mock integrations factory ───────────────────────────────────────────────
 
@@ -1148,5 +1148,32 @@ describe('createApplication', () => {
         error: 'Version probe returned HTTP 500',
       });
     });
+  });
+});
+
+
+describe('setOptional', () => {
+  it('sets the key when value is a non-null, defined primitive', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', 'alice');
+    expect(target).toEqual({ name: 'alice' });
+  });
+
+  it('skips the key when value is undefined (default rejectNull true)', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', undefined);
+    expect(target).toEqual({});
+  });
+
+  it('skips the key when value is null (default rejectNull true)', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', null);
+    expect(target).toEqual({});
+  });
+
+  it('sets the key when value is null with rejectNull false', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', null, { rejectNull: false });
+    expect(target).toEqual({ name: null });
   });
 });
