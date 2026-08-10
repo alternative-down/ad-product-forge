@@ -13,6 +13,19 @@ import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
 import { withDbErrorLogging } from '../database/error-logging';
 
+/**
+ * Module-local debug helper. Centralizes the llm-settings scope
+ * so call sites only specify the level, message, and context.
+ */
+function llmSettingsDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'llm-settings', level, message, context });
+}
+
+
 const llmProfileSchema = z.object({
   name: z.string().trim().min(1),
   modelKey: z.string().min(1),
@@ -112,11 +125,7 @@ export function createLlmSettingsStore(db: Database) {
     const defaults = await getDefaults();
 
     if (defaults === null || defaults === undefined) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'System LLM defaults not configured',
-      });
+      llmSettingsDebug('warn', 'System LLM defaults not configured');
       throw new Error('System LLM defaults are not configured');
     }
 
@@ -127,29 +136,17 @@ export function createLlmSettingsStore(db: Database) {
     ]);
 
     if (primaryProfile.isEnabled !== true) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'Default primary LLM profile missing or disabled',
-      });
+      llmSettingsDebug('warn', 'Default primary LLM profile missing or disabled');
       throw new Error('Default primary LLM profile is missing or disabled');
     }
 
     if (omProfile.isEnabled !== true) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'Default OM LLM profile missing or disabled',
-      });
+      llmSettingsDebug('warn', 'Default OM LLM profile missing or disabled');
       throw new Error('Default OM LLM profile is missing or disabled');
     }
 
     if (hiringRhProfile.isEnabled !== true) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'Default hiring RH LLM profile missing or disabled',
-      });
+      llmSettingsDebug('warn', 'Default hiring RH LLM profile missing or disabled');
       throw new Error('Default hiring RH LLM profile is missing or disabled');
     }
 
@@ -166,12 +163,7 @@ export function createLlmSettingsStore(db: Database) {
     });
 
     if (!row) {
-      forgeDebug({
-        scope: 'llm-settings',
-        level: 'warn',
-        message: 'LLM profile not found',
-        context: { profileId },
-      });
+      llmSettingsDebug('warn', 'LLM profile not found', { profileId });
       throw new Error(`LLM profile not found: ${profileId}`);
     }
 
@@ -253,12 +245,7 @@ export function createLlmSettingsStore(db: Database) {
               defaults.omProfileId === profileId ||
               defaults.hiringRhProfileId === profileId)
           ) {
-            forgeDebug({
-              scope: 'llm-settings',
-              level: 'warn',
-              message: 'deleteModelProfile: cannot delete selected system default',
-              context: { profileId },
-            });
+            llmSettingsDebug('warn', 'deleteModelProfile: cannot delete selected system default', { profileId });
             throw new Error(
               'Cannot delete an LLM profile that is currently selected as a system default',
             );
@@ -288,12 +275,7 @@ export function createLlmSettingsStore(db: Database) {
       const profile = profileMap.get(profileId);
 
       if (profile === null || profile === undefined) {
-        forgeDebug({
-          scope: 'llm-settings',
-          level: 'warn',
-          message: 'LLM profile not found',
-          context: { profileId },
-        });
+        llmSettingsDebug('warn', 'LLM profile not found', { profileId });
         throw new Error(`LLM profile not found: ${profileId}`);
       }
 
@@ -381,12 +363,7 @@ function toProfileRecord(row: LlmProfile): LlmProfileRecord {
   try {
     apiKey = decryptSecret(encryptedApiKey);
   } catch (err) {
-    forgeDebug({
-      scope: 'llm-settings',
-      level: 'error',
-      message: 'Failed to decrypt LLM profile API key',
-      context: { profileId: id, error: errorMsg(err) },
-    });
+    llmSettingsDebug('error', 'Failed to decrypt LLM profile API key', { profileId: id, error: errorMsg(err) });
     throw new Error(`Failed to decrypt LLM profile ${id}: ${errorMsg(err)}`);
   }
 
