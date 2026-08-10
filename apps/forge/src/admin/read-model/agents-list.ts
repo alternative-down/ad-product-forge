@@ -259,7 +259,18 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     };
   }
 
-  async function listAgents(): Promise<AgentListItem[]> {
+  // ── Codification: L#NN-XXX sub-concern decomposition ────────────────────────
+  // Phase 1 of #6239: listAgents decomposed into 6 single-concern helpers (5 loaders + 1 builder). The
+  // coordinator below calls each helper in order and assembles the result.
+  // Phases 2-4 (#6239) deferred to future cycles (getAgent decomposition
+  // data-access helpers, L663 cast cleanup).
+
+  async function loadAgentListRowsAndMetadata(): Promise<{
+    agentRows: Awaited<ReturnType<typeof db.query.agents.findMany>>;
+    notificationMap: Map<string, number>;
+    roleMap: Map<string, { id: string; name: string | null }>;
+    profileMap: Map<string, { id: string; name: string | null }>;
+  }> {
     const [agentRows, unreadNotificationRows, allRoles, allProfiles] = await Promise.all([
       db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] }),
       db
@@ -271,22 +282,17 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       db.query.agentRoles.findMany(),
       db.query.llmProfiles.findMany(),
     ]);
-    // Parallel fetch workspace skills for all agents (N+1 fix)
-    const agentRowsSkills = agentRows.length > 0
-      ? await Promise.all(agentRows.map((agent) => listAgentWorkspaceSkills(workspaceBasePath, agent)))
-      : [];
-    for (let i = 0; i < (agentRows ?? []).length; i++) {
-      skillsByAgentId.set(agentRows![i].id, agentRowsSkills[i]);
-    }
+    return {
+      agentRows,
+      notificationMap: new Map(unreadNotificationRows.map((row) => [row.agentId, row.count])),
+      roleMap: new Map(allRoles.map((r) => [r.id, r])),
+      profileMap: new Map(allProfiles.map((p) => [p.id, p])),
+    };
+  }
 
-    const unreadNotificationCountByAgentId = new Map(
-      unreadNotificationRows.map((row) => [row.agentId, row.count]),
-    );
-    const roleMap = new Map(allRoles.map((r) => [r.id, r]));
-    const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
-
-    // Batch-fetch recent steps for all agents in a single query, then group by agentId
-    const agentIds = agentRows.map((a) => a.id);
+  async function loadRecentStepsByAgentId(
+    agentIds: string[],
+  ): Promise<Map<string, Awaited<ReturnType<typeof db.query.agentExecutionSteps.findMany>>>> {
     const allRecentSteps =
       agentIds.length > 0
         ? await db.query.agentExecutionSteps.findMany({
@@ -303,8 +309,13 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       if (existing.length < 6) existing.push(step);
       recentStepsByAgentId.set(step.agentId, existing);
     }
+    return recentStepsByAgentId;
+  }
 
-    const runtimeMemoryByAgentId = new Map(
+  async function loadRuntimeMemoryByAgentId(
+    agentRows: { id: string }[],
+  ): Promise<Map<string, Awaited<ReturnType<typeof getRuntimeMemoryForAgent>> | null>> {
+    return new Map(
       await Promise.all(
         agentRows.map(
           async (agent) =>
@@ -322,8 +333,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         ),
       ),
     );
+  }
 
-    const latestThreadDetailsByAgentId = new Map(
+  async function loadLatestThreadDetailsByAgentId(
+    agentRows: { id: string }[],
+  ): Promise<Map<string, { preview: string | null; toolBadge: string | null }>> {
+    return new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
           const threadMessages = await withTimeoutAndLog({
@@ -354,8 +369,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         }),
       ),
     );
+  }
 
-    // Batch-fetch LTM state for all agents in a single query, then group by agentId
+  async function loadLongTermMemoryStateByAgentId(
+    agentIds: string[],
+  ): Promise<Map<string, LongTermMemoryState | null>> {
+    const result = new Map<string, LongTermMemoryState | null>();
     const ltmStateRows =
       agentIds.length > 0
         ? await withTimeoutAndLog({
@@ -365,145 +384,197 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
               const rows = await db.query.agentLongTermMemoryStates.findMany({
                 where: inArray(agentLongTermMemoryStates.agentId, agentIds),
               });
-              return rows;
+              return rows ?? [];
             })(),
             timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             timeoutMessage: 'Admin LTM state batch read timed out',
             fallback: null,
           })
         : null;
-
-    const longTermMemoryStateByAgentId = new Map<string, LongTermMemoryState | null>();
     if (ltmStateRows) {
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
-
-          longTermMemoryStateByAgentId.set(
+          result.set(
             row.agentId,
             parsed.success ? parsed.data : createEmptyLongTermMemoryState(),
           );
         } catch (err) {
-      forgeDebug({ scope: 'agents-list', level: 'debug', message: 'parseLongTermMemoryState failed: ' + errorMsg(err) });
-          longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());
+          forgeDebug({
+            scope: 'agents-list',
+            level: 'debug',
+            message: 'parseLongTermMemoryState failed: ' + errorMsg(err),
+          });
+          result.set(row.agentId, createEmptyLongTermMemoryState());
         }
       }
     }
     for (const id of agentIds) {
-      if (!longTermMemoryStateByAgentId.has(id)) {
-        longTermMemoryStateByAgentId.set(id, null);
-      }
+      if (!result.has(id)) result.set(id, null);
     }
-
-    return agentRows.map((agent) => {
-      // L#NN-50 #35: extract structural-typed alias for `(agent as Agent).X` cluster (4 sites)
-      const agentTyped = agent as Agent;
-      const loadedAgent = registry.get(agent.id) as
-        | { runner?: { getSnapshot: () => unknown } }
-        | undefined;
-      const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
-      const recentSteps = recentStepsByAgentId.get(agent.id) ?? [];
-      const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
-      const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
-      const latestThreadDetails = latestThreadDetailsByAgentId.get(agent.id) ?? {
-        preview: null,
-        toolBadge: null,
-      };
-      const executionState = agent.executionState ?? 'absent';
-
-      const averageStepIntervalMs =
-        recentSteps.length >= 2
-          ? Math.round(
-              recentSteps
-                .slice(0, 6)
-                .map((step, index, items) => {
-                  if (index === items.length - 1) return null;
-                  return Math.max(step.createdAt - items[index + 1].createdAt, 0);
-                })
-                .filter((v) => v !== null)
-                .reduce((sum, v, _, arr) => sum + (v as number) / arr.length, 0),
-            )
-          : null;
-
-      const firstStep = recentSteps[0] as
-        | {
-            createdAt?: number;
-            inputTokens?: number;
-            cachedInputTokens?: number;
-            outputTokens?: number;
-            costUsd?: number | null;
-          }
-        | undefined;
-      const lastStepTokens = firstStep
-        ? (firstStep.inputTokens ?? 0) +
-          ((firstStep as AgentExecutionStep).cachedInputTokens ?? 0) +
-          (firstStep.outputTokens ?? 0)
-        : null;
-
-      return {
-        agentId: agent.id,
-        name: agent.name ?? '',
-        description: agent.description ?? null,
-        role: agentTyped.roleId ?? null,
-        executionState,
-        lastExecutionError: agent.lastExecutionError ?? null,
-        lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-        roleName: (() => {
-          const roleId = agentTyped.roleId;
-          return roleId != null ? (roleMap.get(roleId)?.name ?? null) : null;
-        })(),
-        modelProfile: (() => {
-          const id = agentTyped.modelProfileId;
-          return id != null ? (profileMap.get(id)?.name ?? null) : null;
-        })(),
-        omModelProfile: (() => {
-          const id = agentTyped.omModelProfileId;
-          return id != null ? (profileMap.get(id)?.name ?? null) : null;
-        })(),
-        loaded: Boolean(loadedAgent),
-        runner: runnerSnapshot,
-        providerTypes: [],
-        overview: {
-          lastStepAt: firstStep?.createdAt ?? null,
-          lastStepContextTokens: firstStep?.inputTokens ?? null,
-          lastStepPreview: latestThreadDetails.preview,
-          lastToolBadge: latestThreadDetails.toolBadge,
-          lastStepTokens,
-          lastStepCostUsd: firstStep?.costUsd ?? null,
-          averageStepIntervalMs,
-          unreadNotificationCount: unreadNotificationCountByAgentId.get(agent.id) ?? 0,
-          om: runtimeMemory
-            ? {
-                generationCount: runtimeMemory.generationCount,
-                checkpointGeneration: runtimeMemory.checkpointGeneration,
-                recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
-                recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
-                overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
-                overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
-                observationTokenCount: runtimeMemory.metrics.observationTokenCount,
-                reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
-                reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
-                reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
-                checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
-              }
-            : null,
-          ltm: {
-            running: executionState === 'idle' && runtimeMemory !== null
-              ? runtimeMemory.ltm?.running ?? false
-              : false,
-            queued: executionState === 'idle' && runtimeMemory !== null
-              ? runtimeMemory.ltm?.queued ?? false
-              : false,
-            packageCount: longTermMemoryState?.packages.length ?? 0,
-          },
-        },
-        createdAt: agent.createdAt,
-        updatedAt: agent.updatedAt,
-      } as AgentListItem;
-    });
+    return result;
   }
 
-  async function getAgent(agentId: string): Promise<AgentDetail | null> {
+  function buildAgentListItem(
+    agent: Awaited<ReturnType<typeof db.query.agents.findMany>>[number],
+    ctx: {
+      notificationMap: Map<string, number>;
+      roleMap: Map<string, { id: string; name: string | null }>;
+      profileMap: Map<string, { id: string; name: string | null }>;
+      recentStepsByAgentId: Map<
+        string,
+        Awaited<ReturnType<typeof db.query.agentExecutionSteps.findMany>>
+      >;
+      runtimeMemoryByAgentId: Map<
+        string,
+        Awaited<ReturnType<typeof getRuntimeMemoryForAgent>> | null
+      >;
+      longTermMemoryStateByAgentId: Map<string, LongTermMemoryState | null>;
+      latestThreadDetailsByAgentId: Map<string, { preview: string | null; toolBadge: string | null }>;
+    },
+  ): AgentListItem {
+    const agentTyped = agent as Agent;
+    const loadedAgent = registry.get(agent.id) as
+      | { runner?: { getSnapshot: () => unknown } }
+      | undefined;
+    const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
+    const recentSteps = ctx.recentStepsByAgentId.get(agent.id) ?? [];
+    const runtimeMemory = ctx.runtimeMemoryByAgentId.get(agent.id) ?? null;
+    const longTermMemoryState = ctx.longTermMemoryStateByAgentId.get(agent.id) ?? null;
+    const latestThreadDetails = ctx.latestThreadDetailsByAgentId.get(agent.id) ?? {
+      preview: null,
+      toolBadge: null,
+    };
+    const executionState = agent.executionState ?? 'absent';
+
+    const averageStepIntervalMs =
+      recentSteps.length >= 2
+        ? Math.round(
+            recentSteps
+              .slice(0, 6)
+              .map((step, index, items) => {
+                if (index === items.length - 1) return null;
+                return Math.max(step.createdAt - items[index + 1].createdAt, 0);
+              })
+              .filter((v) => v !== null)
+              .reduce((sum, v, _, arr) => sum + (v as number) / arr.length, 0),
+          )
+        : null;
+
+    const firstStep = recentSteps[0] as
+      | {
+          createdAt?: number;
+          inputTokens?: number;
+          cachedInputTokens?: number;
+          outputTokens?: number;
+          costUsd?: number | null;
+        }
+      | undefined;
+    const lastStepTokens = firstStep
+      ? (firstStep.inputTokens ?? 0) +
+        ((firstStep as AgentExecutionStep).cachedInputTokens ?? 0) +
+        (firstStep.outputTokens ?? 0)
+      : null;
+
+    return {
+      agentId: agent.id,
+      name: agent.name ?? '',
+      description: agent.description ?? null,
+      role: agentTyped.roleId ?? null,
+      executionState,
+      lastExecutionError: agent.lastExecutionError ?? null,
+      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
+      roleName: (() => {
+        const roleId = agentTyped.roleId;
+        return roleId != null ? (ctx.roleMap.get(roleId)?.name ?? null) : null;
+      })(),
+      modelProfile: (() => {
+        const id = agentTyped.modelProfileId;
+        return id != null ? (ctx.profileMap.get(id)?.name ?? null) : null;
+      })(),
+      omModelProfile: (() => {
+        const id = agentTyped.omModelProfileId;
+        return id != null ? (ctx.profileMap.get(id)?.name ?? null) : null;
+      })(),
+      loaded: Boolean(loadedAgent),
+      runner: runnerSnapshot,
+      providerTypes: [],
+      overview: {
+        lastStepAt: firstStep?.createdAt ?? null,
+        lastStepContextTokens: firstStep?.inputTokens ?? null,
+        lastStepPreview: latestThreadDetails.preview,
+        lastToolBadge: latestThreadDetails.toolBadge,
+        lastStepTokens,
+        lastStepCostUsd: firstStep?.costUsd ?? null,
+        averageStepIntervalMs,
+        unreadNotificationCount: ctx.notificationMap.get(agent.id) ?? 0,
+        om: runtimeMemory
+          ? {
+              generationCount: runtimeMemory.generationCount,
+              checkpointGeneration: runtimeMemory.checkpointGeneration,
+              recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
+              recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
+              overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
+              overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
+              observationTokenCount: runtimeMemory.metrics.observationTokenCount,
+              reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
+              reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
+              reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
+              checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
+            }
+          : null,
+        ltm: {
+          running:
+            executionState === 'idle' && runtimeMemory !== null
+              ? runtimeMemory.ltm?.running ?? false
+              : false,
+          queued:
+            executionState === 'idle' && runtimeMemory !== null
+              ? runtimeMemory.ltm?.queued ?? false
+              : false,
+          packageCount: longTermMemoryState?.packages.length ?? 0,
+        },
+      },
+      createdAt: agent.createdAt,
+      updatedAt: agent.updatedAt,
+    } as AgentListItem;
+  }
+
+  async function listAgents(): Promise<AgentListItem[]> {
+    const { agentRows, notificationMap, roleMap, profileMap } =
+      await loadAgentListRowsAndMetadata();
+    const agentIds = agentRows.map((a) => a.id);
+
+    const [
+      recentStepsByAgentId,
+      runtimeMemoryByAgentId,
+      latestThreadDetailsByAgentId,
+      longTermMemoryStateByAgentId,
+    ] = await Promise.all([
+      loadRecentStepsByAgentId(agentIds),
+      loadRuntimeMemoryByAgentId(agentRows),
+      loadLatestThreadDetailsByAgentId(agentRows),
+      loadLongTermMemoryStateByAgentId(agentIds),
+    ]);
+
+    const ctx = {
+      notificationMap,
+      roleMap,
+      profileMap,
+      recentStepsByAgentId,
+      runtimeMemoryByAgentId,
+      longTermMemoryStateByAgentId,
+      latestThreadDetailsByAgentId,
+    };
+
+    return await Promise.all(
+      agentRows.map((agent) =>
+        buildAgentListItem(agent, ctx),
+      ),
+    );
+  }
+
+    async function getAgent(agentId: string): Promise<AgentDetail | null> {
     let agent;
     // eslint-disable-next-line prefer-const
     agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
