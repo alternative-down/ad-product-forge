@@ -124,7 +124,7 @@ export function createLlmSettingsStore(db: Database) {
   async function getResolvedDefaults(): Promise<{ primaryProfile: LlmProfileRecord; omProfile: LlmProfileRecord; hiringRhProfile: LlmProfileRecord; }> {
     const defaults = await getDefaults();
 
-    if (defaults === null || defaults === undefined) {
+    if (defaults == null) {
       llmSettingsDebug('warn', 'System LLM defaults not configured');
       throw new Error('System LLM defaults are not configured');
     }
@@ -274,7 +274,7 @@ export function createLlmSettingsStore(db: Database) {
     ]) {
       const profile = profileMap.get(profileId);
 
-      if (profile === null || profile === undefined) {
+      if (profile == null) {
         llmSettingsDebug('warn', 'LLM profile not found', { profileId });
         throw new Error(`LLM profile not found: ${profileId}`);
       }
