@@ -264,7 +264,31 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
   // coordinator below calls each helper in order and assembles the result.
   // Phase 2 of #6239: getAgent decomposed into 4 single-concern helpers (3 loaders + 1 builder). The
   // getAgent coordinator below calls each helper in order and assembles the result.
-  // Phases 3-4 (#6239) deferred to future cycles (data-access helpers, L735 cast cleanup).
+  // Phase 3 of #6239: data-access helpers extracted (loadAgentRows, loadUnreadNotificationCounts,
+  // loadAllRoles, loadAllProfiles). loadAgentListRowsAndMetadata remains as a thin aggregator that
+  // composes the four data-access helpers in a single Promise.all.
+  // Phase 4 (#6239) deferred to a future cycle (L735 cast cleanup).
+
+  async function loadAgentRows(): Promise<Awaited<ReturnType<typeof db.query.agents.findMany>>> {
+    return await db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] });
+  }
+
+  async function loadUnreadNotificationCounts(): Promise<Array<{ agentId: string; count: number }>> {
+    return await db
+      .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
+      .from(agentNotifications)
+      .where(sql`${agentNotifications.readAt} is null`)
+      .groupBy(agentNotifications.agentId)
+      .all();
+  }
+
+  async function loadAllRoles(): Promise<Awaited<ReturnType<typeof db.query.agentRoles.findMany>>> {
+    return await db.query.agentRoles.findMany();
+  }
+
+  async function loadAllProfiles(): Promise<Awaited<ReturnType<typeof db.query.llmProfiles.findMany>>> {
+    return await db.query.llmProfiles.findMany();
+  }
 
   async function loadAgentListRowsAndMetadata(): Promise<{
     agentRows: Awaited<ReturnType<typeof db.query.agents.findMany>>;
@@ -273,15 +297,10 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     profileMap: Map<string, { id: string; name: string | null }>;
   }> {
     const [agentRows, unreadNotificationRows, allRoles, allProfiles] = await Promise.all([
-      db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] }),
-      db
-        .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
-        .from(agentNotifications)
-        .where(sql`${agentNotifications.readAt} is null`)
-        .groupBy(agentNotifications.agentId)
-        .all(),
-      db.query.agentRoles.findMany(),
-      db.query.llmProfiles.findMany(),
+      loadAgentRows(),
+      loadUnreadNotificationCounts(),
+      loadAllRoles(),
+      loadAllProfiles(),
     ]);
     return {
       agentRows,
