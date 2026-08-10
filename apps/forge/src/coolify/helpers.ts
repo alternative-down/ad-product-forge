@@ -10,6 +10,19 @@ import { forgeDebug } from '@forge-runtime/core';
 import z from 'zod';
 import { ApplicationSchema, ApplicationEnvSchema } from './schemas';
 
+/**
+ * Module-local debug helper. Centralizes the coolify-helpers scope
+ * so call sites only specify the level, message, and context.
+ */
+function coolifyHelpersDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'coolify-helpers', level, message, context });
+}
+
+
 export function normalizeDomainHost(value: string | null | undefined): string | null {
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!value) {
@@ -33,7 +46,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
   if (Array.isArray(data)) {
     const parsed = z.array(schema).safeParse(data);
     if (parsed.success) return parsed.data;
-    forgeDebug({ scope: "coolify-helpers", level: "warn", message: "extractCollection: array parse failed", context: {} });
+    coolifyHelpersDebug('warn', "extractCollection: array parse failed", {});
     return [];
   }
 
@@ -56,7 +69,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
       if (Array.isArray(record[key])) {
         const parsed = z.array(schema).safeParse(record[key]);
         if (parsed.success) return parsed.data;
-        forgeDebug({ scope: "coolify-helpers", level: "warn", message: "extractCollection: record parse failed", context: { key } });
+        coolifyHelpersDebug('warn', "extractCollection: record parse failed", { key });
         return [];
       }
     }
@@ -92,27 +105,12 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
       return parsed.data;
     }
 
-    forgeDebug({
-      scope: 'coolify-helpers',
-      level: 'warn',
-      message: 'extractCollection: failed to extract item',
-      context: { dataType: typeof data },
-    });
-    forgeDebug({
-      scope: 'coolify-helpers',
-      level: 'warn',
-      message: 'extractItem: failed to extract item',
-      context: { dataType: typeof data },
-    });
+    coolifyHelpersDebug('warn', 'extractCollection: failed to extract item', { dataType: typeof data });
+    coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
     throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
   }
 
-  forgeDebug({
-    scope: 'coolify-helpers',
-    level: 'warn',
-    message: 'extractItem: failed to extract item',
-    context: { dataType: typeof data },
-  });
+  coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
   throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
 }
 
