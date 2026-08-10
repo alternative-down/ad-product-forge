@@ -19,6 +19,15 @@ export interface MiniMaxResponse<T> {
 
 type MiniMaxJsonResponse = Record<string, unknown>;
 
+function minimaxDebug(
+  level: "warn" | "error",
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: "minimax", level, message, context });
+}
+
+
 export class MiniMaxClient {
   private readonly apiKey: string;
 
@@ -47,12 +56,11 @@ export class MiniMaxClient {
       }
       return parsed as MiniMaxJsonResponse;
     } catch (error) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'Failed to parse MiniMax response',
-        context: { error: errorMsg(error) },
-      });
+      minimaxDebug(
+        'warn',
+        'Failed to parse MiniMax response',
+        { error: errorMsg(error) },
+      );
       return null;
     }
   }
@@ -88,23 +96,21 @@ export class MiniMaxClient {
             try {
               return this.parseJsonResponse(rawBody);
             } catch (error) {
-              forgeDebug({
-                scope: 'minimax',
-                level: 'warn',
-                message: 'Failed to parse MiniMax response',
-                context: { error: errorMsg(error) },
-              });
+              minimaxDebug(
+                'warn',
+                'Failed to parse MiniMax response',
+                { error: errorMsg(error) },
+              );
               return null;
             }
           })()
         : null;
 
       if (!response.ok) {
-        forgeDebug({
-          scope: 'minimax',
-          level: 'error',
-          message: 'MiniMax HTTP request failed',
-        });
+        minimaxDebug(
+          'error',
+          'MiniMax HTTP request failed',
+        );
         return this.buildError(
           String(response.status),
           this.extractErrorMessage(
@@ -116,11 +122,10 @@ export class MiniMaxClient {
       }
 
       if (!body || Array.isArray(body)) {
-        forgeDebug({
-          scope: 'minimax',
-          level: 'warn',
-          message: 'MiniMax response invalid',
-        });
+        minimaxDebug(
+          'warn',
+          'MiniMax response invalid',
+        );
         return this.buildError(
           'INVALID_RESPONSE',
           `MiniMax returned an invalid JSON payload for ${endpoint}`,
@@ -132,11 +137,10 @@ export class MiniMaxClient {
       if (baseResp) {
         const statusCode = this.getNumber(baseResp.status_code);
         if (statusCode !== undefined && statusCode !== 0) {
-          forgeDebug({
-            scope: 'minimax',
-            level: 'warn',
-            message: 'MiniMax business error',
-          });
+          minimaxDebug(
+            'warn',
+            'MiniMax business error',
+          );
           return this.buildError(
             String(statusCode),
             (this.getString(baseResp.status_msg) ?? '') || 'MiniMax returned an error response',
@@ -145,11 +149,10 @@ export class MiniMaxClient {
       }
 
       if (typeof body.baseRespStatusCode === 'number' && body.baseRespStatusCode !== 0) {
-        forgeDebug({
-          scope: 'minimax',
-          level: 'warn',
-          message: 'MiniMax business error',
-        });
+        minimaxDebug(
+          'warn',
+          'MiniMax business error',
+        );
         return this.buildError(
           String(body.baseRespStatusCode),
           (this.getString(body.baseRespStatusMsg) ?? '') || 'MiniMax returned an error response',
@@ -161,11 +164,10 @@ export class MiniMaxClient {
         data: body,
       };
     } catch (error) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'error',
-        message: 'MiniMax network error',
-      });
+      minimaxDebug(
+        'error',
+        'MiniMax network error',
+      );
       return this.buildError(
         'NETWORK_ERROR',
         error instanceof Error ? error.message : 'Network request failed',
@@ -262,11 +264,10 @@ export class MiniMaxClient {
     const audioHex = this.getString(this.getObject(response.data.data)?.audio);
 
     if (audioHex === undefined || audioHex === '') {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax TTS response missing audio data',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax TTS response missing audio data',
+      );
       return this.buildError('INVALID_RESPONSE', 'MiniMax TTS response missing audio data');
     }
 
@@ -307,11 +308,10 @@ export class MiniMaxClient {
     const apiData = this.getObject(response.data.data) ?? undefined;
 
     if (apiData == null) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax list_voices response missing data',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax list_voices response missing data',
+      );
       return this.buildError('INVALID_RESPONSE', 'MiniMax list_voices response missing data');
     }
 
@@ -389,11 +389,10 @@ export class MiniMaxClient {
 
     const images = this.getObject(response.data.data)?.image_base64;
     if (!Array.isArray(images) || images.length === 0) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax image generation response missing images',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax image generation response missing images',
+      );
       return this.buildError(
         'INVALID_RESPONSE',
         'MiniMax image generation response missing images',
@@ -431,11 +430,10 @@ export class MiniMaxClient {
 
     const taskId = this.getString(this.getObject(response.data.data)?.task_id);
     if (taskId === undefined || taskId === '') {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax video generation response missing task_id',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax video generation response missing task_id',
+      );
       return this.buildError(
         'INVALID_RESPONSE',
         'MiniMax video generation response missing task_id',
@@ -464,22 +462,20 @@ export class MiniMaxClient {
 
     const d = this.getObject(response.data.data);
     if (d == null) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax video query response missing data',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax video query response missing data',
+      );
       return this.buildError('INVALID_RESPONSE', 'MiniMax video query response missing data');
     }
 
     const outTaskId = this.getString(d.task_id);
     const status = this.getString(d.status);
     if (!outTaskId || !status) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax video query response missing task_id or status',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax video query response missing task_id or status',
+      );
       return this.buildError(
         'INVALID_RESPONSE',
         'MiniMax video query response missing task_id or status',
@@ -516,11 +512,10 @@ export class MiniMaxClient {
     const fileObj = this.getObject(response.data.data)?.file;
     const f = this.getObject(fileObj);
     if (f == null) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax file retrieve response missing file object',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax file retrieve response missing file object',
+      );
       return this.buildError(
         'INVALID_RESPONSE',
         'MiniMax file retrieve response missing file object',
@@ -529,11 +524,10 @@ export class MiniMaxClient {
 
     const downloadUrl = this.getString(f.download_url);
     if (downloadUrl === undefined || downloadUrl === '') {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'MiniMax file retrieve response missing download_url',
-      });
+      minimaxDebug(
+        'warn',
+        'MiniMax file retrieve response missing download_url',
+      );
       return this.buildError(
         'INVALID_RESPONSE',
         'MiniMax file retrieve response missing download_url',
@@ -555,11 +549,10 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
   const key = (apiKey ?? '') !== '' ? apiKey : process.env.MINIMAX_API_KEY;
 
   if (key === undefined || key === '') {
-    forgeDebug({
-      scope: 'minimax',
-      level: 'error',
-      message: 'createMinimaxManager: MINIMAX_API_KEY not set',
-    });
+    minimaxDebug(
+      'error',
+      'createMinimaxManager: MINIMAX_API_KEY not set',
+    );
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
 
@@ -575,11 +568,10 @@ export function createMiniMaxManager(config: {
     const cfg = await config.integrations.getMinimaxConfig();
 
     if (cfg == null) {
-      forgeDebug({
-        scope: 'minimax',
-        level: 'warn',
-        message: 'getClient MiniMax integration not configured',
-      });
+      minimaxDebug(
+        'warn',
+        'getClient MiniMax integration not configured',
+      );
       throw new Error('MiniMax integration is not configured');
     }
 
