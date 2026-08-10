@@ -62,12 +62,10 @@ export function buildHiringPrompt(input: HiringPromptInput): string {
     sections.push(
       [
         'Company context:',
-        input.companyName !== null && input.companyName !== undefined && input.companyName.trim()
+        input.companyName != null && input.companyName.trim()
           ? `Company name: ${input.companyName.trim()}`
           : null,
-        input.companyContext !== null &&
-        input.companyContext !== undefined &&
-        input.companyContext.trim()
+        input.companyContext != null && input.companyContext.trim()
           ? `Company information: ${input.companyContext.trim()}`
           : null,
       ]
@@ -76,11 +74,7 @@ export function buildHiringPrompt(input: HiringPromptInput): string {
     );
   }
 
-  if (
-    input.additionalContext !== null &&
-    input.additionalContext !== undefined &&
-    input.additionalContext.trim()
-  ) {
+  if (input.additionalContext != null && input.additionalContext.trim()) {
     sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);
   }
 
