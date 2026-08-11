@@ -24,6 +24,7 @@
  * - apps/forge/src/admin/routes/system/reset.ts (D42 cycle 25, Varek, NEW domain admin-system-reset)
  * - apps/forge/src/schedules/notifications/wake-content.ts (D42 cycle 26, Varek, NEW domain schedule-helpers)
  * - apps/forge/src/agents/agent-home-metrics-thread-helpers.ts (D42 cycle 27, Varek, NEW domain agent-home-metrics, L#NN-50 #50 LOG RETENTION SPREAD)
+ * - apps/forge/src/github/ops/app-lifecycle.ts (D42 cycle 28, Varek, NEW domain github-manager-app-lifecycle)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
  * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
@@ -123,6 +124,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // D42 cycle 27 agentHomeMetricsDebug: L#NN-50 #50 SPREAD helper pattern
     // expected=1 because helper body has 1 inline forgeDebug call
     path: 'agents/agent-home-metrics-thread-helpers.ts',
+    expectedOneObjectArgCalls: 1,
+  },
+  {
+    // D42 cycle 28 appLifecycleOpsDebug: module-local helper pattern
+    // expected=1 because helper body has 1 inline forgeDebug call
+    path: 'github/ops/app-lifecycle.ts',
     expectedOneObjectArgCalls: 1,
   },
 ];

@@ -57,6 +57,14 @@ export interface AppLifecycleOps {
   }>;
 }
 
+const appLifecycleOpsDebug = (
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void => {
+  forgeDebug({ scope: 'github-manager-app-lifecycle', level, message, context });
+};
+
 export function createAppLifecycleOps(
   ctx: OpsContext,
   deps: AppLifecycleOpsDeps,
@@ -67,11 +75,7 @@ export function createAppLifecycleOps(
     const githubConfig = await ctx.config.integrations.getGitHubConfig();
 
     if (!githubConfig) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub integration not configured',
-      });
+      appLifecycleOpsDebug('warn', 'GitHub integration not configured');
       throw new Error('GitHub integration is not configured');
     }
 
@@ -96,12 +100,7 @@ export function createAppLifecycleOps(
     const existing = await credentials.getCredentials(input.agentId);
 
     if (existing !== null && existing !== undefined) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App already exists for agent',
-        context: { agentId: input?.agentId },
-      });
+      appLifecycleOpsDebug('warn', 'GitHub App already exists for agent', { agentId: input?.agentId });
       throw new Error(`GitHub App already exists for agent ${input.agentId}`);
     }
 
@@ -151,12 +150,7 @@ export function createAppLifecycleOps(
     const manifestConfig = githubAppManifestConfigSchema.parse(input.manifestConfig);
 
     if (!existingCredentials) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App does not exist for agent',
-        context: { agentId: input?.agentId },
-      });
+      appLifecycleOpsDebug('warn', 'GitHub App does not exist for agent', { agentId: input?.agentId });
       throw new Error(`GitHub App does not exist for agent ${input.agentId}`);
     }
 
@@ -178,12 +172,7 @@ export function createAppLifecycleOps(
       const credentials = ctx.parseCredentials(providerRow.encryptedCredentials);
 
       if (!credentials) {
-        forgeDebug({
-          scope: 'github-manager',
-          level: 'warn',
-          message: 'loadAllAgents: skipped agent due to unparseable credentials',
-          context: { agentId: providerRow.agentId },
-        });
+        appLifecycleOpsDebug('warn', 'loadAllAgents: skipped agent due to unparseable credentials', { agentId: providerRow.agentId });
         continue;
       }
 
