@@ -16,6 +16,33 @@ import {
 } from '../communication/provider-loader';
 
 
+
+/**
+ * Module-local debug helper for agent-loader-data.ts.
+ * Bakes in scope=agent-loader-data so call sites cannot typo the scope string.
+ *
+ * Pattern: L#NN-YYY v4 (single-scope helper extraction).
+ *   - 2 forgeDebug call-sites in this file all use scope=agent-loader-data
+ *
+ * L#NN-50 #50 LOG RETENTION discipline (codified):
+ *   - Spread context fields to TOP-LEVEL of forgeDebug call, NOT nested in context
+ *
+ * Usage:
+ *   agentLoaderDataDebug('warn', 'loadAgentData: agent not in registry', { agentId: config.agentId });
+ */
+function agentLoaderDataDebug(
+  level: 'warn',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'agent-loader-data',
+    level,
+    message,
+    ...context,
+  });
+}
+
 const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
   'internal-chat': true,
   discord: true,
@@ -31,22 +58,12 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
   });
 
   if (agent === undefined) {
-    forgeDebug({
-      scope: 'agent-loader-data',
-      level: 'warn',
-      message: 'loadAgentData: agent not in registry',
-      context: { agentId: config.agentId },
-    });
+    agentLoaderDataDebug('warn', 'loadAgentData: agent not in registry', { agentId: config.agentId });
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
   if (agent.roleId === null || agent.roleId === undefined) {
-    forgeDebug({
-      scope: 'agent-loader-data',
-      level: 'warn',
-      message: 'loadAgentData: agent missing roleId',
-      context: { agentId: config.agentId },
-    });
+    agentLoaderDataDebug('warn', 'loadAgentData: agent missing roleId', { agentId: config.agentId });
     throw new Error(`Agent is missing roleId: ${config.agentId}`);
   }
 
