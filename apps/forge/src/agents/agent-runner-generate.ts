@@ -44,7 +44,7 @@ import {
 import {
   buildIterationFeedback,
 } from './agent-runner-feedback';
-import { forgeDebug } from '@forge-runtime/core';
+import { agentRunnerDebug } from './agent-runner-debug';
 import { errorMsg } from './error-formatting';
 import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
 
@@ -246,12 +246,7 @@ export async function generateWithTimeoutRetries(
     });
 
     try {
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'debug',
-        runtimeId: deps.runtime.id,
-        message: 'preparing runtime context before generate',
-      });
+      agentRunnerDebug('debug', 'preparing runtime context before generate', { runtimeId: deps.runtime.id });
       const agentContextInstructions = await deps.loadAgentContextInstructions(
         deps.currentRuntime,
         deps.db,
@@ -259,18 +254,8 @@ export async function generateWithTimeoutRetries(
       const systemPrompt = buildStepSystemPrompt({
         agentContextInstructions,
       });
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'debug',
-        runtimeId: deps.runtime.id,
-        message: 'runtime context ready before generate',
-      });
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'info',
-        runtimeId: deps.runtime.id,
-        message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
-      });
+      agentRunnerDebug('debug', 'runtime context ready before generate', { runtimeId: deps.runtime.id });
+      agentRunnerDebug('info', `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, { runtimeId: deps.runtime.id });
 
       const result = await Promise.race<RuntimeGenerateResult | null>([
         deps.currentRuntime.agent.generate(effectivePromptText, {
@@ -350,12 +335,7 @@ export async function generateWithTimeoutRetries(
         return undefined;
       }
 
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'info',
-        runtimeId: deps.runtime.id,
-        message: `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
-      });
+      agentRunnerDebug('info', `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, { runtimeId: deps.runtime.id });
 
       return {
         text: result?.text ?? '',
@@ -373,22 +353,11 @@ export async function generateWithTimeoutRetries(
       }
 
       if (isAbortedError(err)) {
-        forgeDebug({
-          scope: 'agent-runner',
-          level: 'info',
-          runtimeId: deps.runtime.id,
-          message: 'generate aborted (stale or cancelled)',
-        });
+        agentRunnerDebug('info', 'generate aborted (stale or cancelled)', { runtimeId: deps.runtime.id });
         return undefined;
       }
 
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'error',
-        runtimeId: deps.runtime.id,
-        message: 'generate failed',
-        context: { error: errorMsg(err) },
-      });
+      agentRunnerDebug('error', 'generate failed', { runtimeId: deps.runtime.id, error: errorMsg(err) });
 
       // Back off on retryable error
       deps.setBackoffMs(GENERATE_TIMEOUT_BACKOFF_MS);

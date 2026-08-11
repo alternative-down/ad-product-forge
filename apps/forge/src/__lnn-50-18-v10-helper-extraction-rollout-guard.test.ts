@@ -19,6 +19,7 @@
  * - apps/forge/src/github/ops/labels.ts (D42 cycle 17, Varek)
  * - apps/forge/src/agents/create-forge-agent.ts (D42 cycle 18, Varek, INLINE pattern)
  * - apps/forge/src/agents/ltm/recall/index-manager.ts (D42 cycle 20, Varek, inline pattern)
+ * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
  * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
  *
  * CANDIDATES (uses 1-object-arg internally, NOT yet migrated):
@@ -82,6 +83,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
   {
     // D42 cycle 23 topUpAgentContractDebug: separate-file pattern, spreads context to top-level
     path: 'agents/top-up-agent-contract.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D42 cycle 19 agentRunnerDebug: spreads context to top-level (L#NN-50 #50 LOG RETENTION)
+    path: 'agents/agent-runner-generate.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];
