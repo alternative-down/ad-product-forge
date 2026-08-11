@@ -16,6 +16,7 @@
  * - apps/forge/src/scripts/init-agent-registry.ts (D41 #6389, Kaelen)
  * - apps/forge/src/database/migrate.ts (D41 #6390, Kaelen)
  * - apps/forge/src/agents/hire-agent.ts (D42 cycle 16, Varek)
+ * - apps/forge/src/github/ops/labels.ts (D42 cycle 17, Varek)
  *
  * CANDIDATES (uses 1-object-arg internally, NOT yet migrated):
  * - apps/forge/src/capabilities/store.ts (D37 #6270, Aldric)
@@ -57,6 +58,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
   {
     // D42 cycle 16 hireAgentDebug: uses 3-positional-arg internally
     path: 'agents/hire-agent.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D42 cycle 17 labelsDebug: uses 3-positional-arg internally
+    path: 'github/ops/labels.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];

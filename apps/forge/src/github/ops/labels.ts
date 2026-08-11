@@ -3,10 +3,9 @@
  * addIssueLabels, removeIssueLabels
  */
 import type { OpsContext } from './context';
-import { forgeDebug } from '@forge-runtime/core';
+import { labelsDebug } from './labels-debug';
 import { errorMsg } from '../../agents/error-formatting';
 
-const SCOPE = 'github-ops-labels';
 
 export function createLabelsOps(ctx: OpsContext) {
   async function listLabels(
@@ -32,12 +31,7 @@ export function createLabelsOps(ctx: OpsContext) {
         default: label.default,
       }));
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'listLabels failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'listLabels failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
@@ -69,12 +63,7 @@ export function createLabelsOps(ctx: OpsContext) {
         default: response.data.default,
       };
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'createLabel failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'createLabel failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
@@ -108,12 +97,7 @@ export function createLabelsOps(ctx: OpsContext) {
         default: response.data.default,
       };
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'updateLabel failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'updateLabel failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
@@ -136,12 +120,7 @@ export function createLabelsOps(ctx: OpsContext) {
       });
       return { success: true };
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'deleteLabel failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'deleteLabel failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
@@ -174,12 +153,7 @@ export function createLabelsOps(ctx: OpsContext) {
         default: label.default,
       }));
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'addIssueLabels failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'addIssueLabels failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
@@ -207,12 +181,7 @@ export function createLabelsOps(ctx: OpsContext) {
       );
       return { success: true };
     } catch (err) {
-      forgeDebug({
-        scope: SCOPE,
-        level: 'error',
-        message: 'removeIssueLabels failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      labelsDebug('error', 'removeIssueLabels failed', { agentId, error: errorMsg(err) });
       throw err;
     }
   }
