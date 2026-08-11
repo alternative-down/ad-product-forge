@@ -19,6 +19,7 @@
  * - apps/forge/src/github/ops/labels.ts (D42 cycle 17, Varek)
  * - apps/forge/src/agents/create-forge-agent.ts (D42 cycle 18, Varek, INLINE pattern)
  * - apps/forge/src/agents/ltm/recall/index-manager.ts (D42 cycle 20, Varek, inline pattern)
+ * - apps/forge/src/github/ops/milestones.ts (D42 cycle 24, Varek, INLINE ctx.forgeDebug wrapper pattern)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
  * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
@@ -95,6 +96,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // D42 cycle 21 workspaceSkillArchiveDebug: spreads context to top-level (L#NN-50 #50 LOG RETENTION)
     path: 'agents/workspace-skill-archive.ts',
     expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D42 cycle 24 milestonesDebug: INLINE ctx.forgeDebug wrapper pattern
+    // expected=1 because helper body has 1 ctx.forgeDebug call
+    path: 'github/ops/milestones.ts',
+    expectedOneObjectArgCalls: 1,
   },
 ];
 
