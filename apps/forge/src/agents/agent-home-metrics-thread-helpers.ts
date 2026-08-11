@@ -102,13 +102,7 @@ export async function readLatestThreadDetails(
       await closeLibsqlClient(client);
     }
   } catch (error) {
-    forgeDebug({
-      scope: 'agent-home-metrics',
-      level: 'error',
-      agentId,
-      message: 'Failed to load latest thread details',
-      context: { error: errorMsg(error) },
-    });
+    agentHomeMetricsDebug('error', 'Failed to load latest thread details', { agentId, error: errorMsg(error) });
     return { preview: null, toolBadge: null };
   }
 }
@@ -143,6 +137,14 @@ export type RuntimeMemory = {
  * Returns null if the agent is not found or any read fails. Errors are logged
  * via forgeDebug and silenced to avoid surfacing in the home metrics page.
  */
+const agentHomeMetricsDebug = (
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void => {
+  forgeDebug({ scope: 'agent-home-metrics', level, message, ...context });
+};
+
 export async function readAgentRuntimeMemory(
   db: Database,
   workspaceBasePath: string,
@@ -154,12 +156,7 @@ export async function readAgentRuntimeMemory(
       where: eq(agents.id, agentId),
     });
   } catch (err) {
-    forgeDebug({
-      scope: 'agent-home-metrics',
-      level: 'error',
-      message: 'readAgentRuntimeMemory: read agent failed',
-      context: { agentId, error: errorMsg(err) },
-    });
+    agentHomeMetricsDebug('error', 'readAgentRuntimeMemory: read agent failed', { agentId, error: errorMsg(err) });
     throw err;
   }
 
@@ -191,13 +188,7 @@ export async function readAgentRuntimeMemory(
       });
     } catch (error) {
       // Migration failure is non-fatal: state may already be up-to-date or in a compatible format
-      forgeDebug({
-        scope: 'agent-home-metrics',
-        level: 'warn',
-        agentId,
-        message: 'Legacy checkpointed OM state migration failed',
-        context: { error: errorMsg(error) },
-      });
+      agentHomeMetricsDebug('warn', 'Legacy checkpointed OM state migration failed', { agentId, error: errorMsg(error) });
     }
 
     const operationalMemoryState = await readOperationalMemoryState({
@@ -231,7 +222,7 @@ export async function readAgentRuntimeMemory(
       },
     };
   } catch (err) {
-    forgeDebug({ scope: 'agent-home-metrics', level: 'debug', message: 'getMetricsThreadState failed: ' + errorMsg(err) });
+    agentHomeMetricsDebug('debug', 'getMetricsThreadState failed: ' + errorMsg(err));
     return null;
   } finally {
     await closeLibsqlClient(client);
