@@ -1,16 +1,19 @@
 import { forgeDebug } from "@forge-runtime/core";
+const scheduleHelpersDebug = (
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void => {
+  forgeDebug({ scope: 'schedule-helpers', level, message, context });
+};
+
 
 
 export function parseScheduleDate(value: string): number {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
-    forgeDebug({
-      scope: 'schedule-helpers',
-      level: 'warn',
-      message: 'parseScheduleDate: invalid date',
-      context: { scheduledDate: value },
-    });
+    scheduleHelpersDebug('warn', 'parseScheduleDate: invalid date', { scheduledDate: value });
     throw new Error(`Invalid scheduledDate: ${value}`);
   }
 
@@ -23,20 +26,12 @@ export function validateScheduleShape(input: {
   scheduledDate?: number;
 }) {
   if (input.scheduleType === 'cron' && (input.cronExpression == null || input.cronExpression === '')) {
-    forgeDebug({
-      scope: 'schedule-helpers',
-      level: 'warn',
-      message: 'validateScheduleShape: cronExpression required for cron',
-    });
+    scheduleHelpersDebug('warn', 'validateScheduleShape: cronExpression required for cron');
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
   if (input.scheduleType === 'date' && (input.scheduledDate == null || input.scheduledDate === 0)) {
-    forgeDebug({
-      scope: 'schedule-helpers',
-      level: 'warn',
-      message: 'validateScheduleShape: scheduledDate required for date',
-    });
+    scheduleHelpersDebug('warn', 'validateScheduleShape: scheduledDate required for date');
     throw new Error('scheduledDate is required when scheduleType is date');
   }
 }
@@ -51,12 +46,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
   }
 
   if (scheduledDate <= Date.now()) {
-    forgeDebug({
-      scope: 'schedule-helpers',
-      level: 'warn',
-      message: 'assertFutureScheduledDate: must be in future',
-      context: { scheduledDate },
-    });
+    scheduleHelpersDebug('warn', 'assertFutureScheduledDate: must be in future', { scheduledDate });
     throw new Error('scheduledDate must be in the future');
   }
 }
