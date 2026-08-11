@@ -19,6 +19,7 @@
  * - apps/forge/src/github/ops/labels.ts (D42 cycle 17, Varek)
  * - apps/forge/src/agents/create-forge-agent.ts (D42 cycle 18, Varek, INLINE pattern)
  * - apps/forge/src/agents/ltm/recall/index-manager.ts (D42 cycle 20, Varek, inline pattern)
+ * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
  *
  * CANDIDATES (uses 1-object-arg internally, NOT yet migrated):
  * - apps/forge/src/capabilities/store.ts (D37 #6270, Aldric)
@@ -77,6 +78,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // expected=1 because helper body has 1 inline forgeDebug call
     path: 'agents/ltm/recall/index-manager.ts',
     expectedOneObjectArgCalls: 1,
+  },
+  {
+    // D42 cycle 23 topUpAgentContractDebug: separate-file pattern, spreads context to top-level
+    path: 'agents/top-up-agent-contract.ts',
+    expectedOneObjectArgCalls: 0,
   },
 ];
 
