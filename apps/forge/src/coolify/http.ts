@@ -3,7 +3,7 @@
  * Extracted from coolify/manager.ts to separate transport concerns.
  */
 
-import { forgeDebug } from '@forge-runtime/core';
+import { coolifyHttpDebug } from './http-debug';
 import { errorMsg } from '../agents/error-formatting';
 import { removeUndefined, safeJsonParse, buildRequestError } from './helpers';
 import { getProviderConfig } from './provider-config';
@@ -19,12 +19,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
     try {
       providerConfig = await getProviderConfig(config.integrations);
     } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: getProviderConfig failed',
-        context: { method, path, error: errorMsg(err) },
-      });
+      coolifyHttpDebug('error', 'requestJson: getProviderConfig failed', { method, path, error: errorMsg(err) });
       throw err;
     }
     let response;
@@ -39,12 +34,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
         body: body ? JSON.stringify(removeUndefined(body)) : undefined,
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: fetch failed',
-        context: { method, path, error: errorMsg(err) },
-      });
+      coolifyHttpDebug('error', 'requestJson: fetch failed', { method, path, error: errorMsg(err) });
       throw err;
     }
 
@@ -52,23 +42,13 @@ export function createHttpTransport(config: HttpTransportConfig) {
     try {
       text = await response.text();
     } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: response.text() failed',
-        context: { method, path, error: errorMsg(err) },
-      });
+      coolifyHttpDebug('error', 'requestJson: response.text() failed', { method, path, error: errorMsg(err) });
       throw err;
     }
     const data = text.length > 0 ? safeJsonParse(text) : null;
 
     if (!response.ok) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: HTTP error',
-        context: { method, path, status: response.status },
-      });
+      coolifyHttpDebug('error', 'requestJson: HTTP error', { method, path, status: response.status });
       throw new Error(buildRequestError(method, path, response.status, data ?? text));
     }
 
