@@ -1,5 +1,5 @@
-import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
+import { migrationsDebug } from './migrations-debug';
 import 'node:process';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -66,12 +66,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
   const databasePath = getAppDatabasePath();
 
   try {
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Starting migration run',
-      context: { databasePath, cwd: process.cwd(), migrationsFolder },
-    });
+    migrationsDebug('info', 'Starting migration run', { databasePath, cwd: process.cwd(), migrationsFolder });
 
     // Ensure the __drizzle_migrations bookkeeping table exists. We use the
     // same shape as drizzle's migrator so existing deployments continue to
@@ -89,12 +84,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
     const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
     const allMigrations = readMigrationFiles({ migrationsFolder });
 
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Applied rows before migrate',
-      context: { appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' } },
-    });
+    migrationsDebug('info', 'Applied rows before migrate', { appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' } });
 
     // Apply each pending migration one statement at a time.
     //
@@ -130,40 +120,21 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
       appliedCount += 1;
     }
 
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Migrations completed',
-      context: {
+    migrationsDebug('info', 'Migrations completed', {
         appliedCount,
         appliedHashes,
         totalMigrations: allMigrations.length,
-      },
-    });
+      });
 
     const dbMigrationsAfter = await queryAppliedMigrations(db, 10);
 
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Applied rows after migrate',
-      context: {
+    migrationsDebug('info', 'Applied rows after migrate', {
         appliedRows: Array.isArray(dbMigrationsAfter) ? dbMigrationsAfter : { error: 'query failed' },
         newlyApplied: appliedCount,
-      },
-    });
-    forgeDebug({
-      scope: 'migrations',
-      level: 'info',
-      message: 'Migrations completed successfully',
-    });
+      });
+    migrationsDebug('info', 'Migrations completed successfully');
   } catch (error) {
-    forgeDebug({
-      scope: 'migrations',
-      level: 'error',
-      message: 'Failed to run migrations',
-      context: { error: errorMsg(error) },
-    });
+    migrationsDebug('error', 'Failed to run migrations', { error: errorMsg(error) });
     let appliedRowsAtFailure: unknown = { error: 'pre-init' };
     try {
       appliedRowsAtFailure = (await db.all<{ id: number; hash: string; createdAt: number }>(sql`
@@ -178,12 +149,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
     } catch (innerError) {
       appliedRowsAtFailure = { error: errorMsg(innerError) };
     }
-    forgeDebug({
-      scope: 'migrations',
-      level: 'error',
-      message: 'Applied rows at failure',
-      context: { appliedRows: appliedRowsAtFailure },
-    });
+    migrationsDebug('error', 'Applied rows at failure', { appliedRows: appliedRowsAtFailure });
     throw error;
   }
 }

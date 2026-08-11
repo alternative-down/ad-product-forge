@@ -197,7 +197,7 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
 describe('L#19 tripwire: forgeDebug consolidation (#5641)', () => {
   test('source has exactly one combined "Starting migration run" call (replaces 4 startup calls)', () => {
     const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-    const matches = source.match(/forgeDebug\(\{[\s\S]*?message:\s*['"]Starting migration run['"]/g);
+    const matches = source.match(/(?:forgeDebug\(\{[\s\S]*?message:\s*['"]Starting migration run['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Starting migration run['"])/g);
     expect(matches).toHaveLength(1);
   });
 
@@ -216,7 +216,7 @@ describe('L#19 tripwire: forgeDebug consolidation (#5641)', () => {
 
   test('source emits one "Migrations completed" summary with appliedHashes context', () => {
     const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-    expect(source).toMatch(/message:\s*['"]Migrations completed['"]/);
+    expect(source).toMatch(/(?:message:\s*['"]Migrations completed['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Migrations completed['"])/);
     expect(source).toMatch(/appliedHashes/);
   });
 
