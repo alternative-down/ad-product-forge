@@ -9,7 +9,7 @@ import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
+import { internalChatServiceHelpersDebug } from './internal-chat-service-helpers-debug';
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -107,12 +107,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   async function getRequiredExternalAccount(accountId: string): Promise<HelperAccount> {
     const account = await accounts.getRequiredAccount(accountId);
     if (account.agentId !== null && account.agentId !== undefined) {
-      forgeDebug({
-        scope: 'internal-chat-service-helpers',
-        level: 'warn',
-        message: 'getRequiredExternalAccount: not found',
-        context: { accountId },
-      });
+      internalChatServiceHelpersDebug('warn', 'getRequiredExternalAccount: not found', { accountId });
       throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
     }
     return account;
@@ -121,12 +116,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   async function getRequiredAccountBySlug(slug: string): Promise<HelperAccount> {
     const account = await accounts.getAccountBySlug(slug);
     if (!account) {
-      forgeDebug({
-        scope: 'internal-chat-service-helpers',
-        level: 'warn',
-        message: 'getRequiredInternalChatAccount: not found',
-        context: { slug },
-      });
+      internalChatServiceHelpersDebug('warn', 'getRequiredInternalChatAccount: not found', { slug });
       throw new InternalChatAccountNotFoundError(slug);
     }
     return account;
@@ -154,12 +144,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       ),
     })) as { accountId: string; conversationId: string } | null;
     if (!membership) {
-      forgeDebug({
-        scope: 'internal-chat-service-helpers',
-        level: 'warn',
-        message: 'getRequiredConversation: not found',
-        context: { conversationId },
-      });
+      internalChatServiceHelpersDebug('warn', 'getRequiredConversation: not found', { conversationId });
       throw new ConversationNotFoundError(conversationId);
     }
   }
@@ -188,12 +173,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       where: eq(internalChatConversations.id, conversationId),
     });
     if (conversation === null || conversation === undefined) {
-      forgeDebug({
-        scope: 'internal-chat-service-helpers',
-        level: 'warn',
-        message: 'getRequiredConversation: not found',
-        context: { conversationId },
-      });
+      internalChatServiceHelpersDebug('warn', 'getRequiredConversation: not found', { conversationId });
       throw new ConversationNotFoundError(conversationId);
     }
     return conversation;

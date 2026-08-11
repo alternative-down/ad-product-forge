@@ -26,6 +26,7 @@
  * - apps/forge/src/agents/agent-home-metrics-thread-helpers.ts (D42 cycle 27, Varek, NEW domain agent-home-metrics, L#NN-50 #50 LOG RETENTION SPREAD)
  * - apps/forge/src/github/ops/app-lifecycle.ts (D42 cycle 28, Varek, NEW domain github-manager-app-lifecycle)
  * - apps/forge/src/coolify/http.ts (D42 cycle 31, Varek, separate-file pattern, NEW domain coolify-http)
+ - apps/forge/src/communication/internal-chat-service-helpers.ts (D42 cycle 32, Varek, separate-file pattern, NEW domain internal-chat-service-helpers)
  - apps/forge/src/github/ops/routing.ts (D42 cycle 29, Varek, INLINE ctx.forgeDebug wrapper pattern, 4th github/ops/)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
@@ -150,6 +151,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // D42 cycle 31 coolifyHttpDebug: separate-file pattern
     // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
     path: 'coolify/http.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D42 cycle 32 internalChatServiceHelpersDebug: separate-file pattern
+    // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
+    path: 'communication/internal-chat-service-helpers.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];
