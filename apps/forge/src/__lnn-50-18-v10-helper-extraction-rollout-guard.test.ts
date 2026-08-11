@@ -139,6 +139,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'github/ops/routing.ts',
     expectedOneObjectArgCalls: 1,
   },
+  {
+    // D42 cycle 30 credentialsOpsDebug: INLINE ctx.forgeDebug wrapper pattern
+    // expected=1 because helper body has 1 inline ctx.forgeDebug call
+    path: 'github/ops/credentials.ts',
+    expectedOneObjectArgCalls: 1,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [

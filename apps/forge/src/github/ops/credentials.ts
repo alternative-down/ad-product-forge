@@ -10,7 +10,6 @@
  * - parseCredentials: decrypt and validate stored credentials
  */
 import { and, eq } from 'drizzle-orm';
-import { forgeDebug } from '@forge-runtime/core';
 import { encryptSecret, decryptSecret } from '../../encryption/crypto';
 import { createId } from '../../utils/id';
 import { NewAgentProvider, agentProviders } from '../../database/schema';
@@ -30,6 +29,14 @@ export interface CredentialsOps {
 }
 
 export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
+  const credentialsOpsDebug = (
+    level: 'warn' | 'error',
+    message: string,
+    context?: Record<string, unknown>,
+  ): void => {
+    ctx.forgeDebug({ scope: 'github-manager', level, message, context });
+  };
+
   async function getCredentials(agentId: string) {
     const provider = await ctx.config.db.query.agentProviders.findFirst({
       where: and(
@@ -49,12 +56,7 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
     const credentials = await getCredentials(agentId);
 
     if (!credentials || credentials.status !== 'active') {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App not active for agent',
-        context: { agentId },
-      });
+      credentialsOpsDebug('warn', 'GitHub App not active for agent', { agentId });
       throw new Error(`GitHub App not active for agent ${agentId}`);
     }
 
@@ -95,11 +97,7 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
       const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
       return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
     } catch (error) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'error',
-        message: 'Failed to parse GitHub credentials: ' + errorMsg(error),
-      });
+      credentialsOpsDebug('error', 'Failed to parse GitHub credentials: ' + errorMsg(error));
       return null;
     }
   }
