@@ -25,7 +25,8 @@
  * - apps/forge/src/schedules/notifications/wake-content.ts (D42 cycle 26, Varek, NEW domain schedule-helpers)
  * - apps/forge/src/agents/agent-home-metrics-thread-helpers.ts (D42 cycle 27, Varek, NEW domain agent-home-metrics, L#NN-50 #50 LOG RETENTION SPREAD)
  * - apps/forge/src/github/ops/app-lifecycle.ts (D42 cycle 28, Varek, NEW domain github-manager-app-lifecycle)
- * - apps/forge/src/github/ops/routing.ts (D42 cycle 29, Varek, INLINE ctx.forgeDebug wrapper pattern, 4th github/ops/)
+ * - apps/forge/src/coolify/http.ts (D42 cycle 31, Varek, separate-file pattern, NEW domain coolify-http)
+ - apps/forge/src/github/ops/routing.ts (D42 cycle 29, Varek, INLINE ctx.forgeDebug wrapper pattern, 4th github/ops/)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
  * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
@@ -144,6 +145,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // expected=1 because helper body has 1 inline ctx.forgeDebug call
     path: 'github/ops/credentials.ts',
     expectedOneObjectArgCalls: 1,
+  },
+  {
+    // D42 cycle 31 coolifyHttpDebug: separate-file pattern
+    // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
+    path: 'coolify/http.ts',
+    expectedOneObjectArgCalls: 0,
   },
 ];
 
