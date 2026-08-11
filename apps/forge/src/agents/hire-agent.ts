@@ -26,7 +26,7 @@ import { getInternalAgentRegistry } from './internal-agent-registry';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import type { GitHubAppManager } from '../github/manager';
-import { forgeDebug } from '@forge-runtime/core';
+import { hireAgentDebug } from './hire-agent-debug';
 
 import { z } from 'zod';
 
@@ -95,24 +95,14 @@ async function rollbackHire(
     try {
       await schedules.removeAgent(agentId);
     } catch (e) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'warn',
-        message: 'Rollback: removeAgent failed',
-        context: { agentId, error: errorMsg(e) },
-      });
+      hireAgentDebug('warn', 'Rollback: removeAgent failed', { agentId, error: errorMsg(e) });
     }
   }
 
   try {
     await internalChat.deleteAgentAccount({ agentId });
   } catch (e) {
-    forgeDebug({
-      scope: 'hire-agent',
-      level: 'warn',
-      message: 'Rollback: deleteAgentAccount failed',
-      context: { agentId, error: errorMsg(e) },
-    });
+    hireAgentDebug('warn', 'Rollback: deleteAgentAccount failed', { agentId, error: errorMsg(e) });
   }
 
   // Delegate DB record + email cleanup to shared helper
@@ -140,14 +130,9 @@ async function rollbackHireDbAndEmail(
     try {
       await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
     } catch (e) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'warn',
-        message: 'Rollback: deleteMailboxByAddress failed',
-        context: {
-          address: provisionedMailbox.address,
-          error: errorMsg(e),
-        },
+      hireAgentDebug('warn', 'Rollback: deleteMailboxByAddress failed', {
+        address: provisionedMailbox.address,
+        error: errorMsg(e),
       });
     }
   }
@@ -248,12 +233,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         roleDescription: validated.roleDescription,
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'error',
-        message: 'registerAgentAccount failed during hire',
-        context: { agentId, error: errorMsg(err) },
-      });
+      hireAgentDebug('error', 'registerAgentAccount failed during hire', { agentId, error: errorMsg(err) });
       // No external ops succeeded yet — undo DB records and email only
       await rollbackHireDbAndEmail(agentId, provisionedMailbox, validated.emailMailboxes, tx);
 
@@ -263,12 +243,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
     try {
       await validated.schedules.createHeartbeatSchedule(agentId);
     } catch (err) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'error',
-        message: 'createHeartbeatSchedule failed during hire',
-        context: { agentId, error: errorMsg(err) },
-      });
+      hireAgentDebug('error', 'createHeartbeatSchedule failed during hire', { agentId, error: errorMsg(err) });
       await rollbackHire(
         agentId,
         provisionedMailbox,
@@ -295,12 +270,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         internalChat: validated.internalChat,
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'error',
-        message: 'loadAgent failed during hire',
-        context: { agentId, error: errorMsg(err) },
-      });
+      hireAgentDebug('error', 'loadAgent failed during hire', { agentId, error: errorMsg(err) });
       await rollbackHire(
         agentId,
         provisionedMailbox,
@@ -318,12 +288,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
     try {
       await getInternalAgentRegistry().add(db, runtime);
     } catch (err) {
-      forgeDebug({
-        scope: 'hire-agent',
-        level: 'error',
-        message: 'registry.add failed during hire',
-        context: { agentId, error: errorMsg(err) },
-      });
+      hireAgentDebug('error', 'registry.add failed during hire', { agentId, error: errorMsg(err) });
       await rollbackHire(
         agentId,
         provisionedMailbox,

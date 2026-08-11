@@ -15,6 +15,7 @@
  * - apps/forge/src/email/migadu-manager.ts (D38 #6300, Aldric)
  * - apps/forge/src/scripts/init-agent-registry.ts (D41 #6389, Kaelen)
  * - apps/forge/src/database/migrate.ts (D41 #6390, Kaelen)
+ * - apps/forge/src/agents/hire-agent.ts (D42 cycle 16, Varek)
  *
  * CANDIDATES (uses 1-object-arg internally, NOT yet migrated):
  * - apps/forge/src/capabilities/store.ts (D37 #6270, Aldric)
@@ -51,6 +52,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
   {
     // D41 #6390 migrationsDebug: uses 3-positional-arg internally
     path: 'database/migrate.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D42 cycle 16 hireAgentDebug: uses 3-positional-arg internally
+    path: 'agents/hire-agent.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];
@@ -97,7 +103,7 @@ function findHelperFunctionRanges(content: string): Array<{ name: string; start:
   while ((match = HELPER_FUNCTION_PATTERN.exec(content)) !== null) {
     const startIdx = match.index;
     const name = match[1];
-    let braceIdx = content.indexOf('{', startIdx);
+    const braceIdx = content.indexOf('{', startIdx);
     if (braceIdx === -1) continue;
     let depth = 0;
     let i = braceIdx;
