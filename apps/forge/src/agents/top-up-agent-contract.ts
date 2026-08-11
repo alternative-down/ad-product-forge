@@ -1,6 +1,6 @@
 import { errorMsg } from './error-formatting';
 import { and, eq, gte, lte } from 'drizzle-orm';
-import { forgeDebug } from '@forge-runtime/core';
+import { topUpAgentContractDebug } from './top-up-agent-contract-debug';
 
 import type { Database } from '../database/client';
 import { currentTimeMs } from '../utils/time';
@@ -30,22 +30,12 @@ export async function topUpActiveAgentContract(
       ),
     })) ?? null;
   } catch (err) {
-    forgeDebug({
-      scope: 'top-up-agent-contract',
-      level: 'error',
-      runtimeId: input.agentId,
-      message: 'Failed to find active contract: ' + errorMsg(err),
-    });
+    topUpAgentContractDebug('error', 'Failed to find active contract: ', { error: errorMsg(err), runtimeId: input.agentId });
     throw err;
   }
 
   if (activeContract === null || activeContract === undefined) {
-    forgeDebug({
-      scope: 'top-up-agent-contract',
-      level: 'warn',
-      message: 'topUpAgentContract: no active contract',
-      context: { agentId: input.agentId },
-    });
+    topUpAgentContractDebug('warn', 'topUpAgentContract: no active contract', { agentId: input.agentId });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
@@ -59,21 +49,12 @@ export async function topUpActiveAgentContract(
   try {
     currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
   } catch (err) {
-    forgeDebug({
-      scope: 'top-up-agent-contract',
-      level: 'error',
-      runtimeId: input.agentId,
-      message: 'Failed to get company cash balance: ' + errorMsg(err),
-    });
+    topUpAgentContractDebug('error', 'Failed to get company cash balance: ', { error: errorMsg(err), runtimeId: input.agentId });
     throw err;
   }
 
   if (currentBalanceUsd < input.amountUsd) {
-    forgeDebug({
-      scope: 'top-up-agent-contract',
-      level: 'warn',
-      message: 'topUpAgentContract: insufficient company cash',
-    });
+    topUpAgentContractDebug('warn', 'topUpAgentContract: insufficient company cash');
     throw new Error('Insufficient company cash for contract top-up');
   }
 
@@ -96,13 +77,7 @@ export async function topUpActiveAgentContract(
         .where(eq(agentExecutionContracts.id, contract.id));
     });
   } catch (err) {
-    forgeDebug({
-      scope: 'top-up-agent-contract',
-      level: 'error',
-      runtimeId: input.agentId,
-      message:
-        'Failed to record cash out or update contract: ' + errorMsg(err),
-    });
+    topUpAgentContractDebug('error', 'Failed to record cash out or update contract: ', { error: errorMsg(err), runtimeId: input.agentId });
     throw err;
   }
 
