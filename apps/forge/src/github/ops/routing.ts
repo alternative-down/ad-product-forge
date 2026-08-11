@@ -2,7 +2,6 @@
  * Routing Ops — buildProvisioning, registerAgentRoutes,
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
-import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 
 import type { HttpRequest } from '../../http/server';
@@ -26,6 +25,14 @@ type RoutingOpsDeps = {
 };
 
 export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
+  const routingOpsDebug = (
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+    context?: Record<string, unknown>,
+  ): void => {
+    ctx.forgeDebug({ scope: 'github-ops', level, message, context });
+  };
+
   function html(status: number, body: string) {
     return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
   }
@@ -170,12 +177,7 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
         `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(appInfo.slug ?? 'unknown')}/installations/new">install the app</a>.</p>`,
       );
     } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: 'handleSetupCreate createApp failed',
-        context: { error: errorMsg(err) },
-      });
+      routingOpsDebug('error', 'handleSetupCreate createApp failed', { error: errorMsg(err) });
       return html(500, `<h1>Failed</h1><pre>${ctx.escapeHtml(String(err))}</pre>`);
     }
   }
@@ -231,24 +233,14 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     try {
       payload = JSON.parse(bodyText);
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Invalid JSON: ' + errorMsg(err) });
+      routingOpsDebug('info', 'Invalid JSON: ' + errorMsg(err));
       return html(400, '<h1>Invalid JSON</h1>');
     }
     if (ctx.isGitHubSelfEvent(payload)) {
-      ctx.forgeDebug({
-        scope: 'github-ops',
-        level: 'info',
-        message: 'Ignoring self event',
-        context: { agentId, event },
-      });
+      routingOpsDebug('info', 'Ignoring self event', { agentId, event });
       return html(200, 'ok');
     }
-    ctx.forgeDebug({
-      scope: 'github-ops',
-      level: 'info',
-      message: `Webhook ${event}`,
-      context: { agentId, delivery },
-    });
+    routingOpsDebug('info', `Webhook ${event}`, { agentId, delivery });
     await ctx.notifications.createNotification({
       agentId,
       content: String(ctx.createGitHubWebhookWakeContent({ event, delivery, payload })),
