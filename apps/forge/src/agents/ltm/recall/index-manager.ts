@@ -17,6 +17,28 @@ import type { RecallPersistence } from './persistence';
  *  - Read index stats (delegates to persistence)
  *  - Read current index stamp (delegates to persistence store)
  */
+
+/**
+ * Module-local debug helper for this file.
+ * Bakes in scope=ltm so call sites cannot typo the scope string.
+ *
+ * Pattern: L#NN-YYY v4 (single-scope helper extraction).
+ *   - 5 forgeDebug call-sites in this file all use scope=ltm
+ *   - Inline pattern keeps TSC error count flat (no new TS7016)
+ */
+function ltmIndexManagerDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'ltm',
+    level,
+    message,
+    context,
+  });
+}
+
 export interface IndexManagerDeps {
   agentId: string;
   retrievalWorkspace: SqliteWorkspaceRetrieval;
@@ -53,15 +75,7 @@ export class IndexManager {
     const stageStartedAt = Date.now();
     const currentStamp = await this.readCurrentIndexStamp();
 
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace init start',
-      context: {
-        agentId: this.deps.agentId,
-        stamp: currentStamp,
-      },
-    });
+    ltmIndexManagerDebug('info', 'ltm recall workspace init start', { agentId: this.deps.agentId, stamp: currentStamp });
     await this.deps.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.deps.retrievalWorkspace.refresh(),
@@ -72,16 +86,7 @@ export class IndexManager {
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
     this.deps.persistence.setLastInitAt(this.lastInitAt);
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace init complete',
-      context: {
-        agentId: this.deps.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      },
-    });
+    ltmIndexManagerDebug('info', 'ltm recall workspace init complete', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
   }
 
   /**
@@ -95,30 +100,12 @@ export class IndexManager {
     const currentStamp = await this.readCurrentIndexStamp();
 
     if (currentStamp === this.lastIndexedStamp) {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall workspace index unchanged',
-        context: {
-          agentId: this.deps.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          stamp: currentStamp,
-        },
-      });
+      ltmIndexManagerDebug('info', 'ltm recall workspace index unchanged', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
       return;
     }
 
     const previousStamp = this.lastIndexedStamp;
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace reindex start',
-      context: {
-        agentId: this.deps.agentId,
-        previousStamp,
-        nextStamp: currentStamp,
-      },
-    });
+    ltmIndexManagerDebug('info', 'ltm recall workspace reindex start', { agentId: this.deps.agentId, previousStamp, nextStamp: currentStamp });
     await this.deps.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.deps.retrievalWorkspace.refresh(),
@@ -128,16 +115,7 @@ export class IndexManager {
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
     this.deps.persistence.setLastInitAt(this.lastInitAt);
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace reindex complete',
-      context: {
-        agentId: this.deps.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      },
-    });
+    ltmIndexManagerDebug('info', 'ltm recall workspace reindex complete', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
   }
 
   /**
