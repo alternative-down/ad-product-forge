@@ -56,6 +56,15 @@ import {
 import { webhookRoutes, webhookEvents } from '../../../database/schema-webhooks';
 import { forgeDebug } from '../debug';
 
+const adminSystemResetDebug = (
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void => {
+  forgeDebug({ scope: 'admin-system-reset', level, message, context });
+};
+
+
 export interface FactoryResetResult {
   ok: true;
   backupPath: string;
@@ -151,12 +160,7 @@ export async function performFactoryReset(
     }
     fs.copyFileSync(dbPath, backupPath);
   } catch (err) {
-    forgeDebug({
-      scope: 'admin',
-      level: 'error',
-      message: 'Factory reset: DB backup failed',
-      context: { error: errorMsg(err), dbPath, backupPath },
-    });
+    adminSystemResetDebug('error', 'Factory reset: DB backup failed', { error: errorMsg(err), dbPath, backupPath });
     throw new Error(`Failed to backup database: ${errorMsg(err)}`);
   }
 
@@ -167,12 +171,7 @@ export async function performFactoryReset(
     throw new Error(`Backup file is empty (0 bytes): ${backupPath}`);
   }
 
-  forgeDebug({
-    scope: 'admin',
-    level: 'info',
-    message: 'Factory reset: DB backup created',
-    context: { dbPath, backupPath, backupBytes: backupSize },
-  });
+  adminSystemResetDebug('info', 'Factory reset: DB backup created', { dbPath, backupPath, backupBytes: backupSize });
 
   // Step 2: Wipe tables in order
   const db = getDatabase();
@@ -185,12 +184,7 @@ export async function performFactoryReset(
       await db.delete(table);
       wipedTables.push(name);
     } catch (err) {
-      forgeDebug({
-        scope: 'admin',
-        level: 'error',
-        message: `Factory reset: failed to wipe table ${name}`,
-        context: { error: errorMsg(err), table: name, alreadyWiped: wipedTables },
-      });
+      adminSystemResetDebug('error', `Factory reset: failed to wipe table ${name}`, { error: errorMsg(err), table: name, alreadyWiped: wipedTables });
       throw new Error(
         `Failed to wipe table ${name} (already wiped: ${wipedTables.join(', ')}): ${errorMsg(err)}`,
       );
@@ -198,17 +192,12 @@ export async function performFactoryReset(
   }
 
   // Step 3: Audit log entry (forgeDebug level=info, structured)
-  forgeDebug({
-    scope: 'admin',
-    level: 'info',
-    message: 'Factory reset complete',
-    context: {
-      backupPath,
-      backupBytes: backupSize,
-      wipedTables,
-      timestamp,
-      timestampIso,
-    },
+  adminSystemResetDebug('info', 'Factory reset complete', {
+    backupPath,
+    backupBytes: backupSize,
+    wipedTables,
+    timestamp,
+    timestampIso,
   });
 
   return {

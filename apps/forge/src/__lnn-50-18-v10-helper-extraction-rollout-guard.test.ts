@@ -21,6 +21,7 @@
  * - apps/forge/src/agents/ltm/recall/index-manager.ts (D42 cycle 20, Varek, inline pattern)
  * - apps/forge/src/github/ops/milestones.ts (D42 cycle 24, Varek, INLINE ctx.forgeDebug wrapper pattern)
  * - apps/forge/src/github/ops/repos.ts (D42 cycle 22, Varek, ctx.forgeDebug pattern)
+ * - apps/forge/src/admin/routes/system/reset.ts (D42 cycle 25, Varek, NEW domain admin-system-reset)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
  * - apps/forge/src/agents/top-up-agent-contract.ts (D42 cycle 23, Varek, NEW domain top-up-agent-contract)
@@ -102,6 +103,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // D42 cycle 22 ctxReposDebug: INLINE pattern, wraps ctx.forgeDebug
     // expected=1 because helper body has 1 ctx.forgeDebug call
     path: 'github/ops/repos.ts',
+    expectedOneObjectArgCalls: 1,
+  },
+  {
+    // D42 cycle 25 adminSystemResetDebug: module-local helper pattern
+    // expected=1 because helper body has 1 inline forgeDebug call
+    path: 'admin/routes/system/reset.ts',
     expectedOneObjectArgCalls: 1,
   },
 ];
