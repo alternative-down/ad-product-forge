@@ -5,6 +5,16 @@ import type { OpsContext } from './context';
 import { errorMsg } from '../../agents/error-formatting';
 
 export function createReposOps(ctx: OpsContext) {
+
+  function ctxReposDebug(message: string, context?: Record<string, unknown>): void {
+    ctx.forgeDebug({
+      scope: 'github-repos',
+      level: 'error',
+      message,
+      context,
+    });
+  }
+
   async function listRepositories(agentId: string) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
@@ -18,12 +28,7 @@ export function createReposOps(ctx: OpsContext) {
         url: repository.html_url,
       }));
     } catch (err) {
-      ctx.forgeDebug({
-        scope: 'github-repos',
-        level: 'error',
-        message: '[github-repos] listRepositories failed',
-        context: { error: errorMsg(err) },
-      });
+      ctxReposDebug('[github-repos] listRepositories failed', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -59,12 +64,7 @@ export function createReposOps(ctx: OpsContext) {
         url: response.data.html_url,
       };
     } catch (err) {
-      ctx.forgeDebug({
-        scope: 'github-repos',
-        level: 'error',
-        message: '[github-repos] createRepository failed',
-        context: { error: errorMsg(err) },
-      });
+      ctxReposDebug('[github-repos] createRepository failed', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -102,12 +102,7 @@ export function createReposOps(ctx: OpsContext) {
         sshUrl: response.data.ssh_url,
       };
     } catch (err) {
-      ctx.forgeDebug({
-        scope: 'github-repos',
-        level: 'error',
-        message: '[github-repos] updateRepository failed',
-        context: { error: errorMsg(err) },
-      });
+      ctxReposDebug('[github-repos] updateRepository failed', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -125,12 +120,7 @@ export function createReposOps(ctx: OpsContext) {
       await octokit.request('DELETE /repos/{owner}/{repo}', { owner, repo: input.repositoryName });
       return { success: true };
     } catch (err) {
-      ctx.forgeDebug({
-        scope: 'github-repos',
-        level: 'error',
-        message: '[github-repos] deleteRepository failed',
-        context: { error: errorMsg(err) },
-      });
+      ctxReposDebug('[github-repos] deleteRepository failed', { error: errorMsg(err) });
       throw err;
     }
   }
@@ -160,12 +150,7 @@ export function createReposOps(ctx: OpsContext) {
         sshUrl: response.data.ssh_url,
       };
     } catch (err) {
-      ctx.forgeDebug({
-        scope: 'github-repos',
-        level: 'error',
-        message: '[github-repos] getRepository failed',
-        context: { error: errorMsg(err) },
-      });
+      ctxReposDebug('[github-repos] getRepository failed', { error: errorMsg(err) });
       throw err;
     }
   }
