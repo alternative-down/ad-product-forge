@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { workspaceSkillArchiveDebug } from './workspace-skill-archive-debug';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
@@ -26,23 +26,14 @@ export async function installAgentWorkspaceSkillsArchive(input: {
   try {
     archive = unzipSync(Buffer.from(input.zipBase64, 'base64'));
   } catch (error) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'error',
-      message: `unzipSync failed: ${error}`,
-    });
+    workspaceSkillArchiveDebug('error', `unzipSync failed: ${error}`);
     throw error;
   }
 
   try {
     await fs.mkdir(skillsRoot, { recursive: true });
   } catch (error) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'error',
-      message: `mkdir skillsRoot failed: ${error}`,
-      context: { skillsRoot },
-    });
+    workspaceSkillArchiveDebug('error', `mkdir skillsRoot failed: ${error}`);
     throw error;
   }
 
@@ -60,11 +51,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
     const relativePath = path.relative(skillsRoot, targetPath);
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      forgeDebug({
-        scope: 'workspace-skills',
-        level: 'warn',
-        message: `Blocked path escape in archive entry: ${entryPath}`,
-      });
+      workspaceSkillArchiveDebug('warn', `Blocked path escape in archive entry: ${entryPath}`);
       throw new Error(`Invalid skill archive entry: ${entryPath}`);
     }
 
@@ -77,12 +64,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
       await ensureParentDirectories(targetPath, skillsRoot);
       await fs.writeFile(targetPath, Buffer.from(content));
     } catch (error) {
-      forgeDebug({
-        scope: 'workspace-skills',
-        level: 'error',
-        message: `Failed to write archive entry: ${error}`,
-        context: { entryPath, targetPath },
-      });
+      workspaceSkillArchiveDebug('error', `Failed to write archive entry: ${error}`);
       throw error;
     }
 
@@ -90,11 +72,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
   }
 
   if (writtenSkills.size === 0) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: 'Skill archive did not contain any files',
-    });
+    workspaceSkillArchiveDebug('warn', 'Skill archive did not contain any files');
     throw new Error('Skill archive did not contain any files');
   }
 
