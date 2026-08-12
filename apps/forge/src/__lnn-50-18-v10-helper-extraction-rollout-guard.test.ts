@@ -179,6 +179,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'discord/message-parser.ts',
     expectedOneObjectArgCalls: 1,
   },
+  {
+    // D43 cycle 36 internalChatGuardsDebug: separate-file pattern
+    // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
+    path: 'communication/internal-chat-guards.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
