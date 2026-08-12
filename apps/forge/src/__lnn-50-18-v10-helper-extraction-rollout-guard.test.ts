@@ -185,6 +185,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'communication/internal-chat-guards.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D43 cycle 37 renewAgentContractDebug: separate-file pattern
+    // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
+    path: 'agents/renew-agent-contract.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
