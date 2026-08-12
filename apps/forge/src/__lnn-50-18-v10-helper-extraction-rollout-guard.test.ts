@@ -191,13 +191,14 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/renew-agent-contract.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D43 cycle 20 workspaceSkillsDebug: INLINE pattern, expected=1 (helper body)
+    path: 'agents/workspace-skills.ts',
+    expectedOneObjectArgCalls: 1,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
-  { path: 'capabilities/store.ts', expectedOneObjectArgCalls: 0 },
-  { path: 'agents/hiring-requests-handler.ts', expectedOneObjectArgCalls: 0 },
-  { path: 'discord-account.ts', expectedOneObjectArgCalls: 0 },
-  { path: 'admin/read-model/agents-debug.ts', expectedOneObjectArgCalls: 0 },
 ];
 
 /**
