@@ -55,10 +55,18 @@ describe('L#NN-50 tripwire — company-cash-operations forgeDebug message hygien
    */
   function forgeDebugMessages(source: string): Array<{ message: string; prefix: string | null }> {
     const out: Array<{ message: string; prefix: string | null }> = [];
-    // Match message: '<text>' or message: "<text>"
-    const re = /message:\s*['"]([^'"]+)['"]/g;
+    // Match pattern 1: legacy direct forgeDebug message: '<text>' calls
+    const re1 = /message:\s*['"]([^'"]+)['"]/g;
     let m: RegExpExecArray | null;
-    while ((m = re.exec(source)) !== null) {
+    while ((m = re1.exec(source)) !== null) {
+      const message = m[1] ?? '';
+      const colonIdx = message.indexOf(':');
+      const prefix = colonIdx > 0 ? message.substring(0, colonIdx).trim() : null;
+      out.push({ message, prefix });
+    }
+    // Match pattern 2: companyCashOperationsDebug('level', '<text>', ...) helper call sites (D43 cycle 2)
+    const re2 = /companyCashOperationsDebug\s*\(\s*['"][^'"]+['"]\s*,\s*['"]([^'"]+)['"]/g;
+    while ((m = re2.exec(source)) !== null) {
       const message = m[1] ?? '';
       const colonIdx = message.indexOf(':');
       const prefix = colonIdx > 0 ? message.substring(0, colonIdx).trim() : null;
@@ -100,7 +108,8 @@ describe('L#NN-50 tripwire — company-cash-operations forgeDebug message hygien
     const postEnd = nextFnMatch && nextFnMatch.index !== undefined ? postIdx + nextFnMatch.index : src.length;
     const postBody = src.substring(postIdx, postEnd);
 
-    expect(postBody).not.toMatch(/message:\s*['"]cancelPlannedEntry:/);
-    expect(postBody).toMatch(/message:\s*['"]postPlannedEntry:/);
+    // Check that postPlannedEntry uses helper call pattern (D43 cycle 2) with correct prefix
+    expect(postBody).not.toMatch(/companyCashOperationsDebug\s*\(\s*['"][^'"]+['"]\s*,\s*['"]cancelPlannedEntry:/);
+    expect(postBody).toMatch(/companyCashOperationsDebug\s*\(\s*['"][^'"]+['"]\s*,\s*['"]postPlannedEntry:/);
   });
 });
