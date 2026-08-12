@@ -1,6 +1,6 @@
 import { errorMsg } from './error-formatting';
+import { renewAgentContractDebug } from './renew-agent-contract-debug';
 import { eq } from 'drizzle-orm';
-import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
 import { agentExecutionContracts } from '../database/schema';
@@ -27,12 +27,11 @@ export async function renewAgentContract(
     const activeContract = await contractStore.getActiveContract(input.agentId);
 
     if (activeContract === null || activeContract === undefined) {
-      forgeDebug({
-        scope: 'renew-agent-contract',
-        level: 'info',
-        message: 'no-active-contract',
-        context: { agentId: input.agentId },
-      });
+      renewAgentContractDebug(
+      'info',
+      'no-active-contract',
+      { agentId: input.agentId },
+    );
       throw new Error(`No active contract for agent: ${input.agentId}`);
     }
 
@@ -46,16 +45,15 @@ export async function renewAgentContract(
     const availableBalanceUsd = currentBalanceUsd + refundableUsd;
 
     if (availableBalanceUsd < input.newBudgetUsd) {
-      forgeDebug({
-        scope: 'renew-agent-contract',
-        level: 'info',
-        message: 'insufficient-balance',
-        context: {
-          agentId: input.agentId,
-          availableBalanceUsd,
-          requiredBudgetUsd: input.newBudgetUsd,
-        },
-      });
+      renewAgentContractDebug(
+      'info',
+      'insufficient-balance',
+      {
+        agentId: input.agentId,
+        availableBalanceUsd,
+        requiredBudgetUsd: input.newBudgetUsd,
+      },
+    );
       throw new Error('Insufficient company cash to renew this contract');
     }
 
@@ -117,11 +115,10 @@ export async function renewAgentContract(
         .where(eq(agentExecutionContracts.id, newContractId));
     });
 
-    forgeDebug({
-      scope: 'renew-agent-contract',
-      level: 'info',
-      message: 'success',
-      context: {
+    renewAgentContractDebug(
+      'info',
+      'success',
+      {
         agentId: input.agentId,
         previousContractId: activeContract.id,
         newContractId,
@@ -129,7 +126,7 @@ export async function renewAgentContract(
         newBudgetUsd: input.newBudgetUsd,
         refundableUsd,
       },
-    });
+    );
 
     return {
       agentId: input.agentId,
@@ -143,15 +140,14 @@ export async function renewAgentContract(
       endsAt: now + WEEK_MS,
     };
   } catch (err) {
-    forgeDebug({
-      scope: 'renew-agent-contract',
-      level: 'info',
-      message: 'error',
-      context: {
+    renewAgentContractDebug(
+      'info',
+      'error',
+      {
         error: errorMsg(err),
         agentId: input.agentId,
       },
-    });
+    );
     throw err;
   }
 }
