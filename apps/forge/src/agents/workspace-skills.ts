@@ -59,12 +59,7 @@ export async function listAgentWorkspaceSkills(
               updatedAt: stat.mtimeMs,
             };
           } catch (error) {
-            forgeDebug({
-              scope: 'workspace-skills',
-              level: 'warn',
-              message: 'Failed to read skill metadata',
-              context: { error: errorMsg(error), skillName },
-            });
+            workspaceSkillsDebug('warn', 'Failed to read skill metadata', { error: errorMsg(error), skillName });
             return null;
           }
         }),
@@ -85,12 +80,7 @@ export async function listAgentWorkspaceSkills(
       return [];
     }
 
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'error',
-      message: 'listAgentWorkspaceSkills failed',
-      context: { error: errorMsg(error) },
-    });
+    workspaceSkillsDebug('error', 'listAgentWorkspaceSkills failed', { error: errorMsg(error) });
     throw error;
   }
 }
@@ -111,12 +101,7 @@ export async function deleteAgentWorkspaceSkill(input: {
   const skillName = input.skillName.trim();
 
   if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: 'deleteAgentWorkspaceSkill: invalid skill name',
-      context: { skillName: input.skillName },
-    });
+    workspaceSkillsDebug('warn', 'deleteAgentWorkspaceSkill: invalid skill name', { skillName: input.skillName });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
@@ -128,14 +113,31 @@ export async function deleteAgentWorkspaceSkill(input: {
   const relativePath = path.relative(skillsRoot, skillRoot);
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: 'deleteAgentWorkspaceSkill: invalid skill name',
-      context: { skillName: input.skillName },
-    });
+    workspaceSkillsDebug('warn', 'deleteAgentWorkspaceSkill: invalid skill name', { skillName: input.skillName });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
   await fs.rm(skillRoot, { recursive: true, force: false });
+}
+
+
+/**
+ * Module-local debug helper for agents/workspace-skills.ts.
+ * Bakes in scope='workspace-skills' so call sites cannot typo the scope string.
+ *
+ * Pattern: L#NN-YYY v4 (single-scope helper extraction, INLINE variant).
+ *   - 4 forgeDebug call-sites all use scope='workspace-skills'
+ *   - This helper collapses the scope repetition while preserving level + message + context
+ */
+export function workspaceSkillsDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'workspace-skills',
+    level,
+    message,
+    context,
+  });
 }
