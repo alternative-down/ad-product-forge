@@ -77,6 +77,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 0,
   },
   {
+    // D43 cycle 19 adminReadModelDebug: module-local helper pattern
+    // expected=0 because helper body has its own forgeDebug call in agents-detail-debug.ts
+    path: 'admin/read-model/agents-detail.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
     // D42 cycle 17 labelsDebug: uses 3-positional-arg internally
     path: 'github/ops/labels.ts',
     expectedOneObjectArgCalls: 0,
