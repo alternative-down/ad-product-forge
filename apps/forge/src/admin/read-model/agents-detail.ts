@@ -6,7 +6,7 @@
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
 
-import { forgeDebug } from '@forge-runtime/core';
+import { adminReadModelDebug } from './agents-detail-debug';
 import { errorMsg } from '../../agents/error-formatting';
 import { desc, eq, inArray } from 'drizzle-orm';
 import {
@@ -36,12 +36,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         orderBy: desc(agentExecutionContracts.startsAt),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentContracts failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentContracts failed', { agentId, error: errorMsg(err) });
       throw err;
     }
     return rows.map((row) => {
@@ -58,12 +53,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         orderBy: desc(agentSchedules.nextTriggerAt),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentSchedules failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentSchedules failed', { agentId, error: errorMsg(err) });
       throw err;
     }
     return rows.map((row) => toScheduleSummaryHelper(row));
@@ -78,12 +68,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         limit: 50,
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentNotifications failed',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentNotifications failed', { agentId, error: errorMsg(err) });
       throw err;
     }
     return rows.map((n) => ({
@@ -101,12 +86,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         where: eq(agentMcpConfigs.agentId, agentId),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentMcpServers failed (query configs)',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentMcpServers failed (query configs)', { agentId, error: errorMsg(err) });
       throw err;
     }
     const serverIds = rows.map((r) => r.serverId).filter(Boolean);
@@ -129,12 +109,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
           where: inArray(mcpServerConfigs.id, serverIds),
         });
       } catch (err) {
-        forgeDebug({
-          scope: 'admin-read-model',
-          level: 'error',
-          message: 'listAgentMcpServers failed (query servers)',
-          context: { agentId, error: errorMsg(err) },
-        });
+        adminReadModelDebug('error', 'listAgentMcpServers failed (query servers)', { agentId, error: errorMsg(err) });
         throw err;
       }
     } else {
@@ -169,12 +144,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         columns: { modelProfileId: true, omModelProfileId: true },
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentLlmProfiles failed (query agent)',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentLlmProfiles failed (query agent)', { agentId, error: errorMsg(err) });
       throw err;
     }
     if (agent === null || agent === undefined) return { profiles: [] };
@@ -186,12 +156,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         where: inArray(llmProfiles.id, profileIds),
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'admin-read-model',
-        level: 'error',
-        message: 'listAgentLlmProfiles failed (query profiles)',
-        context: { agentId, error: errorMsg(err) },
-      });
+      adminReadModelDebug('error', 'listAgentLlmProfiles failed (query profiles)', { agentId, error: errorMsg(err) });
       throw err;
     }
     return { profiles };
