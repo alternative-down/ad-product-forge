@@ -5,7 +5,6 @@ import type {
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type { CreateForgeAgentRuntimeOptions as _CreateForgeAgentRuntimeOptions } from './runtime.js';
 import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
 import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
