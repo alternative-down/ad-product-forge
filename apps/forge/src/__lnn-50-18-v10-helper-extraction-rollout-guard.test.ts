@@ -28,6 +28,7 @@
  * - apps/forge/src/coolify/http.ts (D42 cycle 31, Varek, separate-file pattern, NEW domain coolify-http)
  - apps/forge/src/communication/internal-chat-service-helpers.ts (D42 cycle 32, Varek, separate-file pattern, NEW domain internal-chat-service-helpers)
  - apps/forge/src/agents/agent-loader-data.ts (D42 cycle 33, Varek, module-local helper pattern, NEW domain agent-loader-data)
+ - apps/forge/src/discord/message-parser.ts (D42 cycle 34, Varek, module-local helper pattern, NEW domain discord-message-parser)
  - apps/forge/src/github/ops/routing.ts (D42 cycle 29, Varek, INLINE ctx.forgeDebug wrapper pattern, 4th github/ops/)
  * - apps/forge/src/agents/workspace-skill-archive.ts (D42 cycle 21, Varek, NEW domain workspace-skills)
  * - apps/forge/src/agents/agent-runner-generate.ts (D42 cycle 19, Varek, L#NN-50 #50 LOG RETENTION applied to runtimeId)
@@ -164,6 +165,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // D42 cycle 33 agentLoaderDataDebug: module-local helper pattern
     // expected=1 because helper body has 1 inline forgeDebug call
     path: 'agents/agent-loader-data.ts',
+    expectedOneObjectArgCalls: 1,
+  },
+  {
+    // D42 cycle 34 discordMessageParserDebug: module-local helper pattern
+    // expected=1 because helper body has 1 inline forgeDebug call
+    path: 'discord/message-parser.ts',
     expectedOneObjectArgCalls: 1,
   },
 ];
