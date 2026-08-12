@@ -1,8 +1,8 @@
 import { errorMsg } from './error-formatting';
+import { globalSkillsDebug } from './global-skills-debug';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
-import { forgeDebug } from '@forge-runtime/core';
 import {
   ensureDirectory,
   ensureParentDirectories,
@@ -67,12 +67,11 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
 
     return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
   } catch (error) {
-    forgeDebug({
-      scope: 'global-skills',
-      level: 'error',
-      message: 'loadCustomSkills failed',
-      context: { error: errorMsg(error) },
-    });
+    globalSkillsDebug(
+      'error',
+      'loadCustomSkills failed',
+      { error: errorMsg(error) },
+    );
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
@@ -149,12 +148,11 @@ export async function installGlobalSkillsFromZip(input: {
     }
 
     if (bundledSkillNames.has(skillName)) {
-      forgeDebug({
-        scope: 'global-skills',
-        level: 'warn',
-        message: 'loadGlobalSkill: name reserved by bundled skill',
-        context: { skillName },
-      });
+      globalSkillsDebug(
+      'warn',
+      'loadGlobalSkill: name reserved by bundled skill',
+      { skillName },
+    );
       throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
     }
 
@@ -162,12 +160,11 @@ export async function installGlobalSkillsFromZip(input: {
     const relativePath = path.relative(skillsRoot, targetPath);
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      forgeDebug({
-        scope: 'global-skills',
-        level: 'warn',
-        message: 'loadGlobalSkill: invalid archive entry',
-        context: { entryPath },
-      });
+      globalSkillsDebug(
+      'warn',
+      'loadGlobalSkill: invalid archive entry',
+      { entryPath },
+    );
       throw new Error(`Invalid skill archive entry: ${entryPath}`);
     }
 
@@ -182,11 +179,10 @@ export async function installGlobalSkillsFromZip(input: {
   }
 
   if (writtenSkills.size === 0) {
-    forgeDebug({
-      scope: 'global-skills',
-      level: 'warn',
-      message: 'loadGlobalSkill: archive empty',
-    });
+    globalSkillsDebug(
+      'warn',
+      'loadGlobalSkill: archive empty',
+    );
     throw new Error('Skill archive did not contain any files');
   }
 

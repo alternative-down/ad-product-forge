@@ -196,6 +196,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/workspace-skills.ts',
     expectedOneObjectArgCalls: 1,
   },
+  {
+    // D43 cycle 39 globalSkillsDebug: separate-file pattern
+    // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
+    path: 'agents/global-skills.ts',
+    expectedOneObjectArgCalls: 0,  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
