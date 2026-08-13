@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { forgeDebug } from '@forge-runtime/core';
+import { providerLoaderDebug } from './provider-loader-debug';
 import type { CommunicationProvider } from '@forge-runtime/core';
 import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
@@ -108,11 +108,7 @@ export async function loadCommunicationProviders(
     const internalChat = internalChatCredentialsSchema.parse(credentials['internal-chat']);
 
     if (!config?.internalChat) {
-      forgeDebug({
-        scope: 'provider-loader',
-        level: 'error',
-        message: 'loadProvider: internalChat service required',
-      });
+      providerLoaderDebug('error', 'loadProvider: internalChat service required');
       throw new Error('Internal chat provider requires the internalChat service');
     }
 
@@ -141,12 +137,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      forgeDebug({
-        scope: 'provider-loader',
-        level: 'warn',
-        message: 'Skipping Discord provider because it failed to start',
-        context: { error: errorMsg(error) },
-      });
+      providerLoaderDebug('warn', 'Skipping Discord provider because it failed to start', { error: errorMsg(error) });
     }
   }
 
@@ -161,12 +152,7 @@ export async function loadCommunicationProviders(
         }),
       );
     } catch (error) {
-      forgeDebug({
-        scope: 'provider-loader',
-        level: 'error',
-        message: 'Failed to load email provider',
-        context: { error: errorMsg(error) },
-      });
+      providerLoaderDebug('error', 'Failed to load email provider', { error: errorMsg(error) });
       throw error;
     }
   }
