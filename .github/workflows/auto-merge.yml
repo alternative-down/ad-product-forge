@@ -61,8 +61,8 @@ jobs:
           NON_AUTHOR_REVIEWS=$(echo "$CURRENT_REVIEWS" | jq --arg author "$AUTHOR" \
             '[.[] | select(.user.login != $author)]')
 
-          # 5. L#NN-46 v2: filter to known bot identities (veritas-ak-0n1, orion-qbtvww)
-          KNOWN_BOTS='["veritas-ak-0n1", "orion-qbtvww"]'
+          # 5. L#NN-46 v2: filter to known bot identities (5 forge bot accounts)
+          KNOWN_BOTS='["veritas-ak-0n1", "orion-qbtvww", "aldric-zvqgom", "kaelen-xhhzsg", "varek-iemmpd"]'
           VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
             '[.[] | select((.user.login | ascii_downcase | .[:-5]) as $u | $bots | index($u))]')
 
