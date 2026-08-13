@@ -1,6 +1,6 @@
 import { errorMsg } from './error-formatting';
 import { findAgentById } from './agent-lookup';
-import { forgeDebug } from '@forge-runtime/core';
+import { skillsToolsDebug } from './skills-tools-debug';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -18,12 +18,7 @@ function ensureAgentFound<T>(
   functionName: string,
 ): asserts agent is T {
   if (agent == null) {
-    forgeDebug({
-      scope: 'skills-tools',
-      level: 'error',
-      message: `${functionName} agent not found`,
-      context: { agentId },
-    });
+    skillsToolsDebug('error', `${functionName} agent not found`, { agentId });
     throw new Error(`Agent not found: ${agentId}`);
   }
 }
@@ -53,12 +48,7 @@ async function readTextFileIfPossible(filePath: string) {
   try {
     return await fs.readFile(filePath, 'utf8');
   } catch (error) {
-    forgeDebug({
-      scope: 'skills-tools',
-      level: 'warn',
-      message: 'Failed to read file',
-      context: { error: errorMsg(error), filePath },
-    });
+    skillsToolsDebug('warn', 'Failed to read file', { error: errorMsg(error), filePath });
     return null;
   }
 }
@@ -91,12 +81,7 @@ export function createAgentSkillTools(input: {
       const relativePath = path.relative(skillsRoot, skillRoot);
 
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        forgeDebug({
-          scope: 'skills-tools',
-          level: 'error',
-          message: 'load_workspace_skill invalid skill name',
-          context: { skillName: inputData.skillName },
-        });
+        skillsToolsDebug('error', 'load_workspace_skill invalid skill name', { skillName: inputData.skillName });
         throw new Error(`Invalid skill name: ${inputData.skillName}`);
       }
 
