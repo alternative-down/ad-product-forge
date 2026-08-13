@@ -227,15 +227,15 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 0,
   },
   {
-    // D44 cycle 41: skillsToolsDebug (separate-file pattern, Varek)
+    // D44 cycle 41: skillsToolsDebug (separate-file pattern)
     // expected=0 because helper body uses ...context spread (no forgeDebug calls)
     path: 'agents/skills-tools.ts',
     expectedOneObjectArgCalls: 0,
   },
   {
-    // D44 cycle 4 providerLoaderDebug: separate-file pattern, Aldric
-    // expected=0 because helper body uses ...context spread (no forgeDebug calls)
-    path: 'communication/provider-loader.ts',
+    // D44 cycle 42: agentRunnerContextLoaders REUSES existing agentRunnerDebug helper (Pattern M N=1)
+    // expected=0 because no direct forgeDebug calls (helper handles all)
+    path: 'agents/agent-runner-context-loaders.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];
