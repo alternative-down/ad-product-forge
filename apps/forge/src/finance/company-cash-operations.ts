@@ -18,6 +18,20 @@ type CompanyCashEntryInput = {
 type DbSession = Database;
 
 export function createCompanyCashOperations(db: Database) {
+
+  function companyCashOperationsDebug(
+    level: string,
+    message: string,
+    context?: Record<string, unknown>,
+  ): void {
+    forgeDebug({
+      scope: 'company-cash-operations',
+      level,
+      message,
+      ...(context !== undefined ? { context } : {}),
+    });
+  }
+
   async function createEntry(
     input: CompanyCashEntryInput & {
       direction: CompanyCashDirection;
@@ -89,21 +103,11 @@ export function createCompanyCashOperations(db: Database) {
   async function cancelPlannedEntry(entryId: string) {
     const entry = await getEntry(entryId);
     if (!entry) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'warn',
-        message: 'cancelPlannedEntry: entry not found',
-        context: { entryId },
-      });
+      companyCashOperationsDebug('warn', 'cancelPlannedEntry: entry not found', { entryId });
       throw new Error(`Company cash entry not found: ${entryId}`);
     }
     if (entry.status !== 'planned') {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'warn',
-        message: 'cancelPlannedEntry: entry not planned',
-        context: { entryId, status: entry.status },
-      });
+      companyCashOperationsDebug('warn', 'cancelPlannedEntry: entry not planned', { entryId, status: entry.status });
       throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
     }
 
@@ -126,12 +130,7 @@ export function createCompanyCashOperations(db: Database) {
   async function postPlannedEntry(entryId: string, input: { effectiveAt?: number } = {}) {
     const entry = await getEntry(entryId);
     if (!entry) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'warn',
-        message: 'postPlannedEntry: entry not found',
-        context: { entryId },
-      });
+      companyCashOperationsDebug('warn', 'postPlannedEntry: entry not found', { entryId });
       throw new Error(`Company cash entry not found: ${entryId}`);
     }
     if (entry.status !== 'planned')

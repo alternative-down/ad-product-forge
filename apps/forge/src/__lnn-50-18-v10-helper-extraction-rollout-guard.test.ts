@@ -192,6 +192,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 0,
   },
   {
+    // D43 cycle 2 companyCashOperationsDebug: module-local helper inside factory function
+    // expected=1 because helper body has 1 inline forgeDebug call (message is shorthand property)
+    path: 'finance/company-cash-operations.ts',
+    expectedOneObjectArgCalls: 1,
+  },
+  {
     // D43 cycle 20 workspaceSkillsDebug: INLINE pattern, expected=1 (helper body)
     path: 'agents/workspace-skills.ts',
     expectedOneObjectArgCalls: 1,
