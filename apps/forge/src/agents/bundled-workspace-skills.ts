@@ -1,5 +1,5 @@
 import { errorMsg } from './error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
+import { bundledWorkspaceSkillsDebug } from './bundled-workspace-skills-debug';
 import 'node:process';
 import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
@@ -40,22 +40,22 @@ export function findSkillsFolder(start: string): string {
 
 function parseSkillName(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
-    forgeDebug({
-      scope: 'bundled-workspace-skills',
-      level: 'warn',
-      message: 'parseBundledSkillMeta: missing YAML frontmatter',
-    });
+    bundledWorkspaceSkillsDebug(
+      'warn',
+      'parseBundledSkillMeta: missing YAML frontmatter',
+      {},
+    );
     throw new Error('Bundled skill is missing YAML frontmatter.');
   }
 
   const endIndex = skillContent.indexOf('\n---\n', 4);
 
   if (endIndex === -1) {
-    forgeDebug({
-      scope: 'bundled-workspace-skills',
-      level: 'warn',
-      message: 'parseBundledSkillMeta: frontmatter not closed',
-    });
+    bundledWorkspaceSkillsDebug(
+      'warn',
+      'parseBundledSkillMeta: frontmatter not closed',
+      {},
+    );
     throw new Error('Bundled skill frontmatter is not closed.');
   }
 
@@ -79,11 +79,11 @@ function parseSkillName(skillContent: string) {
     }
   }
 
-  forgeDebug({
-    scope: 'bundled-workspace-skills',
-    level: 'warn',
-    message: 'parseBundledSkillMeta: frontmatter missing name',
-  });
+  bundledWorkspaceSkillsDebug(
+    'warn',
+    'parseBundledSkillMeta: frontmatter missing name',
+    {},
+  );
   throw new Error('Bundled skill frontmatter is missing name.');
 }
 
@@ -128,12 +128,11 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
     await fs.access(skillFilePath);
     return path.resolve(skillsFolder, sourceDirectoryName);
   } catch (error) {
-    forgeDebug({
-      scope: 'bundled-workspace-skills',
-      level: 'warn',
-      message: 'listBundledWorkspaceSkills: source not found',
-      context: { error: errorMsg(error), skillFilePath, sourceDirectoryName },
-    });
+    bundledWorkspaceSkillsDebug(
+      'error',
+      'listBundledWorkspaceSkills: source not found',
+      { error: errorMsg(error), skillFilePath, sourceDirectoryName },
+    );
     throw new Error(`Bundled skill source not found for ${sourceDirectoryName}`);
   }
 }

@@ -220,6 +220,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/adjust-agent-contract-budget.ts',
     expectedOneObjectArgCalls: 2,
   },
+  {
+    // D44 cycle 40 bundledWorkspaceSkillsDebug: separate-file pattern
+    // expected=0 because helper body uses ...context spread (no forgeDebug calls)
+    path: 'agents/bundled-workspace-skills.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
