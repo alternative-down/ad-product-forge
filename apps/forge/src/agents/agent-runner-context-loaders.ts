@@ -6,7 +6,7 @@
  */
 
 import {  errorMsg } from './error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
+import { agentRunnerDebug } from './agent-runner-debug';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
 import { agentSchedules } from '../database/schema';
@@ -98,12 +98,7 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       ...lines,
     ].join('\n');
   } catch (err) {
-    forgeDebug({
-      scope: 'agent-runner',
-      level: 'warn',
-      runtimeId,
-      message: 'Failed to load active schedule summary: ' + errorMsg(err),
-    });
+    agentRunnerDebug('warn', 'Failed to load active schedule summary: ' + errorMsg(err), { runtimeId });
     return null;
   }
 }
@@ -120,12 +115,7 @@ export async function loadAgentContextContent(
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context existence check timed out for filesystem`,
   ).catch((err) => {
-    forgeDebug({
-      scope: 'agent-runner',
-      level: 'error',
-      message: '[safe-catch] context decoration check',
-      context: { error: errorMsg(err) },
-    });
+    agentRunnerDebug('error', '[safe-catch] context decoration check', { error: errorMsg(err) });
     return false;
   });
 
@@ -138,12 +128,7 @@ export async function loadAgentContextContent(
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context read timed out for filesystem`,
   ).catch((err) => {
-    forgeDebug({
-      scope: 'agent-runner',
-      level: 'error',
-      message: '[safe-catch] context decoration read',
-      context: { error: errorMsg(err) },
-    });
+    agentRunnerDebug('error', '[safe-catch] context decoration read', { error: errorMsg(err) });
     return null;
   });
 
