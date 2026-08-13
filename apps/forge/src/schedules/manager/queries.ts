@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { queriesSchedulesManagerDebug } from './queries-debug';
 import { errorMsg } from '../../agents/error-formatting';
 import { toToolOutput } from '../notifications/wake-content';
 import type { ScheduleLifecycle } from '../lifecycle/lifecycle';
@@ -76,12 +76,7 @@ export function createManagerQueries(input: CreateManagerQueriesInput): ManagerQ
     try {
       return await store.getAgentSchedule(agentId, scheduleId);
     } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'getAgentSchedule failed',
-        context: { agentId, scheduleId, error: errorMsg(error) },
-      });
+      queriesSchedulesManagerDebug('error', 'getAgentSchedule failed', { agentId, scheduleId, error: errorMsg(error) });
       throw error;
     }
   }
@@ -101,12 +96,7 @@ export function createManagerQueries(input: CreateManagerQueriesInput): ManagerQ
       const schedules = await store.listAgentSchedules(agentId);
       return schedules.map(toToolOutput);
     } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'listSchedules failed',
-        context: { error: errorMsg(error) },
-      });
+      queriesSchedulesManagerDebug('error', 'listSchedules failed', { error: errorMsg(error) });
       throw error;
     }
   }
@@ -121,12 +111,7 @@ export function createManagerQueries(input: CreateManagerQueriesInput): ManagerQ
         taskId: schedule.scheduleId,
       }));
     } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: 'listTasks failed',
-        context: { error: errorMsg(error) },
-      });
+      queriesSchedulesManagerDebug('error', 'listTasks failed', { error: errorMsg(error) });
       throw error;
     }
   }
