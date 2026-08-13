@@ -207,6 +207,11 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
     path: 'agents/global-skills.ts',
     expectedOneObjectArgCalls: 0,  },
+  {
+    // D43 cycle 21 adminRoutesHelpersDebug: INLINE pattern, expected=1 (helper body)
+    path: 'admin/routes/helpers.ts',
+    expectedOneObjectArgCalls: 1,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [

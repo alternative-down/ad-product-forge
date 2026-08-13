@@ -24,12 +24,7 @@ export function normalizeJsonText(
   try {
     parsed = JSON.parse(normalized ?? '');
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-routes-helpers',
-      level: 'warn',
-      message: 'normalizeJsonText: JSON.parse failed',
-      context: { fieldName, expectedShape, error: errorMsg(err) },
-    });
+    adminRoutesHelpersDebug('warn', 'normalizeJsonText: JSON.parse failed', { fieldName, expectedShape, error: errorMsg(err) });
     throw new Error(`${fieldName} must be valid JSON: ${errorMsg(err)}`);
   }
   const valid =
@@ -38,12 +33,7 @@ export function normalizeJsonText(
       : typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
 
   if (!valid) {
-    forgeDebug({
-      scope: 'admin-routes-helpers',
-      level: 'warn',
-      message: 'validateJsonBody: invalid shape',
-      context: { fieldName, expectedShape },
-    });
+    adminRoutesHelpersDebug('warn', 'validateJsonBody: invalid shape', { fieldName, expectedShape });
     throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
   }
 
@@ -58,12 +48,7 @@ export function parseJsonBody<TSchema extends z.ZodTypeAny>(
   try {
     parsed = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-routes-helpers',
-      level: 'warn',
-      message: 'parseJsonBody: JSON.parse failed',
-      context: { error: errorMsg(err) },
-    });
+    adminRoutesHelpersDebug('warn', 'parseJsonBody: JSON.parse failed', { error: errorMsg(err) });
     throw new Error(`Invalid JSON body: ${errorMsg(err)}`);
   }
   return schema.parse(parsed);
@@ -191,13 +176,21 @@ export async function fsPathExists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-routes-helpers',
-      level: 'warn',
-      message: '[helpers] fsPathExists failed',
-      context: { error: errorMsg(err) },
-    });
+    adminRoutesHelpersDebug('warn', '[helpers] fsPathExists failed', { error: errorMsg(err) });
     // Safe: path does not exist — return false to signal absence
     return false;
   }
+}
+
+
+/**
+ * Internal: wrapper that bakes 'admin-routes-helpers' scope into every call.
+ * Keeps the call sites short while preserving the same forgeDebug payload.
+ */
+function adminRoutesHelpersDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'admin-routes-helpers', level, message, context });
 }
