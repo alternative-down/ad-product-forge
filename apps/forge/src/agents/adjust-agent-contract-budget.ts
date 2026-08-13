@@ -29,11 +29,8 @@ export async function adjustAgentContractBudget(
   });
 
   if (activeContract === null || activeContract === undefined) {
-    forgeDebug({
-      scope: 'adjust-agent-contract-budget',
-      level: 'warn',
-      message: 'adjustAgentContractBudget: no active contract',
-      context: { agentId: input.agentId },
+    adjustAgentContractBudgetDebug('warn', 'adjustAgentContractBudget: no active contract', {
+      agentId: input.agentId,
     });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
@@ -58,11 +55,7 @@ export async function adjustAgentContractBudget(
     const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
 
     if (currentBalanceUsd < budgetDelta) {
-      forgeDebug({
-        scope: 'adjust-agent-contract-budget',
-        level: 'warn',
-        message: 'adjustAgentContractBudget: insufficient company cash',
-      });
+      adjustAgentContractBudgetDebug('warn', 'adjustAgentContractBudget: insufficient company cash');
       throw new Error('Insufficient company cash for budget increase');
     }
 
@@ -86,12 +79,9 @@ export async function adjustAgentContractBudget(
         .where(eq(agentExecutionContracts.id, activeContract.id));
     });
 
-    forgeDebug({
-      scope: 'agent-contract-budget',
-      level: 'info',
+    agentContractBudgetDebug('info', `Budget increased by ${budgetDelta} USD (${currentBudget} -> ${input.newBudgetUsd})`, {
       agentId: input.agentId,
       contractId: activeContract.id,
-      message: `Budget increased by ${budgetDelta} USD (${currentBudget} -> ${input.newBudgetUsd})`,
     });
 
     return {
@@ -137,12 +127,9 @@ export async function adjustAgentContractBudget(
       .where(eq(agentExecutionContracts.id, activeContract.id));
   });
 
-  forgeDebug({
-    scope: 'agent-contract-budget',
-    level: 'info',
+  agentContractBudgetDebug('info', `Budget decreased by ${refundAmount} USD (${currentBudget} -> ${input.newBudgetUsd})`, {
     agentId: input.agentId,
     contractId: activeContract.id,
-    message: `Budget decreased by ${refundAmount} USD (${currentBudget} -> ${input.newBudgetUsd})`,
   });
 
   return {
@@ -153,4 +140,23 @@ export async function adjustAgentContractBudget(
     changeAmountUsd: -refundAmount,
     changeType: 'decrease' as const,
   };
+}
+
+
+function adjustAgentContractBudgetDebug(level: 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>): void {
+  forgeDebug({
+    scope: 'adjust-agent-contract-budget',
+    level,
+    message,
+    context,
+  });
+}
+
+function agentContractBudgetDebug(level: 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>): void {
+  forgeDebug({
+    scope: 'agent-contract-budget',
+    level,
+    message,
+    context,
+  });
 }

@@ -212,6 +212,14 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'admin/routes/helpers.ts',
     expectedOneObjectArgCalls: 1,
   },
+  {
+    // D44 cycle 22: TWO helpers in one file (different scopes)
+    // adjustAgentContractBudgetDebug (scope=adjust-agent-contract-budget, 2 calls)
+    // agentContractBudgetDebug (scope=agent-contract-budget, 2 calls)
+    // Each helper body has 1 forgeDebug call => expected=2 total
+    path: 'agents/adjust-agent-contract-budget.ts',
+    expectedOneObjectArgCalls: 2,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
