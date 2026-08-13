@@ -1,6 +1,6 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../../utils/libsql-helpers';
 import path from 'node:path';
-import { forgeDebug } from '@forge-runtime/core';
+import { conversationHelpersDebug } from './conversation-helpers-debug';
 import { errorMsg } from '../../agents/error-formatting';
 import { createClient } from '@libsql/client';
 import {
@@ -101,12 +101,11 @@ async function listRecentExternalConversations(
         };
       });
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to load external conversations',
-      context: { agentId: _agentId, err: errorMsg(err) },
-    });
+    conversationHelpersDebug(
+      'error',
+      'Failed to load external conversations',
+      { agentId: _agentId, err: errorMsg(err) },
+    );
     return [];
   }
 }
@@ -169,12 +168,11 @@ async function listRecentInternalChatConversations(
       }),
     );
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to load internal chat conversations',
-      context: { agentId, err: errorMsg(err) },
-    });
+    conversationHelpersDebug(
+      'error',
+      'Failed to load internal chat conversations',
+      { agentId, err: errorMsg(err) },
+    );
     return [];
   }
 }
@@ -197,12 +195,11 @@ async function listInternalChatGroupParticipants(
     )) as ConversationParticipant[];
     return members.map((member) => member.displayName ?? 'Unknown participant');
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to load group participants',
-      context: { conversationKey, err: errorMsg(err) },
-    });
+    conversationHelpersDebug(
+      'error',
+      'Failed to load group participants',
+      { conversationKey, err: errorMsg(err) },
+    );
     return [];
   }
 }
@@ -274,12 +271,11 @@ async function listThreadMessages(
       await closeLibsqlClient(client);
     }
   } catch (err) {
-    forgeDebug({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'Failed to load recent thread messages',
-      context: { agentId, err: errorMsg(err) },
-    });
+    conversationHelpersDebug(
+      'error',
+      'Failed to load recent thread messages',
+      { agentId, err: errorMsg(err) },
+    );
     return {
       items: [],
       hasMore: false,
