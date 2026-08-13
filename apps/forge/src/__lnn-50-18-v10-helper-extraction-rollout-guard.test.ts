@@ -226,6 +226,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/bundled-workspace-skills.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D44 cycle 41: skillsToolsDebug (separate-file pattern)
+    // expected=0 because helper body uses ...context spread (no forgeDebug calls)
+    path: 'agents/skills-tools.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [

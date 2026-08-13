@@ -120,7 +120,7 @@ describe('createAgentSkillTools', () => {
         scope: 'skills-tools',
         level: 'error',
         message: 'load_workspace_skill agent not found',
-        context: { agentId: 'agent-42' },
+        agentId: 'agent-42',
       });
     });
 
@@ -307,7 +307,7 @@ describe('createAgentSkillTools', () => {
         scope: 'skills-tools',
         level: 'error',
         message: 'publish_workspace_skill_to_global_catalog agent not found',
-        context: { agentId: 'agent-42' },
+        agentId: 'agent-42',
       });
     });
   });
