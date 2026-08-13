@@ -79,7 +79,7 @@ export function verifyAsaasWebhookRequest(
   webhookSecret: string,
   signatureHeader: string | null | undefined,
 ): AsaasWebhookPayload {
-  if (!signatureHeader) {
+  if (signatureHeader === null || signatureHeader === undefined || signatureHeader === '') {
     throw new Error('Asaas webhook: missing x-asaas-signature header');
   }
   // Header format: "sha256=<hex>" (GitHub-style). Strip prefix if present.

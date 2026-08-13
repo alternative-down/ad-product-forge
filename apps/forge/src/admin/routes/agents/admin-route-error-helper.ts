@@ -34,16 +34,16 @@ export type AdminRouteErrorOptions = {
 export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
   const path = opts?.path;
   const label = opts?.label;
-  const message = path
+  const message = path !== undefined && path !== ''
     ? `${path} route handler failed`
-    : label
+    : label !== undefined && label !== ''
     ? `Admin ${label} failed`
     : 'Admin route failed';
   forgeDebug({
     scope: 'admin',
     level: 'error',
     message,
-    context: { ...(path ? { path } : {}), error: errorMsg(error) },
+    context: { ...(path !== undefined && path !== '' ? { path } : {}), error: errorMsg(error) },
   });
   return jsonResponse({ error: errorMsg(error) }, 500);
 }
