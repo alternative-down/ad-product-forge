@@ -3,7 +3,7 @@ import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/client';
+import type { Database, DbOrTx } from "../database/client";
 import { companyCashLedger } from '../database/schema';
 import { type CompanyCashDirection, type CompanyCashStatus } from './company-cash-enums';
 
@@ -15,7 +15,7 @@ type CompanyCashEntryInput = {
   referenceId?: string;
 };
 
-type DbSession = Database;
+type DbSession = DbOrTx;
 
 export function createCompanyCashOperations(db: Database) {
 
