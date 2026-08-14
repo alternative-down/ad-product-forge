@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { forgeDebug } from '@forge-runtime/core';
+import { workspaceSkillArchiveDebug } from './workspace-skill-archive-debug';
 
 export async function ensureDirectory(targetPath: string): Promise<void> {
   try {
@@ -22,12 +22,7 @@ export async function ensureDirectory(targetPath: string): Promise<void> {
   try {
     await fs.mkdir(targetPath, { recursive: true });
   } catch (error) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'error',
-      message: `fs.mkdir failed: ${error}`,
-      context: { targetPath },
-    });
+    workspaceSkillArchiveDebug('error', `fs.mkdir failed: ${error}`, { targetPath });
     throw error;
   }
 }
@@ -59,11 +54,7 @@ export function normalizeArchiveEntryPath(entryPath: string): NormalizeResult {
   );
 
   if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: `Blocked invalid archive entry: ${entryPath}`,
-    });
+    workspaceSkillArchiveDebug('warn', `Blocked invalid archive entry: ${entryPath}`);
     throw new Error(`Invalid skill archive entry: ${entryPath}`);
   }
 
