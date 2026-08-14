@@ -62,7 +62,7 @@ describe('adminRouteError', () => {
       expect.objectContaining({
         scope: 'admin',
         level: 'error',
-        context: expect.objectContaining({ error: 'debug test' }),
+        error: 'debug test',
       }),
     );
   });
@@ -87,10 +87,8 @@ describe('adminRouteError', () => {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/test route handler failed',
-          context: expect.objectContaining({
-            path: '/admin/agent/test',
-            error: 'debug path test',
-          }),
+          path: '/admin/agent/test',
+          error: 'debug path test',
         }),
       );
     });
@@ -180,7 +178,7 @@ describe('safeRoute (regression for #6262)', () => {
     });
     expect(forgeDebug).toHaveBeenCalledWith(
       expect.objectContaining({
-        context: expect.objectContaining({ path: '/admin/unique-path-xyz' }),
+        path: '/admin/unique-path-xyz',
       }),
     );
   });

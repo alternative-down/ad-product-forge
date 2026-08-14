@@ -238,6 +238,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/agent-runner-context-loaders.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D45 cycle 1: adminRouteErrorDebug (separate-file pattern)
+    // expected=0 because helper body uses ...context spread (no forgeDebug calls)
+    path: 'admin/routes/agents/admin-route-error-helper.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
