@@ -63,8 +63,8 @@ interface StoredCredentials {
 
 function isStoredCredentials(value: unknown): value is StoredCredentials {
   if (typeof value !== 'object' || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return typeof obj.agentId === 'string';
+  if (!('agentId' in value)) return false;
+  return typeof (value as { agentId: unknown }).agentId === 'string';
 }
 
 /**

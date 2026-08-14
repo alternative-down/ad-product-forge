@@ -31,6 +31,7 @@ vi.mock('../../../../capabilities/store.ts', () => ({
 }));
 
 import { registerRoleOps } from './role-ops';
+import { RoleHasAssignedAgentsError } from '../../../../capabilities/role-errors';
 
 interface MockRoute {
   method: string;
@@ -178,10 +179,7 @@ describe('registerRoleOps', () => {
     });
 
     it('returns 409 when role has assignments (typed ROLE_HAS_ASSIGNED_AGENTS code)', async () => {
-      const err = new Error('Cannot delete role with assigned agents') as Error & {
-        code: 'ROLE_HAS_ASSIGNED_AGENTS';
-      };
-      err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
+      const err = new RoleHasAssignedAgentsError('role-protected');
       mockCapabilities.deleteRole.mockRejectedValue(err);
       registerRoleOps(httpServer as any, mockDb);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/delete');
@@ -194,10 +192,7 @@ describe('registerRoleOps', () => {
     });
 
     it('logs error with scope admin (not admin:roles) when delete fails', async () => {
-      const err = new Error('Cannot delete role with assigned agents') as Error & {
-        code: 'ROLE_HAS_ASSIGNED_AGENTS';
-      };
-      err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
+      const err = new Error('Unknown DB error');
       mockCapabilities.deleteRole.mockRejectedValue(err);
       const { forgeDebug } = await import('@forge-runtime/core');
       registerRoleOps(httpServer as any, mockDb);
@@ -212,7 +207,7 @@ describe('registerRoleOps', () => {
       expect(matchingCall).toBeDefined();
       expect(matchingCall?.scope).toBe('admin');
       expect(matchingCall?.scope).not.toBe('admin:roles');
-      expect(matchingCall?.context?.path).toBe('/admin/roles/delete');
+      expect(matchingCall?.path).toBe('/admin/roles/delete');
     });
 
     it('returns 500 on other delete errors', async () => {
