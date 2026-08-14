@@ -4,10 +4,11 @@ import {
   type ConversationStore,
   embedTextWithWorkspaceEmbedder,
   FilesystemDocumentSource,
-  forgeDebug,
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
+import { ltmDebug } from '../ltm-debug-helpers';
+import { ltmRecallDebug } from './recall-debug';
 import { errorMsg } from '../error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
@@ -98,24 +99,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   graphError: string | null;
   injectedSystemMessage: string | null;
 };
-
-// L#NN-YYY v4 helper: scope-injection for ltm forgeDebug calls (3 sites)
-export function ltmDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-): void {
-  forgeDebug({ scope: 'ltm', level, message, context });
-}
-
-// L#NN-YYY v4 helper: scope-injection for ltm-recall forgeDebug calls (2 sites)
-export function ltmRecallDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-): void {
-  forgeDebug({ scope: 'ltm-recall', level, message, context });
-}
 
 export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
