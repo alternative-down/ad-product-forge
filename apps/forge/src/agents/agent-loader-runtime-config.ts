@@ -6,7 +6,7 @@ import {
   WorkspaceSandboxConfigSchema,
   WorkspaceSkillsConfigSchema,
 } from '../database/schema';
-import { resolveWorkspaceEmbedderId } from '@forge-runtime/core';
+import { resolveWorkspaceEmbedderId, type CommunicationModule } from "@forge-runtime/core";
 import type { z } from 'zod';
 import type { AgentLoaderConfig } from './agent-loader-types';
 
@@ -66,6 +66,8 @@ export function buildAgentRuntimeConfig(
       WorkspaceSkillsConfigSchema,
     ),
     workspaceEmbedder: resolveWorkspaceEmbedderId(runtimeData.agent.workspaceEmbedder),
+    agents: undefined as Record<string, unknown> | undefined,
+    communication: undefined as CommunicationModule | undefined,
   };
 }
 
