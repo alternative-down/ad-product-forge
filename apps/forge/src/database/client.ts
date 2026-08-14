@@ -6,7 +6,8 @@
 
 import { createClient } from '@libsql/client';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
-import { sql } from 'drizzle-orm';
+import { type SQLiteTransaction } from 'drizzle-orm/sqlite-core';
+import { type ExtractTablesWithRelations, sql } from 'drizzle-orm';
 import * as schema from './schema';
 import { getAppDatabasePath } from './config';
 
@@ -27,4 +28,13 @@ export function getDatabase(): Database {
   return db;
 }
 
-export type { Database };
+/**
+ * DbOrTx — Union type for helper functions that accept either a top-level Database
+ * or a SQLiteTransaction (received from db.transaction(async (tx) => ...) callbacks).
+ *
+ * Use this for helper function parameters that may be invoked inside or outside
+ * a transaction. Eliminates the SQLiteTransaction → LibSQLDatabase TS2345 cast.
+ */
+type DbOrTx = Database | SQLiteTransaction<'async', unknown, typeof schema, ExtractTablesWithRelations<typeof schema>>;
+
+export type { Database, DbOrTx };

@@ -1,5 +1,5 @@
 import { and, eq, or } from 'drizzle-orm';
-import type { Database } from '../database/client';
+import type { Database, DbOrTx } from "../database/client";
 import {
   internalChatAccounts,
   internalChatConversationMembers,
@@ -72,7 +72,7 @@ export async function resolveChatGroupMembers(
  * Throws if group already exists (input.groupId was provided).
  */
 export async function createChatGroupIfNeeded(
-  tx: Database,
+  tx: DbOrTx,
   groupId: string,
   name: string | undefined,
   actorAccount: { id: string },
@@ -100,7 +100,7 @@ export async function createChatGroupIfNeeded(
  * Updates the group display name within a transaction.
  */
 export async function updateChatGroupName(
-  tx: Database,
+  tx: DbOrTx,
   groupId: string,
   name: string,
   now: number,
@@ -117,7 +117,7 @@ export async function updateChatGroupName(
  * Updates the conversation updatedAt timestamp when done.
  */
 export async function syncChatGroupMembers(
-  tx: Database,
+  tx: DbOrTx,
   groupId: string,
   desiredMembers: Map<string, ResolvedGroupMember>,
   now: number,
