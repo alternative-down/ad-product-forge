@@ -8,7 +8,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { ltmAgentWarn, ltmDebug } from './ltm-debug-helpers';
 
 describe('ltm-debug-helpers', () => {
-  it('ltmDebug calls forgeDebug with scope ltm and the supplied args', () => {
+  it('ltmDebug calls forgeDebug with scope ltm and spreads context to top-level', () => {
     vi.mocked(forgeDebug).mockClear();
     const ctx = { agentId: 'a-1', count: 3 };
 
@@ -19,7 +19,8 @@ describe('ltm-debug-helpers', () => {
       scope: 'ltm',
       level: 'info',
       message: 'memory workflow start',
-      context: ctx,
+      agentId: 'a-1',
+      count: 3,
     });
   });
 
@@ -32,7 +33,6 @@ describe('ltm-debug-helpers', () => {
       scope: 'ltm',
       level: 'warn',
       message: 'runtime not available',
-      context: undefined,
     });
   });
 
