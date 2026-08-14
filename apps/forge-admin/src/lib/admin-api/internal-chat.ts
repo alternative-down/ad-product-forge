@@ -6,6 +6,7 @@ import type {
   InternalChatContact,
   InternalChatExternalAccount,
 } from './types';
+import type { InternalChatParticipantRole } from './index';
 
 export function getInternalChatAccounts() {
   return request<InternalChatExternalAccount[]>('/admin/internal-chat/accounts');
@@ -154,7 +155,7 @@ export function addHomeInternalChatGroupMember(input: {
   accountId: string;
   conversationId: string;
   participantAccountId: string;
-  role?: 'admin' | 'normal';
+  role?: InternalChatParticipantRole;
 }) {
   return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/add', {
     method: 'POST',
@@ -166,7 +167,7 @@ export function updateHomeInternalChatGroupMemberRole(input: {
   accountId: string;
   conversationId: string;
   participantAccountId: string;
-  role: 'admin' | 'normal';
+  role: InternalChatParticipantRole;
 }) {
   return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/update-role', {
     method: 'POST',
