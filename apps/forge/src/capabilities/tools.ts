@@ -45,12 +45,12 @@ export function createCapabilityTools(
           fn: async () => {
             const result = await capabilities.listRoles();
             capabilitiesToolsDebug('info', 'list_agent_roles result', {
-                count: result.length,
-                roles: result.map((role: any) => ({
-                  roleId: (role as any).roleId,
-                  name: (role as any).name,
-                })),
-              });
+              count: result.length,
+              roles: result.map((role) => ({
+                roleId: role.roleId,
+                name: role.name,
+              })),
+            });
             return result;
           },
         });

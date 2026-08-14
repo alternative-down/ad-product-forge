@@ -11,6 +11,7 @@ import {
 import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
+import { RoleHasAssignedAgentsError } from './role-errors';
 import { withDbErrorLogging } from '../database/error-logging';
 import { resolveLoadedToolIds } from './permissions';
 import {
@@ -151,9 +152,7 @@ export function createCapabilityStore(db: Database) {
 
       if (assigned != null) {
         capabilitiesStoreDebug('warn', 'deleteRole: cannot delete role with assigned agents', { roleId });
-        const err = new Error(`Cannot delete role with assigned agents: ${roleId}`) as Error & { code: 'ROLE_HAS_ASSIGNED_AGENTS' };
-        err.code = 'ROLE_HAS_ASSIGNED_AGENTS';
-        throw err;
+        throw new RoleHasAssignedAgentsError(roleId);
       }
 
       await tx.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));

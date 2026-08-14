@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { jsonResponse, parseJsonBody } from '../../index';
 import { createCapabilityStore } from '../../../../capabilities/store';
+import { RoleHasAssignedAgentsError } from '../../../../capabilities/role-errors';
 import type { HttpHandler } from '../../../../http/server';
 import { forgeDebug } from '../../debug';
 
@@ -89,7 +90,7 @@ export function registerRoleOps(
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
-        if ((err as { code?: string }).code === 'ROLE_HAS_ASSIGNED_AGENTS') {
+        if (err instanceof RoleHasAssignedAgentsError) {
           forgeDebug({
             scope: 'admin',
             level: 'warn',
