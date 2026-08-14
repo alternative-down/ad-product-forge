@@ -35,8 +35,8 @@ export async function runGraphSearch(
   const graphDimension = await deps.getGraphDimension();
 
   try {
-    const result = await deps.runTrackedRecallOperation(
-      'retrieval.graph',
+    const result = await deps.runTrackedRecallOperation<Awaited<ReturnType<typeof deps.retrievalWorkspace.searchGraph>>>(
+      "retrieval.graph",
       deps.retrievalWorkspace.searchGraph({
         query: graphQueryText,
         topK: options.topK,
