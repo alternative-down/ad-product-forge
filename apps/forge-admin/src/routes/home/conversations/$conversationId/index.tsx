@@ -12,6 +12,7 @@ import {
   updateHomeInternalChatConversation,
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
+  type InternalChatParticipantRole,
 } from '@/lib/admin-api/index';
 import {
   formatRecentMessageTime,
@@ -51,7 +52,7 @@ function HomeConversationDetailIndexRoute() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
-  const [availableParticipantRole, setAvailableParticipantRole] = useState<'admin' | 'normal'>(
+  const [availableParticipantRole, setAvailableParticipantRole] = useState<InternalChatParticipantRole>(
     'normal',
   );
   const [messageDraft, setMessageDraft] = useState('');
