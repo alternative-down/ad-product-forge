@@ -177,9 +177,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
                   effectiveAt: input.postPlanned.effectiveAt,
                 });
                 break;
-              case 'cancel_planned':
+              case "cancel_planned":
                 result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
                 break;
+              default:
+                throw new Error(`Unknown cash movement action: ${(input as { action: string }).action}`);
             }
             return { valid: true, action: input.action, ...result };
           },

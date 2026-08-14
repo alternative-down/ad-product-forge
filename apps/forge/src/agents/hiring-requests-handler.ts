@@ -13,7 +13,7 @@ import {
   type NativeToolLoopMessage,
   type Tool,
 } from '@forge-runtime/core';
-import { z } from 'zod';
+import { z } from "zod";
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
@@ -436,7 +436,7 @@ export async function generateHiredAgentInstructions(
     const parsedToolResult = hireAgentToolResultSchema.safeParse(toolOutput);
 
     if (!parsedToolResult.success) {
-      hiringDebug('error', 'hireAgent tool result failed schema validation', { parseError: z.flattenError(parsedToolResult.error) });
+      hiringDebug('error', 'hireAgent tool result failed schema validation', { parseError: parsedToolResult.error.flatten() });
     }
 
     if (parsedToolResult.success && parsedToolResult.data.valid) {
