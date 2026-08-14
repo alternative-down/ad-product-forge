@@ -269,6 +269,13 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'admin/read-model/agents-runtime-memory.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D45 cycle 6 Triple-Fix: recall.ts imports ltmDebug (../ltm-debug-helpers) + ltmRecallDebug (./recall-debug)
+    // expected=0 because no direct forgeDebug calls (Pattern M REUSE + Pattern K SEPARATE-FILE + L#NN-50 #50 SPREAD)
+    // ★ L#NN-Triple-Fix-Cycle-Protocol v1 N=2 (2nd instance after Aldric #6456)
+    path: 'agents/ltm/recall.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
