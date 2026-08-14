@@ -198,11 +198,6 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 1,
   },
   {
-    // D43 cycle 20 workspaceSkillsDebug: INLINE pattern, expected=1 (helper body)
-    path: 'agents/workspace-skills.ts',
-    expectedOneObjectArgCalls: 1,
-  },
-  {
     // D43 cycle 39 globalSkillsDebug: separate-file pattern
     // expected=0 because helper body has 0 forgeDebug calls (uses ...context spread)
     path: 'agents/global-skills.ts',
@@ -274,6 +269,21 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     // expected=0 because no direct forgeDebug calls (Pattern M REUSE + Pattern K SEPARATE-FILE + L#NN-50 #50 SPREAD)
     // ★ L#NN-Triple-Fix-Cycle-Protocol v1 N=2 (2nd instance after Aldric #6456)
     path: 'agents/ltm/recall.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D45 cycle 7 Pattern M REUSE N=4: workspace-skill-helpers.ts uses workspaceSkillArchiveDebug helper
+    // expected=0 because no direct forgeDebug calls (Pattern M REUSE applied, helper has SPREAD contract)
+    // ★ L#NN-YYY v6 Pattern M N=4 PERMANENT GOLD trigger (4th distinct scope: workspace-skills)
+    path: 'agents/workspace-skill-helpers.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D45 cycle 7 Pattern M REUSE N=4: workspace-skills.ts deletes local workspaceSkillsDebug, uses workspaceSkillArchiveDebug
+    // expected=0 because no direct forgeDebug calls (local helper deleted, Pattern M REUSE applied)
+    // ★ Anti-pattern eliminated: LOCAL HELPER SHADOWING (workspaceSkillsDebug duplicated scope='workspace-skills' inline)
+    // ★ L#NN-YYY v4 anti-pattern catch (2nd instance after recall.ts cycle 6)
+    path: 'agents/workspace-skills.ts',
     expectedOneObjectArgCalls: 0,
   },
 ];
