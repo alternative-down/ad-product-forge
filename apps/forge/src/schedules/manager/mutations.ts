@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { queriesSchedulesManagerDebug } from './queries-debug';
 import { withDbErrorLogging } from '../../database/error-logging';
 import { z } from 'zod';
 
@@ -22,19 +22,6 @@ import {
 import { createHeartbeatSchedule as makeHeartbeatSchedule } from '../lifecycle/heartbeat';
 import { toScheduleRecord } from './store';
 import type { ScheduleLifecycle } from '../lifecycle/lifecycle';
-
-/**
- * Module-local debug helper. Centralizes the schedules-manager scope
- * so call sites only specify the level, message, and context.
- */
-function schedulesManagerDebug(
-  level: "debug" | "info" | "warn" | "error",
-  message: string,
-  context?: Record<string, unknown>,
-) {
-  forgeDebug({ scope: "schedules-manager", level, message, context });
-}
-
 
 /**
  * schedules/manager/mutations.ts
@@ -172,7 +159,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const existing = await store.getAgentSchedule(agentId, scheduleId);
 
     if (existing === null) {
-      schedulesManagerDebug('error', 'updateSchedule schedule not found', { agentId, scheduleId });
+      queriesSchedulesManagerDebug('error', 'updateSchedule schedule not found', { agentId, scheduleId });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
@@ -336,7 +323,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
 
     if (reloaded === null) {
-      schedulesManagerDebug('error', 'updateOwnedSchedule: not found after update', { scheduleId });
+      queriesSchedulesManagerDebug('error', 'updateOwnedSchedule: not found after update', { scheduleId });
       throw new Error(`Schedule not found after update: ${scheduleId}`);
     }
 
@@ -388,7 +375,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
 
     if (scheduleRecord === null) {
-      schedulesManagerDebug('error', 'createScheduleForAgent failed to load schedule', { agentId: parsed.targetAgentId, recordId: record.id });
+      queriesSchedulesManagerDebug('error', 'createScheduleForAgent failed to load schedule', { agentId: parsed.targetAgentId, recordId: record.id });
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
