@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { githubToolsDebug } from './tools-debug';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
@@ -36,22 +36,12 @@ export function createGitHubTools(
           op: 'get_github_git_credentials',
           hint: 'Verify GitHub App is installed and has repository access.',
           fn: async () => {
-            forgeDebug({
-              scope: 'tools:github',
-              level: 'info',
-              message: 'get_github_git_credentials called',
-              context: { repositoryName: input.repositoryName },
-            });
+            githubToolsDebug('info', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
             const result = await githubApps.getGitCredentials({
               agentId,
               repositoryName: input.repositoryName,
             });
-            forgeDebug({
-              scope: 'tools:github',
-              level: 'info',
-              message: 'get_github_git_credentials result',
-              context: { hasCredentials: result !== null && result !== undefined },
-            });
+            githubToolsDebug('info', 'get_github_git_credentials result', { hasCredentials: result !== null && result !== undefined });
             return result;
           },
         });
