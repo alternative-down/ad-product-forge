@@ -256,6 +256,12 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/agent-runner.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D45 cycle 4: workspaceSearch REUSES existing ltmDebug helper (Pattern M REUSE in ltm scope)
+    // expected=0 because no direct forgeDebug calls (helper uses ...context spread, L#NN-50 #50 SPREAD)
+    path: 'agents/ltm/recall/workspace-search.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [

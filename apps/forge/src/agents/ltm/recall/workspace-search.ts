@@ -1,6 +1,6 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
-import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../error-formatting';
+import { ltmDebug } from '../../ltm-debug-helpers';
 import type { LtmSearchResult } from '../helpers';
 
 export type WorkspaceSearchOptions = {
@@ -35,16 +35,11 @@ export async function runWorkspaceSearch(
   const stageStartedAt = Date.now();
 
   try {
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace search start',
-      context: {
-        agentId: deps.agentId,
-        queryLength: queryText.length,
-        topK: options.topK,
-        mode: options.mode,
-      },
+    ltmDebug('info', 'ltm recall workspace search start', {
+      agentId: deps.agentId,
+      queryLength: queryText.length,
+      topK: options.topK,
+      mode: options.mode,
     });
     const results = await deps.runTrackedRecallOperation<
       Array<{
@@ -74,15 +69,10 @@ export async function runWorkspaceSearch(
       content: result.text.trim(),
       score: result.score,
     }));
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace search complete',
-      context: {
-        agentId: deps.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        resultCount: searchResults.length,
-      },
+    ltmDebug('info', 'ltm recall workspace search complete', {
+      agentId: deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      resultCount: searchResults.length,
     });
     return { formatted: '', results: searchResults };
   } catch (error) {
@@ -91,15 +81,10 @@ export async function runWorkspaceSearch(
       return { formatted: '', results: [] };
     }
 
-    forgeDebug({
-      scope: 'ltm',
-      level: 'info',
-      message: 'ltm recall workspace search failed',
-      context: {
-        agentId: deps.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        error: errorMsg(error),
-      },
+    ltmDebug('info', 'ltm recall workspace search failed', {
+      agentId: deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      error: errorMsg(error),
     });
     throw error;
   }
