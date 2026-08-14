@@ -26,7 +26,7 @@
  *   - P1: micro-erp/read-model.ts (CLEARED #6097, was 6 sites json_parse_narrowing)
  *   - P2: admin/routes/agents/provider-mcp.ts (6 sites, MCP wrapper escape)
  *   - P2: minimax/tools.ts (4 sites, helper_return_narrowing)
- *   - P2: communication/internal-chat-groups.ts (4 sites, needs investigation)
+ *   - communication/internal-chat-groups.ts (CLEARED #6215 / #6117 — was 4 sites db_tx_narrowing)
  *   - P2: finance/payment-receivables.ts (4 sites, needs investigation)
  *
  * L#NN-26 v1 mutation protocol: comment out the allowlist entries, the
