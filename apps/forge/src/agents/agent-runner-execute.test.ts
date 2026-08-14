@@ -13,7 +13,13 @@
  * module level to avoid vitest hoisting issues.
  */
 import { expect, it, vi } from 'vitest';
+
+vi.mock('./agent-runner-debug', () => ({
+  agentRunnerDebug: vi.fn(),
+}));
+
 import { executeStep } from './agent-runner-execute';
+import { agentRunnerDebug } from './agent-runner-debug';
 
 // ─── Mock helpers ────────────────────────────────────────────────────────────────
 
@@ -103,7 +109,6 @@ function makeDeps(
     currentGenerateAbortController?: AbortController | null;
     setCurrentGenerateAbortController?: ReturnType<typeof vi.fn>;
     loopDetector?: unknown;
-    forgeDebug?: ReturnType<typeof vi.fn>;
     mastraId?: string;
     pricingModelKey?: string;
     modelProfileId?: string;
@@ -145,7 +150,6 @@ function makeDeps(
     runLastMessages: 20,
     currentGenerateAbortController: null,
     setCurrentGenerateAbortController: vi.fn(),
-    forgeDebug: vi.fn(),
     ...overrides,
   };
 }
@@ -435,23 +439,23 @@ it('schedules exponential backoff on generation error', async () => {
   expect(delayMs).toBeGreaterThan(0);
 });
 
-it('calls forgeDebug on error with correct context fields', async () => {
+it('calls agentRunnerDebug on error with correct context fields', async () => {
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
     getRunnableContract: vi.fn().mockResolvedValue(contract),
   });
-  const forgeDebug = vi.fn();
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
-  const deps = makeDeps({ store, forgeDebug, generateWithTimeoutRetries });
+  const deps = makeDeps({ store, generateWithTimeoutRetries });
+  (agentRunnerDebug as ReturnType<typeof vi.fn>).mockClear();
   await executeStep(deps as any);
   // Two calls: (1) 'executing step' debug before generate, (2) error debug in catch
-  expect(forgeDebug).toHaveBeenCalledTimes(2);
-  const errorCall = forgeDebug.mock.calls[1]; // [0] is the 'executing step' call
-  expect(errorCall[0].scope).toBe('agent-runner');
-  expect(errorCall[0].level).toBe('error');
-  expect(errorCall[0].runtimeId).toBe('runtime-1');
-  expect(errorCall[0].context.mastraId).toBe('mastra-1');
+  expect(agentRunnerDebug).toHaveBeenCalledTimes(2);
+  const errorCall = (agentRunnerDebug as ReturnType<typeof vi.fn>).mock.calls[1];
+  // helper signature positional (level, message, context): calls[1][0]=level, calls[1][1]=message, calls[1][2]=context
+  expect(errorCall[0]).toBe('error');
+  expect(errorCall[1]).toBe('step failed');
+  expect(errorCall[2]).toEqual(expect.objectContaining({ runtimeId: 'runtime-1', mastraId: 'mastra-1' }));
 });
 
 it('sets execution absent state on error', async () => {

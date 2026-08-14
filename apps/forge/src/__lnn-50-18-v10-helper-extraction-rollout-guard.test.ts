@@ -244,6 +244,18 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'admin/routes/agents/admin-route-error-helper.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D45 cycle 3: agentRunnerExecute REUSES existing agentRunnerDebug helper (Pattern M N=2)
+    // expected=0 because no direct forgeDebug calls (helper handles all)
+    path: 'agents/agent-runner-execute.ts',
+    expectedOneObjectArgCalls: 0,
+  },
+  {
+    // D45 cycle 3: agentRunner REUSES existing agentRunnerDebug helper (Pattern M N=2)
+    // expected=0 because no direct forgeDebug calls (helper handles all)
+    path: 'agents/agent-runner.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [
