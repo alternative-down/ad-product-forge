@@ -262,6 +262,13 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     path: 'agents/ltm/recall/workspace-search.ts',
     expectedOneObjectArgCalls: 0,
   },
+  {
+    // D45 cycle 5: agentsRuntimeMemory REUSES existing adminReadModelDebug helper (Pattern M REUSE in admin-read-model scope)
+    // expected=0 because no direct forgeDebug calls (helper uses ...context spread, L#NN-50 #50 SPREAD)
+    // ★ Pattern M N=3 PERMANENT trigger (3rd cluster: D44 #6450 agent-runner + D45 #6455 ltm + cycle 5 admin-read-model)
+    path: 'admin/read-model/agents-runtime-memory.ts',
+    expectedOneObjectArgCalls: 0,
+  },
 ];
 
 const CANDIDATE_FILES: HelperFileMigration[] = [

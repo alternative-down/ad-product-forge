@@ -30,7 +30,7 @@ import { formatWorkingMemoryValue, isTextPart } from './helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { withTimeout } from '../../utils/async';
 import { closeLibsqlClient } from './conversation-helpers';
-import { forgeDebug } from '@forge-runtime/core';
+import { adminReadModelDebug } from './agents-detail-debug';
 import type { Database } from '../../database/index';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 
@@ -146,11 +146,8 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         agentContext =
           (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
       } catch (err) {
-        forgeDebug({
-          scope: 'admin-read-model',
-          level: 'error',
-          message: '[safe-catch]',
-          context: { err: errorMsg(err) },
+        adminReadModelDebug('error', '[safe-catch]', {
+          err: errorMsg(err),
         });
         agentContext = null;
       }
@@ -213,11 +210,8 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Agent runtime memory LTM snapshot timed out for ${agentId}`,
           ).catch((err) => {
-            forgeDebug({
-              scope: 'admin-read-model',
-              level: 'error',
-              message: '[safe-catch]',
-              context: { err: errorMsg(err) },
+            adminReadModelDebug('error', '[safe-catch]', {
+              err: errorMsg(err),
             });
             return null;
           })
@@ -228,11 +222,8 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
       ).catch((err) => {
-        forgeDebug({
-          scope: 'admin-read-model',
-          level: 'error',
-          message: '[safe-catch]',
-          context: { err: errorMsg(err) },
+        adminReadModelDebug('error', '[safe-catch]', {
+          err: errorMsg(err),
         });
         return null;
       });
