@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { adminRouteErrorDebug } from './admin-route-error-debug';
 import { errorMsg } from '../../../agents/error-formatting';
 import { ZodError } from 'zod';
 import { jsonResponse } from '../helpers';
@@ -39,12 +39,14 @@ export function adminRouteError(error: unknown, opts?: AdminRouteErrorOptions) {
     : label !== undefined && label !== ''
     ? `Admin ${label} failed`
     : 'Admin route failed';
-  forgeDebug({
-    scope: 'admin',
-    level: 'error',
+  adminRouteErrorDebug(
+    'error',
     message,
-    context: { ...(path !== undefined && path !== '' ? { path } : {}), error: errorMsg(error) },
-  });
+    {
+      ...(path !== undefined && path !== '' ? { path } : {}),
+      error: errorMsg(error),
+    },
+  );
   return jsonResponse({ error: errorMsg(error) }, 500);
 }
 
