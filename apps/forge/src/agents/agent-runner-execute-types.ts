@@ -151,11 +151,8 @@ export interface ExecuteStepDeps {
 
   // ── Error logging ──────────────────────────────────────────────────────────
   runtime: InternalAgentRuntime;
-  forgeDebug: (opts: {
-    scope: string;
-    level: string;
-    runtimeId: string;
-    message: string;
-    context?: Record<string, unknown>;
-  }) => void;
+  // NOTE: forgeDebug removed in D45 cycle 3 (Pattern M N=2). Use agentRunnerDebug
+  // helper directly (apps/forge/src/agents/agent-runner-debug.ts). The helper
+  // bakes in scope=agent-runner and spreads context to top-level
+  // (L#NN-50 #50 LOG RETENTION discipline).
 }

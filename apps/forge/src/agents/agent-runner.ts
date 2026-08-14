@@ -1,6 +1,7 @@
 import { buildRunnerSnapshot } from './agent-runner-snapshot';
 import { createId } from '../utils/id';
-import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
+import { createAgentWakeQueue } from '@forge-runtime/core';
+import { agentRunnerDebug } from './agent-runner-debug';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
 import type { InternalAgentRuntime } from './runtime/types';
@@ -298,12 +299,9 @@ function stop() {
 
       await queueNextStep(_runEpoch);
     } catch (error) {
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'error',
+      agentRunnerDebug('error', 'failed to begin run', {
         runtimeId: runtime.id,
-        message: 'failed to begin run',
-        context: { error: errorMsg(error) },
+        error: errorMsg(error),
       });
       if (!isStaleRun(_runEpoch)) {
         await transitionToIdle(_runEpoch);
@@ -351,12 +349,9 @@ function stop() {
       scheduler.setInstant(false);
       scheduler.scheduleNextStep(delayMs, () => executeStep(nextAttempt.contractId, _runEpoch));
     } catch (error) {
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'error',
+      agentRunnerDebug('error', 'failed to schedule next step', {
         runtimeId: runtime.id,
-        message: 'failed to schedule next step',
-        context: { error: errorMsg(error) },
+        error: errorMsg(error),
       });
       scheduler.setInstant(false);
       schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
@@ -436,7 +431,6 @@ function stop() {
       setCurrentGenerateAbortController: (c) => { currentGenerateAbortController = c; },
       // Error logging
       runtime,
-      forgeDebug,
     };
   }
 

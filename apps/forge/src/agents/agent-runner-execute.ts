@@ -25,6 +25,7 @@
 import { withTimeout } from '../utils/async';
 import { extractRunnerControlDirective } from './agent-runner-control-directives';
 import { formatAbsentExecutionError, errorMsg } from './error-formatting';
+import { agentRunnerDebug } from './agent-runner-debug';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
 import type { AgentRunnerUsage as _AgentRunnerUsage } from './agent-runner-usage';
@@ -77,7 +78,6 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     loadAgentContextInstructions,
     currentRuntime,
     db,
-    forgeDebug,
     runtime,
     usage,
     notifications,
@@ -158,11 +158,8 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     progressState.lastStepStage = 'flushing-pending-run-messages';
     prompt = flushPendingRunMessages({ allowOriginIdleOnly: true }) ?? '';
 
-    forgeDebug({
-      scope: 'agent-runner',
-      level: 'debug',
+    agentRunnerDebug('debug', 'executing step', {
       runtimeId: deps.runtimeId,
-      message: 'executing step',
     });
 
     progressState.lastStepStage = 'agent-generate';
@@ -241,21 +238,16 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       return;
     }
 
-    forgeDebug({
-      scope: 'agent-runner',
-      level: 'error',
+    agentRunnerDebug('error', 'step failed', {
       runtimeId: deps.runtimeId,
-      message: 'step failed',
-      context: {
-        mastraId: deps.mastraId,
-        pricingModelKey: deps.pricingModelKey,
-        modelProfileId: deps.modelProfileId,
-        stepStartedAt: progressState.lastStepStartedAt,
-        stepStage: progressState.lastStepStage,
-        lastGenerateProgress: progressState.lastGenerateProgress,
-        prompt,
-        error: errorMsg(error),
-      },
+      mastraId: deps.mastraId,
+      pricingModelKey: deps.pricingModelKey,
+      modelProfileId: deps.modelProfileId,
+      stepStartedAt: progressState.lastStepStartedAt,
+      stepStage: progressState.lastStepStage,
+      lastGenerateProgress: progressState.lastGenerateProgress,
+      prompt,
+      error: errorMsg(error),
     });
     await withTimeout(
       store.setExecutionAbsent(
@@ -269,12 +261,9 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${deps.runtimeId}`,
     ).catch((stateError) => {
-      forgeDebug({
-        scope: 'agent-runner',
-        level: 'error',
+      agentRunnerDebug('error', 'failed to set absent state', {
         runtimeId: deps.runtimeId,
-        message: 'failed to set absent state',
-        context: { stateError },
+        stateError,
       });
     });
     scheduler.scheduleNextStep(nextExponentialBackoffMs(backoffState.backoffMs).current, () =>
