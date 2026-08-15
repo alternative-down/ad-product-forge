@@ -3,7 +3,7 @@ import type {
   LongTermMemoryRecallSnapshot,
   createAgentLongTermMemoryStore,
 } from '../store';
-import { readOperationalMemoryState } from '@forge-runtime/core';
+import { readOperationalMemoryState, type OperationalMemoryState } from '@forge-runtime/core';
 import { buildLtmRecallSnapshot } from '../snapshot';
 import type { LtmSnapshotDeps } from '../snapshot';
 import type { ConversationStore } from '@forge-runtime/core';
@@ -155,7 +155,7 @@ export class RecallPersistence {
           (value: unknown): value is string => typeof value === 'string' && value.length > 0,
         )
       : [];
-    const operationalMemoryState: any =
+    const operationalMemoryState: OperationalMemoryState | null =
       (threadId ?? '') !== ''
         ? await readOperationalMemoryState({
             threadId: threadId as string,

@@ -132,7 +132,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
 
     const reflection = state['activeReflectionBlocks'].find(
-      (item: any) => item['generationCount'] === observation.reflectedGeneration,
+      (item) => item["generationCount"] === observation.reflectedGeneration,
     );
 
      

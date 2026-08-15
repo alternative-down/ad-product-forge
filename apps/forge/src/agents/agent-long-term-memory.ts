@@ -18,7 +18,6 @@ import { z } from 'zod';
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
-  type CheckpointPackageManifest,
   type CheckpointedOmCheckpointPackageInput,
   type CheckpointedOmPackageEntry,
 } from './ltm/store';
@@ -151,7 +150,18 @@ export function createAgentLongTermMemory(input: {
   conversationStore: ConversationStore;
   workspaceActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   workspaceEmbedder?: WorkspaceEmbedderId;
-  persistenceStore: any;
+  persistenceStore: {
+    readState(): Promise<LongTermMemoryState>;
+    writeState(state: LongTermMemoryState): Promise<{
+      packages: unknown[];
+      lastRunAt: string | null;
+      lastRunError: string | null;
+      lastRunErrorAt: string | null;
+      lastWrittenPackageId: string | null;
+      lastWrittenAt: string | null;
+    }>;
+    writeRecallIndexStamp(reason: string): Promise<void>;
+  };
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
@@ -239,7 +249,7 @@ export function createAgentLongTermMemory(input: {
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
     const existing = (state.packages ?? []).find(
-      (entry: any) => entry.checkpointGeneration === payload.toGeneration,
+      (entry) => entry.checkpointGeneration === payload.toGeneration,
     );
 
     if (existing) {
@@ -250,7 +260,7 @@ export function createAgentLongTermMemory(input: {
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence =
       (state.packages ?? []).filter(
-        (entry: any): boolean =>
+        (entry): boolean =>
           entry.packageId !== null &&
           entry.packageId !== undefined &&
           entry.packageId.startsWith(`${dayKey}_`),
