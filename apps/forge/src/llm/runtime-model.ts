@@ -7,6 +7,7 @@ import {
 } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import type { LlmProfileRecord } from './settings-store';
+import { MINIMAX_HOST, MINIMAX_ANTHROPIC_URL } from '../minimax/constants';
 
 /**
  * Module-local debug helper. Centralizes the llm-runtime-model scope
@@ -67,11 +68,11 @@ export async function resolveProfileRuntimeModel(
     }
 
     const baseUrl =
-      profile.baseUrl === 'https://api.minimax.io'
-        ? 'https://api.minimax.io/anthropic/v1'
+      profile.baseUrl === MINIMAX_HOST
+        ? MINIMAX_ANTHROPIC_URL
         : profile.baseUrl !== null && profile.baseUrl !== undefined
           ? profile.baseUrl
-          : 'https://api.minimax.io/anthropic/v1';
+          : MINIMAX_ANTHROPIC_URL;
 
     const model = createAnthropic({
       authToken: profile.apiKey,
