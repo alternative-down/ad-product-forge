@@ -18,7 +18,7 @@ const hireInternalAgentInputSchema = z.object({
 const hireInternalAgentOutputSchema = z.object({
   agentId: z.string(),
   emailAddress: z.string().nullable(),
-  githubAppRegistrationUrl: z.string().nullable(),
+  githubAppRegistrationUrl: z.string().nullish(),  // per L#NN-TSC-Phase-4 v1 producer fix: accepts null OR undefined
 });
 
 const terminateInternalAgentInputSchema = z.object({

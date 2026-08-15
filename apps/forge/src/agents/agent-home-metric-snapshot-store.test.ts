@@ -86,7 +86,9 @@ describe('createAgentHomeMetricSnapshotStore', () => {
         snapshot: snapshotData,
       });
 
-      expect(captured[0].snapshot).toBe(snapshotData);
+      // Per L#NN-TSC-Phase-4 v1: snapshot is JSON-stringified for text NOT NULL storage
+      expect(typeof captured[0].snapshot).toBe('string');
+      expect(JSON.parse(captured[0].snapshot as string)).toEqual(snapshotData);
     });
 
     it('captures stepCreatedAt', async () => {
@@ -184,7 +186,8 @@ describe('createAgentHomeMetricSnapshotStore', () => {
         snapshot: null as unknown,
       });
 
-      expect(captured[0].snapshot).toBeNull();
+      // Per L#NN-TSC-Phase-4 v1: null snapshot is JSON-stringified to 'null' for text NOT NULL storage
+      expect(captured[0].snapshot).toBe('null');
     });
   });
 
