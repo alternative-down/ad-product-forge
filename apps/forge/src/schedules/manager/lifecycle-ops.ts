@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { queriesSchedulesManagerDebug } from './queries-debug';
 import { errorMsg } from '../../agents/error-formatting';
 
 import { toScheduleRecord } from './store';
@@ -68,12 +68,11 @@ export function createManagerLifecycleOps(
     // `!` non-null assertion (which bypasses the null check).
     const lifecycle = getLifecycle();
     if (lifecycle === null) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'info',
-        message: '__registerSchedule: lifecycle is null (stopped), skipping register',
-        context: { scheduleId: record.scheduleId },
-      });
+      queriesSchedulesManagerDebug(
+        'info',
+        '__registerSchedule: lifecycle is null (stopped), skipping register',
+        { scheduleId: record.scheduleId },
+      );
       return;
     }
     await lifecycle.register(record);
@@ -115,17 +114,16 @@ export function createManagerLifecycleOps(
         isActive: remainsActive,
       });
     } catch (error) {
-      forgeDebug({
-        scope: 'schedules-manager',
-        level: 'error',
-        message: '[schedules-manager] triggerSchedule failed',
-        context: {
+      queriesSchedulesManagerDebug(
+        'error',
+        'triggerSchedule failed',
+        {
           scheduleId: scheduleRecord.scheduleId,
           kind: scheduleRecord.kind,
           fireDate: fireDate.getTime(),
           error: errorMsg(error),
         },
-      });
+      );
       throw error;
     }
   }
