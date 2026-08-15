@@ -242,25 +242,25 @@ describe('registerAgentMemoryRoutes', () => {
   });
 
   it('registers GET /admin/agents/:agentId/memory', () => {
-    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    registerAgentMemoryRoutes(httpServer, { getAgentRuntimeMemory: mockGetAgentRuntimeMemory });
     expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/memory');
   });
 
   it('returns 400 when agentId is missing', async () => {
-    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    registerAgentMemoryRoutes(httpServer, { getAgentRuntimeMemory: mockGetAgentRuntimeMemory });
     const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
     expect(response.status).toBe(400);
   });
 
   it('calls getAgentRuntimeMemory with agentId', async () => {
-    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    registerAgentMemoryRoutes(httpServer, { getAgentRuntimeMemory: mockGetAgentRuntimeMemory });
     const route = httpServer.getRoutes()[0];
     await route.handler(makeRequest('/admin/agents/agent-1/memory'));
     expect(mockGetAgentRuntimeMemory).toHaveBeenCalledWith('agent-1');
   });
 
   it('returns state on success', async () => {
-    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    registerAgentMemoryRoutes(httpServer, { getAgentRuntimeMemory: mockGetAgentRuntimeMemory });
     const route = httpServer.getRoutes()[0];
     const response = await route.handler(makeRequest('/admin/agents/agent-1/memory'));
     expect(response.status).toBe(200);
