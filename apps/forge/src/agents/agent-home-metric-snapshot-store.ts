@@ -16,13 +16,14 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
     const createdAt = Date.now();
 
     try {
-      await (db.insert(agentHomeMetricSnapshots) as any).values({
+      await db.insert(agentHomeMetricSnapshots).values({
         id: createId(),
         agentId: input.agentId,
         stepId: input.stepId,
         stepCreatedAt: input.stepCreatedAt,
-        snapshot: input.snapshot,
+        snapshot: JSON.stringify(input.snapshot),
         createdAt,
+        updatedAt: createdAt,
       });
     } catch (err) {
       forgeDebug({

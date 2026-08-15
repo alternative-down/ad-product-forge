@@ -80,7 +80,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     return {
       agentId: hired.agentId,
       emailAddress: hired.emailAddress,
-      githubAppRegistrationUrl: (githubApp as any)?.registrationUrl ?? null,
+      githubAppRegistrationUrl: githubApp?.registrationUrl,
     };
   } catch (error) {
     forgeDebug({
