@@ -52,8 +52,7 @@ vi.mock('../system-settings/store', () => ({
     getSettings: vi.fn().mockResolvedValue({
       checkpointedOmRecentRawTokens: 2000,
       checkpointedOmRawObservationBatchTokens: 3000,
-      checkpointedOmObservationTriggerTokenLimit: 4000,
-      checkpointedOmReflectionTriggerTokenLimit: 5000,
+      // L#NN-TSC-Phase-4 v1 N=3: removed phantom checkpointedOmObservationTriggerTokenLimit and ReflectionTriggerTokenLimit — never existed in schema
       checkpointedOmTotalContextTokens: 100000,
       checkpointedOmObservationReflectionBatchTokens: 1000,
     }),
