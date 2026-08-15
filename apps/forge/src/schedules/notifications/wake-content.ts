@@ -1,11 +1,4 @@
-import { forgeDebug } from "@forge-runtime/core";
-const scheduleHelpersDebug = (
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-): void => {
-  forgeDebug({ scope: 'schedule-helpers', level, message, context });
-};
+import { scheduleHelpersDebug } from './wake-content-debug';
 
 
 

@@ -8,14 +8,7 @@ import type { createAgentScheduleManager } from '../manager/manager';
 
 type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 
-// L#NN-YYY v4 helper: scope-injection for tools:schedules forgeDebug calls (6 sites)
-function toolsScheduleDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-): void {
-  forgeDebug({ scope: 'tools:schedules', level, message, context });
-}
+import { toolsScheduleDebug } from './tools-debug';
 
 export function validationError(error: string, hint: string): {
   valid: false;
