@@ -1,5 +1,5 @@
 import type { HttpRequest, HttpResponse } from '../http/server';
-import { forgeDebug } from '@forge-runtime/core';
+import { webhooksHandlerDebug } from './handler-debug';
 import { errorMsg } from '../agents/error-formatting';
 
 import {
@@ -37,18 +37,6 @@ type NotifyAgent = (input: {
 
 import type { WebhookRouteWithSecret } from './store';
 
-/**
- * Module-local debug helper. Centralizes the webhooks-handler scope
- * so call sites only specify the level, message, and context.
- */
-function webhooksHandlerDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-) {
-  forgeDebug({ scope: 'webhooks-handler', level, message, context });
-}
-
 
 export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyAgent }) {
   async function handleWebhook(request: HttpRequest): Promise<HttpResponse> {
@@ -76,12 +64,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     const signatureHeader =
       request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
     if (signatureHeader === null || signatureHeader === undefined) {
-      forgeDebug({
-        scope: 'webhooks',
-        level: 'warn',
-        message: 'Missing signature header',
-        context: { routeId },
-      });
+      webhooksHandlerDebug('warn', 'Missing signature header', { routeId });
       return { status: 401, body: 'Missing signature' };
     }
     if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
