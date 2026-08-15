@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { buildRunnerSnapshot, type AgentRunnerSnapshot } from './agent-runner-snapshot';
+import type { AgentWakeQueue } from '@forge-runtime/core';
 
 // ─── Mock factories ─────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra({ stopped: true });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.stopped).toBe(true);
   });
@@ -109,7 +110,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.activeRunEpoch).toBe(5);
     expect(snapshot.activeStepEpoch).toBe(12);
@@ -122,7 +123,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra({ timer: setTimeout(() => {}, 1000) });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.scheduled).toBe(true);
   });
@@ -133,7 +134,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra({ timer: null });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.scheduled).toBe(false);
   });
@@ -144,7 +145,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.nextStepAt).toBeNull();
     expect(snapshot.estimatedDelayMs).toBeNull();
@@ -157,7 +158,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.nextStepAt).toBe(futureTime);
     expect(snapshot.estimatedDelayMs).toBeGreaterThanOrEqual(0);
@@ -171,7 +172,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.estimatedDelayMs).toBe(0);
   });
@@ -182,7 +183,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.instant).toBe(true);
   });
@@ -194,7 +195,7 @@ describe('buildRunnerSnapshot', () => {
     const now = 1_700_000_000_000;
     const extra = makeExtra({ lastStepStartedAt: now, lastStepStage: 'generate' });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.lastStepStartedAt).toBe(now);
     expect(snapshot.lastStepStage).toBe('generate');
@@ -207,7 +208,7 @@ describe('buildRunnerSnapshot', () => {
     const now = 1_800_000_000_000;
     const extra = makeExtra({ lastWakeStartedAt: now });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.lastWakeStartedAt).toBe(now);
   });
@@ -222,7 +223,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.pendingRunEvents).toHaveLength(2);
   });
@@ -233,7 +234,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.pendingRunEvents).toHaveLength(0);
   });
@@ -244,7 +245,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue();
     const extra = makeExtra({ executing: true, startingRun: true, startingRunStartedAt: 1_700_000_000_000 });
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.executing).toBe(true);
     expect(snapshot.startingRun).toBe(true);
@@ -257,7 +258,7 @@ describe('buildRunnerSnapshot', () => {
     const wakeQueue = makeWakeQueue({ queued: 3, executing: true, lastExecuteAt: 1_750_000_000_000 });
     const extra = makeExtra();
 
-    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue, extra);
+    const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(wakeQueue.getSnapshot).toHaveBeenCalledTimes(1);
     expect(snapshot.wake.queued).toBe(3);

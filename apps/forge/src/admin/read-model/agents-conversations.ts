@@ -80,7 +80,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
       })
       .catch(() => []);
     return {
-      items: messages.map((message: any) => ({ ...message, authorAgentId: null })),
+      items: messages.map((message) => ({ ...(message as CommunicationMessageView), authorAgentId: null })),
       hasMore: false,
     };
   }

@@ -1,6 +1,6 @@
 import type { Scheduler } from './agent-runner-scheduler';
 import type { RunnerMessageManager } from './agent-runner-message-manager';
-import type { AgentWakeEvent } from '@forge-runtime/core';
+import type { AgentWakeEvent, AgentWakeQueue } from '@forge-runtime/core';
 
 /** Snapshot shape for agent-runner health/debug. */
 export interface AgentRunnerSnapshot {
@@ -30,8 +30,7 @@ export interface AgentRunnerSnapshot {
 export function buildRunnerSnapshot(
   scheduler: Pick<Scheduler, 'getState'>,
   messageManager: Pick<RunnerMessageManager, 'getState'>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  wakeQueue: any,
+  wakeQueue: Pick<AgentWakeQueue, 'getSnapshot'>,
   extra: {
     stopped: boolean;
     startingRun: boolean;
@@ -60,7 +59,7 @@ export function buildRunnerSnapshot(
     lastStepStartedAt: extra.lastStepStartedAt,
     lastStepStage: extra.lastStepStage,
     pendingRunEvents: Array.from(messageManager.getState().pendingRunMessages.values()),
-    wake: wakeQueue.getSnapshot(),
+    wake: wakeQueue.getSnapshot() as unknown as AgentRunnerSnapshot['wake'],
     lastWakeStartedAt: extra.lastWakeStartedAt,
   };
 }

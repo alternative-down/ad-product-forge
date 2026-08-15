@@ -26,7 +26,9 @@ import {
 import { errorMsg } from '../../agents/error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import { formatWorkingMemoryValue, isTextPart } from './helpers';
+import { formatWorkingMemoryValue } from './helpers';
+import type { ConversationMessage, ConversationMessagePart } from 'agent-runtime-core/integrations';
+import type { LtmSnapshot } from '../../agents/ltm/generate-helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { withTimeout } from '../../utils/async';
 import { closeLibsqlClient } from './conversation-helpers';
@@ -38,6 +40,14 @@ import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 import type { WorkspaceFilesystemConfig } from '../../database/schema';
 
 // ─── Input / Output types ────────────────────────────────────────────────────
+
+type RuntimeTextPart =
+  | { type: 'text'; text: string }
+  | { type: 'reasoning'; text: string; providerMetadata?: { anthropic?: { signature?: string; redactedData?: string } } };
+
+function isRuntimeTextPart(part: ConversationMessagePart): part is RuntimeTextPart {
+  return part.type === 'text' || part.type === 'reasoning';
+}
 
 export interface AgentRuntimeMemoryInput {
   agentId: string;
@@ -166,18 +176,18 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       });
 
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
-      const checkpointSummaryText =
-        (checkpointSummaryMessage as { parts?: { type?: string; text?: string }[] } | null)?.parts
-          ?.filter(isTextPart)
-          ?.map((part: any) => part.text?.trim() ?? '')
-          .filter(Boolean)
-          .join('\n') ?? null;
-
+      const checkpointSummaryText = checkpointSummaryMessage
+    ? checkpointSummaryMessage.parts
+        .filter(isRuntimeTextPart)
+        .map((part) => part.text.trim())
+        .filter(Boolean)
+        .join('\n')
+    : null;
       const reflection = operationalMemoryState.reflectionMessages
-        .map((message: any) =>
-          (message as { parts?: { type?: string; text?: string }[] }).parts
-            ?.filter(isTextPart)
-            ?.map((part: any) => part.text?.trim() ?? '')
+        .map((message: ConversationMessage) =>
+          message.parts
+            .filter(isRuntimeTextPart)
+            .map((part) => part.text.trim())
             .filter(Boolean)
             .join('\n'),
         )
@@ -185,10 +195,10 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         .join('\n');
 
       const observations = operationalMemoryState.observationMessages
-        .map((message: any) =>
-          (message as { parts?: { type?: string; text?: string }[] }).parts
-            ?.filter(isTextPart)
-            ?.map((part: any) => part.text?.trim() ?? '')
+        .map((message: ConversationMessage) =>
+          message.parts
+            .filter(isRuntimeTextPart)
+            .map((part) => part.text.trim())
             .filter(Boolean)
             .join('\n'),
         )
@@ -204,7 +214,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
         : null;
 
-      const runtimeLtmSnapshot: any = loadedAgent?.runtime?.longTermMemory
+      const runtimeLtmSnapshot: LtmSnapshot | null = loadedAgent?.runtime?.longTermMemory
         ? await withTimeout(
             loadedAgent.runtime.longTermMemory.readSnapshot(),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
