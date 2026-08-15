@@ -93,6 +93,7 @@ export async function renewAgentContract(
         startsAt: now,
         endsAt: now + WEEK_MS,
         createdAt: now,
+        updatedAt: now,
       });
 
       // Fund new contract — must be in same tx as contract creation
