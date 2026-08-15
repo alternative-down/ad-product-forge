@@ -3,7 +3,7 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/client';
+import type { Database, DbOrTx } from '../database/client';
 import {
   agents,
   agentExecutionContracts,
@@ -88,7 +88,7 @@ async function rollbackHire(
   schedules: HireInternalAgentInput['schedules'],
   internalChat: HireInternalAgentInput['internalChat'],
 
-  tx: any,
+  tx: DbOrTx,
 ) {
   // Undo external resources in reverse order of creation
   if (hasHeartbeat || hasLoadAgent) {
@@ -120,7 +120,7 @@ async function rollbackHireDbAndEmail(
   provisionedMailbox: { address: string } | null,
   emailMailboxes: HireInternalAgentInput['emailMailboxes'],
 
-  tx: any,
+  tx: DbOrTx,
 ) {
   await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
   await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));

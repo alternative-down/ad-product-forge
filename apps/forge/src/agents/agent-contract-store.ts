@@ -346,7 +346,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       verb: 'write',
       context: { agentId: contract.agentId, contractId: contract.id },
       fn: () =>
-        db.transaction(async (tx: any) => {
+        db.transaction(async (tx) => {
           await companyCashOperations.recordCashOut(
             {
               type: 'agent-contract-funding',
@@ -393,7 +393,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       verb: 'write',
       context: { agentId },
       fn: () =>
-        db.transaction(async (tx: any) => {
+        db.transaction(async (tx) => {
           await companyCashOperations.recordCashIn(
             {
               type: 'agent-contract-termination-refund',

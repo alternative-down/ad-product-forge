@@ -59,7 +59,7 @@ export async function topUpActiveAgentContract(
   }
 
   try {
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx) => {
       await companyCashOperations.recordCashOut(
         {
           type: 'agent-contract-topup',

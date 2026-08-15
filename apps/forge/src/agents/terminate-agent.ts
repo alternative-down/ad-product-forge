@@ -78,7 +78,7 @@ export async function terminateInternalAgent(
     }
 
     try {
-      await db.transaction(async (tx: any) => {
+      await db.transaction(async (tx) => {
         await tx
           .delete(agentExecutionContracts)
           .where(eq(agentExecutionContracts.agentId, input.agentId));
@@ -102,7 +102,7 @@ export async function terminateInternalAgent(
 
   // Delete execution contracts (cascade handles steps); delete providers explicitly.
   // All 3 deletes in one transaction — any failure rolls back the full cascade.
-  await db.transaction(async (tx: any) => {
+  await db.transaction(async (tx) => {
     await tx
       .delete(agentExecutionContracts)
       .where(eq(agentExecutionContracts.agentId, input.agentId));

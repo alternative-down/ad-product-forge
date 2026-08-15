@@ -61,7 +61,7 @@ export async function renewAgentContract(
 
     // All cash operations (refund old + fund new) and all contract operations
     // are inside the same transaction. If anything fails, everything rolls back.
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx) => {
       // Refund old contract inside tx — cash only actually moves if tx commits
       if (refundableUsd > 0) {
         await companyCashOperations.recordCashIn(
