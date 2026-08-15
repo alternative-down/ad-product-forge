@@ -11,6 +11,7 @@ import type { ForgeHttpServerAdapter } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
 import {
+  type AgentNotification,
   type McpServerConfig,
   agentExecutionSteps,
   agentSchedules,
@@ -29,7 +30,7 @@ function extractAgentId(path: string): string {
 
 // ─── Agent Base (basic agent data) ─────────────────────────────────────────
 
-export function registerAgentBaseRoutes(httpServer: ForgeHttpServerAdapter, getAgent: any) {
+export function registerAgentBaseRoutes(httpServer: ForgeHttpServerAdapter, getAgent: (id: string) => Promise<unknown>) {
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents/:agentId',
@@ -70,7 +71,7 @@ export function registerAgentStepsRoutes(httpServer: ForgeHttpServerAdapter, db:
 
 export function registerAgentConversationsRoutes(
   httpServer: ForgeHttpServerAdapter,
-  listAgentRecentConversations: any,
+  listAgentRecentConversations: (id: string) => Promise<unknown>,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -87,7 +88,7 @@ export function registerAgentConversationsRoutes(
 
 export function registerAgentMemoryRoutes(
   httpServer: ForgeHttpServerAdapter,
-  getAgentRuntimeMemory: any,
+  deps: { getAgentRuntimeMemory: (id: string) => Promise<unknown> },
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -95,7 +96,7 @@ export function registerAgentMemoryRoutes(
     handler: safeRoute('/admin/agents/:agentId/memory', async (request) => {
         const agentId = extractAgentId(request.path);
         if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-        return jsonResponse(await getAgentRuntimeMemory(agentId));
+        return jsonResponse(await deps.getAgentRuntimeMemory(agentId));
     }),
   });
 }
@@ -217,7 +218,7 @@ export function registerAgentNotificationsRoutes(httpServer: ForgeHttpServerAdap
           limit,
         });
         return jsonResponse({
-          items: rows.map((n: any) => ({
+          items: rows.map((n) => ({
             notificationId: n.id,
             content: n.content,
             timestamp: n.createdAt,
