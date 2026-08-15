@@ -1,6 +1,5 @@
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
-import { forgeDebug } from '@forge-runtime/core';
 
 import { withToolErrorLogging } from '../../capabilities/tools/error-wrapper';
 import { hasToolPermission } from '../../capabilities/catalog';
