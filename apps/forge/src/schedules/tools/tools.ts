@@ -1,6 +1,5 @@
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
-import { forgeDebug } from '@forge-runtime/core';
 
 import { withToolErrorLogging } from '../../capabilities/tools/error-wrapper';
 import { hasToolPermission } from '../../capabilities/catalog';
@@ -8,14 +7,7 @@ import type { createAgentScheduleManager } from '../manager/manager';
 
 type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 
-// L#NN-YYY v4 helper: scope-injection for tools:schedules forgeDebug calls (6 sites)
-function toolsScheduleDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
-  message: string,
-  context?: Record<string, unknown>,
-): void {
-  forgeDebug({ scope: 'tools:schedules', level, message, context });
-}
+import { toolsScheduleDebug } from './tools-debug';
 
 export function validationError(error: string, hint: string): {
   valid: false;
