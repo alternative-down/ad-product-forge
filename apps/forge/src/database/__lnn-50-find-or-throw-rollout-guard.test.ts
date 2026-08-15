@@ -15,6 +15,8 @@
  * Migrated files (issue #5469, Day 17):
  * - apps/forge/src/capabilities/runtime.ts — 5 sites (Phase 1, Day 17 #5469)
  * - apps/forge/src/agents/agent-contract-store.ts — 1 site (Phase 2, getUsagePricing profile)
+ * - apps/forge/src/communication/internal-chat-groups.ts — 2 sites (D46 cycle 8, getRequiredConversationForAccount + requireConversationMembershipByAccount)
+ * - apps/forge/src/communication/internal-chat-listing.ts — 2 sites (D46 cycle 8, getMessages + getMessagesByAccount)
  *
  * Remaining files (issue #5469 backlog, 34+ sites in 18+ files):
  * - communication/internal-chat-groups.ts (5 sites)
@@ -47,6 +49,18 @@ const MIGRATED_FILES: FileMigration[] = [
     path: 'agents/agent-contract-store.ts',
     expectedFindOrThrowUsage: 1, // 1 throw-style site migrated (getUsagePricing profile, Phase 2)
     manualFindOrThrowRemaining: 0, // 0 remaining throw-style sites (4 other findFirst are return-style)
+    expectedConsistency: 0, // no missing forgeDebug drift
+  },
+  {
+    path: 'communication/internal-chat-groups.ts',
+    expectedFindOrThrowUsage: 2, // 2 throw-style sites migrated (getRequiredConversationForAccount, requireConversationMembershipByAccount)
+    manualFindOrThrowRemaining: 0, // 3 findFirst remain but are "already exists"/admin checks (not findOrThrow candidates)
+    expectedConsistency: 0, // no missing forgeDebug drift
+  },
+  {
+    path: 'communication/internal-chat-listing.ts',
+    expectedFindOrThrowUsage: 2, // 2 throw-style sites migrated (getMessages, getMessagesByAccount)
+    manualFindOrThrowRemaining: 0, // 0 remaining findFirst (clean migration)
     expectedConsistency: 0, // no missing forgeDebug drift
   },
 ];

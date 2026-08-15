@@ -24,6 +24,7 @@ import {
   type NewInternalChatConversationMember,
 } from '../database/schema';
 import type { Database } from '../database/client';
+import { findOrThrow } from '../database/find-or-throw';
 
 const logInternalChatError = (
   context: string,
@@ -138,15 +139,17 @@ export function createInternalChatGroups(
     await requireConversationMembershipByAccount(accountId, conversationId);
 
     try {
-      const conversation = await db.query.internalChatConversations.findFirst({
-        where: eq(internalChatConversations.id, conversationId),
-      });
-
-      if (!conversation) {
-        logInternalChatWarn('getRequiredConversationForAccount conversation not found', { conversationId });
-        throw new Error(`Conversation not found: ${conversationId}`);
-      }
-
+      const conversation = await findOrThrow(
+        db.query.internalChatConversations,
+        {
+          scope: 'internal-chat-groups',
+          entity: 'Conversation',
+          op: 'getRequiredConversationForAccount',
+          idValue: conversationId,
+          idField: 'conversationId',
+        },
+        { where: eq(internalChatConversations.id, conversationId) },
+      );
       return conversation;
     } catch (err) {
       if (!(err instanceof Error)) throw err;
@@ -184,17 +187,22 @@ export function createInternalChatGroups(
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
     try {
-      const membership = await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.accountId, accountId),
-          eq(internalChatConversationMembers.conversationId, conversationId),
-        ),
-      });
-
-      if (!membership) {
-        logInternalChatWarn('requireConversationMembershipByAccount membership not found', { conversationId });
-        throw new Error(`Conversation not found: ${conversationId}`);
-      }
+      await findOrThrow(
+        db.query.internalChatConversationMembers,
+        {
+          scope: 'internal-chat-groups',
+          entity: 'Conversation',
+          op: 'requireConversationMembershipByAccount',
+          idValue: conversationId,
+          idField: 'conversationId',
+        },
+        {
+          where: and(
+            eq(internalChatConversationMembers.accountId, accountId),
+            eq(internalChatConversationMembers.conversationId, conversationId),
+          ),
+        },
+      );
     } catch (err) {
       logInternalChatError('Failed to execute requireConversationMembershipByAccount', errorMsg(err));
       throw err;
