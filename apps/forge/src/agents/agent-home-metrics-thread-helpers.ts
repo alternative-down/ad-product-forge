@@ -208,8 +208,8 @@ export async function readAgentRuntimeMemory(
         overflowTokenCount: operationalMemoryState.metrics.overflowTokenCount,
         overflowTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
         observationTokenCount: operationalMemoryState.metrics.observationTokenCount,
-        observationTriggerTokenLimit: (settings as any).checkpointedOmObservationTriggerTokenLimit,
-        reflectionTriggerTokenLimit: (settings as any).checkpointedOmReflectionTriggerTokenLimit,
+        observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
+        reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,  // L#NN-TSC-Phase-4 v1 N=3 LIVE: mapped to existing schema field (was as any on non-existent field)
         reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
         reflectionBudget: Math.max(
           0,
