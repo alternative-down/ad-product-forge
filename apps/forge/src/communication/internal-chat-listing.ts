@@ -13,12 +13,12 @@ import {
   internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
-  type InternalChatConversationMember,
 } from '../database/schema';
 import type { Database } from '../database/client';
 import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
 import { createInternalChatConversationListing } from './internal-chat-conversations-listing';
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
+import { findOrThrow } from '../database/find-or-throw';
 
 async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
   return await fn();
@@ -75,15 +75,22 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
   > {
     return await withChatListingError('getMessages', async () => {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
-      const membership = (await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.accountId, agentAccount.id),
-          eq(internalChatConversationMembers.conversationId, input.conversationKey),
-        ),
-      })) as InternalChatConversationMember | null;
-      if (membership === null || membership === undefined) {
-        throw new Error('Conversation not found: ' + input.conversationKey);
-      }
+      await findOrThrow(
+        db.query.internalChatConversationMembers,
+        {
+          scope: 'internal-chat-listing',
+          entity: 'Conversation',
+          op: 'getMessages',
+          idValue: input.conversationKey,
+          idField: 'conversationKey',
+        },
+        {
+          where: and(
+            eq(internalChatConversationMembers.accountId, agentAccount.id),
+            eq(internalChatConversationMembers.conversationId, input.conversationKey),
+          ),
+        },
+      );
       const conditions = [eq(internalChatMessageReads.messageId, internalChatMessages.id)];
       if (input.dateFrom !== null && input.dateFrom !== undefined) {
         const ts = new Date(input.dateFrom).getTime();
@@ -212,15 +219,22 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
   > {
     return await withChatListingError('getMessagesByAccount', async () => {
       await deps.getRequiredExternalAccount(input.accountId);
-      const membership = (await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.accountId, input.accountId),
-          eq(internalChatConversationMembers.conversationId, input.conversationKey),
-        ),
-      })) as InternalChatConversationMember | null;
-      if (membership === null || membership === undefined) {
-        throw new Error('Conversation not found: ' + input.conversationKey);
-      }
+      await findOrThrow(
+        db.query.internalChatConversationMembers,
+        {
+          scope: 'internal-chat-listing',
+          entity: 'Conversation',
+          op: 'getMessagesByAccount',
+          idValue: input.conversationKey,
+          idField: 'conversationKey',
+        },
+        {
+          where: and(
+            eq(internalChatConversationMembers.accountId, input.accountId),
+            eq(internalChatConversationMembers.conversationId, input.conversationKey),
+          ),
+        },
+      );
       const conditions = [];
       if (input.dateFrom !== null && input.dateFrom !== undefined) {
         const ts = new Date(input.dateFrom).getTime();

@@ -1,7 +1,7 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
-import { ZodError, z } from "zod";
+import { ZodError } from "zod";
 
 const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
 const MAX_BODY_BYTES =
