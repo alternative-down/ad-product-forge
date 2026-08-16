@@ -19,10 +19,15 @@ import {
   requireQueryParam,
 } from './internal-chat-route-helpers';
 import type { InternalChatRequest } from './internal-chat-route-helpers';
+import type { HttpHandler } from '../../../http/server';
+
+type InternalChatHandler = (request: InternalChatRequest) => ReturnType<HttpHandler>;
+
+// TODO(cycle 15+): adapter unification required. See memory/httphandler-vs-internalchatrequest-mismatch-d46.md
 
 // ─── Route handlers ──────────────────────────────────────────────────────────
 
-function buildListConversationsHandler(internalChat: InternalChatService): any {
+function buildListConversationsHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversations', async (request: InternalChatRequest) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -49,7 +54,7 @@ function buildListConversationsHandler(internalChat: InternalChatService): any {
   });
 }
 
-function buildListMessagesHandler(internalChat: InternalChatService): any {
+function buildListMessagesHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/messages', async (request: InternalChatRequest) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -86,7 +91,7 @@ function buildListMessagesHandler(internalChat: InternalChatService): any {
   });
 }
 
-function buildGetAttachmentHandler(internalChat: InternalChatService): any {
+function buildGetAttachmentHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/message-attachment', async (request: InternalChatRequest) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -124,7 +129,7 @@ function buildGetAttachmentHandler(internalChat: InternalChatService): any {
   });
 }
 
-function buildCreateConversationHandler(internalChat: InternalChatService): any {
+function buildCreateConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/create', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
     const conversationKey = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -144,7 +149,7 @@ function buildCreateConversationHandler(internalChat: InternalChatService): any 
   });
 }
 
-function buildSendMessageHandler(internalChat: InternalChatService): any {
+function buildSendMessageHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/send', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
     const result = await internalChat.sendMessage({
@@ -170,7 +175,7 @@ function buildSendMessageHandler(internalChat: InternalChatService): any {
   });
 }
 
-function buildUpdateConversationHandler(internalChat: InternalChatService): any {
+function buildUpdateConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/update', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
     return jsonResponse(
@@ -182,7 +187,7 @@ function buildUpdateConversationHandler(internalChat: InternalChatService): any 
   });
 }
 
-function buildArchiveConversationHandler(internalChat: InternalChatService): any {
+function buildArchiveConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/archive', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
     return jsonResponse(
@@ -205,36 +210,36 @@ export function registerConversationRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/conversations',
-    handler: buildListConversationsHandler(internalChat),
+    handler: buildListConversationsHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/messages',
-    handler: buildListMessagesHandler(internalChat),
+    handler: buildListMessagesHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/message-attachment',
-    handler: buildGetAttachmentHandler(internalChat),
+    handler: buildGetAttachmentHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/create',
-    handler: buildCreateConversationHandler(internalChat),
+    handler: buildCreateConversationHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/send',
-    handler: buildSendMessageHandler(internalChat),
+    handler: buildSendMessageHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/update',
-    handler: buildUpdateConversationHandler(internalChat),
+    handler: buildUpdateConversationHandler(internalChat) as unknown as HttpHandler,
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/archive',
-    handler: buildArchiveConversationHandler(internalChat),
+    handler: buildArchiveConversationHandler(internalChat) as unknown as HttpHandler,
   });
 }
