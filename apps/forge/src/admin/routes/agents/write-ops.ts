@@ -74,7 +74,7 @@ export function registerAgentWriteOpsRoutes(
   ops: any,
 ) {
   // Lifecycle ops — extracted to split/lifecycle-ops.ts
-  registerLifecycleOps(httpServer, input, ops);
+  registerLifecycleOps(httpServer, input, { ...ops, registry });
   // Contract ops — extracted to split/contract-ops.ts
   // Lifecycle delegate ops — extracted to split/lifecycle-delegate-ops.ts
   registerLifecycleDelegateOps(httpServer, input, ops);
