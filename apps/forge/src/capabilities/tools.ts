@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../types/log-level';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
@@ -12,7 +13,7 @@ import { withToolErrorLogging } from './tools/error-wrapper';
 
 // L#NN-YYY v4 helper: scope-injection for tools:capabilities forgeDebug calls
 export function capabilitiesToolsDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void {

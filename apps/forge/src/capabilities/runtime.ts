@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../types/log-level';
 import { errorMsg } from '../agents/error-formatting';
 
 import type { Database } from '../database/client';
@@ -13,7 +14,7 @@ import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 // L#NN-YYY v4 helper: scope-injection for capabilities-runtime forgeDebug calls
 export function capabilitiesRuntimeDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void {

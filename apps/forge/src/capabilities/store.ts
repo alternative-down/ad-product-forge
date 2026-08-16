@@ -11,6 +11,7 @@ import {
 import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../types/log-level';
 import { RoleHasAssignedAgentsError } from './role-errors';
 import { withDbErrorLogging } from '../database/error-logging';
 import { resolveLoadedToolIds } from './permissions';
@@ -35,7 +36,7 @@ import {
  *   - context: optional structured call-site fields (frozen by reference, not deep-copied)
  */
 export function capabilitiesStoreDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void {
