@@ -204,7 +204,7 @@ export function createInternalChatAdmin(db: Database) {
    */
   async function listContacts() {
     const accounts = await db.query.internalChatAccounts.findMany({});
-    return accounts.map((account: any) => ({
+    return accounts.map((account) => ({
       accountId: account.id,
       agentId: account.agentId,
       slug: account.slug,
@@ -223,8 +223,8 @@ export function createInternalChatAdmin(db: Database) {
       where: isNull(internalChatAccounts.agentId),
     });
     return accounts
-      .filter((a: any) => a.agentId === null)
-      .map((account: any) => ({
+      .filter((a) => a.agentId === null)
+      .map((account) => ({
         accountId: account.id,
         slug: account.slug,
         displayName: account.displayName,
