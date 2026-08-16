@@ -8,6 +8,7 @@ import type { HttpRequest } from '../../http/server';
 import { App, Octokit } from 'octokit';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
+import { LogLevel } from '../../types/log-level';
 import {
   githubAppInfoResponseSchema,
   githubAppManifestConversionResponseSchema,
@@ -26,7 +27,7 @@ type RoutingOpsDeps = {
 
 export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
   const routingOpsDebug = (
-    level: 'debug' | 'info' | 'warn' | 'error',
+    level: LogLevel,
     message: string,
     context?: Record<string, unknown>,
   ): void => {

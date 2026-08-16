@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../../types/log-level';
 
 /**
  * Module-local debug helper for github/ops/labels.ts.
@@ -12,7 +13,7 @@ import { forgeDebug } from '@forge-runtime/core';
  *   labelsDebug('error', 'createLabel failed', { agentId, error: errorMsg(err) });
  */
 export function labelsDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void {

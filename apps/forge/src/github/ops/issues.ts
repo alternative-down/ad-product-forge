@@ -19,13 +19,14 @@ import { isRecord } from '../helpers';
 
 import type { OpsContext } from './context';
 import type { IssuePayload } from '../helpers';
+import { LogLevel } from '../../types/log-level';
 
 // ── Codification 1: L#NN-YYY v4 forgeDebug helper extraction ─────────────────
 
 const SCOPE = 'github-ops-issues';
 
 function githubOpsIssuesDebug(
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void {

@@ -3,10 +3,11 @@
  */
 import type { OpsContext } from './context';
 import { errorMsg } from '../../agents/error-formatting';
+import { LogLevel } from '../../types/log-level';
 
 export function createMilestonesOps(ctx: OpsContext) {
   function milestonesDebug(
-    level: 'debug' | 'info' | 'warn' | 'error',
+    level: LogLevel,
     message: string,
     context?: Record<string, unknown>,
   ): void {
