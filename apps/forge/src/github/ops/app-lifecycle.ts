@@ -23,6 +23,7 @@ import { githubAppManifestConfigSchema } from '../types';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';
 import type { GitHubAppOps } from './github-app';
+import { LogLevel } from '../../types/log-level';
 
 export interface AppLifecycleOpsDeps {
   githubApp: GitHubAppOps;
@@ -58,7 +59,7 @@ export interface AppLifecycleOps {
 }
 
 const appLifecycleOpsDebug = (
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void => {
