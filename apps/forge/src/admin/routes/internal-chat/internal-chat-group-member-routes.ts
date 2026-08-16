@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (group-member routes).
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpRequest } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
 import {
@@ -20,7 +20,7 @@ function buildListGroupMembersHandler(internalChat: InternalChatService): HttpHa
   return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-members',
-    async (request: any) => {
+    async (request: HttpRequest) => {
       const accountId = request.query.get('accountId');
       const conversationId = request.query.get('conversationId');
 
@@ -47,7 +47,7 @@ function buildAddMemberHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/add',
-    async (request: any) => {
+    async (request: HttpRequest) => {
       const accountId = request.query.get('accountId');
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
@@ -69,7 +69,7 @@ function buildUpdateRoleHandler(internalChat: InternalChatService): HttpHandler 
   return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/update-role',
-    async (request: any) => {
+    async (request: HttpRequest) => {
       const accountId = request.query.get('accountId');
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
@@ -91,7 +91,7 @@ function buildRemoveMemberHandler(internalChat: InternalChatService): HttpHandle
   return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/remove',
-    async (request: any) => {
+    async (request: HttpRequest) => {
       const accountId = request.query.get('accountId');
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
