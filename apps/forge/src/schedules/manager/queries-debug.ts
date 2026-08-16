@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../../types/log-level';
 
 /**
  * Module-local debug helper for the schedules/manager/ scope.
@@ -21,7 +22,7 @@ import { forgeDebug } from '@forge-runtime/core';
  *   - Spread context fields to TOP-LEVEL of forgeDebug call, NOT nested in context
  */
 export const queriesSchedulesManagerDebug = (
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void => {

@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../../types/log-level';
 
 /**
  * LHS (LOCAL HELPER SHADOWING) SEPARATE-FILE helper for apps/forge/src/schedules/tools/tools.ts
@@ -12,7 +13,7 @@ import { forgeDebug } from '@forge-runtime/core';
  * Shared helper enables consistent log structure across all tools:schedules calls.
  */
 export const toolsScheduleDebug = (
-  level: 'debug' | 'info' | 'warn' | 'error',
+  level: LogLevel,
   message: string,
   context?: Record<string, unknown>,
 ): void => {
