@@ -1,4 +1,5 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../../utils/libsql-helpers';
+import type { ConversationMessagePart } from 'agent-runtime-core/integrations';
 import path from 'node:path';
 import { conversationHelpersDebug } from './conversation-helpers-debug';
 import { errorMsg } from '../../agents/error-formatting';
@@ -236,7 +237,7 @@ async function listThreadMessages(
       const pageStart = input.page * input.perPage;
       const pageEnd = pageStart + input.perPage;
       const pagedMessages = messages.slice(pageStart, pageEnd);
-      const mergedMessages = mergeToolLogMessages([...pagedMessages].reverse() as any[]);
+      const mergedMessages = mergeToolLogMessages<ConversationMessagePart>([...pagedMessages].reverse());
 
       return {
         items: mergedMessages.reverse().map((message) => ({
@@ -249,7 +250,7 @@ async function listThreadMessages(
           content: {
             parts: [
               ...(message.parts ?? []).map((part) =>
-                (part.type as string) === 'text' || (part.type as string) === 'reasoning'
+                part.type === 'text' || part.type === 'reasoning'
                   ? {
                       type: part.type,
                       text: part.text,

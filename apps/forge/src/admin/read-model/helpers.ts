@@ -401,16 +401,23 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   }
 }
 
-export function mergeToolLogMessages(
+export function mergeToolLogMessages<TPart>(
   messages: Array<{
     id: string;
     role: string;
     threadId: string;
     createdAt: string;
-    parts: RuntimeStoredMessagePart[];
+    parts: TPart[];
     metadata?: Record<string, unknown>;
   }>,
-) {
+): Array<{
+  id: string;
+  role: string;
+  threadId: string;
+  createdAt: string;
+  parts: TPart[];
+  metadata?: Record<string, unknown>;
+}> {
   const merged: typeof messages = [];
 
   for (const message of messages) {
