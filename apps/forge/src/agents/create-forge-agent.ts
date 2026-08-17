@@ -8,6 +8,7 @@ import {
 } from '@forge-runtime/core';
 import { getDatabase } from '../database/client';
 import { createAgentLongTermMemoryStore } from './ltm/store';
+import type { CheckpointedOmCheckpointPackageInput } from './ltm/store';
 import { createAgentRuntimePlatform } from './runtime/platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './runtime/memory';
@@ -87,6 +88,53 @@ function requireCheckpointedOmLimits(config: CreateAgentConfig) {
     observationReflectionBatchTokens: config.checkpointedOmObservationReflectionBatchTokens,
     observationSupportTokens: config.checkpointedOmObservationSupportTokens,
     reflectionSupportTokens: config.checkpointedOmReflectionSupportTokens,
+  };
+}
+
+/**
+ * Adapter: bridges longTermMemory.onCheckpointAdvanced (CheckpointedOmCheckpointPackageInput)
+ * to the runtime's CreateRuntimeAgentSessionOptions.onCheckpointAdvanced signature.
+ *
+ * The two signatures describe the same conceptual event but have diverged in shape:
+ * - Runtime expects expanded reflection/observation records with token counts and stable IDs
+ * - LTM accepts a leaner payload with raw content strings and millisecond timestamps
+ *
+ * This adapter maps the runtime's expanded input into the LTM payload format
+ * (text -> content, string ISO timestamps -> number millis). The reverse fields
+ * (recordId, generationCount, tokenCount, blockId, lastObservedAt, reflectedGeneration)
+ * are intentionally dropped - the LTM writer does not consume them.
+ *
+ * Per #6498 resolution: removes the `(longTermMemory as any)` cast that hid the
+ * signature drift between `packages/forge-runtime-core` and `apps/forge/src/agents/ltm/store`.
+ */
+function adaptLtmOnCheckpointAdvanced(
+  longTermMemory: ReturnType<typeof createAgentLongTermMemory> | null | undefined,
+): CreateRuntimeAgentSessionOptions['onCheckpointAdvanced'] {
+  const ltmCallback = longTermMemory?.onCheckpointAdvanced;
+  if (!ltmCallback) return undefined;
+  return async (input) => {
+    const parseDate = (iso: string): number | undefined => {
+      const ts = Date.parse(iso);
+      return Number.isFinite(ts) ? ts : undefined;
+    };
+    const payload: CheckpointedOmCheckpointPackageInput = {
+      threadId: input.threadId,
+      toGeneration: input.toGeneration,
+      fromGeneration: input.fromGeneration,
+      reflections: input.reflections.map((r) => ({
+        content: r.text,
+        createdAt: parseDate(r.createdAt),
+      })),
+      observations: input.observations.map((o) => ({
+        content: o.text,
+        createdAt: parseDate(o.createdAt),
+      })),
+      checkpointSummary: {
+        text: input.checkpointSummary.text,
+        updatedAt: parseDate(input.checkpointSummary.updatedAt) ?? 0,
+      },
+    };
+    await ltmCallback(payload);
   };
 }
 
@@ -220,7 +268,7 @@ export async function createInternalAgentRuntime<
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt:
       typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
-    onCheckpointAdvanced: (longTermMemory as any)?.onCheckpointAdvanced,
+    onCheckpointAdvanced: adaptLtmOnCheckpointAdvanced(longTermMemory),
     runtimeActions: [...platform.workspaceActions, ...toolsToRuntimeActions(allAgentTools)],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
