@@ -84,7 +84,10 @@ export function createInternalChatService(db: Database) {
       listGroupMembersOrDmPeersByAccount: (_a: string, _b: string) => {
         throw new Error('reads not yet initialized');
       },
-    } as unknown as ReturnType<typeof createInternalChatParticipants>,
+      listGroupMembersOrDmPeers: (_a: string, _b: string) => {
+        throw new Error('reads not yet initialized');
+      },
+    } as ReturnType<typeof createInternalChatParticipants>,
     listConversations: () => {
       throw new Error('reads not yet initialized');
     },
