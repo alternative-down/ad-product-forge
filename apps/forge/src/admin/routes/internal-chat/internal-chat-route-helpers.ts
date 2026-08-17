@@ -16,6 +16,27 @@ export interface InternalChatRequest {
   bodyText: string;
 }
 
+/**
+ * Bridges the HTTP layer to the internal-chat handlers. The http server provides
+ * HttpRequest (URLSearchParams query), but internal-chat handlers expect
+ * InternalChatRequest (Map<string, string>). This adapter converts at the
+ * boundary, eliminating the 'as unknown as HttpHandler' cast at every registerRoute
+ * call site (L#NN-21 v1 architectural fix for httphandler-vs-internalchatrequest
+ * mismatch, D46 memory note).
+ */
+export function adaptInternalChatHandler(handler: (request: InternalChatRequest) => ReturnType<HttpHandler>): HttpHandler {
+  return async (request: HttpRequest) => {
+    const queryMap = new Map<string, string>();
+    request.query.forEach((value, key) => {
+      queryMap.set(key, value);
+    });
+    return handler({
+      query: queryMap,
+      bodyText: request.bodyText,
+    });
+  };
+}
+
 // ─── Error handling ────────────────────────────────────────────────────────────
 
 /**
