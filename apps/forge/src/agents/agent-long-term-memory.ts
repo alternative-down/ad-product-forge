@@ -9,6 +9,8 @@ import {
   createRuntimeAgentSession,
   forgeDebug,
   type ConversationStore,
+  type RuntimeAgentSessionStepResult,
+  type RuntimeAgentSessionIteration,
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
@@ -433,10 +435,10 @@ export function createAgentLongTermMemory(input: {
 
               await sleep(runDelayMs);
             },
-            onStepFinish: async (stepResult) => {
+            onStepFinish: async (stepResult: RuntimeAgentSessionStepResult) => {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
-            onIterationComplete: async (iteration) => {
+            onIterationComplete: async (iteration: RuntimeAgentSessionIteration) => {
               ltmDebug('info', 'memory workflow step complete', {
                 agentId: input.agentId,
                 hasToolCalls: iteration.toolCalls.length > 0,

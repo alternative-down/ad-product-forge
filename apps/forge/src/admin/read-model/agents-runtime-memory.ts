@@ -179,7 +179,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       const checkpointSummaryText = checkpointSummaryMessage
     ? checkpointSummaryMessage.parts
         .filter(isRuntimeTextPart)
-        .map((part) => part.text.trim())
+        .map((part: RuntimeTextPart) => part.text.trim())
         .filter(Boolean)
         .join('\n')
     : null;
@@ -187,7 +187,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         .map((message: ConversationMessage) =>
           message.parts
             .filter(isRuntimeTextPart)
-            .map((part) => part.text.trim())
+            .map((part: RuntimeTextPart) => part.text.trim())
             .filter(Boolean)
             .join('\n'),
         )
@@ -198,7 +198,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         .map((message: ConversationMessage) =>
           message.parts
             .filter(isRuntimeTextPart)
-            .map((part) => part.text.trim())
+            .map((part: RuntimeTextPart) => part.text.trim())
             .filter(Boolean)
             .join('\n'),
         )
