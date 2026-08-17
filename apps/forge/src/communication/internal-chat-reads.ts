@@ -8,6 +8,7 @@
 
 import { createInternalChatUnread } from './internal-chat-unread';
 import { createInternalChatParticipants } from './internal-chat-participants';
+import type { ConversationListingOutput } from './internal-chat-conversations-listing';
 
 export interface InternalChatReadsDeps {
   unread: ReturnType<typeof createInternalChatUnread>;
@@ -16,12 +17,12 @@ export interface InternalChatReadsDeps {
     agentId: string;
     unread?: boolean;
     limit: number;
-  }) => Promise<unknown[]>;
+  }) => Promise<ConversationListingOutput[]>;
 }
 
 export interface InternalChatReadsStore {
   getUnreadSummary: (agentId: string) => Promise<unknown>;
-  listRecentConversations: (agentId: string, limit: number) => Promise<unknown[]>;
+  listRecentConversations: (agentId: string, limit: number) => Promise<ConversationListingOutput[]>;
   listGroupMembersOrDmPeersByAccount: (
     accountId: string,
     conversationId: string,

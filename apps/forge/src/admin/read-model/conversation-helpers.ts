@@ -131,7 +131,7 @@ async function listRecentInternalChatConversations(
 
     return await Promise.all(
       rows.map(async (conversation) => {
-        const c = conversation as ConversationListingOutput;
+        const c = conversation;
         const internalConversation = await internalChat.getConversationForAgent(
           agentId,
           c.targetKey,
