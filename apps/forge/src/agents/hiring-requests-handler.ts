@@ -123,10 +123,10 @@ function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
     let textLength = 0;
     if (msg.role === 'assistant' && Array.isArray(msg.content)) {
       hasToolCalls = msg.content.some(
-        (part) =>
-          (part as { type: string }).type === 'tool-call',
+        (part: { type: string }) =>
+          part.type === 'tool-call',
       );
-      textLength = msg.content.reduce((sum, part) => {
+      textLength = msg.content.reduce((sum: number, part: { type: string; text?: string }) => {
         if ((part as { type: string }).type === 'text') {
           return sum + String((part as { text?: string }).text ?? '').length;
         }
