@@ -3,9 +3,11 @@ import { workspaceSkillArchiveDebug } from './workspace-skill-archive-debug';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { WorkspaceFilesystemConfigSchema } from '../database/schema';
 import type { Agent } from '../database/schema';
 import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
+import { parseWorkspaceJsonConfig } from './agent-loader-runtime-config';
 import { parseSkillMetadata, countSkillFiles } from './skills-shared/index';
 
 type AgentSkillSummary = {
@@ -19,17 +21,12 @@ export async function listAgentWorkspaceSkills(
   workspaceBasePath: string,
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>,
 ): Promise<AgentSkillSummary[]> {
-  // The DB column is text but the runtime contract expects a
-  // WorkspaceFilesystemConfig object. agent-loader-runtime-config.ts uses the
-  // same `as unknown as` cast pattern when loading the agent, so the runtime
-  // value here is the parsed object shape (or null when unset). Cast through
-  // unknown to match the resolver's expected type without disabling the
-  // surrounding checks.
+  // Parse JSON-encoded workspaceFilesystem config from DB (text field) and
+  // validate via Zod schema. parseWorkspaceJsonConfig returns undefined for
+  // null/empty values, matching the resolver contract.
   const skillsRoot = resolveAgentSkillsRoot(
     workspaceBasePath,
-    (agent.workspaceFilesystem ?? undefined) as unknown as Parameters<
-      typeof resolveAgentSkillsRoot
-    >[1],
+    parseWorkspaceJsonConfig(agent.workspaceFilesystem, WorkspaceFilesystemConfigSchema),
     agent.id,
   );
 
