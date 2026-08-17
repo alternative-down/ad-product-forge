@@ -7,8 +7,8 @@ vi.mock('@forge-runtime/core', () => ({
     inputSchema: config.inputSchema,
     type: 'tool',
   })),
-  toolsToRuntimeActions: vi.fn((tools) =>
-    Object.values(tools).map((t: any) => ({ name: t.name, inputSchema: t.inputSchema })),
+  toolsToRuntimeActions: vi.fn((tools: Record<string, unknown>): Array<{ name: string; inputSchema: unknown }> =>
+    Object.values(tools).map((t) => ({ name: (t as { name: string }).name, inputSchema: (t as { inputSchema: unknown }).inputSchema })),
   ),
 }));
 
