@@ -9,6 +9,7 @@ import {
   normalizeArchiveEntryPath,
 } from './workspace-skill-helpers';
 
+import { WorkspaceFilesystemConfigSchema } from '../database/schema';
 import type { Agent } from '../database/schema';
 import {
   BUNDLED_SKILL_DIRECTORY_NAMES,
@@ -16,6 +17,7 @@ import {
   resolveBundledSkillRoot,
 } from './bundled-workspace-skills';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
+import { parseWorkspaceJsonConfig } from './agent-loader-runtime-config';
 import {
   parseSkillMetadata as _parseSkillMetadata,
   countSkillFiles as _countSkillFiles,
@@ -225,7 +227,7 @@ export async function installGlobalSkillToAgentWorkspace(input: {
   });
   const targetSkillsRoot = resolveAgentSkillsRoot(
     input.workspaceBasePath,
-    (input.agent.workspaceFilesystem as any) ?? undefined,
+    parseWorkspaceJsonConfig(input.agent.workspaceFilesystem, WorkspaceFilesystemConfigSchema),
     input.agent.id,
   );
 

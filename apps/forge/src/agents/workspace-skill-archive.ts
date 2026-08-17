@@ -3,8 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 
+import { WorkspaceFilesystemConfigSchema } from '../database/schema';
 import type { Agent } from '../database/schema';
 import { resolveAgentSkillsRoot } from './workspace-skill-paths';
+import { parseWorkspaceJsonConfig } from './agent-loader-runtime-config';
 import {
   ensureDirectory,
   ensureParentDirectories,
@@ -18,7 +20,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
 }) {
   const skillsRoot = resolveAgentSkillsRoot(
     input.workspaceBasePath,
-    (input.agent.workspaceFilesystem as any) ?? undefined,
+    parseWorkspaceJsonConfig(input.agent.workspaceFilesystem, WorkspaceFilesystemConfigSchema),
     input.agent.id,
   );
 

@@ -109,7 +109,7 @@ describe('resolveAgentSkillRoot', () => {
   it('works with nested basePath workspaceFilesystem', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-42', workspaceFilesystem: '/data/ws' },
+      agent: { id: 'agent-42', workspaceFilesystem: JSON.stringify({ basePath: 'data/ws' }) },
       skillName: 'skill',
     });
     expect(result.skillsRoot).toMatch(/\/skills$/);

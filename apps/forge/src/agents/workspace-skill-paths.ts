@@ -1,6 +1,8 @@
 import path from 'node:path';
 
+import { WorkspaceFilesystemConfigSchema } from '../database/schema';
 import type { Agent, WorkspaceFilesystemConfig } from '../database/schema';
+import { parseWorkspaceJsonConfig } from './agent-loader-runtime-config';
 
 export function resolveAgentWorkspaceRoot(
   workspaceBasePath: string,
@@ -32,7 +34,7 @@ export function resolveAgentSkillRoot(input: {
 }) {
   const skillsRoot = resolveAgentSkillsRoot(
     input.workspaceBasePath,
-    (input.agent.workspaceFilesystem as any) ?? undefined,
+    parseWorkspaceJsonConfig(input.agent.workspaceFilesystem, WorkspaceFilesystemConfigSchema),
     input.agent.id,
   );
 

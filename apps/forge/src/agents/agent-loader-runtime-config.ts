@@ -77,7 +77,7 @@ export function buildAgentRuntimeConfig(
  * or schema validation failure (the value was stored by HireInternalAgentInput
  * validation, so this should not happen in practice).
  */
-function parseWorkspaceJsonConfig<T>(
+export function parseWorkspaceJsonConfig<T>(
   value: string | null | undefined,
   schema: z.ZodType<T>,
 ): T | undefined {
