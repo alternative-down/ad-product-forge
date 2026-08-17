@@ -44,7 +44,7 @@
 
 import type { Database } from '../database/client';
 import {
-  type InternalChatGroupParticipant as _InternalChatGroupParticipant
+  type InternalChatGroupParticipant
 } from './internal-chat-helpers';
 import {
   createInternalChatConnection,
@@ -267,7 +267,7 @@ export function createInternalChatService(db: Database) {
     listGroupMembersOrDmPeers: listGroupMembersOrDmPeers as (
       agentId: string,
       conversationId: string,
-    ) => Promise<_InternalChatGroupParticipant[]>,
+    ) => Promise<InternalChatGroupParticipant[]>,
   });
 
   // ── Message Sending (delegated to internal-chat-sending.ts) ─────────────
@@ -322,7 +322,7 @@ export function createInternalChatService(db: Database) {
       listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as (
         accountId: string,
         conversationId: string,
-      ) => Promise<_InternalChatGroupParticipant[]>,
+      ) => Promise<InternalChatGroupParticipant[]>,
     },
     attachments: {
       storeMessageAttachments,
@@ -369,6 +369,10 @@ export function createInternalChatService(db: Database) {
     archiveConversationByAccount,
     getUnreadSummary,
     listRecentConversations,
+    listGroupMembersOrDmPeers: listGroupMembersOrDmPeers as (
+      agentId: string,
+      conversationId: string,
+    ) => Promise<InternalChatGroupParticipant[]>,
   };
 }
 

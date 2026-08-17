@@ -189,7 +189,7 @@ async function listInternalChatGroupParticipants(
       return [];
     }
 
-    const members = (await (internalChat as any).listGroupMembersOrDmPeers(
+    const members = (await internalChat.listGroupMembersOrDmPeers(
       _agentId,
       conversationKey,
     )) as ConversationParticipant[];
