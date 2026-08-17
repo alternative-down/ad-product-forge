@@ -17,6 +17,7 @@ import {
   withRouteErrorHandler,
   getQueryParam,
   requireQueryParam,
+  adaptInternalChatHandler,
 } from './internal-chat-route-helpers';
 import type { InternalChatRequest } from './internal-chat-route-helpers';
 import type { HttpHandler } from '../../../http/server';
@@ -210,36 +211,36 @@ export function registerConversationRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/conversations',
-    handler: buildListConversationsHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildListConversationsHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/messages',
-    handler: buildListMessagesHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildListMessagesHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/internal-chat/message-attachment',
-    handler: buildGetAttachmentHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildGetAttachmentHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/create',
-    handler: buildCreateConversationHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildCreateConversationHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/send',
-    handler: buildSendMessageHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildSendMessageHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/update',
-    handler: buildUpdateConversationHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildUpdateConversationHandler(internalChat)),
   });
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/internal-chat/conversation/archive',
-    handler: buildArchiveConversationHandler(internalChat) as unknown as HttpHandler,
+    handler: adaptInternalChatHandler(buildArchiveConversationHandler(internalChat)),
   });
 }
