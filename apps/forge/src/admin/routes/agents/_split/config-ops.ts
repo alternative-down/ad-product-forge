@@ -70,7 +70,7 @@ export function registerConfigOps(
             updatedAt: Date.now(),
           })
           .where(sql`id = ${body.agentId}`);
-        await reloadAgentIfLoaded(db, input.loaderConfig as any, body.agentId);
+        await reloadAgentIfLoaded(db, input.loaderConfig, body.agentId);
         return jsonResponse({ success: true, agentId: body.agentId });
     }),
   });
