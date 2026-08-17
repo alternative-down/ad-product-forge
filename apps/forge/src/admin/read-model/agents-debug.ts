@@ -13,6 +13,7 @@ import type { Database } from '../../database/index';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
+import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 /**
  * Module-local debug helper. Centralizes the admin-read-model scope
@@ -37,7 +38,7 @@ export interface AgentDebugReadModelDeps {
     agentId: string;
     limit: number;
   }) => Promise<unknown>;
-  registry?: { get(agentId: string): unknown };
+  registry?: InternalAgentRegistry;
 }
 
 export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
@@ -53,7 +54,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
   // Resolve getAgentRuntimeMemory — use provided or lazy-init from agents-runtime-memory
   let getAgentRuntimeMemoryFn = getAgentRuntimeMemory_;
   if (!getAgentRuntimeMemoryFn && registry) {
-    const armRM = createAgentsRuntimeMemoryReadModel({ db, registry: registry as any, workspaceBasePath });
+    const armRM = createAgentsRuntimeMemoryReadModel({ db, registry, workspaceBasePath });
     getAgentRuntimeMemoryFn = armRM.getAgentRuntimeMemory;
   }
 
