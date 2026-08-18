@@ -11,7 +11,6 @@ import type { ForgeHttpServerAdapter } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
 import {
-  type AgentNotification,
   type McpServerConfig,
   agentExecutionSteps,
   agentSchedules,
