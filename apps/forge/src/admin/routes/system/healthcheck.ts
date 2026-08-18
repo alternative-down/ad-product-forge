@@ -7,9 +7,23 @@ interface HealthcheckEntry {
   lastHeartbeat: number | null;
 }
 
+export interface HealthcheckRegistry {
+  list(): Iterable<{ id: string }>;
+  get(id: string): { meta?: { name?: string }; runtime?: unknown } | undefined;
+}
+
+export interface HealthcheckReadModel {
+  getAgent(id: string): Promise<{
+    id?: string;
+    status?: string;
+    roleId?: string | null;
+    lastHeartbeat?: number | null;
+  } | null | undefined>;
+}
+
 export async function buildSystemHealthcheck(
-  registry: any,
-  readModel: any,
+  registry: HealthcheckRegistry,
+  readModel: HealthcheckReadModel,
 ): Promise<{
   agents: HealthcheckEntry[];
   timestamp: number;
@@ -18,12 +32,12 @@ export async function buildSystemHealthcheck(
   const agents: HealthcheckEntry[] = [];
 
   for (const entry of entries) {
-    const agent = await readModel.getAgent(entry.runtime.id);
-    const runtime = await registry.get(entry.runtime.id);
+    const agent = await readModel.getAgent(entry.id);
+    const runtime = await registry.get(entry.id);
 
     agents.push({
-      agentId: entry.runtime.id,
-      agentName: runtime?.meta.name ?? entry.runtime.id,
+      agentId: entry.id,
+      agentName: runtime?.meta?.name ?? entry.id,
       status: agent?.status ?? 'unknown',
       role: agent?.roleId ?? null,
       lastHeartbeat: agent?.lastHeartbeat ?? null,

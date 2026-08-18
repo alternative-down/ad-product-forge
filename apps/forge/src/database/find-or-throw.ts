@@ -96,7 +96,7 @@ export interface FindOrThrowLogger {
  *   );
  */
 export async function findOrThrow<T>(
-  queryable: { findFirst: (args?: any) => Promise<T | undefined | null> },
+  queryable: { findFirst: (args?: object) => Promise<T | undefined | null> },
   logger: FindOrThrowLogger,
   findArgs?: { where?: unknown },
 ): Promise<T> {

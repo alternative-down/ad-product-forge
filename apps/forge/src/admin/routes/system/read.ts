@@ -70,7 +70,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     path: '/admin/system/healthcheck',
     handler: async () => {
       try {
-        const healthcheck = await buildSystemHealthcheck(registry, readModel);
+        const healthcheck = await buildSystemHealthcheck(registry, readModel as unknown as Parameters<typeof buildSystemHealthcheck>[1]);
         return jsonResponse(healthcheck);
       } catch (err) {
         adminSystemReadDebug(
