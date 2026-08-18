@@ -24,8 +24,6 @@ import type {
   GitHubAppManifestConfig,
   GitHubAppProvisioning,
 } from '../types';
-// Deferred: imports from ../helpers.ts — use unknown to avoid namespace resolution errors
-// import type { IssuePayload, IssueSummary, IssueDetails } from '../helpers.js';
 
 // ── Sub-interfaces ─────────────────────────────────────────────────────────────
 
