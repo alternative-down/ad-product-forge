@@ -21,7 +21,7 @@ import {
 } from '../schemas/llm';
 import { syncOauthSchema } from '../schemas/oauth';
 import { factoryResetSchema } from '../schemas/system';
-import { performFactoryReset } from './reset';
+import { performFactoryReset } from '../../../system/reset';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { installGlobalSkillsFromZip, deleteGlobalSkill } from '../../../agents/global-skills';
@@ -45,6 +45,16 @@ interface SystemWriteRoutesInput {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
   registry: ReturnType<typeof getInternalAgentRegistry>;
   loadAgent: typeof loadAgent;
+  /**
+   * Admin API key used to authenticate destructive routes that live outside
+   * the /admin/* prefix (e.g. POST /system/reset, re-pathed D49 PR-A per #6521).
+   * When undefined, the route returns 503 unless allowInsecureLocal is true.
+   * Mirrors the auth check at apps/forge/src/http/server.ts:270-287 for
+   * /admin/* paths, applied at route level instead of path prefix.
+   */
+  adminApiKey?: string;
+  /** When true, destructive routes without adminApiKey still respond (local dev only). */
+  allowInsecureLocal?: boolean;
 }
 import { errorMsg } from '../../../agents/error-formatting';
 
@@ -60,7 +70,31 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     integrations,
     registry,
     loadAgent: loadAgentFn,
+    adminApiKey,
+    allowInsecureLocal,
   } = input;
+
+  // Inline helper for routes that live outside /admin/* (re-pathed D49 #6521).
+  // Mirrors the path-prefix auth check at apps/forge/src/http/server.ts:270-287.
+  // Returns null when authenticated; otherwise the JSON response to return.
+  // Inlining avoids exporting getHeaderValue/sendError from server.ts.
+  function checkDestructiveRouteAuth(headers: import("http").IncomingHttpHeaders): { status: number; body: unknown } | null {
+    const headerVal = headers["x-forge-admin-api-key"];
+    const providedKey = Array.isArray(headerVal) ? headerVal[0] : headerVal;
+    if (adminApiKey === undefined) {
+      if (allowInsecureLocal !== true) {
+        return { status: 503, body: { error: "Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect destructive routes." } };
+      }
+      console.warn(
+        "[forge-system-routes] WARNING: destructive route served without authentication (allowInsecureLocal=true). DO NOT use in production.",
+      );
+      return null;
+    }
+    if (providedKey !== adminApiKey) {
+      return { status: 401, body: { error: "Invalid admin API key" } };
+    }
+    return null;
+  }
 
   // POST /admin/system/settings/upsert
   httpServer.registerRoute({
@@ -330,21 +364,31 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   });
 
   // ==========================================================================
-  // FACTORY RESET (#5679 PR-A)
+  // FACTORY RESET (#5679 PR-A, #6521 D49 PR-A re-path + auth fix)
   // ==========================================================================
   //
-  // POST /admin/system/reset
+  // POST /system/reset  (D49 re-path: removed /admin/ prefix per #6521 spec)
   //   Body: { "confirm": "FACTORY_RESET" }
-  //   Auth: x-forge-admin-api-key header (enforced by HTTP middleware)
+  //   Auth: route-level checkDestructiveRouteAuth() — admin API key required
+  //         because the route moved out of /admin/* (which the server-level
+  //         path-prefix middleware protects). Veritas P0 catch (D49 06:43Z
+  //         reviewId 4958047572) confirmed that path-based admin middleware
+  //         no longer covers this route; the check is inlined to avoid
+  //         exporting server.ts internals. Mirrors server.ts:270-287 logic.
+  //   Defense-in-depth (still active): z.literal("FACTORY_RESET") + DB snapshot
+  //         + forgeDebug audit log with backupPath + wipedTables.
   //   Effect: backup DB to /tmp/forge-factory-reset-{ISO}.db, then wipe
   //           all user-data tables (LLM, agents, settings, schedules,
   //           internal-chat, webhooks). Schema preserved.
-  //   Audit: forgeDebug log level=info with backupPath + wipedTables.
   // ==========================================================================
   httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/system/reset',
-    handler: safeRoute('/admin/system/reset', async (request) => {
+    path: '/system/reset',
+    handler: safeRoute('/system/reset', async (request) => {
+        const denied = checkDestructiveRouteAuth(request.headers);
+        if (denied !== null) {
+          return jsonResponse(denied.body, denied.status);
+        }
         const { confirm: _confirm } = parseJsonBody(request.bodyText, factoryResetSchema);
         // _confirm === "FACTORY_RESET" guaranteed by z.literal
         const result = await performFactoryReset();
