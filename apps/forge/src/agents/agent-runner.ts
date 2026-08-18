@@ -20,7 +20,11 @@ import { errorMsg } from './error-formatting';
 
 import { rt } from './runtime-ops';
 
-import { advanceGenerateToken } from './agent-runner-state';
+import {
+  advanceGenerateToken,
+  createRunnerLifecycleState,
+  type RunnerLifecycleState,
+} from './agent-runner-state';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { generateWithTimeoutRetries } from './agent-runner-generate';
@@ -68,19 +72,8 @@ export function createAgentRunner(
     runtimeId: runtime.id,
     setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
-  const timer: NodeJS.Timeout | null = null;
-  let stopped = false;
-  let startingRun = false;
-  let startingRunStartedAt: number | null = null;
-  let executing = false;
-  let lastWakeStartedAt: number | null = null;
-  let lastStepStartedAt: number | null = null;
-  let lastStepStage: string | null = null;
-const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
-  let activeRunId: string | null = null;
-  let currentGenerateAbortController: AbortController | null = null;
-  let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
-  let pendingLongTermMemoryRecallSystemText: string | null = null;
+  const lifecycleState: RunnerLifecycleState = createRunnerLifecycleState();
+  const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
   const messageManager = createRunnerMessageManager(
     {
       flushedRunEventKeys: new Set<string>(),
@@ -138,7 +131,7 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
   }
 
   async function start() {
-    if (stopped) {
+    if (lifecycleState.stopped) {
       return;
     }
 
@@ -172,7 +165,7 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
   }
 
   async function execute(events: AgentWakeEvent[]) {
-    if (stopped) {
+    if (lifecycleState.stopped) {
       return;
     }
 
@@ -184,7 +177,7 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
     const idleOnlyEvents = events.filter((event) => event.idleOnly === true);
     const runnableEvents = events.filter((event) => event.idleOnly !== true);
 
-    if (executionState !== 'idle' || startingRun) {
+    if (executionState !== 'idle' || lifecycleState.startingRun) {
       appendPendingRunMessages(runnableEvents);
 
       for (const event of idleOnlyEvents) {
@@ -219,12 +212,12 @@ const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCou
   }
 
 function stop() {
-    stopped = true;
-    startingRun = false;
-    startingRunStartedAt = null;
-    activeRunId = null;
+    lifecycleState.stopped = true;
+    lifecycleState.startingRun = false;
+    lifecycleState.startingRunStartedAt = null;
+    lifecycleState.activeRunId = null;
     scheduler.stop();
-    executing = false;
+    lifecycleState.executing = false;
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
@@ -238,17 +231,17 @@ function stop() {
     } = {},
   ) {
     const _runEpoch = startNewRunEpoch();
-    startingRun = false;
-    startingRunStartedAt = null;
-    executing = false;
+    lifecycleState.startingRun = false;
+    lifecycleState.startingRunStartedAt = null;
+    lifecycleState.executing = false;
     applyIdleState(_runEpoch);
     if (isStaleRun(_runEpoch)) {
       return;
     }
 
-    lastWakeStartedAt = null;
-    lastStepStartedAt = null;
-    lastStepStage = null;
+    lifecycleState.lastWakeStartedAt = null;
+    lifecycleState.lastStepStartedAt = null;
+    lifecycleState.lastStepStage = null;
     scheduler.clearTimer();
   }
 
@@ -257,22 +250,22 @@ function stop() {
     wakeStartedAt: number;
     markRunning: boolean;
   }) {
-    if (stopped || startingRun) {
+    if (lifecycleState.stopped || lifecycleState.startingRun) {
       return;
     }
 
-    startingRun = true;
-    startingRunStartedAt = Date.now();
+    lifecycleState.startingRun = true;
+    lifecycleState.startingRunStartedAt = Date.now();
     const _runEpoch = startNewRunEpoch();
 
     try {
-      activeRunId = createId();
+      lifecycleState.activeRunId = createId();
       scheduler.setInstant(true);
       scheduler.resetBackoff();
-      lastWakeStartedAt = input.wakeStartedAt;
+      lifecycleState.lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
       messageManager.reset();
-      pendingLongTermMemoryRecallSystemText = null;
+      lifecycleState.pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
 
@@ -307,13 +300,13 @@ function stop() {
         await transitionToIdle(_runEpoch);
       }
     } finally {
-      startingRun = false;
-      startingRunStartedAt = null;
+      lifecycleState.startingRun = false;
+      lifecycleState.startingRunStartedAt = null;
     }
   }
 
   async function queueNextStep(_runEpoch: number) {
-    if (stopped || executing || timer || isStaleRun(_runEpoch)) {
+    if (lifecycleState.stopped || lifecycleState.executing || isStaleRun(_runEpoch)) {
       return;
     }
 
@@ -366,7 +359,7 @@ function stop() {
     //     'idle' early-exits don't leave a stale lock in place.
     //   - progressState is reset on the 'idle' early-exit path
     //     (closure did not reset, leaving dangling timestamps).
-    //   - activeRunId flows through deps.epochState.activeRunId (closure used a
+    //   - lifecycleState.activeRunId flows through deps.epochState.lifecycleState.activeRunId (closure used a
     //     closure-captured let; extracted uses a shared epochState object).
     //   - All 20 tests in agent-runner-execute.test.ts now run against the
     //     production code path (previously they tested dead code).
@@ -383,20 +376,20 @@ function stop() {
       pricingModelKey: currentRuntime.pricingModelKey ?? '',
       modelProfileId: currentRuntime.modelProfileId ?? '',
       // Runner state guards
-      stopped,
-      executingRef: { get value() { return executing; }, set value(v: boolean) { executing = v; } },
+      stopped: lifecycleState.stopped,
+      executingRef: { get value() { return lifecycleState.executing; }, set value(v: boolean) { lifecycleState.executing = v; } },
       isStaleRun,
       // State containers
       epochState: {
         activeRunEpoch: 0,
         activeStepEpoch: scheduler.getActiveStepEpoch(),
         activeGenerateToken: 0,
-        activeRunId,
+        activeRunId: lifecycleState.activeRunId,
       },
       backoffState: scheduler.getState(),
       progressState: {
-        lastStepStartedAt,
-        lastStepStage,
+        lastStepStartedAt: lifecycleState.lastStepStartedAt,
+        lastStepStage: lifecycleState.lastStepStage,
         lastGenerateProgress: null,
       },
       loopState: loopManager.getState(),
@@ -420,15 +413,15 @@ function stop() {
       currentRuntime,
       db,
       // Pending messages / LTM
-      pendingLongTermMemoryRecallSystemText,
+      pendingLongTermMemoryRecallSystemText: lifecycleState.pendingLongTermMemoryRecallSystemText,
       flushPendingRunMessages: (opts) => messageManager.flushPendingRunMessages(opts),
       // Additional runner state
       usage,
       notifications,
       homeMetricSnapshots,
-      runLastMessages,
-      currentGenerateAbortController,
-      setCurrentGenerateAbortController: (c) => { currentGenerateAbortController = c; },
+      runLastMessages: lifecycleState.runLastMessages,
+      currentGenerateAbortController: lifecycleState.currentGenerateAbortController,
+      setCurrentGenerateAbortController: (c) => { lifecycleState.currentGenerateAbortController = c; },
       // Error logging
       runtime,
     };
@@ -459,11 +452,11 @@ function stop() {
     );
 
     if (settings.memoryLastMessagesFullEnabled) {
-      runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
+      lifecycleState.runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
       return;
     }
 
-    runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
+    lifecycleState.runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
   }
 
   async function refreshRunFlushSettings() {
@@ -540,7 +533,7 @@ function stop() {
       scheduler,
       messageManager,
       wakeQueue,
-      { stopped, startingRun, startingRunStartedAt, executing, lastStepStartedAt, lastStepStage, lastWakeStartedAt, timer },
+      { stopped: lifecycleState.stopped, startingRun: lifecycleState.startingRun, startingRunStartedAt: lifecycleState.startingRunStartedAt, executing: lifecycleState.executing, lastStepStartedAt: lifecycleState.lastStepStartedAt, lastStepStage: lifecycleState.lastStepStage, lastWakeStartedAt: lifecycleState.lastWakeStartedAt },
     );
   }
 
@@ -560,7 +553,7 @@ function stop() {
    */
 
   function notifyExternalEvent(event: AgentWakeEvent) {
-    if (stopped) {
+    if (lifecycleState.stopped) {
       return;
     }
 
@@ -573,20 +566,20 @@ function stop() {
   }
 
   function startNewRunEpoch() {
-    // Advance both local activeRunId and scheduler's epoch state
-    activeRunId = createId();
+    // Advance both local lifecycleState.activeRunId and scheduler's epoch state
+    lifecycleState.activeRunId = createId();
     advanceGenerateToken(scheduler.getState());
-    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
-    currentGenerateAbortController = null;
+    lifecycleState.currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
+    lifecycleState.currentGenerateAbortController = null;
     return scheduler.startNewRunEpoch();
   }
 
   function isStaleRun(_runEpoch: number) {
-    return stopped || _runEpoch !== scheduler.getActiveRunEpoch();
+    return lifecycleState.stopped || _runEpoch !== scheduler.getActiveRunEpoch();
   }
 
   function isLocallyIdle() {
-    return !startingRun && !executing && !timer;
+    return !lifecycleState.startingRun && !lifecycleState.executing;
   }
 
   async function transitionToIdle(
@@ -601,8 +594,8 @@ function stop() {
 
     clearTimer();
     advanceGenerateToken(scheduler.getState());
-    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
-    currentGenerateAbortController = null;
+    lifecycleState.currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
+    lifecycleState.currentGenerateAbortController = null;
     applyIdleState(_runEpoch);
 
     if (isStaleRun(_runEpoch)) {
