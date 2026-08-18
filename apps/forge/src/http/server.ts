@@ -2,6 +2,7 @@ import http, { type IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from "zod";
+import { verifyAdminApiKey } from './admin-auth';
 
 const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
 const MAX_BODY_BYTES =
@@ -265,28 +266,16 @@ export function createForgeHttpServer(
       return;
     }
 
-    // Authenticate /admin/* routes
+    // Authenticate /admin/* routes via shared verifyAdminApiKey helper (#6528)
     if (url.pathname.startsWith('/admin/')) {
-      if (config.adminApiKey === undefined) {
-        if (config.allowInsecureLocal === true) {
-          console.warn(
-            '[forge-http] WARNING: /admin/* served without authentication.' +
-              ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
-          );
-        } else {
-          sendError(res, corsHeaders, 503, {
-            error:
-              'Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect admin routes.',
-          });
-          return;
-        }
-      } else {
-        const providedKey = getHeaderValue(req.headers[ADMIN_API_KEY_HEADER]);
-
-        if (providedKey !== config.adminApiKey) {
-          sendError(res, corsHeaders, 401, { error: 'Invalid admin API key' });
-          return;
-        }
+      const denied = verifyAdminApiKey(
+        req.headers,
+        config.adminApiKey,
+        config.allowInsecureLocal === true,
+      );
+      if (denied !== null) {
+        sendError(res, corsHeaders, denied.status, denied.body);
+        return;
       }
     }
 
