@@ -1,4 +1,8 @@
 import { queriesSchedulesManagerDebug } from './queries-debug';
+import {
+  ScheduleNotFoundError,
+  ScheduleCreationError,
+} from '../errors';
 import { withDbErrorLogging } from '../../database/error-logging';
 import { z } from 'zod';
 
@@ -160,7 +164,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     if (existing === null) {
       queriesSchedulesManagerDebug('error', 'updateSchedule schedule not found', { agentId, scheduleId });
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     const normalized = normalizeScheduleUpdate(
@@ -194,7 +198,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     );
 
     if (updated === null) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     getLifecycle()!.cancel(scheduleId);
@@ -236,7 +240,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
 
     if (reloaded === null) {
-      throw new Error(`Schedule not found after update: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId, 'after update');
     }
 
     return toToolOutput(reloaded);
@@ -251,7 +255,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const existing = await store.getAgentSchedule(agentId, scheduleId);
 
     if (existing === null) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     const normalized = normalizeScheduleUpdate(
@@ -281,7 +285,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     );
 
     if (updated === null) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     getLifecycle()!.cancel(scheduleId);
@@ -324,7 +328,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     if (reloaded === null) {
       queriesSchedulesManagerDebug('error', 'updateOwnedSchedule: not found after update', { scheduleId });
-      throw new Error(`Schedule not found after update: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId, 'after update');
     }
 
     return toToolOutput(reloaded);
@@ -340,7 +344,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
       fn: () => store.deleteAgentSchedule(agentId, scheduleId),
     });
     if (!deleted) {
-      throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId, 'or not authorized');
     }
     return { success: true };
   }
@@ -376,7 +380,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
     if (scheduleRecord === null) {
       queriesSchedulesManagerDebug('error', 'createScheduleForAgent failed to load schedule', { agentId: parsed.targetAgentId, recordId: record.id });
-      throw new Error(`Failed to load created schedule: ${record.id}`);
+      throw new ScheduleCreationError(record.id);
     }
 
     try {
@@ -407,7 +411,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     const schedule = await store.getScheduleById(scheduleId);
 
     if (schedule === null) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     requireScheduleEditor(schedule, editorAgentId);
@@ -425,7 +429,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     });
 
     if (schedule === null) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      throw new ScheduleNotFoundError(scheduleId);
     }
 
     requireScheduleDeleter(schedule, editorAgentId);

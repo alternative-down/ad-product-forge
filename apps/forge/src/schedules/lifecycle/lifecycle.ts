@@ -6,6 +6,7 @@
  * Pure lifecycle: scheduleJob / cancel / list — no business logic.
  */
 import { errorMsg } from '../../agents/error-formatting';
+import { InvalidScheduleKindError, ScheduleShapeError } from '../errors';
 import {
   gracefulShutdown,
   scheduleJob,
@@ -243,7 +244,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
   function parseScheduleKind(raw: string | null | undefined): 'agent' | 'heartbeat' {
     if (raw === 'heartbeat') return 'heartbeat';
     if (raw === 'agent' || raw == null) return 'agent';
-    throw new Error(`invalid schedule kind: ${JSON.stringify(raw)}`);
+    throw new InvalidScheduleKindError(raw, 'invalid kind');
   }
 
   function toLifecycleRecord(record: ScheduleLifecycleInput): ScheduleLifecycleRecord {
@@ -260,9 +261,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     };
     if (record.scheduleType === 'cron') {
       if (record.cronExpression == null || record.cronExpression === '') {
-        throw new Error(
-          `invalid cron schedule: missing cronExpression for scheduleId=${record.scheduleId}`,
-        );
+        throw new ScheduleShapeError(record.scheduleId, 'cronExpression');
       }
       return {
         ...base,
@@ -273,9 +272,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     }
     if (record.scheduleType === 'date') {
       if (record.scheduledDate == null) {
-        throw new Error(
-          `invalid date schedule: missing scheduledDate for scheduleId=${record.scheduleId}`,
-        );
+        throw new ScheduleShapeError(record.scheduleId, 'scheduledDate');
       }
       return {
         ...base,
@@ -288,7 +285,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     // union 'cron' | 'date'; anything else is rejected at the boundary
     // so register()'s discriminated-union dispatch always sees a
     // narrowed value. See #5608.
-    throw new Error(`invalid scheduleType: ${JSON.stringify(record.scheduleType)}`);
+    throw new InvalidScheduleKindError(record.scheduleType, 'invalid type');
   }
 
   /**
@@ -317,7 +314,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         return;
       default: {
         const _exhaustive: never = lifecycleRecord;
-        throw new Error(`Unknown scheduleType: ${JSON.stringify(_exhaustive)}`);
+        throw new InvalidScheduleKindError(_exhaustive, 'unknown type');
       }
     }
   }

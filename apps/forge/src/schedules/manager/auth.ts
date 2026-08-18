@@ -3,6 +3,7 @@
  * Extracted to reduce duplication in createAgentScheduleManager
  */
 import { forgeDebug } from '@forge-runtime/core';
+import { ScheduleAuthorizationError } from '../errors';
 
 
 
@@ -43,7 +44,7 @@ export function requireScheduleEditor(schedule: ScheduleAuthorizable, requesterA
       message: 'requireScheduleEditor: not authorized to edit',
       context: { scheduleId: schedule.scheduleId },
     });
-    throw new Error(`Not authorized to edit schedule: ${schedule.scheduleId}`);
+    throw new ScheduleAuthorizationError(schedule.scheduleId, 'edit');
   }
 }
 
@@ -58,6 +59,6 @@ export function requireScheduleDeleter(schedule: ScheduleAuthorizable, requester
       message: 'requireScheduleDeleter: not authorized to delete',
       context: { scheduleId: schedule.scheduleId },
     });
-    throw new Error(`Not authorized to delete schedule: ${schedule.scheduleId}`);
+    throw new ScheduleAuthorizationError(schedule.scheduleId, 'delete');
   }
 }

@@ -1,4 +1,5 @@
 import { scheduleHelpersDebug } from './wake-content-debug';
+import { ScheduleValidationError } from '../errors';
 
 
 
@@ -7,7 +8,7 @@ export function parseScheduleDate(value: string): number {
 
   if (Number.isNaN(timestamp)) {
     scheduleHelpersDebug('warn', 'parseScheduleDate: invalid date', { scheduledDate: value });
-    throw new Error(`Invalid scheduledDate: ${value}`);
+    throw new ScheduleValidationError('scheduledDate', value);
   }
 
   return timestamp;
@@ -20,12 +21,12 @@ export function validateScheduleShape(input: {
 }) {
   if (input.scheduleType === 'cron' && (input.cronExpression == null || input.cronExpression === '')) {
     scheduleHelpersDebug('warn', 'validateScheduleShape: cronExpression required for cron');
-    throw new Error('cronExpression is required when scheduleType is cron');
+    throw new ScheduleValidationError('cronExpression');
   }
 
   if (input.scheduleType === 'date' && (input.scheduledDate == null || input.scheduledDate === 0)) {
     scheduleHelpersDebug('warn', 'validateScheduleShape: scheduledDate required for date');
-    throw new Error('scheduledDate is required when scheduleType is date');
+    throw new ScheduleValidationError('scheduledDate', 'required for date');
   }
 }
 
@@ -40,7 +41,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
 
   if (scheduledDate <= Date.now()) {
     scheduleHelpersDebug('warn', 'assertFutureScheduledDate: must be in future', { scheduledDate });
-    throw new Error('scheduledDate must be in the future');
+    throw new ScheduleValidationError('future');
   }
 }
 
