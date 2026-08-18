@@ -244,6 +244,11 @@ export async function createForgeBootstrap() {
     // the loader config through bootstrap.
     loaderConfig: undefined as never,
     emailMailboxes: undefined as never,
+    // Admin API key + insecure-local flag for destructive routes outside /admin/*
+    // (e.g. POST /system/reset, re-pathed D49 PR-A per #6521). Same semantics
+    // as the server-level path-prefix auth at http/server.ts:270-287.
+    adminApiKey,
+    allowInsecureLocal,
   });
 
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;

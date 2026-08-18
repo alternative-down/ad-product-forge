@@ -153,7 +153,7 @@ function makeMockLoader() {
   return vi.fn();
 }
 
-function buildInput() {
+function buildInput(): Parameters<typeof registerSystemWriteRoutes>[0] {
   return {
     httpServer: makeMockHttpServer() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['httpServer'],
     db: makeMockDb() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['db'],
@@ -165,6 +165,10 @@ function buildInput() {
     integrations: makeMockIntegrations() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['integrations'],
     registry: makeMockRegistry() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['registry'],
     loadAgent: makeMockLoader() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['loadAgent'],
+    // D49 #6526 P0: allow dev/test mode to bypass auth check on destructive
+    // routes. Mirrors http/server.ts:270-287 semantics. Production MUST set
+    // FORGE_ADMIN_API_KEY + leave allowInsecureLocal=false.
+    allowInsecureLocal: true,
   };
 }
 
@@ -412,20 +416,22 @@ describe('POST /system/reset route', () => {
     expect(route!.method).toBe('POST');
   });
 
-  it('L#19 tripwire: rejects body with wrong confirm string (route returns 500)', async () => {
+  it('L#19 tripwire: rejects body with wrong confirm string (ZodError thrown via safeRoute)', async () => {
+    // safeRoute (admin-route-error-helper.ts:99) re-throws ZodError so schema
+    // validation bubbles up to the outer HTTP layer with its intended status.
+    // The tripwire still detects the bug class: if z.literal is weakened to
+    // z.string(), no ZodError is thrown and this test FAILS.
     const input = buildInput();
     registerSystemWriteRoutes(input);
     const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
       (r) => r.path === '/system/reset',
     );
-    const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
+    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
 
-    const result = (await handler({ bodyText: JSON.stringify({ confirm: 'wrong' }) })) as {
-      status: number;
-      body: string;
-    };
-    expect(result.status).toBe(500);
-    expect(result.body).toContain('confirm');
+    // The promise rejects with a ZodError whose message contains 'FACTORY_RESET'.
+    await expect(
+      handler({ bodyText: JSON.stringify({ confirm: 'wrong' }), headers: {} }),
+    ).rejects.toThrow(/FACTORY_RESET/);
     // Critical: factory reset must NOT have been triggered
     expect(mockCopyFileSync).not.toHaveBeenCalled();
     expect(mockDelete).not.toHaveBeenCalled();
@@ -447,19 +453,87 @@ describe('POST /system/reset route', () => {
     expect(oldRoute).toBeUndefined();
   });
 
+    it('D49 #6526: route requires x-forge-admin-api-key header (returns 401 when key configured but missing/wrong)', async () => {
+    const input = buildInput();
+    // Override allowInsecureLocal: false and set adminApiKey so the auth check
+    // actually validates the header (not the insecure-local fallback).
+    input.adminApiKey = 'test-secret-key';
+    input.allowInsecureLocal = false;
+    registerSystemWriteRoutes(input);
+    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
+      (r) => r.path === '/system/reset',
+    );
+    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+
+    const result = (await handler({
+      bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
+      headers: { 'x-forge-admin-api-key': 'WRONG-KEY' },
+    })) as { status: number; body: string };
+    expect(result.status).toBe(401);
+    expect(result.body).toContain('Invalid admin API key');
+    // Critical: factory reset must NOT have been triggered
+    expect(mockCopyFileSync).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('D49 #6526: route returns 503 when adminApiKey undefined AND allowInsecureLocal false', async () => {
+    const input = buildInput();
+    // Override defaults: no adminApiKey + no insecureLocal flag
+    input.adminApiKey = undefined;
+    input.allowInsecureLocal = false;
+    registerSystemWriteRoutes(input);
+    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
+      (r) => r.path === '/system/reset',
+    );
+    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+
+    const result = (await handler({
+      bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
+      headers: {},
+    })) as { status: number; body: string };
+    expect(result.status).toBe(503);
+    expect(result.body).toContain('Admin authentication not configured');
+    // Critical: factory reset must NOT have been triggered
+    expect(mockCopyFileSync).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('D49 #6526: route returns 200 when adminApiKey configured AND matching header', async () => {
+    const input = buildInput();
+    input.adminApiKey = 'test-secret-key';
+    input.allowInsecureLocal = false;
+    registerSystemWriteRoutes(input);
+    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
+      (r) => r.path === '/system/reset',
+    );
+    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+
+    const result = (await handler({
+      bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
+      headers: { 'x-forge-admin-api-key': 'test-secret-key' },
+    })) as { status: number; body: string };
+    expect(result.status).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.ok).toBe(true);
+  });
+
     it('L#19 tripwire: successful reset returns 200 with backupPath + wipedTables', async () => {
     const input = buildInput();
     registerSystemWriteRoutes(input);
     const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
       (r) => r.path === '/system/reset',
     );
-    const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
+    const handler = route!.handler as (req: {
+      bodyText: string;
+      headers: Record<string, string>;
+    }) => Promise<unknown>;
 
     // Pin timestamp via factoryResetSchema side-effect? No — the handler doesn't
     // pass options, so we rely on Date.now(). The backupPath is non-deterministic
     // in tests, but the structure is testable.
     const result = (await handler({
       bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
+      headers: {},
     })) as { status: number; body: string };
     expect(result.status).toBe(200);
     const body = JSON.parse(result.body);

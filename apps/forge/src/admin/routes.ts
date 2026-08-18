@@ -131,6 +131,15 @@ export interface AdminRouteContext {
   coolify: CoolifyManager | null;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
   internalChat: InternalChatService;
+  /**
+   * Admin API key used by destructive routes outside /admin/* (e.g. POST
+   * /system/reset, re-pathed D49 PR-A per #6521). When undefined, the route
+   * returns 503 unless allowInsecureLocal is true. Same semantics as the
+   * server-level check at apps/forge/src/http/server.ts:270-287.
+   */
+  adminApiKey?: string;
+  /** When true, destructive routes without adminApiKey still respond (local dev only). */
+  allowInsecureLocal?: boolean;
 }
 
 export function registerAdminRoutes(input: AdminRouteContext) {
@@ -252,6 +261,8 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     llmSettings,
     llmModelPrices,
     integrations,
+    adminApiKey: input.adminApiKey,
+    allowInsecureLocal: input.allowInsecureLocal,
   });
 
   registerFinanceWriteRoutes(input.httpServer, {
