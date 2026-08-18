@@ -1,10 +1,10 @@
 /**
- * Unit tests for admin/routes/index.ts — jsonResponse and parseJsonBody.
+ * Unit tests for admin/routes/index.ts — jsonResponse and adminRoutesParseJsonBody.
  * Zero prior coverage.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { jsonResponse, parseJsonBody } from './index';
+import { jsonResponse, adminRoutesParseJsonBody } from './index';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
@@ -74,59 +74,59 @@ describe('jsonResponse', () => {
   });
 });
 
-// ─── parseJsonBody ────────────────────────────────────────────────────────────
+// ─── adminRoutesParseJsonBody ────────────────────────────────────────────────────────────
 
-describe('parseJsonBody', () => {
+describe('adminRoutesParseJsonBody', () => {
   const schema = z.object({
     name: z.string(),
     age: z.number(),
   });
 
   it('parses valid JSON object against schema', () => {
-    const result = parseJsonBody('{"name":"Alice","age":30}', schema);
+    const result = adminRoutesParseJsonBody('{"name":"Alice","age":30}', schema);
     expect(result).toEqual({ name: 'Alice', age: 30 });
   });
 
   it('returns empty object for empty body text', () => {
-    const result = parseJsonBody('', z.object({}));
+    const result = adminRoutesParseJsonBody('', z.object({}));
     expect(result).toEqual({});
   });
 
   it('returns empty object for whitespace-only body text', () => {
-    const result = parseJsonBody('   ', z.object({}));
+    const result = adminRoutesParseJsonBody('   ', z.object({}));
     expect(result).toEqual({});
   });
 
   it('throws for invalid JSON syntax', () => {
-    expect(() => parseJsonBody('{invalid}', schema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('{invalid}', schema)).toThrow();
   });
 
   it('throws for schema mismatch (type error)', () => {
-    expect(() => parseJsonBody('{"name":123}', schema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('{"name":123}', schema)).toThrow();
   });
 
   it('parses array when schema allows array', () => {
     const arraySchema = z.array(z.number());
-    const result = parseJsonBody('[1,2,3]', arraySchema);
+    const result = adminRoutesParseJsonBody('[1,2,3]', arraySchema);
     expect(result).toEqual([1, 2, 3]);
   });
 
   it('throws for partial JSON (trailing comma)', () => {
-    expect(() => parseJsonBody('{"name":"Bob",}', schema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('{"name":"Bob",}', schema)).toThrow();
   });
 
   it('preserves string values with spaces', () => {
-    const result = parseJsonBody('{"name":"Bob Smith","age":25}', schema);
+    const result = adminRoutesParseJsonBody('{"name":"Bob Smith","age":25}', schema);
     expect(result.name).toBe('Bob Smith');
   });
 
   it('preserves null values in JSON', () => {
     const schemaWithNull = z.object({ name: z.string().nullable() });
-    const result = parseJsonBody('{"name":null}', schemaWithNull);
+    const result = adminRoutesParseJsonBody('{"name":null}', schemaWithNull);
     expect(result.name).toBeNull();
   });
 
   it('throws for number when string expected', () => {
-    expect(() => parseJsonBody('{"name":999,"age":30}', schema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('{"name":999,"age":30}', schema)).toThrow();
   });
 });

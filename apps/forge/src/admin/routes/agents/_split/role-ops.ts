@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 
-import { jsonResponse, parseJsonBody } from '../../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import { createCapabilityStore } from '../../../../capabilities/store';
 import { RoleHasAssignedAgentsError } from '../../../../capabilities/role-errors';
 import type { HttpHandler } from '../../../../http/server';
@@ -56,7 +56,7 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/create',
     handler: safeRoute('/admin/roles/create', async (request) => {
-        const body = parseJsonBody(request.bodyText, createRoleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, createRoleSchema);
         const result = await capabilities.createRole({
           name: body.name,
           description: body.description,
@@ -70,7 +70,7 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/update',
     handler: safeRoute('/admin/roles/update', async (request) => {
-        const body = parseJsonBody(request.bodyText, updateRoleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, updateRoleSchema);
         const result = await capabilities.updateRole({
           roleId: body.roleId,
           name: body.name,
@@ -86,7 +86,7 @@ export function registerRoleOps(
     path: '/admin/roles/delete',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, deleteRoleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteRoleSchema);
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
@@ -109,7 +109,7 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/tool-permissions',
     handler: safeRoute('/admin/roles/tool-permissions', async (request) => {
-        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, roleToolPermissionSchema);
         const toolId = resolvePermissionId(body.toolName);
         if (body.allowed === true) {
           await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });

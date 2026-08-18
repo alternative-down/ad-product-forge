@@ -102,11 +102,11 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     if (!credentials) {
       return html(
         404,
-        `<h1>GitHub App not provisioned</h1><p>No pending GitHub App configuration exists for agent ${ctx.escapeHtml(agentId)}.</p>`,
+        `<h1>GitHub App not provisioned</h1><p>No pending GitHub App configuration exists for agent ${ctx.githubEscapeHtml(agentId)}.</p>`,
       );
     }
     if (credentials.status !== 'pending') {
-      return html(200, `<h1>GitHub App ${ctx.escapeHtml(credentials.status)}</h1>`);
+      return html(200, `<h1>GitHub App ${ctx.githubEscapeHtml(credentials.status)}</h1>`);
     }
     const githubConfig = await ctx.getGlobalConfig();
     const manifest = JSON.stringify({
@@ -125,7 +125,7 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
     return html(
       200,
-      `<!doctype html><html><body><form id="f" action="${ctx.escapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.escapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`,
+      `<!doctype html><html><body><form id="f" action="${ctx.githubEscapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.githubEscapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`,
     );
   }
 
@@ -175,11 +175,11 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       await ctx.saveCredentials(agentId, created);
       return html(
         200,
-        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(appInfo.slug ?? 'unknown')}/installations/new">install the app</a>.</p>`,
+        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.githubEscapeHtml(appInfo.slug ?? 'unknown')}/installations/new">install the app</a>.</p>`,
       );
     } catch (err) {
       routingOpsDebug('error', 'handleSetupCreate createApp failed', { error: errorMsg(err) });
-      return html(500, `<h1>Failed</h1><pre>${ctx.escapeHtml(String(err))}</pre>`);
+      return html(500, `<h1>Failed</h1><pre>${ctx.githubEscapeHtml(String(err))}</pre>`);
     }
   }
 

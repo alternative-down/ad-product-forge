@@ -4,7 +4,7 @@ import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { createId } from '../../../utils/id';
 import { eq, and } from 'drizzle-orm';
-import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
+import { adminRoutesParseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { safeRoute } from './admin-route-error-helper';
@@ -97,7 +97,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-provider/upsert',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, upsertAgentProviderSchema);
       if (body.providerType === 'discord') {
         const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
 
@@ -168,7 +168,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-provider/delete',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentProviderSchema);
 
       await db
         .delete(agentProviders)
@@ -194,7 +194,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/create',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, createAgentMcpServerSchema);
       const serverId = createId();
       const configId = createId();
 
@@ -243,7 +243,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/update',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, updateAgentMcpServerSchema);
       // D34 #6214 L#NN-50 #36: extract updateAgentMcpServer helper (DRY).
       // The helper at mcp-server-helpers.ts:74 was dormant until now.
       await updateAgentMcpServer(db, body);
@@ -264,7 +264,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/delete',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
       // D34 #6214 L#NN-50 #36: extract deleteAgentMcpServer helper (DRY).
       // The helper at mcp-server-helpers.ts:111 was dormant until now.
       await deleteAgentMcpServer(db, body.configId, body.agentId, body.serverId);
@@ -285,7 +285,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/assign',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, assignAgentMcpServerSchema);
       const existing = await db.query.agentMcpConfigs.findFirst({
         where: and(
           eq(agentMcpConfigs.agentId, body.agentId),
@@ -337,7 +337,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/set-active',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
 
       await db
         .update(agentMcpConfigs)
@@ -368,7 +368,7 @@ export function registerAgentProviderMcpRoutes({
     method: 'POST',
     path: '/admin/agent-mcp/detach',
     handler: safeRoute(async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, detachAgentMcpServerSchema);
       const config = await db.query.agentMcpConfigs.findFirst({
         where: and(
           eq(agentMcpConfigs.id, body.configId),

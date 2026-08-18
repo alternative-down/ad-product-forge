@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { safeRoute } from '../agents/admin-route-error-helper';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
 
 const createInvestmentSchema = z
@@ -115,7 +115,7 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/investment/create',
     handler: safeRoute('/admin/finance/investment/create', async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, createInvestmentSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, createInvestmentSchema);
       const effectiveAt =
         body.effectiveAt !== null && body.effectiveAt !== undefined
           ? new Date(body.effectiveAt).getTime()
@@ -138,7 +138,7 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/payable/create',
     handler: safeRoute('/admin/finance/payable/create', async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, createPayableSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, createPayableSchema);
       const dueAt = new Date(body.dueAt).getTime();
 
       if (!Number.isFinite(dueAt)) {
@@ -189,7 +189,7 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/ledger/post',
     handler: safeRoute('/admin/finance/ledger/post', async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, ledgerEntryActionSchema);
       const effectiveAt =
         body.effectiveAt !== null && body.effectiveAt !== undefined
           ? new Date(body.effectiveAt).getTime()
@@ -210,7 +210,7 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/ledger/cancel',
     handler: safeRoute('/admin/finance/ledger/cancel', async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, ledgerEntryActionSchema);
       const result = await input.companyCash.cancelPlannedEntry(body.entryId);
 
       await input.companyPayables.syncRecurringPayableOccurrence({
@@ -227,7 +227,7 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/recurring-payable/set-active',
     handler: safeRoute('/admin/finance/recurring-payable/set-active', async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, recurringPayableStatusSchema);
       const result = await input.companyPayables.setRecurringPayableActive(
         body.payableId,
         body.isActive,

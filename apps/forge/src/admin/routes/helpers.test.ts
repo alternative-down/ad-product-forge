@@ -1,20 +1,20 @@
 /**
  * Unit tests for admin/routes/helpers.ts
  *
- * Covers: normalizeOptionalText, normalizeJsonText, parseJsonBody,
+ * Covers: normalizeOptionalText, normalizeJsonText, adminRoutesParseJsonBody,
  * jsonResponse, summarizeHealthcheckThreadMessage,
- * extractLatestHealthcheckMessagePreview, summarizeActiveItems
+ * extractLatestHealthcheckMessagePreview, adminRoutesSummarizeActiveItems
  */
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   normalizeOptionalText,
   normalizeJsonText,
-  parseJsonBody,
+  adminRoutesParseJsonBody,
   jsonResponse,
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
-  summarizeActiveItems,
+  adminRoutesSummarizeActiveItems,
 } from './helpers';
 
 // ─── normalizeOptionalText ────────────────────────────────────────────────────
@@ -93,37 +93,37 @@ describe('normalizeJsonText', () => {
   });
 });
 
-// ─── parseJsonBody ─────────────────────────────────────────────────────────────
+// ─── adminRoutesParseJsonBody ─────────────────────────────────────────────────────────────
 
-describe('parseJsonBody', () => {
+describe('adminRoutesParseJsonBody', () => {
   const testSchema = z.object({
     name: z.string(),
     age: z.number().optional(),
   });
 
   it('parses valid JSON body', () => {
-    const result = parseJsonBody('{"name":"Alice","age":30}', testSchema);
+    const result = adminRoutesParseJsonBody('{"name":"Alice","age":30}', testSchema);
     expect(result).toEqual({ name: 'Alice', age: 30 });
   });
 
   it('parses minimal body matching schema', () => {
-    const result = parseJsonBody('{"name":"Bob"}', testSchema);
+    const result = adminRoutesParseJsonBody('{"name":"Bob"}', testSchema);
     expect(result).toEqual({ name: 'Bob' });
   });
 
   it('throws for empty bodyText (no JSON.parse fallback)', () => {
-    // parseJsonBody calls JSON.parse on trimmed body even when empty
+    // adminRoutesParseJsonBody calls JSON.parse on trimmed body even when empty
     // so '' throws because JSON.parse('') fails
-    expect(() => parseJsonBody('', testSchema)).toThrow();
-    expect(() => parseJsonBody('   ', testSchema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('', testSchema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('   ', testSchema)).toThrow();
   });
 
   it('throws ZodError for invalid body', () => {
-    expect(() => parseJsonBody('{"name":123}', testSchema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('{"name":123}', testSchema)).toThrow();
   });
 
   it('throws for invalid JSON syntax', () => {
-    expect(() => parseJsonBody('not json', testSchema)).toThrow();
+    expect(() => adminRoutesParseJsonBody('not json', testSchema)).toThrow();
   });
 
   it('applies schema defaults for missing optional fields', () => {
@@ -131,7 +131,7 @@ describe('parseJsonBody', () => {
       name: z.string(),
       active: z.boolean().default(true),
     });
-    const result = parseJsonBody('{"name":"Carol"}', schemaWithDefault);
+    const result = adminRoutesParseJsonBody('{"name":"Carol"}', schemaWithDefault);
     expect(result).toEqual({ name: 'Carol', active: true });
   });
 });
@@ -336,11 +336,11 @@ describe('extractLatestHealthcheckMessagePreview', () => {
   });
 });
 
-// ─── summarizeActiveItems ─────────────────────────────────────────────────────
+// ─── adminRoutesSummarizeActiveItems ─────────────────────────────────────────────────────
 
-describe('summarizeActiveItems', () => {
+describe('adminRoutesSummarizeActiveItems', () => {
   it('returns empty array for empty input', () => {
-    expect(summarizeActiveItems([])).toEqual([]);
+    expect(adminRoutesSummarizeActiveItems([])).toEqual([]);
   });
 
   it('groups items by their constructor.name', () => {
@@ -349,13 +349,13 @@ describe('summarizeActiveItems', () => {
       { customProp: 2 },
       { customProp: 3 },
     ];
-    const result = summarizeActiveItems(items);
+    const result = adminRoutesSummarizeActiveItems(items);
     expect(result).toContainEqual({ name: 'Object', count: 3 });
   });
 
   it('counts total items per constructor name', () => {
     const items = [{ a: 1 }, { b: 2 }, { c: 3 }];
-    const result = summarizeActiveItems(items);
+    const result = adminRoutesSummarizeActiveItems(items);
     expect(result).toContainEqual({ name: 'Object', count: 3 });
   });
 
@@ -363,7 +363,7 @@ describe('summarizeActiveItems', () => {
     class Agent {}
     class Schedule {}
     const items = [new Schedule(), new Schedule(), new Agent()];
-    const result = summarizeActiveItems(items);
+    const result = adminRoutesSummarizeActiveItems(items);
     // Schedule (count 2) should come before Agent (count 1)
     expect(result[0].name).toBe('Schedule');
     expect(result[0].count).toBe(2);
@@ -371,7 +371,7 @@ describe('summarizeActiveItems', () => {
 
   it('handles primitives (uses typeof for non-objects)', () => {
     const items: unknown[] = ['string', 'string', 42, true, null];
-    const result = summarizeActiveItems(items);
+    const result = adminRoutesSummarizeActiveItems(items);
     // string → 'string' (typeof), number → 'number', boolean → 'boolean', null → 'null' (typeof)
     expect(result.map((r) => r.name)).toContain('string');
   });

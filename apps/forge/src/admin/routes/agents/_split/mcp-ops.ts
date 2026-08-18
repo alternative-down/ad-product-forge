@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import { createId } from '../../../../utils/id';
-import { jsonResponse, parseJsonBody } from '../../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import type { HttpHandler } from '../../../../http/server';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
@@ -38,7 +38,7 @@ export function registerMcpOps(
     method: 'POST',
     path: '/admin/agent/mcp/create',
     handler: safeRoute('/admin/agent/mcp/create', async (request) => {
-      const body = parseJsonBody(request.bodyText ?? '', mcpCreateBodySchema);
+      const body = adminRoutesParseJsonBody(request.bodyText ?? '', mcpCreateBodySchema);
       const serverId = createId();
       const configId = createId();
 

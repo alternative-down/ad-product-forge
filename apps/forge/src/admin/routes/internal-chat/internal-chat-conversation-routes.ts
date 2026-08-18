@@ -12,7 +12,7 @@ import {
   updateInternalChatConversationSchema,
   archiveInternalChatConversationSchema,
 } from '../schemas/internal-chat';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import {
   withRouteErrorHandler,
   getQueryParam,
@@ -132,7 +132,7 @@ function buildGetAttachmentHandler(internalChat: InternalChatService): InternalC
 
 function buildCreateConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/create', async (request: InternalChatRequest) => {
-    const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, createInternalChatConversationSchema);
     const conversationKey = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const result = await internalChat.createExternalChatGroupWithMembers({
       accountId: body.accountId,
@@ -152,7 +152,7 @@ function buildCreateConversationHandler(internalChat: InternalChatService): Inte
 
 function buildSendMessageHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/send', async (request: InternalChatRequest) => {
-    const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
     const result = await internalChat.sendMessage({
       accountId: body.accountId,
       targetKey: body.conversationId,
@@ -178,7 +178,7 @@ function buildSendMessageHandler(internalChat: InternalChatService): InternalCha
 
 function buildUpdateConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/update', async (request: InternalChatRequest) => {
-    const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, updateInternalChatConversationSchema);
     return jsonResponse(
       await internalChat.updateGroupByAccount({
         groupId: body.conversationId,
@@ -190,7 +190,7 @@ function buildUpdateConversationHandler(internalChat: InternalChatService): Inte
 
 function buildArchiveConversationHandler(internalChat: InternalChatService): InternalChatHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/archive', async (request: InternalChatRequest) => {
-    const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
     return jsonResponse(
       await internalChat.archiveConversationByAccount({
         accountId: body.accountId,

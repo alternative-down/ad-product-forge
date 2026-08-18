@@ -40,7 +40,7 @@ function makeCtx(): OpsContext {
     getManifestCallbackPath: (id: string) => `/c/${id}`,
     getSetupPath: (id: string) => `/s/${id}`,
     getWebhookPath: (id: string) => `/w/${id}`,
-    escapeHtml: (s: string) => s,
+    githubEscapeHtml: (s: string) => s,
     normalizeAssignees: ((a: string[]) => a) as any,
     toIssueSummary: vi.fn().mockImplementation((p: unknown) => ({
       id: (p as { id: number }).id,

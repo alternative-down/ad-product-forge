@@ -11,7 +11,7 @@ import {
   updateExternalInternalChatAccountSchema,
   deleteExternalInternalChatAccountSchema,
 } from '../schemas/internal-chat';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { withRouteErrorHandler } from './internal-chat-route-helpers';
 
 // ─── Account route handlers ──────────────────────────────────────────────────
@@ -54,7 +54,7 @@ function buildListContactsHandler(
 
 function buildCreateAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/create', async (request: HttpRequest) => {
-    const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
     return jsonResponse(
       await internalChat.registerExternalAccount({
         slug: body.targetKey,
@@ -66,7 +66,7 @@ function buildCreateAccountHandler(internalChat: InternalChatService): HttpHandl
 
 function buildUpdateAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/update', async (request: HttpRequest) => {
-    const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
     return jsonResponse(
       await internalChat.updateExternalAccount({
         accountId: body.accountId,
@@ -78,7 +78,7 @@ function buildUpdateAccountHandler(internalChat: InternalChatService): HttpHandl
 
 function buildDeleteAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/delete', async (request: HttpRequest) => {
-    const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
+    const body = adminRoutesParseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
     return jsonResponse(await internalChat.deleteExternalAccount(body));
   });
 }

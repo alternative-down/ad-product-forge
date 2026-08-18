@@ -201,7 +201,7 @@ export function getHeader(
 /**
  * Escapes HTML special characters in a string.
  */
-export function escapeHtml(value: string): string {
+export function githubEscapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

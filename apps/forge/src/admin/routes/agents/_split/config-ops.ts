@@ -4,7 +4,7 @@
 
 import { z as _z } from 'zod';
 import { sql } from 'drizzle-orm';
-import { jsonResponse, parseJsonBody } from '../../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import { reloadAgentIfLoaded } from '../../../../capabilities/runtime';
 import {
   updateAgentGitHubManifestConfigSchema,
@@ -33,7 +33,7 @@ export function registerConfigOps(
     method: 'POST',
     path: '/admin/agent/github-manifest-config/update',
     handler: safeRoute('/admin/agent/github-manifest-config/update', async (request) => {
-        const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
         if (!input.githubApps) {
           return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
         }
@@ -50,7 +50,7 @@ export function registerConfigOps(
     method: 'POST',
     path: '/admin/agent/update-config',
     handler: safeRoute('/admin/agent/update-config', async (request) => {
-        const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, updateAgentConfigSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
         });

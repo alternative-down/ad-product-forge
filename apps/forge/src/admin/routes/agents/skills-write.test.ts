@@ -89,7 +89,7 @@ vi.mock('../schemas/skills', () => ({
 
 // Mock utilities from ../index
 vi.mock('../index', () => ({
-  parseJsonBody: mockParseJsonBody,
+  adminRoutesParseJsonBody: mockParseJsonBody,
   jsonResponse: mockJsonResponse,
 }));
 

@@ -11,7 +11,7 @@ import {
   updateInternalChatGroupMemberRoleSchema,
   removeInternalChatGroupMemberSchema,
 } from '../schemas/internal-chat';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { withRouteErrorHandler } from './internal-chat-route-helpers';
 
 // ─── Route handlers ──────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ function buildAddMemberHandler(internalChat: InternalChatService): HttpHandler {
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
       }
-      const body = parseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
       return jsonResponse(
         await internalChat.addMemberToGroupByAccount({
           accountId,
@@ -74,7 +74,7 @@ function buildUpdateRoleHandler(internalChat: InternalChatService): HttpHandler 
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
       }
-      const body = parseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
       return jsonResponse(
         await internalChat.updateMemberRoleByAccount({
           accountId,
@@ -96,7 +96,7 @@ function buildRemoveMemberHandler(internalChat: InternalChatService): HttpHandle
       if (accountId === null || accountId === undefined) {
         return jsonResponse({ error: 'accountId required' }, 400);
       }
-      const body = parseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);
       return jsonResponse(
         await internalChat.removeMemberFromGroupByAccount({
           accountId,

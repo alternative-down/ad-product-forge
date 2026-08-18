@@ -66,7 +66,7 @@ const baseCtx = (): any => ({
   getManifestCallbackPath: (id: string) => `/c/${id}`,
   getSetupPath: (id: string) => `/s/${id}`,
   getWebhookPath: (id: string) => `/w/${id}`,
-  escapeHtml: (s: string) => s,
+  githubEscapeHtml: (s: string) => s,
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],

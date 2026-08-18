@@ -44,7 +44,7 @@ vi.mock('../helpers.js', () => ({
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
     body: JSON.stringify(body),
   })),
-  parseJsonBody: vi.fn((bodyText: string, _schema: { parse: (v: unknown) => unknown }) => {
+  adminRoutesParseJsonBody: vi.fn((bodyText: string, _schema: { parse: (v: unknown) => unknown }) => {
     if (!bodyText || bodyText.trim() === '') return {};
     try {
       return JSON.parse(bodyText);

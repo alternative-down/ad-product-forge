@@ -17,7 +17,7 @@ vi.mock('../index', () => ({
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
     body: JSON.stringify(body),
   })),
-  parseJsonBody: vi.fn((bodyText: string, schema: { parse: (v: unknown) => unknown }) => {
+  adminRoutesParseJsonBody: vi.fn((bodyText: string, schema: { parse: (v: unknown) => unknown }) => {
     if (bodyText.trim() === '') return {};
     return schema.parse(JSON.parse(bodyText));
   }),
@@ -199,8 +199,8 @@ describe('POST /admin/finance/investment/create — handler', () => {
   it('returns success response', async () => {
     const response = await handler(makeMockRequest(JSON.stringify({ amountUsd: 100 })));
 
-    const { parseJsonBody } = await import('../index');
-    expect(parseJsonBody).toHaveBeenCalled();
+    const { adminRoutesParseJsonBody } = await import('../index');
+    expect(adminRoutesParseJsonBody).toHaveBeenCalled();
     expect(response).toMatchObject({ status: 200 });
   });
 });

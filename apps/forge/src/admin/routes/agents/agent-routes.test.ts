@@ -30,7 +30,7 @@ vi.mock('../../../database/index', () => ({}));
 
 vi.mock('../index', () => ({
   jsonResponse: (body: unknown, status = 200) => ({ status, body }),
-  parseJsonBody: (bodyText: string, _schema: z.ZodTypeAny) => {
+  adminRoutesParseJsonBody: (bodyText: string, _schema: z.ZodTypeAny) => {
     try {
       return bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
     } catch {

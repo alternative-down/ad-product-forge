@@ -4,7 +4,7 @@
  * Split from write-ops.ts (#2180)
  */
 
-import { parseJsonBody, jsonResponse } from '../../index';
+import { adminRoutesParseJsonBody, jsonResponse } from '../../index';
 import { safeRoute } from '../admin-route-error-helper';
 
 import {
@@ -29,7 +29,7 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/top-up',
     handler: safeRoute('/admin/agent/contract/top-up', async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, topUpAgentContractSchema);
       return jsonResponse(await ops.topUpActiveAgentContract(db, body));
     
 }),
@@ -40,7 +40,7 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/adjust-budget',
     handler: safeRoute('/admin/agent/contract/adjust-budget', async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
       return jsonResponse(await ops.adjustAgentContractBudget(db, body));
     
 }),
@@ -51,7 +51,7 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/renew',
     handler: safeRoute('/admin/agent/contract/renew', async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, renewAgentContractSchema);
       return jsonResponse(await ops.renewAgentContract(db, body));
     
 }),

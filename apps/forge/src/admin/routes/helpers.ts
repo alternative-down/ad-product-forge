@@ -40,7 +40,7 @@ export function normalizeJsonText(
   return JSON.stringify(parsed);
 }
 
-export function parseJsonBody<TSchema extends z.ZodTypeAny>(
+export function adminRoutesParseJsonBody<TSchema extends z.ZodTypeAny>(
   bodyText: string,
   schema: TSchema,
 ): z.infer<TSchema> {
@@ -48,7 +48,7 @@ export function parseJsonBody<TSchema extends z.ZodTypeAny>(
   try {
     parsed = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
   } catch (err) {
-    adminRoutesHelpersDebug('warn', 'parseJsonBody: JSON.parse failed', { error: errorMsg(err) });
+    adminRoutesHelpersDebug('warn', 'adminRoutesParseJsonBody: JSON.parse failed', { error: errorMsg(err) });
     throw new Error(`Invalid JSON body: ${errorMsg(err)}`);
   }
   return schema.parse(parsed);
@@ -154,7 +154,7 @@ export function extractLatestHealthcheckMessagePreview(content: unknown): string
   return null;
 }
 
-export function summarizeActiveItems(items: unknown[]): Array<{ name: string; count: number }> {
+export function adminRoutesSummarizeActiveItems(items: unknown[]): Array<{ name: string; count: number }> {
   const summary = new Map<string, number>();
 
   for (const item of items) {

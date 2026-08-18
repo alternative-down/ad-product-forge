@@ -18,7 +18,7 @@ export type AdminHandler = (req: HttpRequest) => Promise<HttpResponse>;
  *     method: 'POST',
  *     path: '/admin/webhooks/route/create',
  *     handler: wrapAdminRoute('/admin/webhooks/route/create', async (request) => {
- *       const body = parseJsonBody(request.bodyText, createRouteSchema);
+ *       const body = adminRoutesParseJsonBody(request.bodyText, createRouteSchema);
  *       const route = await store.createRoute({ ... });
  *       return jsonResponse({ routeId: route.routeId }, 201);
  *     }),

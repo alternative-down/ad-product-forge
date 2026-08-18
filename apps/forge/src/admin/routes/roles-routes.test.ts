@@ -103,13 +103,13 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 vi.mock('./helpers', () => ({
-  parseJsonBody: mockParseJsonBody,
+  adminRoutesParseJsonBody: mockParseJsonBody,
   jsonResponse: mockJsonResponse,
   normalizeOptionalText: vi.fn().mockReturnValue(null),
   normalizeJsonText: vi.fn().mockReturnValue(null),
   summarizeHealthcheckThreadMessage: vi.fn().mockResolvedValue(''),
   extractLatestHealthcheckMessagePreview: vi.fn().mockReturnValue(''),
-  summarizeActiveItems: vi.fn().mockResolvedValue(''),
+  adminRoutesSummarizeActiveItems: vi.fn().mockResolvedValue(''),
 }));
 
 vi.mock('../../capabilities/runtime', () => ({

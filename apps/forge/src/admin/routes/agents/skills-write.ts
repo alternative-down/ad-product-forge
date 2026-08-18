@@ -15,7 +15,7 @@ import {
   installAgentWorkspaceSkillsFromZip,
   deleteAgentWorkspaceSkill,
 } from '../../../agents/workspace-skills';
-import { parseJsonBody, jsonResponse } from '../index';
+import { adminRoutesParseJsonBody, jsonResponse } from '../index';
 import { agents } from '../../../database/schema';
 import {
   uploadAgentSkillsSchema,
@@ -38,7 +38,7 @@ export function registerAgentSkillsWriteRoutes(
     method: 'POST',
     path: '/admin/agent-skills/upload',
     handler: safeRoute('/admin/agent-skills/upload', async (request) => {
-      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, uploadAgentSkillsSchema);
       const agent = await input.db.query.agents.findFirst({
         where: eq(agents.id, body.agentId),
       });
@@ -72,7 +72,7 @@ export function registerAgentSkillsWriteRoutes(
     method: 'POST',
     path: '/admin/agent-skills/delete',
     handler: safeRoute('/admin/agent-skills/delete', async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentSkillSchema);
       const agent = await input.db.query.agents.findFirst({
         where: eq(agents.id, body.agentId),
       });
@@ -103,7 +103,7 @@ export function registerAgentSkillsWriteRoutes(
     method: 'POST',
     path: '/admin/agent-skills/install-global',
     handler: safeRoute('/admin/agent-skills/install-global', async (request) => {
-      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
       const agent = await input.db.query.agents.findFirst({
         where: eq(agents.id, body.agentId),
       });
@@ -134,7 +134,7 @@ export function registerAgentSkillsWriteRoutes(
     method: 'POST',
     path: '/admin/agent-skills/publish-global',
     handler: safeRoute('/admin/agent-skills/publish-global', async (request) => {
-      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
       const agent = await input.db.query.agents.findFirst({
         where: eq(agents.id, body.agentId),
       });

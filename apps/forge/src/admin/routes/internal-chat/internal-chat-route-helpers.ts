@@ -7,7 +7,7 @@ import type { HttpHandler, HttpRequest } from '../../../http/server';
 import { errorMsg } from '../../../agents/error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '../debug';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 
 // ─── Request type ─────────────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ export function parseBody<T extends z.ZodTypeAny>(
   schema: T,
 ): z.infer<T> {
   try {
-    return parseJsonBody(request.bodyText, schema);
+    return adminRoutesParseJsonBody(request.bodyText, schema);
   } catch (err) {
     // Re-throw as plain Error so withRouteErrorHandler can catch it
     throw new Error(errorMsg(err));
