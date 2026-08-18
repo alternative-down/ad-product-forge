@@ -22,7 +22,7 @@ vi.mock('@forge-runtime/core', () => ({
 import {
   safeSerializeRecallSteps,
   safeSerializeGraphResult,
-  escapeXml,
+  ltmEscapeXml,
   buildRecallSystemMessage,
   type LtmSearchResult,
 } from './helpers';
@@ -77,44 +77,44 @@ describe('safeSerializeGraphResult', () => {
   });
 });
 
-// ─── escapeXml ───────────────────────────────────────────────────────────────
+// ─── ltmEscapeXml ───────────────────────────────────────────────────────────────
 
-describe('escapeXml', () => {
+describe('ltmEscapeXml', () => {
   it('escapes ampersand', () => {
-    expect(escapeXml('a & b')).toBe('a &amp; b');
+    expect(ltmEscapeXml('a & b')).toBe('a &amp; b');
   });
 
   it('escapes less-than', () => {
-    expect(escapeXml('a < b')).toBe('a &lt; b');
+    expect(ltmEscapeXml('a < b')).toBe('a &lt; b');
   });
 
   it('escapes greater-than', () => {
-    expect(escapeXml('a > b')).toBe('a &gt; b');
+    expect(ltmEscapeXml('a > b')).toBe('a &gt; b');
   });
 
   it('escapes double-quote', () => {
-    expect(escapeXml('say "hi"')).toBe('say &quot;hi&quot;');
+    expect(ltmEscapeXml('say "hi"')).toBe('say &quot;hi&quot;');
   });
 
   it('escapes single-quote', () => {
-    expect(escapeXml("say 'hi'")).toBe('say &apos;hi&apos;');
+    expect(ltmEscapeXml("say 'hi'")).toBe('say &apos;hi&apos;');
   });
 
   it('escapes multiple special chars', () => {
-    expect(escapeXml('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d');
+    expect(ltmEscapeXml('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d');
   });
 
   it('returns unchanged string with no special chars', () => {
-    expect(escapeXml('hello world')).toBe('hello world');
+    expect(ltmEscapeXml('hello world')).toBe('hello world');
   });
 
   it('returns empty string unchanged', () => {
-    expect(escapeXml('')).toBe('');
+    expect(ltmEscapeXml('')).toBe('');
   });
 
   it('handles all escapes in one string', () => {
     const input = '&<>"\'';
-    const result = escapeXml(input);
+    const result = ltmEscapeXml(input);
     expect(result).toBe('&amp;&lt;&gt;&quot;&apos;');
   });
 });

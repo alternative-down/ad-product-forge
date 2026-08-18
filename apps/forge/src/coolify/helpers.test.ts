@@ -1,7 +1,7 @@
 /**
  * Unit tests for coolify/helpers.ts.
- * normalizeDomainHost, extractCollection, extractItem, extractLogs,
- * removeUndefined, safeJsonParse, buildRequestError, toTimestamp.
+ * normalizeDomainHost, extractCollection, extractItem, coolifyExtractLogs,
+ * removeUndefined, coolifySafeJsonParse, buildRequestError, toTimestamp.
  * Zero prior coverage.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -10,9 +10,9 @@ import {
   normalizeDomainHost,
   extractCollection,
   extractItem,
-  extractLogs,
+  coolifyExtractLogs,
   removeUndefined,
-  safeJsonParse,
+  coolifySafeJsonParse,
   buildRequestError,
   toTimestamp,
 } from './helpers';
@@ -144,35 +144,35 @@ describe('extractItem', () => {
   });
 });
 
-// ─── extractLogs ─────────────────────────────────────────────────────────────
+// ─── coolifyExtractLogs ─────────────────────────────────────────────────────────────
 
-describe('extractLogs', () => {
+describe('coolifyExtractLogs', () => {
   it('returns string as-is', () => {
-    expect(extractLogs('Build successful\nDeploying...')).toBe('Build successful\nDeploying...');
+    expect(coolifyExtractLogs('Build successful\nDeploying...')).toBe('Build successful\nDeploying...');
   });
 
   it('extracts from "logs" key', () => {
-    expect(extractLogs({ logs: 'Step 1 complete\nStep 2 starting' })).toBe(
+    expect(coolifyExtractLogs({ logs: 'Step 1 complete\nStep 2 starting' })).toBe(
       'Step 1 complete\nStep 2 starting',
     );
   });
 
   it('extracts from "data" key when logs is not present', () => {
-    expect(extractLogs({ data: 'deployment output here' })).toBe('deployment output here');
+    expect(coolifyExtractLogs({ data: 'deployment output here' })).toBe('deployment output here');
   });
 
   it('extracts from "output" key', () => {
-    expect(extractLogs({ output: 'stdout data' })).toBe('stdout data');
+    expect(coolifyExtractLogs({ output: 'stdout data' })).toBe('stdout data');
   });
 
   it('returns empty string when no suitable key found', () => {
-    expect(extractLogs({ someOtherKey: 'value' })).toBe('');
-    expect(extractLogs({})).toBe('');
+    expect(coolifyExtractLogs({ someOtherKey: 'value' })).toBe('');
+    expect(coolifyExtractLogs({})).toBe('');
   });
 
   it('returns empty string for null and undefined', () => {
-    expect(extractLogs(null)).toBe('');
-    expect(extractLogs(undefined)).toBe('');
+    expect(coolifyExtractLogs(null)).toBe('');
+    expect(coolifyExtractLogs(undefined)).toBe('');
   });
 });
 
@@ -206,23 +206,23 @@ describe('removeUndefined', () => {
   });
 });
 
-// ─── safeJsonParse ───────────────────────────────────────────────────────────
+// ─── coolifySafeJsonParse ───────────────────────────────────────────────────────────
 
-describe('safeJsonParse', () => {
+describe('coolifySafeJsonParse', () => {
   it('parses valid JSON', () => {
-    expect(safeJsonParse('{"key":"value"}')).toEqual({ key: 'value' });
-    expect(safeJsonParse('[1,2,3]')).toEqual([1, 2, 3]);
+    expect(coolifySafeJsonParse('{"key":"value"}')).toEqual({ key: 'value' });
+    expect(coolifySafeJsonParse('[1,2,3]')).toEqual([1, 2, 3]);
   });
 
   it('returns the original string on invalid JSON (not an Error)', () => {
-    expect(safeJsonParse('not json at all')).toBe('not json at all');
-    expect(safeJsonParse('{broken: json')).toBe('{broken: json');
+    expect(coolifySafeJsonParse('not json at all')).toBe('not json at all');
+    expect(coolifySafeJsonParse('{broken: json')).toBe('{broken: json');
   });
 
   it('truncates logged text to 100 chars', () => {
     // Just verify it doesn't throw — the logging is internal
     const long = 'x'.repeat(300);
-    const result = safeJsonParse(long);
+    const result = coolifySafeJsonParse(long);
     expect(result).toBe(long);
   });
 });

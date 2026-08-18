@@ -15,10 +15,10 @@ vi.mock('@forge-runtime/core', () => ({
   })
 }));
 
-// Mock ../helpers — register.ts imports parseJsonBody, jsonResponse, forgeDebug from '../helpers'
+// Mock ../helpers — register.ts imports adminRoutesParseJsonBody, jsonResponse, forgeDebug from '../helpers'
 // forgeDebug re-exports from @forge-runtime/core, so we let the core mock track calls
 vi.mock('../helpers', () => ({
-  parseJsonBody: vi.fn((bodyText: string, _schema?: unknown) => {
+  adminRoutesParseJsonBody: vi.fn((bodyText: string, _schema?: unknown) => {
     if (!bodyText || bodyText.trim() === '{}' || bodyText.trim() === '') return {};
     try {
       return JSON.parse(bodyText);

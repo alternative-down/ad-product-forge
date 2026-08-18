@@ -7,7 +7,7 @@ import {
   parseBody,
 } from './internal-chat-route-helpers';
 import type { InternalChatRequest } from './internal-chat-route-helpers';
-import { parseJsonBody } from '../index';
+import { adminRoutesParseJsonBody } from '../index';
 
 // ─── Mock setup ──────────────────────────────────────────────────────────────
 

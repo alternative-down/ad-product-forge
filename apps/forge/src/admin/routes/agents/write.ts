@@ -7,7 +7,7 @@ import type { HttpHandler } from '../../../http/server';
 
 import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { labeledRoute } from './admin-route-error-helper';
@@ -44,7 +44,7 @@ export function registerAgentWriteRoutes(
     method: 'POST',
     path: '/admin/agent/clear-history',
     handler: labeledRoute('Agent clear-history route', async (request) => {
-      const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, clearAgentHistorySchema);
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
       return jsonResponse({
         success: true,
@@ -60,7 +60,7 @@ export function registerAgentWriteRoutes(
     method: 'POST',
     path: '/admin/agent/ltm-recall-search',
     handler: labeledRoute('Agent ltm-recall-search route', async (request) => {
-      const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
       return jsonResponse(
         await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
           query: body.query,

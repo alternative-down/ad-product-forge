@@ -13,7 +13,7 @@ import {
   getSetupPath,
   getWebhookPath,
   getHeader,
-  escapeHtml,
+  githubEscapeHtml,
   toIssueSummary,
   toIssueDetails,
   summarizeGitHubEvent,
@@ -360,35 +360,35 @@ describe('getHeader', () => {
   });
 });
 
-// --- escapeHtml ---
-describe('escapeHtml', () => {
+// --- githubEscapeHtml ---
+describe('githubEscapeHtml', () => {
   it('escapes angle brackets', () => {
-    expect(escapeHtml('<div>')).toBe('&lt;div&gt;');
+    expect(githubEscapeHtml('<div>')).toBe('&lt;div&gt;');
   });
 
   it('escapes ampersand', () => {
-    expect(escapeHtml('A & B')).toBe('A &amp; B');
+    expect(githubEscapeHtml('A & B')).toBe('A &amp; B');
   });
 
   it('escapes double quotes', () => {
-    expect(escapeHtml('say "hi"')).toBe('say &quot;hi&quot;');
+    expect(githubEscapeHtml('say "hi"')).toBe('say &quot;hi&quot;');
   });
 
   it('escapes double quotes', () => {
-    expect(escapeHtml('say "hi"')).toBe('say &quot;hi&quot;');
+    expect(githubEscapeHtml('say "hi"')).toBe('say &quot;hi&quot;');
   });
 
   it('handles strings with no special chars', () => {
-    expect(escapeHtml('plain text 123')).toBe('plain text 123');
+    expect(githubEscapeHtml('plain text 123')).toBe('plain text 123');
   });
 
   it('handles empty string', () => {
-    expect(escapeHtml('')).toBe('');
+    expect(githubEscapeHtml('')).toBe('');
   });
 
   it('escapes < > & " and single quotes', () => {
     const sq = String.fromCharCode(39);
-    expect(escapeHtml('<>&"' + sq + 'text')).toBe('&lt;&gt;&amp;&quot;&#39;text');
+    expect(githubEscapeHtml('<>&"' + sq + 'text')).toBe('&lt;&gt;&amp;&quot;&#39;text');
   });
 });
 

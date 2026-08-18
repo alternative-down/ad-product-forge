@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 
-import { extractCollection, extractItem, extractLogs, toTimestamp } from './helpers';
+import { extractCollection, extractItem, coolifyExtractLogs, toTimestamp } from './helpers';
 import {
   GitHubAppSchema,
   GitHubRepositorySchema,
@@ -251,7 +251,7 @@ export function createCoolifyManager(config: {
 
     return {
       applicationUuid: input.applicationUuid,
-      logs: extractLogs(data),
+      logs: coolifyExtractLogs(data),
     };
   }
 

@@ -13,7 +13,7 @@ import {
   getSetupPath,
   getWebhookPath,
   getHeader,
-  escapeHtml,
+  githubEscapeHtml,
   toIssueSummary,
   toIssueDetails,
   summarizeGitHubEvent,
@@ -425,41 +425,41 @@ describe('getHeader', () => {
   });
 });
 
-// ─── escapeHtml ───────────────────────────────────────────────────────────────
+// ─── githubEscapeHtml ───────────────────────────────────────────────────────────────
 
-describe('escapeHtml', () => {
+describe('githubEscapeHtml', () => {
   it('escapes ampersands', () => {
-    expect(escapeHtml('a & b')).toBe('a &amp; b');
+    expect(githubEscapeHtml('a & b')).toBe('a &amp; b');
   });
 
   it('escapes less-than signs', () => {
-    expect(escapeHtml('<div>')).toBe('&lt;div&gt;');
+    expect(githubEscapeHtml('<div>')).toBe('&lt;div&gt;');
   });
 
   it('escapes greater-than signs', () => {
-    expect(escapeHtml('5 > 3')).toBe('5 &gt; 3');
+    expect(githubEscapeHtml('5 > 3')).toBe('5 &gt; 3');
   });
 
   it('escapes double quotes', () => {
-    expect(escapeHtml('say "hello"')).toBe('say &quot;hello&quot;');
+    expect(githubEscapeHtml('say "hello"')).toBe('say &quot;hello&quot;');
   });
 
   it('escapes single quotes', () => {
-    expect(escapeHtml("it's fine")).toBe('it&#39;s fine');
+    expect(githubEscapeHtml("it's fine")).toBe('it&#39;s fine');
   });
 
   it('escapes all characters together', () => {
-    expect(escapeHtml('<a href="url?a=1&b=2">Link & Text</a>')).toBe(
+    expect(githubEscapeHtml('<a href="url?a=1&b=2">Link & Text</a>')).toBe(
       '&lt;a href=&quot;url?a=1&amp;b=2&quot;&gt;Link &amp; Text&lt;/a&gt;',
     );
   });
 
   it('returns the same string when no special characters', () => {
-    expect(escapeHtml('plain text')).toBe('plain text');
+    expect(githubEscapeHtml('plain text')).toBe('plain text');
   });
 
   it('returns empty string for empty input', () => {
-    expect(escapeHtml('')).toBe('');
+    expect(githubEscapeHtml('')).toBe('');
   });
 });
 

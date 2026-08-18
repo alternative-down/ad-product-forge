@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { jsonResponse, parseJsonBody } from '../../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
@@ -36,7 +36,7 @@ export function registerLifecycleDelegateOps(
     method: 'POST',
     path: '/admin/agent/hire',
     handler: safeRoute('/admin/agent/hire', async (request) => {
-        const body = parseJsonBody(
+        const body = adminRoutesParseJsonBody(
           request.bodyText ?? '',
           z.object({
             hiringRequest: z.string(),
@@ -64,7 +64,7 @@ export function registerLifecycleDelegateOps(
     method: 'POST',
     path: '/admin/agent/terminate',
     handler: safeRoute('/admin/agent/terminate', async (request) => {
-        const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string() }));
+        const body = adminRoutesParseJsonBody(request.bodyText, z.object({ agentId: z.string() }));
         return jsonResponse(
           await ops.runInternalTermination(input.db, {
             agentId: body.agentId,
@@ -84,7 +84,7 @@ export function registerLifecycleDelegateOps(
     method: 'POST',
     path: '/admin/agent/change-role',
     handler: safeRoute('/admin/agent/change-role', async (request) => {
-        const body = parseJsonBody(
+        const body = adminRoutesParseJsonBody(
           request.bodyText ?? '',
           z.object({ agentId: z.string(), roleId: z.string() }),
         );

@@ -1,4 +1,4 @@
-import { parseJsonBody, jsonResponse } from '../index';
+import { adminRoutesParseJsonBody, jsonResponse } from '../index';
 import { z } from 'zod';
 import { createWebhookStore } from '../../../webhooks/store';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
@@ -30,7 +30,7 @@ export function registerWebhookAdminRoutes(
     method: 'POST',
     path: '/admin/webhooks/route/create',
     handler: wrapAdminRoute('/admin/webhooks/route/create', async (request) => {
-      const body = parseJsonBody(request.bodyText, createRouteSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, createRouteSchema);
       // Secret is generated inside store.createRoute using 32 random bytes
       // (256 bits) via crypto.randomBytes — see encryption/crypto.ts and
       // Closes #5894. The plaintext is returned ONCE here and never again.
@@ -46,7 +46,7 @@ export function registerWebhookAdminRoutes(
     method: 'POST',
     path: '/admin/webhooks/route/rotate-secret',
     handler: wrapAdminRoute('/admin/webhooks/route/rotate-secret', async (request) => {
-      const body = parseJsonBody(request.bodyText, rotateRouteSecretSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, rotateRouteSecretSchema);
       const { route, plaintextSecret } = await store.rotateRouteSecret(body.routeId);
       // Plaintext returned ONCE; admin must store client-side immediately.
       // Last four is provided for identification alongside the new secret.
@@ -90,7 +90,7 @@ export function registerWebhookAdminRoutes(
     method: 'POST',
     path: '/admin/webhooks/route/deactivate',
     handler: wrapAdminRoute('/admin/webhooks/route/deactivate', async (request) => {
-      const body = parseJsonBody(request.bodyText, deactivateRouteSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, deactivateRouteSchema);
       await store.deactivateRoute(body.routeId);
       return jsonResponse({ success: true });
     }),
@@ -123,7 +123,7 @@ export function registerWebhookAdminRoutes(
     method: 'POST',
     path: '/admin/webhooks/event/mark-processed',
     handler: wrapAdminRoute('/admin/webhooks/event/mark-processed', async (request) => {
-      const body = parseJsonBody(request.bodyText, markProcessedSchema);
+      const body = adminRoutesParseJsonBody(request.bodyText, markProcessedSchema);
       await store.markProcessed(body.eventId);
       return jsonResponse({ success: true });
     }),

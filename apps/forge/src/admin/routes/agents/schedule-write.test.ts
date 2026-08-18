@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerAgentSchedulesWriteRoutes } from './schedule-write';
 
-// schedule-write.ts imports { forgeDebug } from '../debug' and { jsonResponse, parseJsonBody } from '../index'
+// schedule-write.ts imports { forgeDebug } from '../debug' and { jsonResponse, adminRoutesParseJsonBody } from '../index'
 // The real ../index does NOT export forgeDebug (it's only in @forge-runtime/core).
 // This mock makes ../index provide a dummy forgeDebug so the handler's catch block
 // calls don't throw.
@@ -12,13 +12,13 @@ vi.mock('../index', () => ({
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
     body: JSON.stringify(body),
   }),
-  parseJsonBody: (bodyText: string, schema: any) => {
+  adminRoutesParseJsonBody: (bodyText: string, schema: any) => {
     if (!bodyText || bodyText.trim() === '{}' || bodyText.trim() === '') return {};
     return schema.parse(JSON.parse(bodyText));
   },
 }));
 
-// Also stub the schemas module so parseJsonBody doesn't fail on schema.parse()
+// Also stub the schemas module so adminRoutesParseJsonBody doesn't fail on schema.parse()
 vi.mock('../schemas/schedules', () => ({
   createScheduleSchema: {
     parse: vi.fn((data) => data),

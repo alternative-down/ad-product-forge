@@ -33,7 +33,7 @@ const makeCtx = (): any => ({
   getManifestCallbackPath: (id: string) => `/webhook/github/${id}/callback`,
   getSetupPath: (id: string) => `/webhook/github/${id}/setup`,
   getWebhookPath: (id: string) => `/webhook/github/${id}/event`,
-  escapeHtml: (s: string) => s,
+  githubEscapeHtml: (s: string) => s,
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],

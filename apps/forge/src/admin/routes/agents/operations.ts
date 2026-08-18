@@ -10,7 +10,7 @@ import type { HttpHandler } from '../../../http/server';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import { jsonResponse } from '../index';
-import { parseJsonBody } from '../index';
+import { adminRoutesParseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
 import { labeledRoute } from './admin-route-error-helper';
 
@@ -54,7 +54,7 @@ export function registerAgentOperationRoutes(
     method: 'POST',
     path: '/admin/agent/wake',
     handler: labeledRoute('Agent wake route', (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+      const { agentId } = adminRoutesParseJsonBody(request.bodyText, agentActionSchema);
       const entry = registry.get(agentId);
       const timestamp = Date.now();
 
@@ -90,7 +90,7 @@ export function registerAgentOperationRoutes(
     method: 'POST',
     path: '/admin/agent/internal-chat/send',
     handler: labeledRoute('Internal chat send route', async (request) => {
-      const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
+      const payload = adminRoutesParseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
       const sender = await input.internalChat.registerExternalAccount({
         slug: payload.senderSlug,
         displayName: payload.senderDisplayName,

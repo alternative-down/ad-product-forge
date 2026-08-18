@@ -72,7 +72,7 @@ export interface GithubOpsRouting {
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
   getWebhookPath: (agentId: string) => string;
-  escapeHtml: (input: string) => string;
+  githubEscapeHtml: (input: string) => string;
 }
 
 /** Issue and assignee formatting helpers. */
@@ -155,7 +155,7 @@ export interface OpsContext {
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
   getWebhookPath: (agentId: string) => string;
-  escapeHtml: (input: string) => string;
+  githubEscapeHtml: (input: string) => string;
   normalizeAssignees: (assignees?: string[] | undefined) => string[] | undefined;
   toIssueSummary: (payload: import('../helpers').IssuePayload) => import('../helpers').IssueSummary;
   toIssueDetails: (payload: import('../helpers').IssuePayload) => import('../helpers').IssueDetails;

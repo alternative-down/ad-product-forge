@@ -5,7 +5,7 @@
 
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import {
   createScheduleSchema,
   updateScheduleSchema,
@@ -24,7 +24,7 @@ export function registerAgentSchedulesWriteRoutes(
     method: 'POST',
     path: '/admin/agent-schedule/create',
     handler: safeRoute('/admin/agent-schedule/create', async (request) => {
-        const body = parseJsonBody(request.bodyText, createScheduleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, createScheduleSchema);
         const scheduleInput =
           body.scheduleType === 'cron'
             ? {
@@ -55,7 +55,7 @@ export function registerAgentSchedulesWriteRoutes(
     method: 'POST',
     path: '/admin/agent-schedule/update',
     handler: safeRoute('/admin/agent-schedule/update', async (request) => {
-        const body = parseJsonBody(request.bodyText, updateScheduleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, updateScheduleSchema);
         const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
           name: body.name,
           description: body.description,
@@ -76,7 +76,7 @@ export function registerAgentSchedulesWriteRoutes(
     method: 'POST',
     path: '/admin/agent-schedule/delete',
     handler: safeRoute('/admin/agent-schedule/delete', async (request) => {
-        const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteScheduleSchema);
         const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
         return jsonResponse(result);
     }),

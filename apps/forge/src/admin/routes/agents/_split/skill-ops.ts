@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
-import { jsonResponse, parseJsonBody } from '../../index';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import {
   installGlobalSkillsFromZip,
   deleteGlobalSkill,
@@ -59,7 +59,7 @@ export function registerSkillOps(
     method: 'POST',
     path: '/admin/agent/skills/publish-to-global',
     handler: safeRoute('/admin/agent/skills/publish-to-global', async (request) => {
-        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
           columns: { id: true, workspaceFilesystem: true },
@@ -83,7 +83,7 @@ export function registerSkillOps(
     method: 'POST',
     path: '/admin/agent/skills/install-global',
     handler: safeRoute('/admin/agent/skills/install-global', async (request) => {
-        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
           columns: { id: true, workspaceFilesystem: true },
@@ -104,7 +104,7 @@ export function registerSkillOps(
     method: 'POST',
     path: '/admin/agent/skills/upload',
     handler: safeRoute('/admin/agent/skills/upload', async (request) => {
-        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, uploadAgentSkillsSchema);
         const installedSkillNames = await installGlobalSkillsFromZip({
           workspaceBasePath,
           zipBase64: body.skillsZipBase64,
@@ -118,7 +118,7 @@ export function registerSkillOps(
     method: 'POST',
     path: '/admin/agent/skills/delete',
     handler: safeRoute('/admin/agent/skills/delete', async (request) => {
-        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentSkillSchema);
         await deleteGlobalSkill({ workspaceBasePath, skillName: body.skillName });
         return jsonResponse({ success: true, skillName: body.skillName });
     }),

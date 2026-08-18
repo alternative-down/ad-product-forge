@@ -9,7 +9,7 @@ import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
 import { adminRouteError, safeRoute } from '../agents/admin-route-error-helper';
-import { jsonResponse, parseJsonBody, normalizeOptionalText, normalizeJsonText } from '../helpers';
+import { jsonResponse, adminRoutesParseJsonBody, normalizeOptionalText, normalizeJsonText } from '../helpers';
 import { upsertSystemSettingsSchema, upsertLlmModelPriceSchema } from '../schemas/llm';
 import { upsertSystemMcpServerSchema, deleteSystemMcpServerSchema } from '../schemas/mcp';
 import { uploadSystemSkillsSchema, deleteSystemSkillSchema } from '../schemas/skills';
@@ -86,7 +86,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, upsertSystemSettingsSchema);
         const result = await systemSettings.upsertSettings(
           body as Parameters<typeof systemSettings.upsertSettings>[0],
         );
@@ -110,7 +110,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/mcp/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
         const serverId = body.serverId ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
         const values = {
@@ -188,7 +188,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/mcp/delete',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
         const linkedConfigs = await db.query.agentMcpConfigs.findMany({
           where: eq(agentMcpConfigs.serverId, body.serverId),
           columns: { agentId: true, id: true },
@@ -214,7 +214,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/skills/upload',
     handler: safeRoute('/admin/system/skills/upload', async (request) => {
-        const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, uploadSystemSkillsSchema);
         const installedSkillNames = await installGlobalSkillsFromZip({
           workspaceBasePath,
           zipBase64: body.archiveBase64,
@@ -228,7 +228,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/skills/delete',
     handler: safeRoute('/admin/system/skills/delete', async (request) => {
-        const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteSystemSkillSchema);
         await deleteGlobalSkill({
           workspaceBasePath,
           skillName: body.skillName,
@@ -242,7 +242,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/price/upsert',
     handler: safeRoute('/admin/system/llm/price/upsert', async (request) => {
-        const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
         return jsonResponse(await llmModelPrices.upsertPrice(body));
     }),
   });
@@ -252,7 +252,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/integration/upsert',
     handler: safeRoute('/admin/system/integration/upsert', async (request) => {
-        const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
         return jsonResponse(await integrations.upsertIntegration(body));
     }),
   });
@@ -262,7 +262,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/integration/delete',
     handler: safeRoute('/admin/system/integration/delete', async (request) => {
-        const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
         await integrations.deleteIntegration(body.providerType);
         return jsonResponse({ success: true, integrationId: body.integrationId });
     }),
@@ -273,7 +273,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/profile/upsert',
     handler: safeRoute('/admin/system/llm/profile/upsert', async (request) => {
-        const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
     }),
   });
@@ -283,7 +283,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/profile/delete',
     handler: safeRoute('/admin/system/llm/profile/delete', async (request) => {
-        const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteLlmProfileSchema);
         await llmSettings.deleteProfile(body.profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
     }),
@@ -294,7 +294,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/defaults/update',
     handler: safeRoute('/admin/system/llm/defaults/update', async (request) => {
-        const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
     }),
   });
@@ -305,7 +305,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/oauth/sync',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, syncOauthSchema);
+        const body = adminRoutesParseJsonBody(request.bodyText, syncOauthSchema);
         const providerIds: Array<'openai-codex' | 'anthropic'> =
           body.provider === 'all' ? ['openai-codex', 'anthropic'] : [body.provider];
         const results: Array<{
@@ -374,7 +374,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         if (denied !== null) {
           return jsonResponse(denied.body, denied.status);
         }
-        const { confirm: _confirm } = parseJsonBody(request.bodyText, factoryResetSchema);
+        const { confirm: _confirm } = adminRoutesParseJsonBody(request.bodyText, factoryResetSchema);
         // _confirm === "FACTORY_RESET" guaranteed by z.literal
         const result = await performFactoryReset();
         return jsonResponse(result);

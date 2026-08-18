@@ -100,11 +100,11 @@ import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-writ
 import {
   normalizeOptionalText as _normalizeOptionalText,
   normalizeJsonText as _normalizeJsonText,
-  parseJsonBody as _parseJsonBody,
+  adminRoutesParseJsonBody as _parseJsonBody,
   jsonResponse as _jsonResponse,
   summarizeHealthcheckThreadMessage as _summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview as _extractLatestHealthcheckMessagePreview,
-  summarizeActiveItems as _summarizeActiveItems,
+  adminRoutesSummarizeActiveItems as _summarizeActiveItems,
 } from './routes/helpers';
 
 import { registerFinanceReadRoutes } from './routes/finance/read';

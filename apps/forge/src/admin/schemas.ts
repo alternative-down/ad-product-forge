@@ -18,7 +18,7 @@
  *   - topUpAgentContractSchema — coerce version (`z.coerce.number()`) for
  *     the legacy route (admin/routes.ts) that parses body as text. The
  *     per-route version (z.number) in ./routes/schemas/agents is used
- *     by the new contract-ops.ts which goes through parseJsonBody first.
+ *     by the new contract-ops.ts which goes through adminRoutesParseJsonBody first.
  *   - hireAgentSchema — same drift pattern as topUpAgentContractSchema.
  *
  * Unique (no per-route equivalent): upsertAgentProviderSchema,
@@ -50,7 +50,7 @@ import { z } from 'zod';
 
 // INTENTIONAL DRIFT
 // Legacy route parses body as text (z.coerce.number).
-// Per-route version in ./routes/schemas/agents uses z.number (parseJsonBody).
+// Per-route version in ./routes/schemas/agents uses z.number (adminRoutesParseJsonBody).
 export const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
   amountUsd: z.coerce.number().positive(),
@@ -58,7 +58,7 @@ export const topUpAgentContractSchema = z.object({
 
 // INTENTIONAL DRIFT
 // Legacy route parses body as text (z.coerce.number).
-// Per-route version in ./routes/schemas/agents uses z.number (parseJsonBody).
+// Per-route version in ./routes/schemas/agents uses z.number (adminRoutesParseJsonBody).
 export const hireAgentSchema = z.object({
   hiringRequest: z.string().min(1),
   additionalContext: z.string().optional(),

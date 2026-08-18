@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   safeSerializeRecallSteps,
   safeSerializeGraphResult,
-  escapeXml,
+  ltmEscapeXml,
   buildRecallSystemMessage,
 } from './ltm/helpers';
 
@@ -81,30 +81,30 @@ describe('ltm/helpers', () => {
     });
   });
 
-  describe('escapeXml', () => {
+  describe('ltmEscapeXml', () => {
     it('escapes ampersand', () => {
-      expect(escapeXml('a & b')).toBe('a &amp; b');
+      expect(ltmEscapeXml('a & b')).toBe('a &amp; b');
     });
 
     it('escapes less-than', () => {
-      expect(escapeXml('a < b')).toBe('a &lt; b');
+      expect(ltmEscapeXml('a < b')).toBe('a &lt; b');
     });
 
     it('escapes greater-than', () => {
-      expect(escapeXml('a > b')).toBe('a &gt; b');
+      expect(ltmEscapeXml('a > b')).toBe('a &gt; b');
     });
 
     it('escapes double-quote', () => {
-      expect(escapeXml('say "hello"')).toBe('say &quot;hello&quot;');
+      expect(ltmEscapeXml('say "hello"')).toBe('say &quot;hello&quot;');
     });
 
     it('escapes single-quote', () => {
-      expect(escapeXml("it's")).toBe("it's".replaceAll("'", '&apos;'));
+      expect(ltmEscapeXml("it's")).toBe("it's".replaceAll("'", '&apos;'));
     });
 
     it('escapes all characters in mixed string', () => {
       const mixed = 'A & B < C > D "E" \'F\'';
-      const result = escapeXml(mixed);
+      const result = ltmEscapeXml(mixed);
       expect(result).toContain('&amp;');
       expect(result).toContain('&lt;');
       expect(result).toContain('&gt;');
@@ -113,15 +113,15 @@ describe('ltm/helpers', () => {
     });
 
     it('returns input unchanged when no special chars', () => {
-      expect(escapeXml('hello world')).toBe('hello world');
+      expect(ltmEscapeXml('hello world')).toBe('hello world');
     });
 
     it('handles empty string', () => {
-      expect(escapeXml('')).toBe('');
+      expect(ltmEscapeXml('')).toBe('');
     });
 
     it('escapes already-escaped content', () => {
-      expect(escapeXml('a &amp; b')).toBe('a &amp;amp; b');
+      expect(ltmEscapeXml('a &amp; b')).toBe('a &amp;amp; b');
     });
   });
 

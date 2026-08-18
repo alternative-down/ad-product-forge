@@ -5,5 +5,5 @@
  */
 
 /* eslint-disable reexport-check/no-unnecessary-reexports */
-export { parseJsonBody, jsonResponse } from './helpers';
+export { adminRoutesParseJsonBody, jsonResponse } from './helpers';
 /* eslint-enable reexport-check/no-unnecessary-reexports */

@@ -114,7 +114,7 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
   throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
 }
 
-export function extractLogs(data: unknown): string {
+export function coolifyExtractLogs(data: unknown): string {
   if (typeof data === 'string') {
     return data;
   }
@@ -139,7 +139,7 @@ export function removeUndefined(record: Record<string, unknown>): Record<string,
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
-export function safeJsonParse(text: string): unknown {
+export function coolifySafeJsonParse(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch (error) {

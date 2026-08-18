@@ -56,7 +56,7 @@ vi.mock('../../../../src/database/schema', () => ({
 
 vi.mock('../create-forge-agent.ts', () => ({}));
 
-// Mock schemas/agents and parseJsonBody so route validation returns correct status codes
+// Mock schemas/agents and adminRoutesParseJsonBody so route validation returns correct status codes
 vi.mock('../../admin/routes/schemas/agents', () => {
   const z = require('zod');
   return {
@@ -99,7 +99,7 @@ vi.mock('../../admin/routes/index', () => ({
     headers: { 'content-type': 'application/json; charset=utf-8' },
     body: JSON.stringify(body),
   }),
-  parseJsonBody: (bodyText: string, schema: unknown) => {
+  adminRoutesParseJsonBody: (bodyText: string, schema: unknown) => {
     const data = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
     try {
       return (schema as any).parse(data);

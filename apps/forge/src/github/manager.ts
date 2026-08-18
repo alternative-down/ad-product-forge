@@ -56,7 +56,7 @@ import {
   getRegisterPath,
   getSetupPath,
   getWebhookPath,
-  escapeHtml,
+  githubEscapeHtml,
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
 } from './helpers';
 import { createReposOps } from './ops/repos';
@@ -143,7 +143,7 @@ export function createGitHubAppManager(config: {
     getManifestCallbackPath,
     getSetupPath,
     getWebhookPath,
-    escapeHtml,
+    githubEscapeHtml,
     normalizeAssignees,
     DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
     toIssueSummary: (p) => toIssueSummary(p),

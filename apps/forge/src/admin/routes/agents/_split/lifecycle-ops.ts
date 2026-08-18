@@ -4,7 +4,7 @@
  * Split from write-ops.ts (#2180)
  */
 
-import { parseJsonBody, jsonResponse } from '../../index';
+import { adminRoutesParseJsonBody, jsonResponse } from '../../index';
 import type { Database } from '../../../../database/client';
 import type { HttpHandler } from '../../../../http/server';
 
@@ -45,7 +45,7 @@ export function registerLifecycleOps(
     path: '/admin/agent/reload',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
+        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
         const config = input.loaderConfig;
         const runtime = await ops.loadAgent(input.db, { ...config, agentId });
         await ops.registry.add(input.db, runtime);
@@ -62,7 +62,7 @@ export function registerLifecycleOps(
     path: '/admin/agent/force-idle',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
+        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
         const entry = ops.registry.get(agentId);
         if (entry !== null) {
           const runner = (entry as { runner: { forceIdle: () => Promise<void> } }).runner;
@@ -81,7 +81,7 @@ export function registerLifecycleOps(
     path: '/admin/agent/rewakeup',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
+        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
         let entry = ops.registry.get(agentId);
 
         if (entry !== null) {
