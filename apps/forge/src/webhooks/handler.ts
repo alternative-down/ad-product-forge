@@ -10,6 +10,7 @@ import {
   parseWebhookPayload,
   verifyWebhookSignature,
 } from './handler-helpers';
+import { HttpStatus, WebhookBody } from './http-status';
 
 type CreateEventResult =
   | { kind: 'created'; eventId: string }
@@ -42,15 +43,15 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
   async function handleWebhook(request: HttpRequest): Promise<HttpResponse> {
     const routeId = extractRouteId(request.path);
     if (routeId === null) {
-      return { status: 404, body: 'Route not found' };
+      return { status: HttpStatus.NotFound, body: WebhookBody.RouteNotFound };
     }
 
     const route = await input.store.getRoute(routeId);
     if (route == null) {
-      return { status: 404, body: 'Route not found' };
+      return { status: HttpStatus.NotFound, body: WebhookBody.RouteNotFound };
     }
     if (!route.isActive) {
-      return { status: 404, body: 'Route inactive' };
+      return { status: HttpStatus.NotFound, body: WebhookBody.RouteInactive };
     }
 
     // Defense-in-depth (closes #5963): require HMAC for ALL routes. A null/empty
@@ -58,18 +59,18 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     // than silently accepting unsigned requests.
     if (route.secret === null || route.secret === undefined || route.secret === '') {
       webhooksHandlerDebug('error', 'Route has no secret — misconfigured, refusing request', { routeId, agentId: route.agentId });
-      return { status: 500, body: 'Route misconfigured' };
+      return { status: HttpStatus.InternalServerError, body: WebhookBody.RouteMisconfigured };
     }
 
     const signatureHeader =
       request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
     if (signatureHeader === null || signatureHeader === undefined) {
       webhooksHandlerDebug('warn', 'Missing signature header', { routeId });
-      return { status: 401, body: 'Missing signature' };
+      return { status: HttpStatus.Unauthorized, body: WebhookBody.MissingSignature };
     }
     if (!verifyWebhookSignature(request.bodyText, signatureHeader, route.secret)) {
       webhooksHandlerDebug('warn', 'Invalid signature', { routeId });
-      return { status: 401, body: 'Invalid signature' };
+      return { status: HttpStatus.Unauthorized, body: WebhookBody.InvalidSignature };
     }
 
     const parsed = parseWebhookPayload(request.bodyText);
@@ -78,7 +79,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       // of synthesizing a fake Error. The previous code discarded the
       // actual diagnostic context (e.g., position of syntax error).
       webhooksHandlerDebug('error', `parseWebhookPayload failed (${parsed.reason}): ${errorMsg(parsed.error)}`);
-      return { status: 400, body: 'Invalid JSON payload' };
+      return { status: HttpStatus.BadRequest, body: WebhookBody.InvalidJsonPayload };
     }
 
     const result = await input.store.createEvent({
@@ -95,14 +96,14 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     if (result.kind === 'duplicate') {
       webhooksHandlerDebug('info', 'Idempotent replay — skipping notification', { routeId, eventId: result.eventId });
       return {
-        status: 200,
+        status: HttpStatus.Ok,
         body: JSON.stringify({ eventId: result.eventId, deduplicated: true }),
       };
     }
 
     input.notifyAgent(buildNotificationContent(route, result.eventId, routeId, Date.now()));
 
-    return { status: 202, body: JSON.stringify({ eventId: result.eventId }) };
+    return { status: HttpStatus.Accepted, body: JSON.stringify({ eventId: result.eventId }) };
   }
 
   return { handleWebhook };
