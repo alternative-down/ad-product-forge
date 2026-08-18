@@ -51,7 +51,6 @@ export function buildRouteKey(method: string, path: string): RouteKey {
 
 const CORS_METHODS = 'GET,POST,PATCH,DELETE,OPTIONS';
 const CORS_ALLOWED_HEADERS = 'content-type,x-forge-admin-api-key';
-const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
 
 function buildCorsHeaders(
   origin: string | null,
