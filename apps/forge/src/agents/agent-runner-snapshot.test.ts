@@ -47,7 +47,6 @@ function makeExtra(overrides: {
   lastStepStartedAt?: number | null;
   lastStepStage?: string | null;
   lastWakeStartedAt?: number | null;
-  timer?: ReturnType<typeof setTimeout> | null;
 } = {}) {
   return {
     stopped: false,
@@ -57,7 +56,6 @@ function makeExtra(overrides: {
     lastStepStartedAt: null,
     lastStepStage: null,
     lastWakeStartedAt: null,
-    timer: null,
     ...overrides,
   };
 }
@@ -117,22 +115,23 @@ describe('buildRunnerSnapshot', () => {
     expect(snapshot.backoffMs).toBe(120_000);
   });
 
-  it('should set scheduled=true when timer is not null', () => {
-    const scheduler = { getState: vi.fn(() => makeSchedulerState()) };
+  it('should set scheduled=true when scheduler.getState().nextStepAt is not null', () => {
+    const futureTime = Date.now() + 30_000;
+    const scheduler = { getState: vi.fn(() => makeSchedulerState({ nextStepAt: futureTime })) };
     const messageManager = { getState: vi.fn(() => makeMessageManagerState()) };
     const wakeQueue = makeWakeQueue();
-    const extra = makeExtra({ timer: setTimeout(() => {}, 1000) });
+    const extra = makeExtra();
 
     const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
     expect(snapshot.scheduled).toBe(true);
   });
 
-  it('should set scheduled=false when timer is null', () => {
-    const scheduler = { getState: vi.fn(() => makeSchedulerState()) };
+  it('should set scheduled=false when scheduler.getState().nextStepAt is null', () => {
+    const scheduler = { getState: vi.fn(() => makeSchedulerState({ nextStepAt: null })) };
     const messageManager = { getState: vi.fn(() => makeMessageManagerState()) };
     const wakeQueue = makeWakeQueue();
-    const extra = makeExtra({ timer: null });
+    const extra = makeExtra();
 
     const snapshot = buildRunnerSnapshot(scheduler as any, messageManager as any, wakeQueue as Pick<AgentWakeQueue, 'getSnapshot'>, extra);
 
