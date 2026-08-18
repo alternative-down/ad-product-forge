@@ -57,6 +57,7 @@ interface SystemWriteRoutesInput {
   allowInsecureLocal?: boolean;
 }
 import { errorMsg } from '../../../agents/error-formatting';
+import { verifyAdminApiKey } from '../../../http/admin-auth';
 
 export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   const {
@@ -74,27 +75,10 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     allowInsecureLocal,
   } = input;
 
-  // Inline helper for routes that live outside /admin/* (re-pathed D49 #6521).
-  // Mirrors the path-prefix auth check at apps/forge/src/http/server.ts:270-287.
-  // Returns null when authenticated; otherwise the JSON response to return.
-  // Inlining avoids exporting getHeaderValue/sendError from server.ts.
-  function checkDestructiveRouteAuth(headers: import("http").IncomingHttpHeaders): { status: number; body: unknown } | null {
-    const headerVal = headers["x-forge-admin-api-key"];
-    const providedKey = Array.isArray(headerVal) ? headerVal[0] : headerVal;
-    if (adminApiKey === undefined) {
-      if (allowInsecureLocal !== true) {
-        return { status: 503, body: { error: "Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect destructive routes." } };
-      }
-      console.warn(
-        "[forge-system-routes] WARNING: destructive route served without authentication (allowInsecureLocal=true). DO NOT use in production.",
-      );
-      return null;
-    }
-    if (providedKey !== adminApiKey) {
-      return { status: 401, body: { error: "Invalid admin API key" } };
-    }
-    return null;
-  }
+  // Route-level auth via shared verifyAdminApiKey helper (#6528).
+  // /system/reset was re-pathed outside /admin/* in D49 #6521, so it no longer
+  // inherits the server-level path-prefix middleware. This call mirrors the
+  // auth check at apps/forge/src/http/server.ts — now via the same helper.
 
   // POST /admin/system/settings/upsert
   httpServer.registerRoute({
@@ -369,12 +353,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   //
   // POST /system/reset  (D49 re-path: removed /admin/ prefix per #6521 spec)
   //   Body: { "confirm": "FACTORY_RESET" }
-  //   Auth: route-level checkDestructiveRouteAuth() — admin API key required
+  //   Auth: route-level verifyAdminApiKey() helper — admin API key required
   //         because the route moved out of /admin/* (which the server-level
   //         path-prefix middleware protects). Veritas P0 catch (D49 06:43Z
   //         reviewId 4958047572) confirmed that path-based admin middleware
-  //         no longer covers this route; the check is inlined to avoid
-  //         exporting server.ts internals. Mirrors server.ts:270-287 logic.
+  //         no longer covers this route. D49 #6528 extracted the previously
+  //         inlined check into a shared helper at http/admin-auth.ts,
+  //         mirroring server.ts:282-297 logic (no more duplication).
   //   Defense-in-depth (still active): z.literal("FACTORY_RESET") + DB snapshot
   //         + forgeDebug audit log with backupPath + wipedTables.
   //   Effect: backup DB to /tmp/forge-factory-reset-{ISO}.db, then wipe
@@ -385,7 +370,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/system/reset',
     handler: safeRoute('/system/reset', async (request) => {
-        const denied = checkDestructiveRouteAuth(request.headers);
+        const denied = verifyAdminApiKey(request.headers, adminApiKey, allowInsecureLocal === true);
         if (denied !== null) {
           return jsonResponse(denied.body, denied.status);
         }
