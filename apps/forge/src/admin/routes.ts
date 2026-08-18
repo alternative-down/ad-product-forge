@@ -94,7 +94,7 @@ import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
 import { registerAgentReadRoutes } from './routes/agents/read';
 import { registerAgentWriteRoutes as _registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
-import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops';
+import { registerAgentWriteOpsRoutes, type AgentOperations } from './routes/agents/write-ops';
 import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write';
 import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write';
 import {
@@ -169,7 +169,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   const companyCash = createCompanyCashOperations(input.db);
 
   // Agent operations bundle (used by write-ops routes)
-  const ops = {
+  const ops: AgentOperations = {
     loadAgent,
     topUpActiveAgentContract,
     adjustAgentContractBudget,
