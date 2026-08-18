@@ -1,25 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-type InternalAgentRegistry = {
-  listAgents: () => Promise<Array<{ agentId: string; name: string; status: string }>>;
-};
-type AdminReadModel = {
-  agents: { listAgents: () => Promise<unknown> };
-  finance: { getFinance: () => Promise<unknown> };
-};
-import { buildSystemHealthcheck } from './healthcheck';
+import {
+  buildSystemHealthcheck,
+  type HealthcheckRegistry,
+  type HealthcheckReadModel,
+} from './healthcheck';
 
 describe('buildSystemHealthcheck', () => {
   it('returns agents list and timestamp from registry and readModel', async () => {
     const mockRegistry = {
       list: vi.fn().mockReturnValue([
         {
-          runtime: { id: 'agent-abc' },
-        },
+          id: 'agent-abc' },
       ]),
       get: vi.fn().mockResolvedValue({
         meta: { name: 'Test Agent' },
       }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi.fn().mockResolvedValue({
@@ -28,7 +24,7 @@ describe('buildSystemHealthcheck', () => {
         roleId: 'admin',
         lastHeartbeat: 1700000000000,
       }),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -45,13 +41,13 @@ describe('buildSystemHealthcheck', () => {
 
   it('uses agentId as fallback name when meta.name is missing', async () => {
     const mockRegistry = {
-      list: vi.fn().mockReturnValue([{ runtime: { id: 'agent-xyz' } }]),
+      list: vi.fn().mockReturnValue([{ id: 'agent-xyz' }]),
       get: vi.fn().mockResolvedValue({ meta: {} }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi.fn().mockResolvedValue({ id: 'agent-xyz', status: 'idle' }),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -60,13 +56,13 @@ describe('buildSystemHealthcheck', () => {
 
   it('returns unknown status when agent not in readModel', async () => {
     const mockRegistry = {
-      list: vi.fn().mockReturnValue([{ runtime: { id: 'agent-unknown' } }]),
+      list: vi.fn().mockReturnValue([{ id: 'agent-unknown' }]),
       get: vi.fn().mockResolvedValue({ meta: { name: 'Ghost' } }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi.fn().mockResolvedValue(null),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -79,9 +75,9 @@ describe('buildSystemHealthcheck', () => {
     const mockRegistry = {
       list: vi.fn().mockReturnValue([]),
       get: vi.fn(),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
-    const mockReadModel = {} as AdminReadModel;
+    const mockReadModel = {} as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -94,16 +90,16 @@ describe('buildSystemHealthcheck', () => {
       list: vi
         .fn()
         .mockReturnValue([
-          { runtime: { id: 'agent-1' } },
-          { runtime: { id: 'agent-2' } },
-          { runtime: { id: 'agent-3' } },
+          { id: 'agent-1' },
+          { id: 'agent-2' },
+          { id: 'agent-3' },
         ]),
       get: vi
         .fn()
         .mockResolvedValueOnce({ meta: { name: 'Alice' } })
         .mockResolvedValueOnce({ meta: {} })
         .mockResolvedValueOnce({ meta: { name: 'Bob' } }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi
@@ -111,7 +107,7 @@ describe('buildSystemHealthcheck', () => {
         .mockResolvedValueOnce({ id: 'agent-1', status: 'running' })
         .mockResolvedValueOnce({ id: 'agent-2', status: 'idle' })
         .mockResolvedValueOnce({ id: 'agent-3', status: 'running' }),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -123,9 +119,9 @@ describe('buildSystemHealthcheck', () => {
 
   it('handles agent without roleId in readModel', async () => {
     const mockRegistry = {
-      list: vi.fn().mockReturnValue([{ runtime: { id: 'agent-no-role' } }]),
+      list: vi.fn().mockReturnValue([{ id: 'agent-no-role' }]),
       get: vi.fn().mockResolvedValue({ meta: { name: 'Roleless' } }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi.fn().mockResolvedValue({
@@ -133,7 +129,7 @@ describe('buildSystemHealthcheck', () => {
         status: 'running',
         lastHeartbeat: 1700000000000,
       }),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
@@ -142,16 +138,16 @@ describe('buildSystemHealthcheck', () => {
 
   it('handles lastHeartbeat missing in readModel', async () => {
     const mockRegistry = {
-      list: vi.fn().mockReturnValue([{ runtime: { id: 'agent-no-heartbeat' } }]),
+      list: vi.fn().mockReturnValue([{ id: 'agent-no-heartbeat' }]),
       get: vi.fn().mockResolvedValue({ meta: { name: 'Silent' } }),
-    } as unknown as InternalAgentRegistry;
+    } as unknown as HealthcheckRegistry;
 
     const mockReadModel = {
       getAgent: vi.fn().mockResolvedValue({
         id: 'agent-no-heartbeat',
         status: 'idle',
       }),
-    } as unknown as AdminReadModel;
+    } as unknown as HealthcheckReadModel;
 
     const result = await buildSystemHealthcheck(mockRegistry, mockReadModel);
 
