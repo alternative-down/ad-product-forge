@@ -1,7 +1,7 @@
 /**
  * Factory Reset Route + Logic Tests - #5679 PR-A
  *
- * L#19 tripwires for POST /admin/system/reset and performFactoryReset.
+ * L#19 tripwires for POST /system/reset and performFactoryReset.
  *
  * Bug class targeted: "destructive operation without safety check" — e.g.,
  * accidental trigger via typo, replay, double-click, or admin-key leakage.
@@ -18,13 +18,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Schema modules: replace with Symbol placeholders so we don't need a real DB
-vi.mock('../../../database/schema-llm', () => ({
+vi.mock('../database/schema-llm', () => ({
   llmProfiles: { _name: 'llm_profiles' },
   llmModelPrices: { _name: 'llm_model_prices' },
   systemLlmDefaults: { _name: 'system_llm_defaults' },
 }));
 
-vi.mock('../../../database/schema-agents', () => ({
+vi.mock('../database/schema-agents', () => ({
   agents: { _name: 'agents' },
   agentProviders: { _name: 'agent_providers' },
   agentExecutionContracts: { _name: 'agent_execution_contracts' },
@@ -37,20 +37,20 @@ vi.mock('../../../database/schema-agents', () => ({
   agentSchedules: { _name: 'agent_schedules' },
 }));
 
-vi.mock('../../../database/schema-config', () => ({
+vi.mock('../database/schema-config', () => ({
   systemSettings: { _name: 'system_settings' },
 }));
 
-vi.mock('../../../database/schema-integrations', () => ({
+vi.mock('../database/schema-integrations', () => ({
   systemIntegrations: { _name: 'system_integrations' },
 }));
 
-vi.mock('../../../database/schema-mcp', () => ({
+vi.mock('../database/schema-mcp', () => ({
   mcpServerConfigs: { _name: 'mcp_server_configs' },
   agentMcpConfigs: { _name: 'agent_mcp_configs' },
 }));
 
-vi.mock('../../../database/schema-chat', () => ({
+vi.mock('../database/schema-chat', () => ({
   internalChatAccounts: { _name: 'internal_chat_accounts' },
   internalChatConversations: { _name: 'internal_chat_conversations' },
   internalChatConversationMembers: { _name: 'internal_chat_conversation_members' },
@@ -59,7 +59,7 @@ vi.mock('../../../database/schema-chat', () => ({
   internalChatMessageAttachments: { _name: 'internal_chat_message_attachments' },
 }));
 
-vi.mock('../../../database/schema-webhooks', () => ({
+vi.mock('../database/schema-webhooks', () => ({
   webhookRoutes: { _name: 'webhook_routes' },
   webhookEvents: { _name: 'webhook_events' },
 }));
@@ -79,7 +79,7 @@ vi.mock('node:fs', () => ({
 }));
 
 const mockDelete = vi.fn();
-vi.mock('../../../database/client', () => ({
+vi.mock('../database/client', () => ({
   getDatabase: vi.fn(() => ({
     delete: mockDelete,
   })),
@@ -87,19 +87,19 @@ vi.mock('../../../database/client', () => ({
 }));
 
 const mockGetAppDatabasePath = vi.fn();
-vi.mock('../../../database/config', () => ({
+vi.mock('../database/config', () => ({
   getAppDatabasePath: () => mockGetAppDatabasePath(),
 }));
 
 const mockForgeDebug = vi.fn();
-vi.mock('../debug', () => ({
+vi.mock('../admin/routes/debug', () => ({
   forgeDebug: (...args: unknown[]) => mockForgeDebug(...args),
 }));
 
 const mockErrorMsg = vi.fn((err: unknown) =>
   err instanceof Error ? err.message : String(err),
 );
-vi.mock('../../../agents/error-formatting', () => ({
+vi.mock('../agents/error-formatting', () => ({
   errorMsg: (err: unknown) => mockErrorMsg(err),
 }));
 
@@ -110,8 +110,8 @@ vi.mock('node:path', async () => {
 });
 
 import { performFactoryReset, listWipeTargets } from './reset';
-import { factoryResetSchema } from '../schemas/system';
-import { registerSystemWriteRoutes } from './write';
+import { factoryResetSchema } from '../admin/routes/schemas/system';
+import { registerSystemWriteRoutes } from '../admin/routes/system/write';
 
 // --- Helpers ---
 
@@ -399,7 +399,7 @@ describe('listWipeTargets', () => {
 // ROUTE HANDLER (integration with write.ts)
 // =============================================================================
 
-describe('POST /admin/system/reset route', () => {
+describe('POST /system/reset route', () => {
   it('registers the route as POST', () => {
     const mockServer = makeMockHttpServer();
     const input = buildInput();
@@ -407,7 +407,7 @@ describe('POST /admin/system/reset route', () => {
 
     registerSystemWriteRoutes(input);
 
-    const route = mockServer.routes.find((r) => r.path === '/admin/system/reset');
+    const route = mockServer.routes.find((r) => r.path === '/system/reset');
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -416,7 +416,7 @@ describe('POST /admin/system/reset route', () => {
     const input = buildInput();
     registerSystemWriteRoutes(input);
     const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/admin/system/reset',
+      (r) => r.path === '/system/reset',
     );
     const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
 
@@ -431,11 +431,27 @@ describe('POST /admin/system/reset route', () => {
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
-  it('L#19 tripwire: successful reset returns 200 with backupPath + wipedTables', async () => {
+  it('D49 #6521 PR-A: route is registered at /system/reset (NOT /admin/system/reset)', () => {
+    const mockServer = makeMockHttpServer();
+    const input = buildInput();
+    (input as { httpServer: unknown }).httpServer = mockServer;
+
+    registerSystemWriteRoutes(input);
+
+    // New path per #6521 spec
+    const newRoute = mockServer.routes.find((r) => r.path === '/system/reset');
+    expect(newRoute).toBeDefined();
+
+    // Old path must NOT exist (route was moved, not duplicated)
+    const oldRoute = mockServer.routes.find((r) => r.path === '/admin/system/reset');
+    expect(oldRoute).toBeUndefined();
+  });
+
+    it('L#19 tripwire: successful reset returns 200 with backupPath + wipedTables', async () => {
     const input = buildInput();
     registerSystemWriteRoutes(input);
     const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/admin/system/reset',
+      (r) => r.path === '/system/reset',
     );
     const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
 
@@ -459,7 +475,7 @@ describe('POST /admin/system/reset route', () => {
 //
 // To verify the tripwires catch the bug class:
 //
-// 1. Run `npx vitest run apps/forge/src/admin/routes/system/reset.test.ts` → ALL PASS
+// 1. Run `npx vitest run apps/forge/src/system/reset.test.ts` → ALL PASS
 // 2. Pick a safety check and revert it. Examples:
 //    a) In factoryResetSchema, change `z.literal('FACTORY_RESET')` to
 //       `z.string().min(1)` → schema tests should now PASS for any non-empty string,

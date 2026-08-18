@@ -10,7 +10,7 @@ import { z } from 'zod';
 // =============================================================================
 
 /**
- * Body schema for POST /admin/system/reset.
+ * Body schema for POST /system/reset.
  *
  * Requires explicit `confirm: "FACTORY_RESET"` literal to prevent accidental
  * trigger (e.g., by a frontend bug, double-click, or replay attack). Admin

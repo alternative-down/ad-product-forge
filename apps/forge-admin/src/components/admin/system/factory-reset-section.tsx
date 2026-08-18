@@ -7,7 +7,7 @@ import { FactoryResetModal } from './factory-reset-modal';
  * Section rendered on /settings/system that exposes the factory-reset action.
  *
  * The reset endpoint creates its own audit log via forgeDebug on the backend
- * (see apps/forge/src/admin/routes/system/reset.ts). There is no public
+ * (see apps/forge/src/system/reset.ts). There is no public
  * audit-history endpoint, so the UI surfaces only a static "last reset" hint
  * with a link to the documentation note.
  */

@@ -5,7 +5,7 @@
  *   - Step 1: warning screen showing the wipe list
  *   - Step 2: typed confirmation screen requiring exact string
  *
- * The backend POST /admin/system/reset (apps/forge/src/admin/routes/system/reset.ts)
+ * The backend POST /system/reset (apps/forge/src/system/reset.ts)
  * expects body shape: { confirm: 'FACTORY_RESET' } (z.literal).
  *
  * This module is the source of truth for:

@@ -1,7 +1,7 @@
 /**
  * System Factory Reset - Phase 4+ of #719, #5679 PR-A
  *
- * Core logic for POST /admin/system/reset. Backs up the database file,
+ * Core logic for POST /system/reset. Backs up the database file,
  * then wipes all user-data tables (LLM profiles, agents, system settings,
  * schedules, internal-chat, webhooks). Preserves schema (does NOT drop
  * tables) so the application can keep running post-reset.
@@ -26,10 +26,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { errorMsg } from '../../../agents/error-formatting';
-import { getDatabase, type Database } from '../../../database/client';
-import { getAppDatabasePath } from '../../../database/config';
-import { llmProfiles, llmModelPrices, systemLlmDefaults } from '../../../database/schema-llm';
+import { errorMsg } from '../agents/error-formatting';
+import { getDatabase, type Database } from '../database/client';
+import { getAppDatabasePath } from '../database/config';
+import { llmProfiles, llmModelPrices, systemLlmDefaults } from '../database/schema-llm';
 import {
   agents,
   agentProviders,
@@ -41,10 +41,10 @@ import {
   agentLongTermMemoryRecallStates,
   agentNotifications,
   agentSchedules,
-} from '../../../database/schema-agents';
-import { systemSettings } from '../../../database/schema-config';
-import { systemIntegrations } from '../../../database/schema-integrations';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema-mcp';
+} from '../database/schema-agents';
+import { systemSettings } from '../database/schema-config';
+import { systemIntegrations } from '../database/schema-integrations';
+import { mcpServerConfigs, agentMcpConfigs } from '../database/schema-mcp';
 import {
   internalChatAccounts,
   internalChatConversations,
@@ -52,9 +52,9 @@ import {
   internalChatMessages,
   internalChatMessageReads,
   internalChatMessageAttachments,
-} from '../../../database/schema-chat';
-import { webhookRoutes, webhookEvents } from '../../../database/schema-webhooks';
-import { forgeDebug } from '../debug';
+} from '../database/schema-chat';
+import { webhookRoutes, webhookEvents } from '../database/schema-webhooks';
+import { forgeDebug } from '../admin/routes/debug';
 
 const adminSystemResetDebug = (
   level: 'debug' | 'info' | 'warn' | 'error',

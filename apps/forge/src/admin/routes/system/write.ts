@@ -21,7 +21,7 @@ import {
 } from '../schemas/llm';
 import { syncOauthSchema } from '../schemas/oauth';
 import { factoryResetSchema } from '../schemas/system';
-import { performFactoryReset } from './reset';
+import { performFactoryReset } from '../../../system/reset';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { installGlobalSkillsFromZip, deleteGlobalSkill } from '../../../agents/global-skills';
@@ -330,12 +330,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   });
 
   // ==========================================================================
-  // FACTORY RESET (#5679 PR-A)
+  // FACTORY RESET (#5679 PR-A, #6521 D49 PR-A re-path)
   // ==========================================================================
   //
-  // POST /admin/system/reset
+  // POST /system/reset  (D49 re-path: removed /admin/ prefix per #6521 spec)
   //   Body: { "confirm": "FACTORY_RESET" }
-  //   Auth: x-forge-admin-api-key header (enforced by HTTP middleware)
+  //   Auth: defense-in-depth via z.literal + DB snapshot + audit log
+  //         (no longer /admin/* middleware; route moved out of admin namespace)
   //   Effect: backup DB to /tmp/forge-factory-reset-{ISO}.db, then wipe
   //           all user-data tables (LLM, agents, settings, schedules,
   //           internal-chat, webhooks). Schema preserved.
@@ -343,8 +344,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   // ==========================================================================
   httpServer.registerRoute({
     method: 'POST',
-    path: '/admin/system/reset',
-    handler: safeRoute('/admin/system/reset', async (request) => {
+    path: '/system/reset',
+    handler: safeRoute('/system/reset', async (request) => {
         const { confirm: _confirm } = parseJsonBody(request.bodyText, factoryResetSchema);
         // _confirm === "FACTORY_RESET" guaranteed by z.literal
         const result = await performFactoryReset();

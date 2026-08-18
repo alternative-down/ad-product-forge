@@ -156,7 +156,7 @@ export type FactoryResetRequest = {
 };
 
 export function triggerFactoryReset() {
-  return request<FactoryResetResult>('/admin/system/reset', {
+  return request<FactoryResetResult>('/system/reset', {
     method: 'POST',
     body: JSON.stringify({ confirm: 'FACTORY_RESET' } satisfies FactoryResetRequest),
   });
