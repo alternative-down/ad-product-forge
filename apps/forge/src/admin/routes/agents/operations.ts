@@ -7,6 +7,8 @@ import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
 import type { ToolResult } from '../../../capabilities/tools/error-wrapper';
 import type { HttpHandler } from '../../../http/server';
+import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
+import type { InternalChatService } from '../../../communication/internal-chat-service';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
@@ -28,53 +30,13 @@ const adminInternalChatSendFromAdminSchema = z
   })
   .strict();
 
-// Widen to accept any object with the required methods (including the full InternalChat from routes.ts)
-type InternalChat = {
-  registerExternalAccount: (input: {
-    slug: string;
-    displayName: string;
-  }) => Promise<{ accountId: string }>;
-  sendMessage: (
-    input: {
-      accountId: string;
-      targetKey: string;
-      content: string;
-      attachments: CommunicationFile[];
-    },
-  ) => Promise<ToolResult<{ success: boolean; conversationKey: string; messageId: string }>>;
-};
-
-// Widen to accept both the minimal Registry and the full InternalAgentRegistry
-type RegistryEntry =
-  | {
-      runner: {
-        notifyExternalEvent: (event: unknown) => void;
-        forceIdle: () => Promise<void>;
-      };
-    }
-  | {
-      loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
-      add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
-      remove: (agentId: string) => void;
-      get: (agentId: string) => unknown;
-      list: () => unknown[];
-    }
-  | null;
-
-type Registry =
-  | {
-      get(agentId: string): RegistryEntry;
-    }
-  | {
-      loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
-      add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
-      remove: (agentId: string) => void;
-      get: (agentId: string) => unknown;
-      list: () => unknown[];
-    };
-
 /**
  * Register routes for agent operations (wake, internal chat)
+ *
+ * The consumer uses the canonical `InternalChatService` and
+ * `InternalAgentRegistry` types so that producer signatures propagate here
+ * automatically — eliminating the recurring module-boundary type drift
+ * cycles (#6499, #6497, #6494, #6498, #6496, #6500). See #6519.
  */
 export function registerAgentOperationRoutes(
   httpServer: {
@@ -84,8 +46,8 @@ export function registerAgentOperationRoutes(
       handler: HttpHandler;
     }) => void;
   },
-  input: { internalChat: InternalChat },
-  registry: Registry | any,
+  input: { internalChat: InternalChatService },
+  registry: InternalAgentRegistry,
 ) {
   // POST /admin/agent/wake
   httpServer.registerRoute({
@@ -96,11 +58,18 @@ export function registerAgentOperationRoutes(
       const entry = registry.get(agentId);
       const timestamp = Date.now();
 
-      if (entry === null || entry === undefined) {
+      if (!entry) {
         return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
       }
 
-      (entry as { runner: { notifyExternalEvent: (event: unknown) => void; forceIdle: () => Promise<void> } }).runner.notifyExternalEvent({
+      if (!entry.runner) {
+        return jsonResponse(
+          { error: `Agent has no runner attached (wake ignored): ${agentId}` },
+          409,
+        );
+      }
+
+      entry.runner.notifyExternalEvent({
         type: 'manual-wake',
         groupKey: `manual-wake:${agentId}`,
         groupMetadata: {
@@ -112,8 +81,8 @@ export function registerAgentOperationRoutes(
         timestamp,
       });
       return jsonResponse({ success: true });
-    
-}),
+
+    }),
   });
 
   // POST /admin/agent/internal-chat/send
@@ -141,7 +110,7 @@ export function registerAgentOperationRoutes(
         conversationKey: sent.data.conversationKey,
         messageId: sent.data.messageId,
       });
-    
-}),
+
+    }),
   });
 }

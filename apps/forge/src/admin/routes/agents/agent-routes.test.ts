@@ -1,3 +1,5 @@
+import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
+import type { InternalChatService } from '../../../communication/internal-chat-service';
 /**
  * Agent Routes Tests - Phase 2 of #689
  * Tests for extracted agent route submodules (read, operations, write, write-ops).
@@ -265,8 +267,8 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     };
     registerAgentOperationRoutes(
       httpServer as any,
-      { internalChat: createInternalChat() },
-      new Map(),
+      { internalChat: createInternalChat() as unknown as InternalChatService },
+      new Map() as unknown as InternalAgentRegistry,
     );
     expect(routes.find((r) => r.path === '/admin/agent/wake' && r.method === 'POST')).toBeDefined();
   });
@@ -278,8 +280,8 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     };
     registerAgentOperationRoutes(
       httpServer as any,
-      { internalChat: createInternalChat() },
-      new Map(),
+      { internalChat: createInternalChat() as unknown as InternalChatService },
+      new Map() as unknown as InternalAgentRegistry,
     );
     expect(
       routes.find((r) => r.path === '/admin/agent/internal-chat/send' && r.method === 'POST'),
@@ -293,8 +295,8 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     };
     registerAgentOperationRoutes(
       httpServer as any,
-      { internalChat: createInternalChat() },
-      new Map(),
+      { internalChat: createInternalChat() as unknown as InternalChatService },
+      new Map() as unknown as InternalAgentRegistry,
     );
     expect(routes).toHaveLength(2);
   });
