@@ -91,7 +91,7 @@ export function createInternalChatProvider(input: {
         content: message.content,
         attachments: message.attachments,
       });
-      if (!sent.valid) {
+      if (sent.valid === false) {
         throw new Error(sent.error);
       }
 

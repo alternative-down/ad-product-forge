@@ -30,7 +30,7 @@ export function adaptInternalChatHandler(handler: (request: InternalChatRequest)
     request.query.forEach((value, key) => {
       queryMap.set(key, value);
     });
-    return handler({
+    return await handler({
       query: queryMap,
       bodyText: request.bodyText,
     });

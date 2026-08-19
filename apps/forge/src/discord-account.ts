@@ -175,7 +175,7 @@ export function createDiscordProvider(config: {
     while (pendingMessages.length > 0) {
       const message = pendingMessages.shift();
 
-      if (!message) {
+      if (message == null) {
         return;
       }
 
@@ -205,7 +205,7 @@ export function createDiscordProvider(config: {
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
-        if (!inboundMessage) {
+        if (inboundMessage == null) {
           discordAccountDebug('info', 'toInboundMessage returned null');
           return;
         }

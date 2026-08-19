@@ -23,7 +23,7 @@ export async function normalizeOperationalMemoryMessages(input: {
     });
 
     for (const message of messages) {
-      if (!message.operationalMemoryType) {
+      if (message.operationalMemoryType == null) {
         continue;
       }
 

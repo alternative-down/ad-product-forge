@@ -412,7 +412,7 @@ export async function generateHiredAgentInstructions(
   const _lastRunText = runResult.text;
   const lastRunFinishReason = runResult.finishReason;
   const hireAgentActionResult =
-    runResult.deferredToolCall && runResult.deferredToolCall.toolName === 'hireAgent'
+    runResult.deferredToolCall != null && runResult.deferredToolCall.toolName === 'hireAgent'
       ? await executeHireAgentTool({
           tool: hiringTools.hireAgent,
           toolInput: runResult.deferredToolCall.input,

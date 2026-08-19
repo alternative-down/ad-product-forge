@@ -382,7 +382,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           op: 'minimax_image',
           hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
           fn: async () => {
-            const subjectReference = input.reference_images
+            const subjectReference = input.reference_images != null
               ? await Promise.all(
                   input.reference_images.map(async (referenceImage: string) => ({
                     type: input.reference_type ?? 'character',

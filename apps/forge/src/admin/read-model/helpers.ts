@@ -13,6 +13,7 @@
  * Migration: update imports from './helpers' to the specific thematic file.
  */
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export {
   isNonNullObject,
   hasToolCallId,
@@ -21,10 +22,14 @@ export {
   isTextPart,
   partsOfContent,
 } from './helpers-type-guards';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export type { MessagePart, TextPart } from './helpers-type-guards';
 
+// Back-compat shim: callers update their imports to `./helpers-debug` (migration in progress)
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration to thematic files; remove when 0 consumers
 export { adminDebug } from './helpers-debug';
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export {
   splitMemoryRecallSegments,
   humanizeMemoryKey,
@@ -32,6 +37,7 @@ export {
   renderWorkingMemoryMarkdown,
 } from './helpers-memory-formatting';
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export {
   truncatePreview,
   toToolBadge,
@@ -40,13 +46,16 @@ export {
   collectConversationParticipants,
 } from './helpers-message-preview';
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export {
   mergeToolLogMessages,
   buildThreadToolInvocationParts,
 } from './helpers-tool-invocation';
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export {
   toScheduleSummary,
   decryptProviderConfig,
 } from './helpers-schedule-crypto';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- Back-compat shim during helpers.ts migration; remove when 0 consumers
 export type { ScheduleSummary } from './helpers-schedule-crypto';

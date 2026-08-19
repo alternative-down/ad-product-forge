@@ -29,7 +29,7 @@ export function createMessageManager(
         continue;
       }
 
-      if (event.text !== null && event.text !== undefined && !event.text.trim()) {
+      if (event.text !== null && event.text !== undefined && event.text.trim() === "") {
         continue;
       }
 
@@ -42,7 +42,7 @@ export function createMessageManager(
   }
 
   function shouldIncludePendingRunEventInFlush(event: AgentWakeEvent): boolean {
-    if (!event.type.startsWith('message:')) {
+    if (event.type.startsWith("message:") !== true) {
       return true;
     }
 
