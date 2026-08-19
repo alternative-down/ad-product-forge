@@ -1,4 +1,12 @@
 import { errorMsg } from '../agents/error-formatting';
+import {
+  LlmCannotDeleteSystemDefaultError,
+  LlmDefaultProfileMissingOrDisabledError,
+  LlmDefaultProfileNotEnabledError,
+  LlmProfileDecryptError,
+  LlmProfileNotFoundError,
+  LlmSystemDefaultsNotConfiguredError,
+} from './errors';
 import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -126,7 +134,7 @@ export function createLlmSettingsStore(db: Database) {
 
     if (defaults == null) {
       llmSettingsDebug('warn', 'System LLM defaults not configured');
-      throw new Error('System LLM defaults are not configured');
+      throw new LlmSystemDefaultsNotConfiguredError();
     }
 
     const [primaryProfile, omProfile, hiringRhProfile] = await Promise.all([
@@ -137,17 +145,17 @@ export function createLlmSettingsStore(db: Database) {
 
     if (primaryProfile.isEnabled !== true) {
       llmSettingsDebug('warn', 'Default primary LLM profile missing or disabled');
-      throw new Error('Default primary LLM profile is missing or disabled');
+      throw new LlmDefaultProfileMissingOrDisabledError('primary');
     }
 
     if (omProfile.isEnabled !== true) {
       llmSettingsDebug('warn', 'Default OM LLM profile missing or disabled');
-      throw new Error('Default OM LLM profile is missing or disabled');
+      throw new LlmDefaultProfileMissingOrDisabledError('om');
     }
 
     if (hiringRhProfile.isEnabled !== true) {
       llmSettingsDebug('warn', 'Default hiring RH LLM profile missing or disabled');
-      throw new Error('Default hiring RH LLM profile is missing or disabled');
+      throw new LlmDefaultProfileMissingOrDisabledError('hiringRh');
     }
 
     return {
@@ -164,7 +172,7 @@ export function createLlmSettingsStore(db: Database) {
 
     if (!row) {
       llmSettingsDebug('warn', 'LLM profile not found', { profileId });
-      throw new Error(`LLM profile not found: ${profileId}`);
+      throw new LlmProfileNotFoundError(profileId);
     }
 
     return toProfileRecord(row);
@@ -246,9 +254,7 @@ export function createLlmSettingsStore(db: Database) {
               defaults.hiringRhProfileId === profileId)
           ) {
             llmSettingsDebug('warn', 'deleteModelProfile: cannot delete selected system default', { profileId });
-            throw new Error(
-              'Cannot delete an LLM profile that is currently selected as a system default',
-            );
+            throw new LlmCannotDeleteSystemDefaultError(profileId);
           }
 
           await tx.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
@@ -276,11 +282,11 @@ export function createLlmSettingsStore(db: Database) {
 
       if (profile == null) {
         llmSettingsDebug('warn', 'LLM profile not found', { profileId });
-        throw new Error(`LLM profile not found: ${profileId}`);
+        throw new LlmProfileNotFoundError(profileId);
       }
 
       if (profile.isEnabled !== true) {
-        throw new Error(`Default LLM profile must be enabled: ${profile.profileId}`);
+        throw new LlmDefaultProfileNotEnabledError(profile.profileId);
       }
     }
 
@@ -364,7 +370,7 @@ function toProfileRecord(row: LlmProfile): LlmProfileRecord {
     apiKey = decryptSecret(encryptedApiKey);
   } catch (err) {
     llmSettingsDebug('error', 'Failed to decrypt LLM profile API key', { profileId: id, error: errorMsg(err) });
-    throw new Error(`Failed to decrypt LLM profile ${id}: ${errorMsg(err)}`);
+    throw new LlmProfileDecryptError(id, err);
   }
 
   return {
