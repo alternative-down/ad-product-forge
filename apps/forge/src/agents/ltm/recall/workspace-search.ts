@@ -77,7 +77,7 @@ export async function runWorkspaceSearch(
     return { formatted: '', results: searchResults };
   } catch (error) {
     const errMsg = errorMsg(error);
-    if (errMsg.includes('SQLITE_ERROR: no such table') || errMsg.includes('no such table:')) {
+    if (errMsg.includes("SQLITE_ERROR: no such table") === true || errMsg.includes("no such table:") === true) {
       return { formatted: '', results: [] };
     }
 

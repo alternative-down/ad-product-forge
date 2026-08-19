@@ -177,7 +177,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
       const checkpointSummaryText = checkpointSummaryMessage
-    ? checkpointSummaryMessage.parts
+    != null ? checkpointSummaryMessage.parts
         .filter(isRuntimeTextPart)
         .map((part: RuntimeTextPart) => part.text.trim())
         .filter(Boolean)
@@ -210,7 +210,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         ((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string) !== ''
           ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
           : null;
-      const lastObservedAt = operationalMemoryState.observationMessages.length
+      const lastObservedAt = operationalMemoryState.observationMessages.length !== 0
         ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
         : null;
 

@@ -409,7 +409,7 @@ export function createAgentLongTermMemory(input: {
   async function generateLtmRun(prompt: string) {
     await ensureInitialized();
 
-    if (!memoryAgent) {
+    if (memoryAgent == null) {
       ltmDebug('warn', 'initializeLtmSession: runtime not available', { agentId: input.agentId });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
@@ -478,7 +478,7 @@ export function createAgentLongTermMemory(input: {
       }
     }
 
-    if (!result) {
+    if (result == null) {
       ltmDebug('error', 'generateLtmSummary: no result produced', { agentId: input.agentId });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }

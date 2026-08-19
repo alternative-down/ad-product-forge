@@ -165,7 +165,7 @@ function buildSendMessageHandler(internalChat: InternalChatService): InternalCha
         }),
       ),
     });
-    if (!result.valid) {
+    if (result.valid === false) {
       throw new Error(result.error);
     }
     return jsonResponse({

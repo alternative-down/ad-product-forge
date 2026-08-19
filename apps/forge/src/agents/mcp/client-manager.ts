@@ -156,7 +156,6 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     serverId: string,
     action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
   ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
-    const self = this;
     return {
       ...action,
       async execute(
@@ -166,7 +165,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         try {
           return await action.execute(input, context);
         } catch (error) {
-          void self.handleServerDisconnect(serverId, error);
+          void this.handleServerDisconnect(serverId, error);
           throw error;
         }
       },

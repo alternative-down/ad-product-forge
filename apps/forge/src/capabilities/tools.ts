@@ -91,7 +91,7 @@ export function createCapabilityTools(
         capabilitiesToolsDebug('info', 'manage_agent_role called', { input });
 
         if (input.action === 'create') {
-          if (!input.create) {
+          if (input.create == null) {
             return {
               valid: false,
               error: 'create is required when action is create',
@@ -130,7 +130,7 @@ export function createCapabilityTools(
         }
 
         if (input.action === 'update') {
-          if (!input.update) {
+          if (input.update == null) {
             return {
               valid: false,
               error: 'update is required when action is update',
@@ -169,7 +169,7 @@ export function createCapabilityTools(
           });
         }
 
-        if (!input.delete) {
+        if (input.delete == null) {
           return {
             valid: false,
             error: 'delete is required when action is delete',

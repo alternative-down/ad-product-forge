@@ -158,7 +158,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     if (!onInboundMessage || pendingMessages.length === 0) return;
     while (pendingMessages.length > 0) {
       const message = pendingMessages.shift();
-      if (!message) return;
+      if (message == null) return;
       await onInboundMessage(message);
     }
   }

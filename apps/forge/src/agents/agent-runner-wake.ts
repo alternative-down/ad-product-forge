@@ -83,7 +83,7 @@ function formatWakeItemText({
 }
 
 function describeWakeGroup(event: AgentWakeEvent) {
-  if (event.type.startsWith('message:')) {
+  if (event.type.startsWith("message:") === true) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
     const lines = [
       ...(event.groupMetadata?.Provider !== undefined
@@ -117,7 +117,7 @@ function describeWakeGroup(event: AgentWakeEvent) {
       : 'scheduler';
   }
 
-  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+  if (event.type.startsWith("github:") === true || event.groupMetadata?.Source === "github") {
     return `GitHub: ${event.groupMetadata?.EventType ?? event.groupKey}`;
   }
 
@@ -152,7 +152,7 @@ function describeWakeActor(event: AgentWakeEvent) {
     return '';
   }
 
-  if (event.type.startsWith('github:') || event.groupMetadata?.Source === 'github') {
+  if (event.type.startsWith("github:") === true || event.groupMetadata?.Source === "github") {
     return 'GitHub';
   }
 

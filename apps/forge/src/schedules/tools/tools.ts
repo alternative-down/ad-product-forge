@@ -312,7 +312,7 @@ export function createAgentScheduleTools(
         if (input.action === 'create') {
           const createInput = input.create ?? null;
 
-          if (!createInput) {
+          if (createInput == null) {
             return validationError(
         'create is required when action is create',
         'Send the create object with name, scheduleType, and content.',
@@ -358,7 +358,7 @@ export function createAgentScheduleTools(
         if (input.action === 'update') {
           const updateInput = input.update ?? null;
 
-          if (!updateInput) {
+          if (updateInput == null) {
             return validationError(
         'update is required when action is update',
         'Send the update object with cronId and the fields you want to change.',
@@ -397,7 +397,7 @@ export function createAgentScheduleTools(
 
         const deleteInput = input.delete ?? null;
 
-        if (!deleteInput) {
+        if (deleteInput == null) {
           return validationError(
         'delete is required when action is delete',
         'Send the delete object with cronId.',
@@ -468,7 +468,7 @@ export function createAgentScheduleTools(
         if (input.action === 'create') {
           const createInput = input.create ?? null;
 
-          if (!createInput) {
+          if (createInput == null) {
             return validationError(
         'create is required when action is create',
         'Send the create object with targetAgentId, name, scheduleType, and content.',
@@ -522,7 +522,7 @@ export function createAgentScheduleTools(
         if (input.action === 'update') {
           const updateInput = input.update ?? null;
 
-          if (!updateInput) {
+          if (updateInput == null) {
             return validationError(
         'update is required when action is update',
         'Send the update object with cronId and the fields you want to change.',
@@ -561,7 +561,7 @@ export function createAgentScheduleTools(
 
         const deleteInput = input.delete ?? null;
 
-        if (!deleteInput) {
+        if (deleteInput == null) {
           return validationError(
         'delete is required when action is delete',
         'Send the delete object with cronId.',
