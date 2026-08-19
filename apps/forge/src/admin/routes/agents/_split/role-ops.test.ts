@@ -31,7 +31,7 @@ vi.mock('../../../../capabilities/store.ts', () => ({
 }));
 
 import { registerRoleOps } from './role-ops';
-import { RoleHasAssignedAgentsError } from '../../../../capabilities/role-errors';
+import { RoleHasAssignedAgentsError } from '../../../../capabilities/errors';
 
 interface MockRoute {
   method: string;
