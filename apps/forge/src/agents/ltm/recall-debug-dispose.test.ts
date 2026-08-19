@@ -100,7 +100,7 @@ function getCreatedInstance() {
   return __retrievalInstance;
 }
 
-import { AgentLongTermMemoryRecall } from './ltm/recall';
+import { AgentLongTermMemoryRecall } from './recall';
 
 const temporaryDirectories: string[] = [];
 
