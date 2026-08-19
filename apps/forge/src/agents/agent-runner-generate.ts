@@ -264,7 +264,7 @@ export async function generateWithTimeoutRetries(
           maxSteps: GENERATE_MAX_STEPS_PER_RUN,
           runId: deps.activeRunId !== null ? deps.activeRunId : `${deps.runtime.id}:${runEpoch}`,
         }),
-        timeout.promise as Promise<never>,
+        timeout.promise,
       ]);
 
       clearGenerateTimeout(timeout);
