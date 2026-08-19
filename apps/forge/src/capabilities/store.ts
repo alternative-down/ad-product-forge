@@ -12,7 +12,15 @@ import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
 import { LogLevel } from '../types/log-level';
-import { RoleHasAssignedAgentsError } from './role-errors';
+import {
+  AgentMissingRoleIdError,
+  AgentNotFoundError,
+  RoleHasAssignedAgentsError,
+  RoleIdRequiredError,
+  RoleNameRequiredError,
+  RoleNotFoundError,
+  RoleUpdateAtLeastOneFieldRequiredError,
+} from './errors';
 import { withDbErrorLogging } from '../database/error-logging';
 import { resolveLoadedToolIds } from './permissions';
 import {
@@ -118,7 +126,7 @@ export function createCapabilityStore(db: Database) {
     const existing = await queryRole(db, input.roleId);
     if (existing == null) {
       capabilitiesStoreDebug('warn', 'requireRole: not found', { roleId: input.roleId });
-      throw new Error(`Role not found: ${input.roleId}`);
+      throw new RoleNotFoundError(input.roleId);
     }
 
     return await withDbErrorLogging({
@@ -352,7 +360,7 @@ export function createCapabilityStore(db: Database) {
     if (input.action === 'create') {
       if (input.name == null || !input.name.trim()) {
         capabilitiesStoreDebug('warn', 'manageRole create: name required');
-        throw new Error('Role name is required.');
+        throw new RoleNameRequiredError();
       }
 
       return await createRole({
@@ -367,7 +375,7 @@ export function createCapabilityStore(db: Database) {
     if (input.action === 'delete') {
       if (input.roleId == null) {
         capabilitiesStoreDebug('warn', 'manageRole delete: roleId required');
-        throw new Error('roleId is required.');
+        throw new RoleIdRequiredError('delete');
       }
 
       return await deleteRole(input.roleId);
@@ -375,12 +383,12 @@ export function createCapabilityStore(db: Database) {
 
     if (input.roleId == null) {
       capabilitiesStoreDebug('warn', 'manageRole update: roleId required');
-      throw new Error('roleId is required.');
+      throw new RoleIdRequiredError('update');
     }
 
     if (input.name == null && input.description === undefined) {
       capabilitiesStoreDebug('warn', 'manageRole update: no fields provided');
-      throw new Error('At least one field besides roleId must be provided.');
+      throw new RoleUpdateAtLeastOneFieldRequiredError();
     }
 
     return await updateRole({
@@ -418,12 +426,12 @@ export function createCapabilityStore(db: Database) {
 
     if (agent == null) {
       capabilitiesStoreDebug('warn', 'assignRoleToAgent: agent not found', { agentId });
-      throw new Error(`Agent not found: ${agentId}`);
+      throw new AgentNotFoundError(agentId);
     }
 
     if (agent.roleId == null) {
       capabilitiesStoreDebug('warn', 'assignRoleToAgent: agent missing roleId', { agentId });
-      throw new Error(`Agent is missing roleId: ${agentId}`);
+      throw new AgentMissingRoleIdError(agentId);
     }
 
     return {

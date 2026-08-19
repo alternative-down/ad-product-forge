@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import { createCapabilityStore } from '../../../../capabilities/store';
-import { RoleHasAssignedAgentsError } from '../../../../capabilities/role-errors';
+import { RoleHasAssignedAgentsError } from '../../../../capabilities/errors';
 import type { HttpHandler } from '../../../../http/server';
 import { forgeDebug } from '../../debug';
 
