@@ -12,7 +12,7 @@ export function safeSerializeRecallSteps(steps: unknown[]) {
     return JSON.stringify(steps, null, 2);
   } catch (error) {
     forgeDebug({
-      scope: 'agent-long-term-memory-recall',
+      scope: 'ltm/recall',
       level: 'warn',
       message: 'Failed to serialize recall steps',
       context: { error: errorMsg(error) },
@@ -26,7 +26,7 @@ export function safeSerializeGraphResult(result: unknown) {
     return JSON.stringify(result, null, 2);
   } catch (error) {
     forgeDebug({
-      scope: 'agent-long-term-memory-recall',
+      scope: 'ltm/recall',
       level: 'warn',
       message: 'Failed to serialize graph result',
       context: { error: errorMsg(error) },

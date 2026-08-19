@@ -74,7 +74,7 @@ vi.mock('@forge-runtime/core', () => {
   };
 });
 
-import { AgentLongTermMemoryRecall } from './ltm/recall';
+import { AgentLongTermMemoryRecall } from './recall';
 
 const temporaryDirectories: string[] = [];
 
