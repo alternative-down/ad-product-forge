@@ -1050,7 +1050,11 @@ describe('createApplication', () => {
     it('returns verified-failure status when app status is not running', async () => {
       setupVerifyMock({ app: { status: 'stopped', fqdn: 'https://test.example.com' } });
 
-      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      await vi.runAllTimersAsync();
+      const result = await promise;
+      vi.useRealTimers();
 
       expect(result).toEqual({
         status: 'verified-failure',
@@ -1074,7 +1078,11 @@ describe('createApplication', () => {
     it('returns verified-failure health when /health returns 503', async () => {
       setupVerifyMock({ health: { ok: false, status: 503 } });
 
-      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
 
       expect(result).toEqual({
         status: 'verified-failure',
@@ -1101,10 +1109,14 @@ describe('createApplication', () => {
         version: { ok: true, status: 200, forgeVersionHeader: 'actual-sha' },
       });
 
-      const result = await manager.verifyApplicationHealth({
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
         applicationUuid: 'app-001',
         expectedSha: 'expected-sha',
       });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
 
       expect(result).toEqual({
         status: 'verified-failure',
@@ -1119,10 +1131,14 @@ describe('createApplication', () => {
         version: { ok: true, status: 200, forgeVersionHeader: null },
       });
 
-      const result = await manager.verifyApplicationHealth({
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
         applicationUuid: 'app-001',
         expectedSha: 'expected-sha',
       });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
 
       expect(result).toEqual({
         status: 'verified-failure',
@@ -1137,10 +1153,14 @@ describe('createApplication', () => {
         version: { ok: false, status: 500 },
       });
 
-      const result = await manager.verifyApplicationHealth({
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
         applicationUuid: 'app-001',
         expectedSha: 'expected-sha',
       });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
 
       expect(result).toEqual({
         status: 'verified-failure',
