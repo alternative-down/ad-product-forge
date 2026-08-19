@@ -62,9 +62,9 @@ jobs:
             '[.[] | select(.user.login != $author)]')
 
           # 5. L#NN-46 v2: filter to known bot identities (5 forge bot accounts)
-          KNOWN_BOTS='["veritas-ak-0n1", "orion-qbtvww", "aldric-zvqgom", "kaelen-xhhzsg", "varek-iemmpd"]'
+          KNOWN_BOTS='["veritas-ak-0n1[bot]", "orion-qbtvww[bot]", "aldric-zvqgom[bot]", "kaelen-xhhzsg[bot]", "varek-iemmpd[bot]"]'
           VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
-            '[.[] | select((.user.login | ascii_downcase | .[:-5]) as $u | $bots | index($u))]')
+            '[.[] | select((.user.login | ascii_downcase) as $u | $bots | index($u))]')
 
           # 6. L#NN-9 9h: check for exactly 2 unique approvers
           UNIQUE_APPROVERS=$(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | length')
