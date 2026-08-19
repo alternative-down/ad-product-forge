@@ -729,6 +729,144 @@ describe('createAgentListReadModel', () => {
       expect(result?.recentExecutionSteps).toBeDefined();
     });
 
+
+    it('buildMcpServerSummaries: maps active MCP link with isActive=1 (buildMcpServerSummaries edge case)', async () => {
+      const db = makeMockDb();
+      db.query.agents.findFirst.mockResolvedValueOnce({
+        id: 'agent-mcp-active',
+        name: 'Active MCP Agent',
+        description: 'has active mcp',
+        executionState: 'idle',
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        loaded: false,
+        createdAt: 0,
+        updatedAt: 0,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+      });
+      db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
+      db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
+      db.query.agentMcpConfigs.findMany
+        .mockResolvedValueOnce([{ id: 'cfg-1', serverId: 'srv-1', agentId: 'agent-mcp-active', isActive: 1, createdAt: 0, updatedAt: 0 }]);
+      db.query.mcpServerConfigs.findMany
+        .mockResolvedValueOnce([{ id: 'srv-1', name: 'StdIO Server', description: null, transport: 'stdio', command: 'node', args: '', envVars: '', url: '', headers: '', createdAt: 0, updatedAt: 0 }]);
+      db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
+      db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);
+      db.query.agentRoles.findMany.mockResolvedValueOnce([]);
+      db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      const result = await model.getAgent('agent-mcp-active');
+      expect(result?.mcpServers).toHaveLength(1);
+      expect(result?.mcpServers[0]).toMatchObject({
+        configId: 'cfg-1',
+        serverId: 'srv-1',
+        name: 'StdIO Server',
+        isActive: true,
+        transport: 'stdio',
+      });
+    });
+
+    it('buildMcpServerSummaries: returns configId=null when serverId not in agentMcpConfigs (buildMcpServerSummaries edge case)', async () => {
+      const db = makeMockDb();
+      db.query.agents.findFirst.mockResolvedValueOnce({
+        id: 'agent-mcp-orphan',
+        name: 'Orphan MCP Agent',
+        description: null,
+        executionState: 'idle',
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        loaded: false,
+        createdAt: 0,
+        updatedAt: 0,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+      });
+      db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
+      db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
+      // agentMcpConfigs has row for srv-A, but mcpServerConfigs returns srv-orphan (no matching config)
+      db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
+        { id: 'cfg-A', serverId: 'srv-A', agentId: 'agent-mcp-orphan', isActive: 1, createdAt: 0, updatedAt: 0 },
+      ]);
+      db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
+        { id: 'srv-orphan', name: 'Orphan Server', description: 'no link', transport: 'http_streamable', command: '', args: '', envVars: '', url: 'https://example.com', headers: '', createdAt: 0, updatedAt: 0 },
+      ]);
+      db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
+      db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);
+      db.query.agentRoles.findMany.mockResolvedValueOnce([]);
+      db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      const result = await model.getAgent('agent-mcp-orphan');
+      expect(result?.mcpServers).toHaveLength(1);
+      expect(result?.mcpServers[0].configId).toBeNull();
+      expect(result?.mcpServers[0].isActive).toBe(false);
+    });
+
+    it('buildMcpServerSummaries: maps isActive=false when link.isActive=0 (buildMcpServerSummaries edge case)', async () => {
+      const db = makeMockDb();
+      db.query.agents.findFirst.mockResolvedValueOnce({
+        id: 'agent-mcp-inactive',
+        name: 'Inactive MCP Agent',
+        description: null,
+        executionState: 'idle',
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        loaded: false,
+        createdAt: 0,
+        updatedAt: 0,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+      });
+      db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
+      db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
+      db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
+        { id: 'cfg-2', serverId: 'srv-2', agentId: 'agent-mcp-inactive', isActive: 0, createdAt: 0, updatedAt: 0 },
+      ]);
+      db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
+        { id: 'srv-2', name: 'Disabled Server', description: null, transport: 'stdio', command: '', args: '', envVars: '', url: '', headers: '', createdAt: 0, updatedAt: 0 },
+      ]);
+      db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
+      db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);
+      db.query.agentRoles.findMany.mockResolvedValueOnce([]);
+      db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      const result = await model.getAgent('agent-mcp-inactive');
+      expect(result?.mcpServers).toHaveLength(1);
+      expect(result?.mcpServers[0].isActive).toBe(false);
+      expect(result?.mcpServers[0].configId).toBe('cfg-2');
+    });
+
+    it('loadAgentListRowsAndMetadata: returns empty maps when all underlying loaders return [] (loadAgentListRowsAndMetadata edge case)', async () => {
+      const db = makeMockDb();
+      // All findMany already return [] by default; this verifies the Promise.all composition via public listAgents
+      db.query.agents.findMany.mockResolvedValueOnce([]);
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      const result = await model.listAgents();
+      expect(result).toEqual([]);
+    });
     it('handles agent with description null (buildAgentDetail edge case)', async () => {
       const db = makeMockDb();
       db.query.agents.findFirst.mockResolvedValueOnce({
