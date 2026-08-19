@@ -1014,30 +1014,6 @@ function resolveSpriteSeed(sceneAgent: Pick<SceneAgent, 'agentId' | 'spriteSeed'
   return sceneAgent.agentId.length;
 }
 
-function resolveAmbientPose(input: {
-  agentId: string;
-  tick: number;
-  mode: 'memory';
-  baseDir: SceneAgent['dir'];
-}) {
-  const bucket = Math.floor(input.tick / 24);
-  const variant = hashText(`${input.agentId}:${input.mode}:${bucket}`) % 6;
-
-  if (variant <= 1) {
-    return { dir: input.baseDir, frame: 5 };
-  }
-
-  if (variant === 2) {
-    return { dir: 'down' as const, frame: 1 };
-  }
-
-  if (variant === 3) {
-    return { dir: 'left' as const, frame: 1 };
-  }
-
-  return { dir: input.baseDir, frame: 1 };
-}
-
 export function resolveDeskAmbientPose(input: {
   agentId: string;
   tick: number;
@@ -1145,16 +1121,6 @@ function advanceDeskAnimationState(input: {
   }
 
   return nextState;
-}
-
-function hashText(value: string) {
-  let hash = 0;
-
-  for (const char of value) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-
-  return hash;
 }
 
 function randomInt(min: number, max: number) {
