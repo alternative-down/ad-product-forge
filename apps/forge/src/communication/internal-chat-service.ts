@@ -52,6 +52,11 @@ import {
 } from './internal-chat-connection';
 import { createInternalChatGroups } from './internal-chat-groups';
 import { createInternalChatAccountOps } from './internal-chat-account-ops';
+import {
+  ReadsNotInitializedError,
+  AccountNotFoundError,
+  AttachmentNotFoundError,
+} from './internal-chat-service.errors';
 import { createInternalChatListing } from './internal-chat-listing';
 import { createInternalChatParticipants } from './internal-chat-participants';
 import { createInternalChatUnread } from './internal-chat-unread';
@@ -77,19 +82,19 @@ export function createInternalChatService(db: Database) {
   const reads = createInternalChatReads({
     unread: {
       getUnreadSummary: () => {
-        throw new Error('reads not yet initialized');
+        throw new ReadsNotInitializedError();
       },
     },
     participants: {
       listGroupMembersOrDmPeersByAccount: (_a: string, _b: string) => {
-        throw new Error('reads not yet initialized');
+        throw new ReadsNotInitializedError();
       },
       listGroupMembersOrDmPeers: (_a: string, _b: string) => {
-        throw new Error('reads not yet initialized');
+        throw new ReadsNotInitializedError();
       },
     } as ReturnType<typeof createInternalChatParticipants>,
     listConversations: () => {
-      throw new Error('reads not yet initialized');
+      throw new ReadsNotInitializedError();
     },
   });
 
@@ -110,7 +115,7 @@ export function createInternalChatService(db: Database) {
     getRequiredAccountBySlug,
     getAccountByTargetKey: async (targetKey: string) => {
       const account = await _getAccountByTargetKey(targetKey);
-      if (!account) throw new Error('Account not found by targetKey: ' + targetKey);
+      if (!account) throw new AccountNotFoundError(targetKey);
       return {
         id: account.id,
         agentId: account.agentId as string | null,
@@ -331,7 +336,7 @@ export function createInternalChatService(db: Database) {
       storeMessageAttachments,
       readMessageAttachment: async (messageId: string, attachmentName: string) => {
         const file = await readMessageAttachment(messageId, attachmentName);
-        if (file == null) throw new Error('Attachment not found: ' + attachmentName);
+        if (file == null) throw new AttachmentNotFoundError(attachmentName);
         return { stream: file.data, contentType: file.contentType };
       },
     },
