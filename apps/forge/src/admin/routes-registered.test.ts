@@ -9,7 +9,7 @@
  * registerAdminRoutes with a mock httpServer and asserting the expected routes
  * are in the registered list.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { Database } from '../database/client';
 
 interface RegisteredRoute {

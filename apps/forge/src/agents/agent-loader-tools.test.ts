@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AgentLoaderConfig } from './agent-loader-types';
 import { loadAgentToolset } from './agent-loader-tools';
 
 // ─── Mock refs via vi.hoisted so tests can call .mock* on them ────────────────

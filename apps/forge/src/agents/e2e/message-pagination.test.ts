@@ -51,7 +51,6 @@ vi.mock('../../admin/routes/internal-chat/index', () => ({
 
 // ─── Import after mocks ───────────────────────────────────────────────────────
 
-import { registerInternalChatRoutes } from '../../admin/routes/internal-chat/index';
 
 // ─── Route handler helpers (copied from agent-lifecycle.test.ts pattern) ────
 

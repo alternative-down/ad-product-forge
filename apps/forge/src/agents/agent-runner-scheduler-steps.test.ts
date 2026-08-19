@@ -8,7 +8,7 @@
  * Extracted from agent-runner-scheduler.ts (#2257 phase 5).
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createSchedulerSteps, BeginRunInput } from './agent-runner-scheduler-steps';
+import { createSchedulerSteps } from './agent-runner-scheduler-steps';
 import type { FlushManager } from './agent-runner-flush-manager';
 
 function makeDeps() {

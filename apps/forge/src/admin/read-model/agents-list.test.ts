@@ -47,7 +47,6 @@ vi.mock('../../agents/workspace-skills', () => ({
   listAgentWorkspaceSkills: vi.fn().mockResolvedValue([]),
 }));
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 function makeMockDb() {
   // Declare query as 'any' so vi.fn() is typed as Mock<unknown> → mockResolvedValueOnce available

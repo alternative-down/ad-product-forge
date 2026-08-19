@@ -1,4 +1,3 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createMockDb, resetAgentReadModelMocks } from './shared-test-helpers';
 

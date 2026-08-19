@@ -20,7 +20,6 @@ import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helper
 import type { Database } from '../database/client';
 import { agents } from '../database/schema';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { InternalAgentRuntime } from './runtime/types';
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

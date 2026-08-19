@@ -5,7 +5,6 @@ import type {
   InternalChatDeliveryMessage,
   InternalChatConnectionImpl,
 } from './internal-chat-connection';
-import { buildGroupMetadata } from './internal-chat-helpers';
 
 // ---------------------------------------------------------------------------
 // helpers

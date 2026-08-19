@@ -1,5 +1,4 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // --- Mock factories (vi.mock is hoisted, so these run before the SUT import) ---
 

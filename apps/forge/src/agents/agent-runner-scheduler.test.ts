@@ -6,7 +6,7 @@
  *
  * No prior coverage.
  */
-import { describe, expect, it, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS } from './time-constants';
 import {
   createScheduler,

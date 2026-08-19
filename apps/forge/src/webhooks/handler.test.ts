@@ -4,7 +4,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { createWebhookHandler } from './handler';
-import type { HttpRequest, HttpResponse } from '../http/server';
+import type { HttpRequest } from '../http/server';
 
 // Closes #5963: HMAC-SHA256 signing helper (matches verifyWebhookSignature impl).
 const signWebhookBody = (body: string, secret: string): string =>

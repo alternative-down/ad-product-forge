@@ -44,7 +44,7 @@
  * Tracked for future migration PRs (scope-boundary: NOT fixed in this PR).
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 

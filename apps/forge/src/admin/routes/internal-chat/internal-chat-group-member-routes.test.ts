@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { registerGroupMemberRoutes } from './internal-chat-group-member-routes';
-import type { InternalChatService } from '../../../communication/internal-chat-service';
 
 describe('registerGroupMemberRoutes', () => {
   let httpServer: { registerRoute: ReturnType<typeof vi.fn> };

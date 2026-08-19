@@ -1,7 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { registerInternalChatRoutes } from './index';
 
-import type { HttpHandler, HttpResponse } from '../../../http/server';
+import type { HttpResponse } from '../../../http/server';
 
 // Handler functions take no arguments; they are zero-arg closures wrapping async logic
 type Route = {

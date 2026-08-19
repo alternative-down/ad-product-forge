@@ -10,7 +10,6 @@
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { AgentWakeEvent } from '@forge-runtime/core';
 
 export type HealthcheckDeps = {
   runtimeId: string;

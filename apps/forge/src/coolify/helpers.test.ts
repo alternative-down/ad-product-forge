@@ -4,7 +4,7 @@
  * removeUndefined, coolifySafeJsonParse, buildRequestError, toTimestamp.
  * Zero prior coverage.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   normalizeDomainHost,
@@ -16,7 +16,7 @@ import {
   buildRequestError,
   toTimestamp,
 } from './helpers';
-import { ApplicationSchema, ApplicationEnvSchema } from './schemas';
+import { ApplicationSchema } from './schemas';
 
 // ─── normalizeDomainHost ─────────────────────────────────────────────────────
 
