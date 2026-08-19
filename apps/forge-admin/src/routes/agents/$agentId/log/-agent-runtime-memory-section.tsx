@@ -103,11 +103,7 @@ export function AgentRuntimeMemorySection({
         <AgentLogMetrics
           metrics={metrics}
           generationCount={generationCount}
-          updatedAt={updatedAt}
-          lastObservedAt={lastObservedAt}
           checkpointMessageId={checkpointMessageId}
-          checkpointGeneration={checkpointGeneration}
-          checkpointUpdatedAt={checkpointUpdatedAt}
         />
       ) : null}
 

@@ -43,20 +43,12 @@ function formatDateTime(value: number) {
 interface AgentLogMetricsProps {
   metrics: NonNullable<AgentLogRuntimeMemoryData['metrics']>;
 
-  updatedAt: number | null;
-  lastObservedAt: number | null;
   checkpointMessageId: string | null;
-  checkpointGeneration: number | null;
-  checkpointUpdatedAt: number | null;
 }
 
 export function AgentLogMetrics({
   metrics,
-  updatedAt,
-  lastObservedAt,
   checkpointMessageId,
-  checkpointGeneration,
-  checkpointUpdatedAt,
 }: AgentLogMetricsProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
