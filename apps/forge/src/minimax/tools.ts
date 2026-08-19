@@ -5,6 +5,16 @@ import { z } from 'zod';
 import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 
 import type { MiniMaxManager } from './manager';
+import {
+  MiniMaxApiCallError,
+  MiniMaxFileDownloadError,
+  MiniMaxFilesystemRequiredError,
+  MiniMaxReferenceImageError,
+  MiniMaxVideoGenerationFailedError,
+  MiniMaxVideoGenerationTimeoutError,
+  MiniMaxVideoStatusError,
+  MiniMaxVoiceListError,
+} from './errors';
 
 /**
  * Private helper for forgeDebug calls scoped to minimax. Centralizes the
@@ -155,7 +165,7 @@ async function writeBufferToWorkspace(
 
   if (!filesystem) {
     minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-    throw new Error('MiniMax tools require a workspace filesystem');
+    throw new MiniMaxFilesystemRequiredError();
   }
 
   const outputPath = createMiniMaxOutputPath(kind, extension, index);
@@ -168,7 +178,7 @@ async function downloadFileBuffer(downloadUrl: string) {
 
   if (!response.ok) {
     minimaxDebug('error', 'downloadFileBuffer HTTP failure', { status: response.status, downloadUrl });
-    throw new Error(`MiniMax file download failed with status ${response.status}`);
+    throw new MiniMaxFileDownloadError(response.status);
   }
 
   const arrayBuffer = await response.arrayBuffer();
@@ -183,7 +193,7 @@ async function readWorkspaceImageAsDataUrl(
 
   if (!filesystem) {
     minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-    throw new Error('MiniMax tools require a workspace filesystem');
+    throw new MiniMaxFilesystemRequiredError();
   }
 
   const data = await filesystem.readFile(filePath);
@@ -192,7 +202,7 @@ async function readWorkspaceImageAsDataUrl(
 
   if (!mimeType || !mimeType.startsWith('image/')) {
     minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-    throw new Error(`Reference image must be an image file: ${filePath}`);
+    throw new MiniMaxReferenceImageError(filePath);
   }
 
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
@@ -210,7 +220,7 @@ async function waitForVideoFile(minimax: MiniMaxManager, taskId: string) {
 
     if (!status.success) {
       minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-      throw new Error(status.error?.message ?? 'Failed to query MiniMax video generation status');
+      throw new MiniMaxVideoStatusError(status.error?.message);
     }
 
     const videoStatus = status.data?.status?.toLowerCase() ?? '';
@@ -222,14 +232,14 @@ async function waitForVideoFile(minimax: MiniMaxManager, taskId: string) {
 
     if (videoStatus === 'failed') {
       minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-      throw new Error(status.data?.failureReason ?? 'MiniMax video generation failed');
+      throw new MiniMaxVideoGenerationFailedError(status.data?.failureReason);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
   minimaxDebug('error', 'minimax-tools: validation/requirement failed');
-  throw new Error('MiniMax video generation did not finish within the expected time window');
+  throw new MiniMaxVideoGenerationTimeoutError();
 }
 
 export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set<string> | null) {
@@ -250,7 +260,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           fn: async () => {
             const result = await minimax.listVoices('all');
             if (!result.success || !result.data) {
-              throw new Error(result.error?.message ?? 'Failed to list voices');
+              throw new MiniMaxVoiceListError(result.error?.message);
             }
             return { voiceType: 'all' as const, ...result.data };
           },
@@ -315,7 +325,8 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
               outputFormat: input.output_format ?? 'mp3',
             });
             if (!result.success || !result.data) {
-              throw new Error(
+              throw new MiniMaxApiCallError(
+                'textToSpeech',
                 result.error?.message
                   ?? buildMiniMaxHint(
                     result.error?.code,
@@ -392,7 +403,8 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
               subjectReference,
             });
             if (!result.success || !result.data) {
-              throw new Error(
+              throw new MiniMaxApiCallError(
+                'generateImage',
                 result.error?.message
                   ?? buildMiniMaxHint(
                     result.error?.code,
@@ -465,7 +477,8 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
               lastFrameImage: input.last_frame_image ?? undefined,
             });
             if (!task.success || !task.data) {
-              throw new Error(
+              throw new MiniMaxApiCallError(
+                'createVideoGenerationTask',
                 task.error?.message
                   ?? buildMiniMaxHint(
                     task.error?.code,
@@ -478,7 +491,8 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             const file = await minimax.retrieveFile(fileId);
 
             if (!file.success || !file.data) {
-              throw new Error(
+              throw new MiniMaxApiCallError(
+                'retrieveFile',
                 file.error?.message ?? 'MiniMax did not return a downloadable video file',
               );
             }
