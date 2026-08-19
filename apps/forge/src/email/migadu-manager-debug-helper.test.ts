@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { migaduManagerDebug } from './migadu-manager';
+import { migaduManagerDebug } from './migadu-manager-debug';
 
 vi.mock('@forge-runtime/core', async () => {
   const actual = await vi.importActual<typeof import('@forge-runtime/core')>('@forge-runtime/core');
