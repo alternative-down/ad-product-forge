@@ -12,7 +12,9 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
-// L#NN-YYY v4 helper: scope-injection for capabilities-runtime forgeDebug calls
+// Extracted from inline forgeDebug calls in PR #6345 (closes #6338, D42 cycle by varek).
+// Logs under the 'capabilities-runtime' scope; use this helper instead of calling
+// forgeDebug directly so the scope is centralized.
 export function capabilitiesRuntimeDebug(
   level: LogLevel,
   message: string,
