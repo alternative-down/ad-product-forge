@@ -10,6 +10,15 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
+import {
+  PollUntilInvalidMaxAttemptsError,
+  PollUntilInvalidIntervalError,
+  PollUntilAbortedError,
+  PollUntilMaxAttemptsReachedError,
+  RetryWithBackoffInvalidMaxRetriesError,
+  RetryWithBackoffInvalidInitialMsError,
+  RetryWithBackoffAbortedError,
+} from './polling-helpers.errors';
 
 const POLLING_HELPERS_SCOPE = 'coolify-polling-helpers' as const;
 
@@ -54,10 +63,10 @@ export async function pollUntil<T>(
   } = options;
 
   if (maxAttempts <= 0) {
-    throw new Error(`pollUntil: maxAttempts must be > 0 (got ${maxAttempts})`);
+    throw new PollUntilInvalidMaxAttemptsError(maxAttempts);
   }
   if (intervalMs < 0) {
-    throw new Error(`pollUntil: intervalMs must be >= 0 (got ${intervalMs})`);
+    throw new PollUntilInvalidIntervalError(intervalMs);
   }
 
   const startTime = Date.now();
@@ -66,7 +75,7 @@ export async function pollUntil<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (abortSignal?.aborted === true) {
       pollUntilLog('warn', 'pollUntil: aborted', { attempt });
-      throw new Error('pollUntil: aborted');
+      throw new PollUntilAbortedError();
     }
 
     const result = await fn();
@@ -89,9 +98,7 @@ export async function pollUntil<T>(
     maxAttempts,
     elapsedMs,
   });
-  throw new Error(
-    `pollUntil: max attempts reached (${maxAttempts} attempts in ${elapsedMs}ms)`,
-  );
+  throw new PollUntilMaxAttemptsReachedError(maxAttempts, elapsedMs);
 }
 
 export interface RetryWithBackoffOptions {
@@ -119,10 +126,10 @@ export async function retryWithBackoff<T>(
   const { maxRetries, initialMs, multiplier = 2, abortSignal } = options;
 
   if (maxRetries < 0) {
-    throw new Error(`retryWithBackoff: maxRetries must be >= 0 (got ${maxRetries})`);
+    throw new RetryWithBackoffInvalidMaxRetriesError(maxRetries);
   }
   if (initialMs < 0) {
-    throw new Error(`retryWithBackoff: initialMs must be >= 0 (got ${initialMs})`);
+    throw new RetryWithBackoffInvalidInitialMsError(initialMs);
   }
 
   let delay = initialMs;
@@ -131,7 +138,7 @@ export async function retryWithBackoff<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (abortSignal?.aborted === true) {
       pollUntilLog('warn', 'retryWithBackoff: aborted', { attempt });
-      throw new Error('retryWithBackoff: aborted');
+      throw new RetryWithBackoffAbortedError();
     }
 
     try {
