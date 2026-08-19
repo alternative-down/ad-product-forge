@@ -16,7 +16,7 @@
  *   remaining callers of the OLD path.
  */
 import { describe, expect, it } from 'vitest';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAgentScheduleStore } from './store';
 
 // --- Mock Database helpers ---

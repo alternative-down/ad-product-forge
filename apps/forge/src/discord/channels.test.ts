@@ -13,7 +13,7 @@
  *  - Non-empty query → only matches content.includes(query) or has attachments
  */
 import { describe, expect, it, vi } from 'vitest';
-import { Collection, Events, GatewayIntentBits, Partials } from 'discord.js';
+import { Collection } from 'discord.js';
 import { listCandidateChannels } from './channels';
 import type { Client } from 'discord.js';
 

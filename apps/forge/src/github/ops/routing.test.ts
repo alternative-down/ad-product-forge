@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { OpsContext } from './context';
-import type { GitHubAppCredentials } from '../types';
 
 const makeCtx = (): any => ({
   config: {

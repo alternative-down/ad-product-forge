@@ -9,7 +9,7 @@
  * These load workspace context and schedule summaries for the agent runner.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { AGENT_CONTEXT_FILE_PATH, AGENT_CONTEXT_WARNING_CHAR_LIMIT } from '../utils/constants';
+import { AGENT_CONTEXT_WARNING_CHAR_LIMIT } from '../utils/constants';
 
 // ─── Test module imports ──────────────────────────────────────────────────────
 // The module is marked unused-file but is loaded by agent-runner.ts.

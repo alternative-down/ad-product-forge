@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Database } from '../database/client';
 
 function createMockDb() {
   const insertMock = vi.fn();

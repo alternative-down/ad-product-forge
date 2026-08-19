@@ -159,7 +159,7 @@ describe('resolveBundledSkillRoot (walk-up search, L#NN-16 fix #5686)', () => {
 
 // ─── findSkillsFolder (L#19 tripwire for #5686) ─────────────────────────────
 import { findSkillsFolder } from './bundled-workspace-skills';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 describe('findSkillsFolder (L#19 tripwire for #5686 L#NN-16 fix)', () => {

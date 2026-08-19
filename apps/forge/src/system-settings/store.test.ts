@@ -72,7 +72,6 @@ vi.mock('@forge-runtime/core', () => ({
 
 import { createSystemSettingsStore } from './store';
 import { systemSettings } from '../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
 
 describe('createSystemSettingsStore', () => {
   beforeEach(() => {

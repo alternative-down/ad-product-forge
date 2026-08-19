@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SqliteWorkspaceRetrieval, ConversationStore } from '@forge-runtime/core';
+import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { createAgentLongTermMemoryRecall } from './recall';
 import { buildRecallQueryFromStep, shouldSkipRecallInjection } from './recall/query-helpers';
 

@@ -4,13 +4,11 @@
  * Zero prior coverage.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
 import {
   getProviderConfig,
   getApplicationsBaseDomain,
   type ProviderConfig,
 } from './provider-config';
-import { ServerSchema } from './schemas';
 
 // ─── getProviderConfig ────────────────────────────────────────────────────────
 

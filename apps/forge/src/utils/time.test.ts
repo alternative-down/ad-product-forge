@@ -2,7 +2,7 @@
  * Unit tests for utils/time.ts.
  * TimeProvider and currentTimeMs — zero prior coverage.
  */
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createTimeProvider, currentTimeMs, TimeProvider } from './time';
 
 // ─── createTimeProvider ────────────────────────────────────────────────────

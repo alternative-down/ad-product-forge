@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { join, dirname } from 'node:path';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { findMigrationsFolder } from './migrate';
 

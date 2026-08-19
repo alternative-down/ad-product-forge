@@ -5,14 +5,14 @@
  * formatCheckpointPackageId, buildCheckpointPackageManifest, getTempPackagePath.
  * Async fs operations are tested via integration tests in ltm/store.test.ts.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
   buildCheckpointPackageManifest,
   getTempPackagePath,
 } from './checkpoint-io';
-import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from './store';
+import type { CheckpointedOmCheckpointPackageInput } from './store';
 
 // ─── Test factories ─────────────────────────────────────────────────────────
 

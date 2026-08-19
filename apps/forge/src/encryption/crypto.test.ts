@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import crypto from 'node:crypto';
-import { decryptSecret, encryptSecret } from './crypto';
+import { decryptSecret } from './crypto';
 
 describe('crypto', () => {
   const originalKey = process.env.ENCRYPTION_KEY;

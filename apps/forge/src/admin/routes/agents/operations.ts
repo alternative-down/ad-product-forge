@@ -4,8 +4,6 @@
  */
 
 import { z } from 'zod';
-import type { CommunicationFile } from '@forge-runtime/core';
-import type { ToolResult } from '../../../capabilities/tools/error-wrapper';
 import type { HttpHandler } from '../../../http/server';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
 import type { InternalChatService } from '../../../communication/internal-chat-service';

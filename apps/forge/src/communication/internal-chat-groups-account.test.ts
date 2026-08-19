@@ -7,7 +7,6 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { createInternalChatGroupsAccount } from './internal-chat-groups-account';
-import type { InternalChatGroupsAccountDeps } from './internal-chat-groups-account';
 
 function makeMockDeps() {
   return {

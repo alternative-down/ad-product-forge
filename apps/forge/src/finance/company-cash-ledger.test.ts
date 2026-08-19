@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { createCompanyCashLedger } from './company-cash-ledger';
 import { createCompanyCashOperations } from './company-cash-operations';
 

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Database } from '../database/client';
 import {
   agents,
   agentRoles,
@@ -8,7 +7,7 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { createCapabilityStore } from './store';
-import { resolveLoadedToolIds, ROLE_INSPECTION_TOOL_IDS } from './permissions';
+import { resolveLoadedToolIds } from './permissions';
 
 // ── Mock helpers ─────────────────────────────────────────────────────────────
 function createMockAgent(overrides = {}) {
