@@ -8,6 +8,7 @@ import {
 } from '@forge-runtime/core';
 import { getDatabase } from '../database/client';
 import { createAgentLongTermMemoryStore } from './ltm/store';
+import { AgentRuntimeConfigFieldMissingError } from './create-forge-agent.errors';
 import type { CheckpointedOmCheckpointPackageInput } from './ltm/store';
 import { createAgentRuntimePlatform } from './runtime/platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
@@ -51,34 +52,32 @@ function createForgeAgentDebug(
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmTotalContextTokens required');
-    throw new Error('checkpointedOmTotalContextTokens is required in agent runtime config.');
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmTotalContextTokens');
   }
 
   if (config.checkpointedOmRecentRawTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmRecentRawTokens required');
-    throw new Error('checkpointedOmRecentRawTokens is required in agent runtime config.');
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmRecentRawTokens');
   }
 
   if (config.checkpointedOmRawObservationBatchTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmRawObservationBatchTokens required');
-    throw new Error('checkpointedOmRawObservationBatchTokens is required in agent runtime config.');
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmRawObservationBatchTokens');
   }
 
   if (config.checkpointedOmObservationReflectionBatchTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmObservationReflectionBatchTokens required');
-    throw new Error(
-      'checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.',
-    );
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmObservationReflectionBatchTokens');
   }
 
   if (config.checkpointedOmObservationSupportTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmObservationSupportTokens required');
-    throw new Error('checkpointedOmObservationSupportTokens is required in agent runtime config.');
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmObservationSupportTokens');
   }
 
   if (config.checkpointedOmReflectionSupportTokens === undefined) {
     createForgeAgentDebug('error', 'buildAgentRuntimeConfig: checkpointedOmReflectionSupportTokens required');
-    throw new Error('checkpointedOmReflectionSupportTokens is required in agent runtime config.');
+    throw new AgentRuntimeConfigFieldMissingError('checkpointedOmReflectionSupportTokens');
   }
 
   return {
