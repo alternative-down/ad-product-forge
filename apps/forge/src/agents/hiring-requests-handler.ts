@@ -1,4 +1,8 @@
 import { errorMsg } from './error-formatting';
+import {
+  HiringInsufficientCompanyCashError,
+  HiringMissingLLMModelPriceError,
+} from './hiring-requests-handler.errors';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -204,7 +208,7 @@ export async function generateHiredAgentInstructions(
 
   if (modelPrice === null || modelPrice === undefined) {
     hiringDebug('error', 'hiring-requests-handler: validation/requirement failed');
-    throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
+    throw new HiringMissingLLMModelPriceError(hiringRhModelKey);
   }
 
   const estimatedInputTokens = estimateTextTokens(hiringPrompt);
@@ -220,7 +224,7 @@ export async function generateHiredAgentInstructions(
   hiringDebug('info', 'Tools loaded', { toolCount: Object.keys(tools).length });
 
   if (currentBalanceUsd < estimatedCostUsd) {
-    throw new Error('Insufficient company cash for hiring workflow');
+    throw new HiringInsufficientCompanyCashError();
   }
 
   const inputSchema = z.object({
