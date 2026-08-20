@@ -59,6 +59,14 @@ export interface CreateChatGroupInput {
 }
 import { errorMsg } from '../agents/error-formatting';
 
+import {
+  ChatGroupNotFoundError,
+  ChatGroupAlreadyExistsError,
+  ChatGroupMemberAlreadyExistsError,
+  ChatGroupAdminRequiredError,
+  ChatGroupNameRequiredError,
+} from './internal-chat-errors';
+
 export interface AddMemberToGroupInput {
   agentId: string;
   groupId: string;
@@ -163,7 +171,7 @@ export function createInternalChatGroups(
 
     if (group.type !== 'group') {
       logInternalChatWarn('getRequiredGroupForAgent type check failed', { groupId });
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
@@ -174,7 +182,7 @@ export function createInternalChatGroups(
 
     if (group.type !== 'group') {
       logInternalChatWarn('getRequiredGroupForAccount type check failed', { groupId });
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
@@ -221,7 +229,7 @@ export function createInternalChatGroups(
 
       if (existing != null) {
         logInternalChatWarn('createGroup: already exists', { conversationKey: input.conversationKey });
-        throw new Error(`Chat group already exists: ${input.conversationKey}`);
+        throw new ChatGroupAlreadyExistsError(input.conversationKey);
       }
 
       const now = Date.now();
@@ -279,7 +287,7 @@ export function createInternalChatGroups(
       })) as InternalChatConversationMember | null;
 
       if (existing != null) {
-        throw new Error(`Group member already exists: ${input.participantSlug}`);
+        throw new ChatGroupMemberAlreadyExistsError(input.participantSlug);
       }
 
       await db.insert(internalChatConversationMembers).values({
@@ -362,11 +370,11 @@ export function createInternalChatGroups(
         ),
       })) as InternalChatConversationMember | null;
       if (membership == null || membership.role !== 'admin') {
-        throw new Error('Only admins can update the group.');
+        throw new ChatGroupAdminRequiredError();
       }
     } else {
       if (input.name == null) {
-        throw new Error('name is required when creating a group.');
+        throw new ChatGroupNameRequiredError();
       }
     }
 

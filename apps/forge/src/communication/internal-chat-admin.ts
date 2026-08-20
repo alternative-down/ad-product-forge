@@ -14,6 +14,12 @@ import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import {
+
+import {
+  InternalChatAccountNotFoundError,
+  ConversationNotFoundError,
+  ConversationMembershipError,
+} from './internal-chat-errors';
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
@@ -154,7 +160,7 @@ export function createInternalChatAdmin(db: Database) {
     });
 
     if (existing === null || existing === undefined) {
-      throw new Error('Account not found');
+      throw new InternalChatAccountNotFoundError(input.accountId, 'Account not found');
     }
 
     await db
@@ -253,14 +259,14 @@ export function createInternalChatAdmin(db: Database) {
       where: eq(internalChatAccounts.agentId, agentId),
     });
     if (account === null || account === undefined) {
-      throw new Error('Account not found for agent');
+      throw new InternalChatAccountNotFoundError(agentId, 'Account not found for agent');
     }
 
     const conversation = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, conversationId),
     });
     if (conversation === null || conversation === undefined) {
-      throw new Error('Conversation not found');
+      throw new ConversationNotFoundError(conversationId);
     }
 
     const membership = await db.query.internalChatConversationMembers.findFirst({
@@ -270,7 +276,7 @@ export function createInternalChatAdmin(db: Database) {
       ),
     });
     if (membership === null || membership === undefined) {
-      throw new Error('Agent is not a member of this conversation');
+      throw new ConversationMembershipError(agentId, conversationId);
     }
 
     return conversation;
