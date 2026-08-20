@@ -68,10 +68,11 @@ function makeKebabCaseFilenameRule() {
           const isRoute = /^route\.(tsx?|jsx?)$/.test(basename);
           const isTest = /\.(test|spec)\.(tsx?|jsx?)$/.test(basename);
           const isConfig = /^[a-z]+\.(config|types)\.(tsx?|jsx?)$/.test(basename);
-          if (!isKebab && !isIndex && !isRoute && !isTest && !isConfig) {
+          const isErrors = /\.errors\.(tsx?|jsx?)$/.test(basename);
+          if (!isKebab && !isIndex && !isRoute && !isTest && !isConfig && !isErrors) {
             context.report({
               node,
-              message: `Filename "${basename}" must be kebab-case (e.g., my-component.tsx, agent-log.test.ts). Allowed patterns: index.tsx, route.tsx, *.test.ts, kebab-case.tsx`,
+              message: `Filename "${basename}" must be kebab-case (e.g., my-component.tsx, agent-log.test.ts). Allowed patterns: index.tsx, route.tsx, *.test.ts, *.errors.ts, kebab-case.tsx`,
             });
           }
         },
