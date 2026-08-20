@@ -56,6 +56,13 @@ import {
 import { webhookRoutes, webhookEvents } from '../database/schema-webhooks';
 import { forgeDebug } from '../admin/routes/debug';
 
+import {
+  DatabaseFileNotFoundError,
+  DatabaseBackupFailedError,
+  DatabaseBackupEmptyError,
+  DatabaseWipeFailedError,
+} from './reset.errors';
+
 const adminSystemResetDebug = (
   level: 'debug' | 'info' | 'warn' | 'error',
   message: string,
@@ -156,19 +163,19 @@ export async function performFactoryReset(
   // Step 1: Backup DB file BEFORE any wipe
   try {
     if (!fs.existsSync(dbPath)) {
-      throw new Error(`Database file not found at ${dbPath}`);
+      throw new DatabaseFileNotFoundError(dbPath);
     }
     fs.copyFileSync(dbPath, backupPath);
   } catch (err) {
     adminSystemResetDebug('error', 'Factory reset: DB backup failed', { error: errorMsg(err), dbPath, backupPath });
-    throw new Error(`Failed to backup database: ${errorMsg(err)}`);
+    throw new DatabaseBackupFailedError(dbPath, backupPath, errorMsg(err));
   }
 
   // Verify backup is non-empty (defense against copyFileSync of empty file)
   const backupSize = fs.statSync(backupPath).size;
   if (backupSize === 0) {
     fs.unlinkSync(backupPath);
-    throw new Error(`Backup file is empty (0 bytes): ${backupPath}`);
+    throw new DatabaseBackupEmptyError(backupPath);
   }
 
   adminSystemResetDebug('info', 'Factory reset: DB backup created', { dbPath, backupPath, backupBytes: backupSize });
@@ -185,9 +192,7 @@ export async function performFactoryReset(
       wipedTables.push(name);
     } catch (err) {
       adminSystemResetDebug('error', `Factory reset: failed to wipe table ${name}`, { error: errorMsg(err), table: name, alreadyWiped: wipedTables });
-      throw new Error(
-        `Failed to wipe table ${name} (already wiped: ${wipedTables.join(', ')}): ${errorMsg(err)}`,
-      );
+      throw new DatabaseWipeFailedError(name, wipedTables, errorMsg(err));
     }
   }
 
