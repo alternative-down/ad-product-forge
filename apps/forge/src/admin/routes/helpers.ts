@@ -8,6 +8,11 @@ export function normalizeOptionalText(value?: string): string | null {
   return (normalized ?? '') !== '' ? normalized : null;
 }
 import { errorMsg } from '../../agents/error-formatting';
+import {
+  NormalizeJsonTextInvalidJsonError,
+  NormalizeJsonTextInvalidShapeError,
+  ParseJsonBodyInvalidJsonError,
+} from './errors';
 
 export function normalizeJsonText(
   value: string | undefined,
@@ -25,7 +30,7 @@ export function normalizeJsonText(
     parsed = JSON.parse(normalized ?? '');
   } catch (err) {
     adminRoutesHelpersDebug('warn', 'normalizeJsonText: JSON.parse failed', { fieldName, expectedShape, error: errorMsg(err) });
-    throw new Error(`${fieldName} must be valid JSON: ${errorMsg(err)}`);
+    throw new NormalizeJsonTextInvalidJsonError(fieldName, err);
   }
   const valid =
     expectedShape === 'array'
@@ -34,7 +39,7 @@ export function normalizeJsonText(
 
   if (!valid) {
     adminRoutesHelpersDebug('warn', 'validateJsonBody: invalid shape', { fieldName, expectedShape });
-    throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
+    throw new NormalizeJsonTextInvalidShapeError(fieldName, expectedShape);
   }
 
   return JSON.stringify(parsed);
@@ -49,7 +54,7 @@ export function adminRoutesParseJsonBody<TSchema extends z.ZodTypeAny>(
     parsed = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
   } catch (err) {
     adminRoutesHelpersDebug('warn', 'adminRoutesParseJsonBody: JSON.parse failed', { error: errorMsg(err) });
-    throw new Error(`Invalid JSON body: ${errorMsg(err)}`);
+    throw new ParseJsonBodyInvalidJsonError(err);
   }
   return schema.parse(parsed);
 }
