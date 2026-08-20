@@ -40,3 +40,19 @@ export class AsaasWebhookParsePayloadError extends Error {
     this.errorMessage = errorMessage;
   }
 }
+
+export class StripeSignatureMissingTimestampError extends Error {
+  readonly code = 'STRIPE_SIGNATURE_MISSING_TIMESTAMP' as const;
+  constructor() {
+    super('Stripe-Signature header missing or invalid timestamp (t=)');
+    this.name = 'StripeSignatureMissingTimestampError';
+  }
+}
+
+export class StripeSignatureMissingV1SignatureError extends Error {
+  readonly code = 'STRIPE_SIGNATURE_MISSING_V1_SIGNATURE' as const;
+  constructor() {
+    super('Stripe-Signature header missing v1 signature');
+    this.name = 'StripeSignatureMissingV1SignatureError';
+  }
+}
