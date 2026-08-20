@@ -14,17 +14,17 @@ import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
 import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  type NewInternalChatConversationMember,
+} from '../database/schema';
 
 import {
   InternalChatAccountNotFoundError,
   ConversationNotFoundError,
   ConversationMembershipError,
 } from './internal-chat-errors';
-  internalChatAccounts,
-  internalChatConversationMembers,
-  internalChatConversations,
-  type NewInternalChatConversationMember,
-} from '../database/schema';
 
 export interface AdminAccountView {
   accountId: string;
