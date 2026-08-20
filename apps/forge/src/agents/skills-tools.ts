@@ -1,4 +1,8 @@
 import { errorMsg } from './error-formatting';
+import {
+  AgentNotFoundError,
+  InvalidSkillNameError,
+} from './skills-tools.errors';
 import { findAgentById } from './agent-lookup';
 import { skillsToolsDebug } from './skills-tools-debug';
 import fs from 'node:fs/promises';
@@ -19,7 +23,7 @@ function ensureAgentFound<T>(
 ): asserts agent is T {
   if (agent == null) {
     skillsToolsDebug('error', `${functionName} agent not found`, { agentId });
-    throw new Error(`Agent not found: ${agentId}`);
+    throw new AgentNotFoundError(agentId);
   }
 }
 
@@ -82,7 +86,7 @@ export function createAgentSkillTools(input: {
 
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
         skillsToolsDebug('error', 'load_workspace_skill invalid skill name', { skillName: inputData.skillName });
-        throw new Error(`Invalid skill name: ${inputData.skillName}`);
+        throw new InvalidSkillNameError(inputData.skillName);
       }
 
       const skillMarkdownPath = path.resolve(skillRoot, 'SKILL.md');
