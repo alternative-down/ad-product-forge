@@ -9,6 +9,11 @@ import { forgeDebug } from '@forge-runtime/core';
 import { normalizeDomainHost } from './helpers';
 import { ServerSchema } from './schemas';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
+import {
+  CoolifyProviderConfigMissingIntegrationError,
+  CoolifyProviderConfigMissingWildcardDomainError,
+  CoolifyProviderConfigResolutionError,
+} from './errors';
 
 export interface ProviderConfig {
   baseUrl: string;
@@ -30,9 +35,7 @@ export async function getProviderConfig(
       level: 'error',
       message: 'coolify-provider-config: configuration check failed',
     });
-    throw new Error(
-      'Coolify integration requires a configured admin connection in system integrations',
-    );
+    throw new CoolifyProviderConfigMissingIntegrationError();
   }
 
   return {
@@ -61,9 +64,7 @@ export async function getApplicationsBaseDomain(
     const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
     if (wildcardDomain === null || wildcardDomain === undefined) {
-      throw new Error(
-        'Coolify integration could not determine a wildcard domain from the server configuration',
-      );
+      throw new CoolifyProviderConfigMissingWildcardDomainError();
     }
 
     return wildcardDomain;
@@ -74,9 +75,7 @@ export async function getApplicationsBaseDomain(
       message: 'Coolify provider config failed',
       context: { error: errorMsg(error) },
     });
-    throw new Error(
-      `Failed to resolve Coolify applications base domain: ${errorMsg(error)}`,
-    );
+    throw new CoolifyProviderConfigResolutionError(errorMsg(error));
   }
 }
 

@@ -101,3 +101,36 @@ export class CoolifyEnvBulkUpdateMissingKeyError extends Error {
     this.envKey = envKey;
   }
 }
+
+// ── Pattern L D51 #6502 batch 18: typed Errors for coolify/provider-config.ts ──
+// See apps/forge/src/coolify/provider-config.ts for the source throw sites.
+// Message strings preserved verbatim for backward compatibility with
+// provider-config.test.ts string-based assertions.
+
+export class CoolifyProviderConfigMissingIntegrationError extends Error {
+  readonly code = 'COOLIFY_PROVIDER_CONFIG_MISSING_INTEGRATION' as const;
+  constructor() {
+    super('Coolify integration requires a configured admin connection in system integrations');
+    this.name = 'CoolifyProviderConfigMissingIntegrationError';
+  }
+}
+
+export class CoolifyProviderConfigMissingWildcardDomainError extends Error {
+  readonly code = 'COOLIFY_PROVIDER_CONFIG_MISSING_WILDCARD_DOMAIN' as const;
+  constructor() {
+    super(
+      'Coolify integration could not determine a wildcard domain from the server configuration',
+    );
+    this.name = 'CoolifyProviderConfigMissingWildcardDomainError';
+  }
+}
+
+export class CoolifyProviderConfigResolutionError extends Error {
+  readonly code = 'COOLIFY_PROVIDER_CONFIG_RESOLUTION' as const;
+  readonly errorMessage: string;
+  constructor(errorMessage: string) {
+    super(`Failed to resolve Coolify applications base domain: ${errorMessage}`);
+    this.name = 'CoolifyProviderConfigResolutionError';
+    this.errorMessage = errorMessage;
+  }
+}
