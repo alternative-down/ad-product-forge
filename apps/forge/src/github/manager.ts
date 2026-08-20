@@ -71,6 +71,12 @@ import { createAppLifecycleOps } from './ops/app-lifecycle';
 import type { OpsContext } from './ops/context';
 import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from './types';
 
+import {
+  ParseCredentialsNotInitializedError,
+  CreateGitHubAppNotInitializedError,
+  OpsRoutingNotInitializedError,
+} from './manager.errors';
+
 const GITHUB_PROVIDER_TYPE = 'github-app';
 
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
@@ -130,13 +136,13 @@ export function createGitHubAppManager(config: {
     saveCredentials: (_agentId: string, _credentials: GitHubAppCredentials) =>
       Promise.reject(new Error('saveCredentials not initialized')),
     parseCredentials: (_encryptedCredentials: string) => {
-      throw new Error('parseCredentials not initialized');
+      throw new ParseCredentialsNotInitializedError();
     },
     createInstallationOctokit: (
       _credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
     ) => Promise.reject(new Error('createInstallationOctokit not initialized')),
     createGitHubApp: (_credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => {
-      throw new Error('createGitHubApp not initialized');
+      throw new CreateGitHubAppNotInitializedError();
     },
     getHeader,
     getRegisterPath,
@@ -217,7 +223,7 @@ export function createGitHubAppManager(config: {
 
   // ── Build other ops (depend on opsCtx.getInstallationOctokit etc.) ─────────
   opsCtx.opsRouting = createRoutingOps(opsCtx);
-  if (opsCtx.opsRouting == null) throw new Error('opsRouting not initialized');
+  if (opsCtx.opsRouting == null) throw new OpsRoutingNotInitializedError();
   const opsRepos = createReposOps(opsCtx);
   const opsPullRequests = createPullRequestsOps(opsCtx);
   const opsIssues = createIssuesOps(opsCtx);
