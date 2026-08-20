@@ -2,6 +2,12 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import crypto from 'node:crypto';
 
+import {
+  InvalidEncryptedInputError,
+  InvalidEncryptionKeyLengthError,
+  MissingEncryptionKeyError,
+} from './crypto.errors';
+
 /**
  * Environment-level cache — set once on module load.
  */
@@ -19,16 +25,13 @@ function requireEncryptionKey(): Buffer {
       level: 'error',
       message: 'encryption-crypto: validation/requirement failed',
     });
-    throw new Error('ENCRYPTION_KEY environment variable is required');
+    throw new MissingEncryptionKeyError();
   }
 
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
 
   if (key.length !== 32) {
-    throw new Error(
-      'ENCRYPTION_KEY must be 256-bit (32 bytes). ' +
-        "Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
-    );
+    throw new InvalidEncryptionKeyLengthError(key.length);
   }
 
   return key;
@@ -66,7 +69,7 @@ export function decryptSecret(encrypted: string): string {
   // Without this check, malformed input would throw a confusing IV/authTag size
   // error at decipher.final() instead of a clear "invalid encrypted input" error.
   if (combined.length < 32) {
-    throw new Error('Invalid encrypted input: combined buffer must contain IV (16) + ciphertext + authTag (16)');
+    throw new InvalidEncryptedInputError(combined.length);
   }
 
   // Extract components: IV (16) + ciphertext + authTag (16)
