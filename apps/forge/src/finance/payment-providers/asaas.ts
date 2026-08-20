@@ -12,6 +12,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import type { PaymentProviderType } from '../payment-schema';
 import { errorMsg } from '../../agents/error-formatting';
+import {
+  AsaasWebhookInvalidSignatureError,
+  AsaasWebhookMissingSignatureHeaderError,
+  AsaasWebhookParsePayloadError,
+} from './errors';
 import { forgeDebug } from '@forge-runtime/core';
 
 /** Asaas webhook notification payload. */
@@ -80,7 +85,7 @@ export function verifyAsaasWebhookRequest(
   signatureHeader: string | null | undefined,
 ): AsaasWebhookPayload {
   if (signatureHeader === null || signatureHeader === undefined || signatureHeader === '') {
-    throw new Error('Asaas webhook: missing x-asaas-signature header');
+    throw new AsaasWebhookMissingSignatureHeaderError();
   }
   // Header format: "sha256=<hex>" (GitHub-style). Strip prefix if present.
   const received = signatureHeader.startsWith('sha256=')
@@ -98,7 +103,7 @@ export function verifyAsaasWebhookRequest(
     sigValid = false;
   }
   if (!sigValid) {
-    throw new Error('Asaas webhook: invalid signature');
+    throw new AsaasWebhookInvalidSignatureError();
   }
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
@@ -109,7 +114,7 @@ export function verifyAsaasWebhookRequest(
       message: 'Asaas webhook JSON parse failed',
       context: { error: errorMsg(err) },
     });
-    throw new Error('Asaas webhook: failed to parse JSON payload');
+    throw new AsaasWebhookParsePayloadError(errorMsg(err));
   }
 }
 
