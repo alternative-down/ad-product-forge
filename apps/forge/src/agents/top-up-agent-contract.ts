@@ -1,4 +1,8 @@
 import { errorMsg } from './error-formatting';
+import {
+  TopUpAgentContractInsufficientCashError,
+  TopUpAgentContractNoActiveContractError,
+} from './top-up-agent-contract.errors';
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { topUpAgentContractDebug } from './top-up-agent-contract-debug';
 
@@ -36,7 +40,7 @@ export async function topUpActiveAgentContract(
 
   if (activeContract === null || activeContract === undefined) {
     topUpAgentContractDebug('warn', 'topUpAgentContract: no active contract', { agentId: input.agentId });
-    throw new Error(`No active contract for agent: ${input.agentId}`);
+    throw new TopUpAgentContractNoActiveContractError(input.agentId);
   }
 
   // TS narrows activeContract to AgentExecutionContract here (non-null + non-undefined).
@@ -55,7 +59,7 @@ export async function topUpActiveAgentContract(
 
   if (currentBalanceUsd < input.amountUsd) {
     topUpAgentContractDebug('warn', 'topUpAgentContract: insufficient company cash');
-    throw new Error('Insufficient company cash for contract top-up');
+    throw new TopUpAgentContractInsufficientCashError();
   }
 
   try {
