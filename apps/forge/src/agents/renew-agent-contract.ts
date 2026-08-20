@@ -1,4 +1,8 @@
 import { errorMsg } from './error-formatting';
+import {
+  RenewAgentContractInsufficientCashError,
+  RenewAgentContractNoActiveContractError,
+} from './renew-agent-contract.errors';
 import { renewAgentContractDebug } from './renew-agent-contract-debug';
 import { eq } from 'drizzle-orm';
 
@@ -32,7 +36,7 @@ export async function renewAgentContract(
       'no-active-contract',
       { agentId: input.agentId },
     );
-      throw new Error(`No active contract for agent: ${input.agentId}`);
+      throw new RenewAgentContractNoActiveContractError(input.agentId);
     }
 
     const spentUsd = await contractStore.getContractSpend(activeContract.id);
@@ -54,7 +58,7 @@ export async function renewAgentContract(
         requiredBudgetUsd: input.newBudgetUsd,
       },
     );
-      throw new Error('Insufficient company cash to renew this contract');
+      throw new RenewAgentContractInsufficientCashError();
     }
 
     const newContractId = createId();
