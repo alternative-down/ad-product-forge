@@ -1,6 +1,7 @@
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
 import { forgeDebug } from '@forge-runtime/core';
+import { AgentRunnerMissingPrimaryModelProfileError } from './agent-runner-usage.errors';
 
 const RECENT_STEP_LIMIT = 10;
 
@@ -58,7 +59,7 @@ export function createAgentRunnerUsage(input: {
         level: 'error',
         message: 'agent-runner-usage: validation/requirement failed',
       });
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+      throw new AgentRunnerMissingPrimaryModelProfileError(input.runtime.id);
     }
 
     const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
@@ -150,7 +151,7 @@ export function createAgentRunnerUsage(input: {
         level: 'error',
         message: 'agent-runner-usage: validation/requirement failed',
       });
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+      throw new AgentRunnerMissingPrimaryModelProfileError(input.runtime.id);
     }
 
     const pricing = await input.store.getUsagePricing({
