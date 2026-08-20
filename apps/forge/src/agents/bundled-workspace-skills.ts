@@ -6,6 +6,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  BundledSkillFrontmatterMissingNameError,
+  BundledSkillFrontmatterNotClosedError,
+  BundledSkillMissingFrontmatterError,
+  BundledSkillSourceNotFoundError,
+  BundledSkillsMarkerNotFoundError,
+} from './bundled-workspace-skills.errors';
+
 // Fixed: L#NN-16 sibling bug (Refs #5686). Walk-up search replaces the
 // hardcoded `.., ..` candidate roots in resolveBundledSkillRoot. Works in
 // dev (src/agents/) and bundled (dist/agents/) layouts, as well as any
@@ -33,9 +41,7 @@ export function findSkillsFolder(start: string): string {
     if (existsSync(candidate)) return path.join(dir, 'skills');
     dir = path.dirname(dir);
   }
-  throw new Error(
-    `skills/github-api/SKILL.md not found above ${start} (walked 5 levels)`,
-  );
+  throw new BundledSkillsMarkerNotFoundError(start);
 }
 
 function parseSkillName(skillContent: string) {
@@ -45,7 +51,7 @@ function parseSkillName(skillContent: string) {
       'parseBundledSkillMeta: missing YAML frontmatter',
       {},
     );
-    throw new Error('Bundled skill is missing YAML frontmatter.');
+    throw new BundledSkillMissingFrontmatterError();
   }
 
   const endIndex = skillContent.indexOf('\n---\n', 4);
@@ -56,7 +62,7 @@ function parseSkillName(skillContent: string) {
       'parseBundledSkillMeta: frontmatter not closed',
       {},
     );
-    throw new Error('Bundled skill frontmatter is not closed.');
+    throw new BundledSkillFrontmatterNotClosedError();
   }
 
   const frontmatter = skillContent.slice(4, endIndex);
@@ -84,7 +90,7 @@ function parseSkillName(skillContent: string) {
     'parseBundledSkillMeta: frontmatter missing name',
     {},
   );
-  throw new Error('Bundled skill frontmatter is missing name.');
+  throw new BundledSkillFrontmatterMissingNameError();
 }
 
 export async function copyDirectoryContents(sourceDirectory: string, targetDirectory: string) {
@@ -133,6 +139,6 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
       'listBundledWorkspaceSkills: source not found',
       { error: errorMsg(error), skillFilePath, sourceDirectoryName },
     );
-    throw new Error(`Bundled skill source not found for ${sourceDirectoryName}`);
+    throw new BundledSkillSourceNotFoundError(sourceDirectoryName);
   }
 }
