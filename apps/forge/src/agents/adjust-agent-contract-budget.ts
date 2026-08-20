@@ -8,6 +8,12 @@ import { createCompanyCashOperations } from '../finance/company-cash-operations'
 import { createAgentContractStore } from './agent-contract-store';
 import { currentTimeMs } from '../utils/time';
 
+import {
+  CannotReduceBudgetBelowSpentError,
+  InsufficientCompanyCashError,
+  NoActiveContractError,
+} from './adjust-agent-contract-budget.errors';
+
 export async function adjustAgentContractBudget(
   db: Database,
   input: {
@@ -32,7 +38,7 @@ export async function adjustAgentContractBudget(
     adjustAgentContractBudgetDebug('warn', 'adjustAgentContractBudget: no active contract', {
       agentId: input.agentId,
     });
-    throw new Error(`No active contract for agent: ${input.agentId}`);
+    throw new NoActiveContractError(input.agentId);
   }
 
   const currentBudget = activeContract.budgetUsd;
@@ -56,7 +62,7 @@ export async function adjustAgentContractBudget(
 
     if (currentBalanceUsd < budgetDelta) {
       adjustAgentContractBudgetDebug('warn', 'adjustAgentContractBudget: insufficient company cash');
-      throw new Error('Insufficient company cash for budget increase');
+      throw new InsufficientCompanyCashError();
     }
 
     // Deduct from company cash and update budget atomically
@@ -100,9 +106,7 @@ export async function adjustAgentContractBudget(
 
   // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {
-    throw new Error(
-      `Cannot reduce budget below spent amount (${contractSpend.toFixed(6)} USD). New budget must be at least ${contractSpend.toFixed(6)} USD.`,
-    );
+    throw new CannotReduceBudgetBelowSpentError(contractSpend, input.newBudgetUsd);
   }
 
   const refundAmount = Math.abs(budgetDelta);
