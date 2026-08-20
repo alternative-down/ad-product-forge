@@ -11,6 +11,14 @@ import type { createSystemIntegrationStore } from '../system-integrations/store'
 import { migaduManagerDebug } from './migadu-manager-debug';
 import { errorMsg } from '../agents/error-formatting';
 
+import {
+  MigaduDomainDerivationError,
+  MigaduProviderConfigMissingError,
+  MailboxLocalPartDerivationError,
+  InvalidMailboxAddressError,
+  MigaduCredentialsParseError,
+} from './migadu-manager.errors';
+
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';
 const MIGADU_IMAP_HOST = 'imap.migadu.com';
@@ -212,7 +220,7 @@ export function createAgentEmailManager(config: {
 
     if (!domain) {
       migaduManagerDebug('warn', 'buildMigaduConfig: cannot derive Migadu domain from API user', { apiUser: integration.apiUser });
-      throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
+      throw new MigaduDomainDerivationError(integration.apiUser);
     }
 
     return {
@@ -231,9 +239,7 @@ export function createAgentEmailManager(config: {
         'warn',
         'getRequiredProviderConfig: Migadu email provisioning not configured',
       );
-      throw new Error(
-        'Migadu email provisioning requires a configured admin connection in system integrations',
-      );
+      throw new MigaduProviderConfigMissingError();
     }
 
     return providerConfig;
@@ -299,7 +305,7 @@ export function buildMailboxLocalPart(agentId: string) {
       'warn',
       'buildMailboxLocalPart: cannot derive local part from agent id',
     );
-    throw new Error(`Cannot derive mailbox local part from agent id: ${agentId}`);
+    throw new MailboxLocalPartDerivationError(agentId);
   }
 
   return normalized;
@@ -317,7 +323,7 @@ export function getLocalPart(address: string) {
       'warn',
       'getLocalPart: invalid address format',
     );
-    throw new Error(`Invalid mailbox address: ${address}`);
+    throw new InvalidMailboxAddressError(address);
   }
 
   return localPart;
@@ -335,9 +341,7 @@ function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
     decrypted = decryptSecret(encryptedCredentials);
   } catch (err) {
     migaduManagerDebug('error', 'parseStoredCredentials: decrypt failed', { agentId, error: errorMsg(err) });
-    throw new Error(
-      `Failed to decrypt email credentials for agent ${agentId}: ${errorMsg(err)}`,
-    );
+    throw new MigaduCredentialsParseError(agentId, 'decrypt', `Failed to decrypt email credentials for agent ${agentId}: ${errorMsg(err)}`);
   }
 
   let parsed: unknown;
@@ -345,17 +349,13 @@ function parseStoredCredentials(agentId: string, encryptedCredentials: string) {
     parsed = JSON.parse(decrypted);
   } catch (err) {
     migaduManagerDebug('error', 'parseStoredCredentials: JSON.parse failed', { agentId, error: errorMsg(err) });
-    throw new Error(
-      `Failed to parse email credentials JSON for agent ${agentId}: ${errorMsg(err)}`,
-    );
+    throw new MigaduCredentialsParseError(agentId, 'json', `Failed to parse email credentials JSON for agent ${agentId}: ${errorMsg(err)}`);
   }
 
   try {
     return emailProviderCredentialsSchema.parse(parsed);
   } catch (err) {
     migaduManagerDebug('error', 'parseStoredCredentials: schema parse failed', { agentId, error: errorMsg(err) });
-    throw new Error(
-      `Email provider credentials schema validation failed for agent ${agentId}: ${errorMsg(err)}`,
-    );
+    throw new MigaduCredentialsParseError(agentId, 'schema', `Email provider credentials schema validation failed for agent ${agentId}: ${errorMsg(err)}`);
   }
 }
