@@ -9,6 +9,10 @@ import {
   Partials,
 } from 'discord.js';
 import { errorMsg } from '../agents/error-formatting';
+import {
+  DiscordTargetNotSendableError,
+  DiscordUserNotFoundError,
+} from './errors';
 
 import { forgeDebug } from '@forge-runtime/core';
 import type { DiscordSendableChannel } from '../discord-types';
@@ -112,7 +116,7 @@ export async function resolveDiscordTargetChannel(
       const channel = await client.channels.fetch(targetKey);
 
       if (channel?.isSendable() === false) {
-        throw new Error(`Discord target is not sendable: ${targetKey}`);
+        throw new DiscordTargetNotSendableError(targetKey);
       }
 
       return channel as DiscordSendableChannel;
@@ -126,7 +130,7 @@ export async function resolveDiscordTargetChannel(
   const matchedUser = candidateUsers.find((user) => user.username === targetKey);
 
   if (!matchedUser) {
-    throw new Error(`Discord user not found: ${targetKey}`);
+    throw new DiscordUserNotFoundError(targetKey);
   }
 
   try {

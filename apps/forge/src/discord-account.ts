@@ -24,6 +24,10 @@ import { withTyping, clearTypingTimers } from './discord/typing';
 import { sendDiscordChunks } from './discord/outbound';
 import { downloadDiscordAttachments, extractDiscordMessageContent } from './discord/message-parser';
 import { getDiscordConversationName, getDiscordConversationParticipants } from './discord/helpers';
+import {
+  DiscordClientNotReadyError,
+  DiscordTargetNotReadableError,
+} from './discord/errors';
 
 // ─── module-level helpers ──────────────────────────────────────────────────────
 
@@ -188,7 +192,7 @@ export function createDiscordProvider(config: {
   const ready = client.login(config.token).then(() => {
     discordAccountDebug('info', 'Login succeeded');
     if (!client.user) {
-      throw new Error('Discord client did not become ready after login');
+      throw new DiscordClientNotReadyError();
     }
 
     client.on(Events.MessageCreate, async (message) => {
@@ -335,7 +339,7 @@ export function createDiscordProvider(config: {
 
       if (channel === null || channel?.isTextBased() === false || channel?.isSendable() === false) {
         discordAccountDebug('error', 'getMessages discord target not readable', { targetKey });
-        throw new Error(`Discord target is not readable: ${targetKey}`);
+        throw new DiscordTargetNotReadableError(targetKey);
       }
 
       return await listChannelMessages({
