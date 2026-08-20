@@ -81,7 +81,7 @@ export async function pollUntil<T>(
     const result = await fn();
     onAttempt?.(attempt, Date.now() - startTime);
 
-    if (result) {
+    if (result !== null && result !== undefined && result !== false) {
       return result as T;
     }
 

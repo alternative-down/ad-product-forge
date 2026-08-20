@@ -96,7 +96,6 @@ function main(): void {
 
   const schemaSet = new Set(schema);
   const snapshotSet = new Set(snapshot);
-  const migrationSet = new Set(migrations);
 
   const inSchemaNotSnapshot = schema.filter((t) => !snapshotSet.has(t));
   const inSnapshotNotSchema = snapshot.filter((t) => !schemaSet.has(t));

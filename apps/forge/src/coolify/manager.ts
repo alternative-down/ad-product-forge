@@ -368,9 +368,9 @@ export function createCoolifyManager(config: {
 
     const baseUrl = app.fqdn.replace(/\/$/, '');
 
-    let healthResponse: Response;
+    let _healthResponse: Response;
     try {
-      healthResponse = await retryWithBackoff(
+      _healthResponse = await retryWithBackoff(
         async () => {
           const response = await fetch(`${baseUrl}/health`);
           if (response.ok !== true) {

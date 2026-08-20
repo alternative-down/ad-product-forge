@@ -156,6 +156,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     serverId: string,
     action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
   ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- cycle 18 #6568 hotfix preserved: closure capture for async execute callback
     const self = this;
     return {
       ...action,
