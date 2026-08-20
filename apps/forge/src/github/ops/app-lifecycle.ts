@@ -20,6 +20,11 @@ import { forgeDebug } from '@forge-runtime/core';
 import { agentProviders, agents } from '../../database/schema';
 import { createAppName } from '../helpers';
 import { githubAppManifestConfigSchema } from '../types';
+import {
+  GithubAppAlreadyExistsError,
+  GithubAppDoesNotExistError,
+  GithubIntegrationNotConfiguredError,
+} from './errors';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';
 import type { GitHubAppOps } from './github-app';
@@ -77,7 +82,7 @@ export function createAppLifecycleOps(
 
     if (!githubConfig) {
       appLifecycleOpsDebug('warn', 'GitHub integration not configured');
-      throw new Error('GitHub integration is not configured');
+      throw new GithubIntegrationNotConfiguredError();
     }
 
     return githubConfig;
@@ -102,7 +107,7 @@ export function createAppLifecycleOps(
 
     if (existing !== null && existing !== undefined) {
       appLifecycleOpsDebug('warn', 'GitHub App already exists for agent', { agentId: input?.agentId });
-      throw new Error(`GitHub App already exists for agent ${input.agentId}`);
+      throw new GithubAppAlreadyExistsError(input.agentId);
     }
 
     const pendingCredentials = {
@@ -152,7 +157,7 @@ export function createAppLifecycleOps(
 
     if (!existingCredentials) {
       appLifecycleOpsDebug('warn', 'GitHub App does not exist for agent', { agentId: input?.agentId });
-      throw new Error(`GitHub App does not exist for agent ${input.agentId}`);
+      throw new GithubAppDoesNotExistError(input.agentId);
     }
 
     const nextCredentials = {
