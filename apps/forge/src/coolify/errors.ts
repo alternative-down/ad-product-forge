@@ -53,3 +53,51 @@ export function mapProviderConfigError(operation: string, error: unknown): Error
   }
   return new Error(`${operation} failed: ${errorMsg(error)}`);
 }
+// ── Pattern L D51 #6502 batch 13: typed Errors for coolify/manager.ts ──
+// See apps/forge/src/coolify/manager.ts for the source throw sites.
+// Message strings preserved verbatim for backward compatibility with
+// manager.test.ts string-based assertions.
+
+export class CoolifyHealthProbeError extends Error {
+  readonly code = 'COOLIFY_HEALTH_PROBE' as const;
+  readonly status: number;
+  constructor(status: number) {
+    super(`Health probe returned HTTP ${status}`);
+    this.name = 'CoolifyHealthProbeError';
+    this.status = status;
+  }
+}
+
+export class CoolifyVersionProbeError extends Error {
+  readonly code = 'COOLIFY_VERSION_PROBE' as const;
+  readonly status: number;
+  constructor(status: number) {
+    super(`Version probe returned HTTP ${status}`);
+    this.name = 'CoolifyVersionProbeError';
+    this.status = status;
+  }
+}
+
+export class CoolifyVersionShaMismatchError extends Error {
+  readonly code = 'COOLIFY_VERSION_SHA_MISMATCH' as const;
+  readonly actualSha: string | null | undefined;
+  readonly expectedSha: string;
+  constructor(actualSha: string | null | undefined, expectedSha: string) {
+    super(
+      `x-forge-version header "${actualSha ?? 'null'}" does not match expected sha "${expectedSha}"`,
+    );
+    this.name = 'CoolifyVersionShaMismatchError';
+    this.actualSha = actualSha;
+    this.expectedSha = expectedSha;
+  }
+}
+
+export class CoolifyEnvBulkUpdateMissingKeyError extends Error {
+  readonly code = 'COOLIFY_ENV_BULK_UPDATE_MISSING_KEY' as const;
+  readonly envKey: string;
+  constructor(envKey: string) {
+    super(`Coolify API did not return env ${envKey} after bulk update`);
+    this.name = 'CoolifyEnvBulkUpdateMissingKeyError';
+    this.envKey = envKey;
+  }
+}

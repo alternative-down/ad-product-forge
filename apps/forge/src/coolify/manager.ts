@@ -5,6 +5,12 @@
 import { z } from 'zod';
 
 import { extractCollection, extractItem, coolifyExtractLogs, toTimestamp } from './helpers';
+import {
+  CoolifyEnvBulkUpdateMissingKeyError,
+  CoolifyHealthProbeError,
+  CoolifyVersionProbeError,
+  CoolifyVersionShaMismatchError,
+} from './errors';
 import { pollUntil, retryWithBackoff } from './polling-helpers';
 import {
   GitHubAppSchema,
@@ -368,7 +374,7 @@ export function createCoolifyManager(config: {
         async () => {
           const response = await fetch(`${baseUrl}/health`);
           if (response.ok !== true) {
-            throw new Error(`Health probe returned HTTP ${response.status}`);
+            throw new CoolifyHealthProbeError(response.status);
           }
           return response;
         },
@@ -390,13 +396,11 @@ export function createCoolifyManager(config: {
           async () => {
             const response = await fetch(`${baseUrl}/version`);
             if (response.ok !== true) {
-              throw new Error(`Version probe returned HTTP ${response.status}`);
+              throw new CoolifyVersionProbeError(response.status);
             }
             const actualSha = response.headers.get('x-forge-version');
             if (actualSha !== input.expectedSha) {
-              throw new Error(
-                `x-forge-version header "${actualSha ?? 'null'}" does not match expected sha "${input.expectedSha}"`,
-              );
+              throw new CoolifyVersionShaMismatchError(actualSha ?? null, input.expectedSha!);
             }
             return response;
           },
@@ -477,7 +481,7 @@ export function createCoolifyManager(config: {
       );
 
       if (!env) {
-        throw new Error(`Coolify API did not return env ${input.key} after bulk update`);
+        throw new CoolifyEnvBulkUpdateMissingKeyError(input.key);
       }
 
       return toEnvDetails(env);
