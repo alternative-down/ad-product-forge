@@ -11,6 +11,12 @@ import { loadAgent, type AgentLoaderConfig } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import {
+  ChangeAgentRolePermissionError,
+  ParsedCredentialsShapeMismatchError,
+  UpdateInternalChatProviderProfileCredentialsError,
+  UpdateInternalChatProviderProfileUpdateError,
+} from './errors';
 
 // Extracted from inline forgeDebug calls in PR #6345 (closes #6338, D42 cycle by varek).
 // Logs under the 'capabilities-runtime' scope; use this helper instead of calling
@@ -99,13 +105,11 @@ export async function updateInternalChatProviderProfile(
     const decrypted = decryptSecret(provider.encryptedCredentials);
     const parsed: unknown = JSON.parse(decrypted);
     if (!isStoredCredentials(parsed)) {
-      throw new Error('Parsed credentials do not match StoredCredentials shape');
+      throw new ParsedCredentialsShapeMismatchError();
     }
     credentials = parsed;
   } catch (err) {
-    throw new Error(
-      `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${errorMsg(err)}`,
-    );
+    throw new UpdateInternalChatProviderProfileCredentialsError(input.agentId, err);
   }
 
   const nextCredentials = {
@@ -124,9 +128,7 @@ export async function updateInternalChatProviderProfile(
       .where(eq(agentProviders.id, provider.id));
     capabilitiesRuntimeDebug('info', 'Internal chat provider profile updated', { agentId: input.agentId });
   } catch (err) {
-    throw new Error(
-      `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${errorMsg(err)}`,
-    );
+    throw new UpdateInternalChatProviderProfileUpdateError(input.agentId, err);
   }
 
   return { updated: true };
@@ -284,9 +286,7 @@ export async function changeAgentRole(input: {
         actorRoleId: actorAgent.roleId,
         targetAgentId: input.targetAgentId,
       });
-    throw new Error(
-      `Agent ${input.actorAgentId} cannot change role for ${input.targetAgentId}`,
-    );
+    throw new ChangeAgentRolePermissionError(input.actorAgentId, input.targetAgentId);
   }
 
   const actorLabel = actorIsSelf ? `${actorAgent.name} (self)` : actorAgent.name;

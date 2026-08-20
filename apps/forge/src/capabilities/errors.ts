@@ -85,3 +85,60 @@ export class AgentMissingRoleIdError extends Error {
     this.agentId = agentId;
   }
 }
+
+// ── Pattern L D51 #6502 batch 16: typed Errors for capabilities/runtime.ts ──
+// See apps/forge/src/capabilities/runtime.ts for the source throw sites.
+// Message strings preserved verbatim for backward compatibility with
+// runtime.test.ts string-based assertions.
+
+export class ParsedCredentialsShapeMismatchError extends Error {
+  readonly code = 'PARSED_CREDENTIALS_SHAPE_MISMATCH' as const;
+  constructor() {
+    super('Parsed credentials do not match StoredCredentials shape');
+    this.name = 'ParsedCredentialsShapeMismatchError';
+  }
+}
+
+export class UpdateInternalChatProviderProfileCredentialsError extends Error {
+  readonly code = 'UPDATE_INTERNAL_CHAT_PROVIDER_PROFILE_CREDENTIALS' as const;
+  readonly agentId: string;
+  readonly originalError: unknown;
+  constructor(agentId: string, cause: unknown) {
+    super(
+      `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${agentId}: ${
+        cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : String(cause).replace(/^Error: /, '')
+      }`,
+    );
+    this.name = 'UpdateInternalChatProviderProfileCredentialsError';
+    this.agentId = agentId;
+    this.originalError = cause;
+  }
+}
+
+export class UpdateInternalChatProviderProfileUpdateError extends Error {
+  readonly code = 'UPDATE_INTERNAL_CHAT_PROVIDER_PROFILE_UPDATE' as const;
+  readonly agentId: string;
+  readonly originalError: unknown;
+  constructor(agentId: string, cause: unknown) {
+    super(
+      `updateInternalChatProviderProfile: failed to update provider for agent ${agentId}: ${
+        cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : String(cause).replace(/^Error: /, '')
+      }`,
+    );
+    this.name = 'UpdateInternalChatProviderProfileUpdateError';
+    this.agentId = agentId;
+    this.originalError = cause;
+  }
+}
+
+export class ChangeAgentRolePermissionError extends Error {
+  readonly code = 'CHANGE_AGENT_ROLE_PERMISSION' as const;
+  readonly actorAgentId: string;
+  readonly targetAgentId: string;
+  constructor(actorAgentId: string, targetAgentId: string) {
+    super(`Agent ${actorAgentId} cannot change role for ${targetAgentId}`);
+    this.name = 'ChangeAgentRolePermissionError';
+    this.actorAgentId = actorAgentId;
+    this.targetAgentId = targetAgentId;
+  }
+}
