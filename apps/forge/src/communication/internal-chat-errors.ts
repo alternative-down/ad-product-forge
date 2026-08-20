@@ -85,3 +85,66 @@ export class AttachmentNotFoundError extends Error {
     this.attachmentName = attachmentName;
   }
 }
+
+/**
+ * Pattern L typed errors for D51 #6596 batch 8 — internal-chat-{groups,admin,sending} completion.
+ * Replaces remaining 8 raw `throw new Error(...)` calls (5 in groups, 3 in admin/sending after reusing
+ * existing classes) with typed Error subclasses.
+ *
+ * Pattern reference: apps/forge/src/communication/internal-chat-service.errors.ts (D50 #6502 batch 6).
+ */
+export class ChatGroupMemberAlreadyExistsError extends Error {
+  readonly participantSlug: string;
+
+  constructor(participantSlug: string) {
+    super(`Group member already exists: ${participantSlug}`);
+    this.name = 'ChatGroupMemberAlreadyExistsError';
+    this.participantSlug = participantSlug;
+  }
+}
+
+export class ChatGroupAdminRequiredError extends Error {
+  constructor() {
+    super('Only admins can update the group.');
+    this.name = 'ChatGroupAdminRequiredError';
+  }
+}
+
+export class ChatGroupNameRequiredError extends Error {
+  constructor() {
+    super('name is required when creating a group.');
+    this.name = 'ChatGroupNameRequiredError';
+  }
+}
+
+export class ConversationMembershipError extends Error {
+  readonly agentId: string;
+  readonly conversationId: string;
+
+  constructor(agentId: string, conversationId: string) {
+    super(`Agent is not a member of this conversation: ${conversationId}`);
+    this.name = 'ConversationMembershipError';
+    this.agentId = agentId;
+    this.conversationId = conversationId;
+  }
+}
+
+export class ReplyTargetMismatchError extends Error {
+  readonly messageId: string;
+  readonly expectedConversationId: string;
+  readonly actualConversationId: string;
+
+  constructor(
+    messageId: string,
+    expectedConversationId: string,
+    actualConversationId: string,
+  ) {
+    super(
+      `Reply target belongs to a different conversation: ${messageId}`,
+    );
+    this.name = 'ReplyTargetMismatchError';
+    this.messageId = messageId;
+    this.expectedConversationId = expectedConversationId;
+    this.actualConversationId = actualConversationId;
+  }
+}

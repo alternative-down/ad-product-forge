@@ -13,6 +13,11 @@ import {
   ExternalAccountNotFoundError,
   InternalChatError,
   AttachmentNotFoundError,
+  ChatGroupMemberAlreadyExistsError,
+  ChatGroupAdminRequiredError,
+  ChatGroupNameRequiredError,
+  ConversationMembershipError,
+  ReplyTargetMismatchError,
 } from './internal-chat-errors';
 
 describe('ConversationNotFoundError', () => {
@@ -183,5 +188,89 @@ describe('AttachmentNotFoundError', () => {
     const error = new AttachmentNotFoundError('x');
     expect(error).toBeInstanceOf(Error);
     expect(error).toBeInstanceOf(AttachmentNotFoundError);
+  });
+});
+
+
+describe('ChatGroupMemberAlreadyExistsError', () => {
+  it('has correct name and message', () => {
+    const error = new ChatGroupMemberAlreadyExistsError('participant-slug-1');
+    expect(error.name).toBe('ChatGroupMemberAlreadyExistsError');
+    expect(error.message).toBe('Group member already exists: participant-slug-1');
+  });
+
+  it('exposes participantSlug field', () => {
+    const error = new ChatGroupMemberAlreadyExistsError('agent_x');
+    expect(error.participantSlug).toBe('agent_x');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new ChatGroupMemberAlreadyExistsError('x');
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('ChatGroupAdminRequiredError', () => {
+  it('has correct name and message', () => {
+    const error = new ChatGroupAdminRequiredError();
+    expect(error.name).toBe('ChatGroupAdminRequiredError');
+    expect(error.message).toBe('Only admins can update the group.');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new ChatGroupAdminRequiredError();
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('ChatGroupNameRequiredError', () => {
+  it('has correct name and message', () => {
+    const error = new ChatGroupNameRequiredError();
+    expect(error.name).toBe('ChatGroupNameRequiredError');
+    expect(error.message).toBe('name is required when creating a group.');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new ChatGroupNameRequiredError();
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('ConversationMembershipError', () => {
+  it('has correct name and message', () => {
+    const error = new ConversationMembershipError('agent_001', 'conv_abc');
+    expect(error.name).toBe('ConversationMembershipError');
+    expect(error.message).toBe('Agent is not a member of this conversation: conv_abc');
+  });
+
+  it('exposes agentId and conversationId fields', () => {
+    const error = new ConversationMembershipError('a', 'c');
+    expect(error.agentId).toBe('a');
+    expect(error.conversationId).toBe('c');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new ConversationMembershipError('a', 'c');
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('ReplyTargetMismatchError', () => {
+  it('has correct name and message', () => {
+    const error = new ReplyTargetMismatchError('msg_1', 'conv_a', 'conv_b');
+    expect(error.name).toBe('ReplyTargetMismatchError');
+    expect(error.message).toBe('Reply target belongs to a different conversation: msg_1');
+  });
+
+  it('exposes messageId, expectedConversationId, actualConversationId fields', () => {
+    const error = new ReplyTargetMismatchError('m', 'a', 'b');
+    expect(error.messageId).toBe('m');
+    expect(error.expectedConversationId).toBe('a');
+    expect(error.actualConversationId).toBe('b');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new ReplyTargetMismatchError('m', 'a', 'b');
+    expect(error).toBeInstanceOf(Error);
   });
 });

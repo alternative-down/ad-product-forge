@@ -23,6 +23,12 @@ import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 import type { ToolResult } from '../capabilities/tools/error-wrapper';
 import type { InternalChatGroupParticipant } from './internal-chat-helpers';
 
+import {
+  ConversationNotFoundError,
+  MessageNotFoundError,
+  ReplyTargetMismatchError,
+} from './internal-chat-errors';
+
 export interface SendingDeps {
   db: Database;
   accounts: {
@@ -106,7 +112,7 @@ export function createChatSending(deps: SendingDeps) {
             );
 
         if (conversation === null || conversation === undefined) {
-          throw new Error('Conversation not found: ' + input.targetKey);
+          throw new ConversationNotFoundError(input.targetKey);
         }
 
         const now = Date.now();
@@ -118,12 +124,10 @@ export function createChatSending(deps: SendingDeps) {
             where: eq(internalChatMessages.id, input.replyToMessageId),
           });
           if (!parentMessage) {
-            throw new Error('Reply target message not found: ' + input.replyToMessageId);
+            throw new MessageNotFoundError(input.replyToMessageId);
           }
           if (parentMessage.conversationId !== conversation.id) {
-            throw new Error(
-              'Reply target belongs to a different conversation: ' + input.replyToMessageId,
-            );
+            throw new ReplyTargetMismatchError(input.replyToMessageId, conversation.id, parentMessage.conversationId);
           }
           resolvedReplyTo = input.replyToMessageId;
         }
