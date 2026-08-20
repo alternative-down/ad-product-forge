@@ -10,6 +10,11 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
+import {
+  StripeSignatureMissingTimestampError,
+  StripeSignatureMissingV1SignatureError,
+} from './errors';
+
 import type { PaymentProviderType } from '../payment-schema';
 
 export type StripeWebhookPayload = {
@@ -192,10 +197,10 @@ export function verifyStripeWebhookSignature(
     }
   }
   if (timestamp === null) {
-    throw new Error('Stripe-Signature header missing or invalid timestamp (t=)');
+    throw new StripeSignatureMissingTimestampError();
   }
   if (v1Signatures.length === 0) {
-    throw new Error('Stripe-Signature header missing v1 signature');
+    throw new StripeSignatureMissingV1SignatureError();
   }
   // Replay protection: reject signatures whose timestamp is outside tolerance.
   if (Math.abs(nowSeconds - timestamp) > toleranceSeconds) {
