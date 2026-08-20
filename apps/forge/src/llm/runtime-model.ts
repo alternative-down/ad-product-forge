@@ -7,6 +7,12 @@ import {
 } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import type { LlmProfileRecord } from './settings-store';
+import {
+  InvalidAccountModelKeyFormatError,
+  InvalidAccountOAuthModelKeyError,
+  InvalidMinimaxCodingModelKeyError,
+  UnsupportedOAuthProviderError,
+} from './errors';
 import { MINIMAX_HOST, MINIMAX_ANTHROPIC_URL } from '../minimax/constants';
 
 /**
@@ -36,7 +42,7 @@ export async function resolveProfileRuntimeModel(
 
     if (!providerId || !modelId) {
       runtimeModelDebug('error', 'resolveRuntimeModel: invalid OAuth model key', { modelKey: profile.modelKey });
-      throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
+      throw new InvalidAccountOAuthModelKeyError(profile.modelKey);
     }
 
     // #5942: providerId comes from a split() of profile.modelKey. Validate
@@ -45,7 +51,7 @@ export async function resolveProfileRuntimeModel(
     // system.
     if (providerId !== 'openai-codex' && providerId !== 'claude-code') {
       runtimeModelDebug('error', 'resolveRuntimeModel: unsupported OAuth providerId', { providerId, modelKey: profile.modelKey });
-      throw new Error(`Unsupported OAuth providerId: ${providerId}`);
+      throw new UnsupportedOAuthProviderError(providerId);
     }
 
     const gateway = createOAuthGateway();
@@ -64,7 +70,7 @@ export async function resolveProfileRuntimeModel(
 
     if (!modelId) {
       runtimeModelDebug('error', 'resolveRuntimeModel: invalid MiniMax model key', { modelKey: profile.modelKey });
-      throw new Error(`Invalid MiniMax coding model key: ${profile.modelKey}`);
+      throw new InvalidMinimaxCodingModelKeyError(profile.modelKey);
     }
 
     const baseUrl =
@@ -89,9 +95,7 @@ export async function resolveProfileRuntimeModel(
   const slashIdx = profile.modelKey.indexOf('/');
   if (slashIdx <= 0 || slashIdx === profile.modelKey.length - 1) {
     runtimeModelDebug('error', 'resolveRuntimeModel: invalid default model key (expected provider/model)', { modelKey: profile.modelKey });
-    throw new Error(
-      `Invalid account model key (expected provider/model format): ${profile.modelKey}`,
-    );
+    throw new InvalidAccountModelKeyFormatError(profile.modelKey);
   }
 
   return {

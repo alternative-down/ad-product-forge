@@ -85,3 +85,50 @@ export class LlmProfileDecryptError extends Error {
     this.cause = cause;
   }
 }
+
+// ── Pattern L D51 #6502 batch 12: resolveProfileRuntimeModel typed Errors ──
+// See apps/forge/src/llm/runtime-model.ts for the source throw sites.
+// Message strings preserved verbatim for backward compatibility with
+// runtime-model.test.ts assertions.
+
+export class InvalidAccountOAuthModelKeyError extends Error {
+  readonly code = 'INVALID_ACCOUNT_OAUTH_MODEL_KEY' as const;
+  readonly modelKey: string;
+  constructor(modelKey: string) {
+    super(`Invalid account OAuth model key: ${modelKey}`);
+    this.name = 'InvalidAccountOAuthModelKeyError';
+    this.modelKey = modelKey;
+  }
+}
+
+export class UnsupportedOAuthProviderError extends Error {
+  readonly code = 'UNSUPPORTED_OAUTH_PROVIDER' as const;
+  readonly providerId: string;
+  constructor(providerId: string) {
+    super(`Unsupported OAuth providerId: ${providerId}`);
+    this.name = 'UnsupportedOAuthProviderError';
+    this.providerId = providerId;
+  }
+}
+
+export class InvalidMinimaxCodingModelKeyError extends Error {
+  readonly code = 'INVALID_MINIMAX_CODING_MODEL_KEY' as const;
+  readonly modelKey: string;
+  constructor(modelKey: string) {
+    super(`Invalid MiniMax coding model key: ${modelKey}`);
+    this.name = 'InvalidMinimaxCodingModelKeyError';
+    this.modelKey = modelKey;
+  }
+}
+
+export class InvalidAccountModelKeyFormatError extends Error {
+  readonly code = 'INVALID_ACCOUNT_MODEL_KEY_FORMAT' as const;
+  readonly modelKey: string;
+  constructor(modelKey: string) {
+    super(
+      `Invalid account model key (expected provider/model format): ${modelKey}`,
+    );
+    this.name = 'InvalidAccountModelKeyFormatError';
+    this.modelKey = modelKey;
+  }
+}

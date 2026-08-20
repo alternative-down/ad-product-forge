@@ -184,3 +184,73 @@ describe('resolveProfileRuntimeModel', () => {
     expect(result).not.toHaveProperty('url');
   });
 });
+
+// ── Pattern L D51 #6502 batch 12: typed-Error instanceof assertions ──
+import {
+  InvalidAccountModelKeyFormatError,
+  InvalidAccountOAuthModelKeyError,
+  InvalidMinimaxCodingModelKeyError,
+  UnsupportedOAuthProviderError,
+} from './errors';
+
+describe('resolveProfileRuntimeModel typed-Error paths (Pattern L #6502 batch 12)', () => {
+  test('throws InvalidAccountOAuthModelKeyError on missing providerId', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'oauth-gateway/',
+      baseUrl: null,
+      apiKey: 'user-key',
+    });
+    await expect(promise).rejects.toBeInstanceOf(InvalidAccountOAuthModelKeyError);
+    await expect(promise).rejects.toThrow('Invalid account OAuth model key: oauth-gateway/');
+  });
+
+  test('throws InvalidAccountOAuthModelKeyError on missing modelId', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'oauth-gateway/claude-code/',
+      baseUrl: null,
+      apiKey: 'user-key',
+    });
+    await expect(promise).rejects.toBeInstanceOf(InvalidAccountOAuthModelKeyError);
+    await expect(promise).rejects.toThrow('Invalid account OAuth model key: oauth-gateway/claude-code/');
+  });
+
+  test('throws UnsupportedOAuthProviderError on unknown providerId', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'oauth-gateway/unknown-provider/claude-sonnet',
+      baseUrl: null,
+      apiKey: 'user-key',
+    });
+    await expect(promise).rejects.toBeInstanceOf(UnsupportedOAuthProviderError);
+    await expect(promise).rejects.toThrow('Unsupported OAuth providerId: unknown-provider');
+  });
+
+  test('throws InvalidMinimaxCodingModelKeyError on empty modelId', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'minimax-coding-plan/',
+      baseUrl: null,
+      apiKey: 'key',
+    });
+    await expect(promise).rejects.toBeInstanceOf(InvalidMinimaxCodingModelKeyError);
+    await expect(promise).rejects.toThrow('Invalid MiniMax coding model key: minimax-coding-plan/');
+  });
+
+  test('throws InvalidAccountModelKeyFormatError on default path missing slash', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'gpt-4',
+      baseUrl: null,
+      apiKey: 'sk-abc',
+    });
+    await expect(promise).rejects.toBeInstanceOf(InvalidAccountModelKeyFormatError);
+    await expect(promise).rejects.toThrow('Invalid account model key (expected provider/model format): gpt-4');
+  });
+
+  test('throws InvalidAccountModelKeyFormatError on trailing slash', async () => {
+    const promise = resolveProfileRuntimeModel({
+      modelKey: 'openai/',
+      baseUrl: null,
+      apiKey: 'sk-abc',
+    });
+    await expect(promise).rejects.toBeInstanceOf(InvalidAccountModelKeyFormatError);
+    await expect(promise).rejects.toThrow('Invalid account model key (expected provider/model format): openai/');
+  });
+});
