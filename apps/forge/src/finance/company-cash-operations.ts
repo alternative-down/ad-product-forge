@@ -3,6 +3,11 @@ import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
+import {
+  CompanyCashEntryNotFoundError,
+  CompanyCashEntryNotPlannedError,
+} from './company-cash-operations.errors';
+
 import type { Database, DbOrTx } from "../database/client";
 import { companyCashLedger } from '../database/schema';
 import { type CompanyCashDirection, type CompanyCashStatus } from './company-cash-enums';
@@ -104,11 +109,11 @@ export function createCompanyCashOperations(db: Database) {
     const entry = await getEntry(entryId);
     if (!entry) {
       companyCashOperationsDebug('warn', 'cancelPlannedEntry: entry not found', { entryId });
-      throw new Error(`Company cash entry not found: ${entryId}`);
+      throw new CompanyCashEntryNotFoundError(entryId);
     }
     if (entry.status !== 'planned') {
       companyCashOperationsDebug('warn', 'cancelPlannedEntry: entry not planned', { entryId, status: entry.status });
-      throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
+      throw new CompanyCashEntryNotPlannedError(entryId, 'canceled');
     }
 
     await withDbErrorLogging({
@@ -131,10 +136,10 @@ export function createCompanyCashOperations(db: Database) {
     const entry = await getEntry(entryId);
     if (!entry) {
       companyCashOperationsDebug('warn', 'postPlannedEntry: entry not found', { entryId });
-      throw new Error(`Company cash entry not found: ${entryId}`);
+      throw new CompanyCashEntryNotFoundError(entryId);
     }
     if (entry.status !== 'planned')
-      throw new Error(`Only planned company cash entries can be posted: ${entryId}`);
+      throw new CompanyCashEntryNotPlannedError(entryId, 'posted');
 
     const effectiveAt = input.effectiveAt ?? Date.now();
     await withDbErrorLogging({
