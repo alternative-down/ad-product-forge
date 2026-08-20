@@ -28,6 +28,12 @@ import { withDbErrorLogging } from '../database/error-logging';
 import { createId } from '../utils/id';
 
 import type { Database } from '../database/client';
+
+import {
+  ProcessPaymentEventLedgerInsertMissingRowError,
+  UpsertCustomerMissingInsertRowError,
+  UpsertSubscriptionMissingInsertRowError,
+} from './payment-receivables.errors';
 import {
   paymentProviders,
   paymentCustomers,
@@ -188,9 +194,7 @@ export function createPaymentReceivablesStore(db: Database) {
             .all();
           const inserted = insertedRows[0];
           if (insertedRows.length === 0) {
-            throw new Error(
-              `upsertCustomer: insert returned no row for provider=${input.provider} customerId=${input.providerCustomerId}`,
-            );
+            throw new UpsertCustomerMissingInsertRowError(input.provider, input.providerCustomerId);
           }
           return inserted.id;
         }),
@@ -280,9 +284,7 @@ export function createPaymentReceivablesStore(db: Database) {
             .all();
           const inserted = insertedRows[0];
           if (insertedRows.length === 0) {
-            throw new Error(
-              `upsertSubscription: insert returned no row for providerSubscriptionId=${input.providerSubscriptionId}`,
-            );
+            throw new UpsertSubscriptionMissingInsertRowError(input.providerSubscriptionId);
           }
           return inserted.id;
         }),
@@ -441,9 +443,7 @@ export function createPaymentReceivablesStore(db: Database) {
               .all();
             const ledgerRow = ledgerRows[0];
             if (ledgerRows.length === 0) {
-              throw new Error(
-                `processPaymentEvent: ledger insert returned no row for txId=${txId}`,
-              );
+              throw new ProcessPaymentEventLedgerInsertMissingRowError(txId);
             }
             // Update the transaction with the ledger link + posted flag in the
             // SAME transaction (atomic). After this, paymentTransactions.ledgerEntryId
