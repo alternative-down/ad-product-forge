@@ -9,6 +9,7 @@ import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { safeRoute } from '../agents/admin-route-error-helper';
 import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
+import { InvalidPayableDueAtError } from './write.errors';
 
 const createInvestmentSchema = z
   .object({
@@ -142,7 +143,7 @@ export function registerFinanceWriteRoutes(
       const dueAt = new Date(body.dueAt).getTime();
 
       if (!Number.isFinite(dueAt)) {
-        throw new Error('Invalid payable dueAt');
+        throw new InvalidPayableDueAtError();
       }
 
       if (body.kind === 'single') {
