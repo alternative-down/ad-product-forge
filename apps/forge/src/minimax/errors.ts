@@ -91,3 +91,19 @@ export class MiniMaxApiCallError extends Error {
     this.operation = operation;
   }
 }
+
+export class MiniMaxApiKeyNotSetError extends Error {
+  readonly code = 'MINIMAX_API_KEY_NOT_SET' as const;
+  constructor() {
+    super('MINIMAX_API_KEY environment variable is not set');
+    this.name = 'MiniMaxApiKeyNotSetError';
+  }
+}
+
+export class MiniMaxIntegrationNotConfiguredError extends Error {
+  readonly code = 'MINIMAX_INTEGRATION_NOT_CONFIGURED' as const;
+  constructor() {
+    super('MiniMax integration is not configured');
+    this.name = 'MiniMaxIntegrationNotConfiguredError';
+  }
+}
