@@ -14,6 +14,7 @@ import {
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 import { ltmAgentWarn, ltmDebug } from './ltm-debug-helpers';
+import { LtmRuntimeSessionNotAvailableError, LtmGenerateProducedNoResultError } from './agent-long-term-memory.errors';
 
 import {
   createAgentLongTermMemoryStore,
@@ -411,7 +412,7 @@ export function createAgentLongTermMemory(input: {
 
     if (memoryAgent == null) {
       ltmDebug('warn', 'initializeLtmSession: runtime not available', { agentId: input.agentId });
-      throw new Error(`LTM runtime session is not available for ${input.agentId}`);
+      throw new LtmRuntimeSessionNotAvailableError(input.agentId);
     }
 
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
@@ -480,7 +481,7 @@ export function createAgentLongTermMemory(input: {
 
     if (result == null) {
       ltmDebug('error', 'generateLtmSummary: no result produced', { agentId: input.agentId });
-      throw new Error(`LTM generate produced no result for ${input.agentId}`);
+      throw new LtmGenerateProducedNoResultError(input.agentId);
     }
 
     return result;
