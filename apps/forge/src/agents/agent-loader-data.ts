@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { AgentLoaderDataAgentNotFoundError, AgentLoaderDataMissingRoleIdError } from './agent-loader-data.errors';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/client';
@@ -59,12 +60,12 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
 
   if (agent === undefined) {
     agentLoaderDataDebug('warn', 'loadAgentData: agent not in registry', { agentId: config.agentId });
-    throw new Error(`Agent not found in registry: ${config.agentId}`);
+    throw new AgentLoaderDataAgentNotFoundError(config.agentId);
   }
 
   if (agent.roleId === null || agent.roleId === undefined) {
     agentLoaderDataDebug('warn', 'loadAgentData: agent missing roleId', { agentId: config.agentId });
-    throw new Error(`Agent is missing roleId: ${config.agentId}`);
+    throw new AgentLoaderDataMissingRoleIdError(config.agentId);
   }
 
   const llmSettings = createLlmSettingsStore(db);
