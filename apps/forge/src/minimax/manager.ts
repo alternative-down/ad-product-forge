@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { MiniMaxApiKeyNotSetError, MiniMaxIntegrationNotConfiguredError } from './errors';
 import { MINIMAX_BASE_URL } from './constants';
 
 export interface MiniMaxConfig {
@@ -553,7 +554,7 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
       'error',
       'createMinimaxManager: MINIMAX_API_KEY not set',
     );
-    throw new Error('MINIMAX_API_KEY environment variable is not set');
+    throw new MiniMaxApiKeyNotSetError();
   }
 
   return new MiniMaxClient({ apiKey: key });
@@ -572,7 +573,7 @@ export function createMiniMaxManager(config: {
         'warn',
         'getClient MiniMax integration not configured',
       );
-      throw new Error('MiniMax integration is not configured');
+      throw new MiniMaxIntegrationNotConfiguredError();
     }
 
     return new MiniMaxClient({ apiKey: cfg.apiKey });
