@@ -1,4 +1,5 @@
 /**
+import { EmailProviderDisposedError, EmailSendMissingTargetKeyError } from './email-account.errors';
  * Email provider implementation.
  * Pure helper functions are in email-account-helpers.ts for independent testing.
  */
@@ -80,7 +81,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     emailAccountDebug('warn', 'connectImap: provider already disposed');
     if (disposed) {
       emailAccountDebug('warn', 'connectImap: provider disposed');
-      throw new Error('Email provider is disposed');
+      throw new EmailProviderDisposedError();
     }
     if (client) return client;
     if (connectPromise) return await connectPromise;
@@ -425,7 +426,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       if (!recipientAddress) {
         emailAccountDebug('warn', 'send: targetKey missing', { targetKey: input.targetKey });
-        throw new Error('[email] Cannot send without a targetKey');
+        throw new EmailSendMissingTargetKeyError();
       }
 
       const recentInboxEmails = await listRecentInboxEmails(50);
