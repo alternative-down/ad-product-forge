@@ -1,3 +1,4 @@
+import { InternalChatParticipantNotFoundError } from './internal-chat-groups-helpers.errors';
 import { and, eq, or } from 'drizzle-orm';
 import type { Database, DbOrTx } from "../database/client";
 import {
@@ -43,7 +44,7 @@ export async function resolveChatGroupMembers(
     }));
 
     if (participant === null || participant === undefined) {
-      throw new Error(`Internal chat participant not found: ${member.participantKey}`);
+      throw new InternalChatParticipantNotFoundError(member.participantKey);
     }
 
     desiredMembers.set(participant.id, {

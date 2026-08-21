@@ -1,3 +1,4 @@
+import { CommunicationProviderMissingServiceError } from './provider-loader.errors';
 import { z } from 'zod';
 
 import { providerLoaderDebug } from './provider-loader-debug';
@@ -109,7 +110,7 @@ export async function loadCommunicationProviders(
 
     if (!config?.internalChat) {
       providerLoaderDebug('error', 'loadProvider: internalChat service required');
-      throw new Error('Internal chat provider requires the internalChat service');
+      throw new CommunicationProviderMissingServiceError();
     }
 
     providers.push(
