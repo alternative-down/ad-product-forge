@@ -50,6 +50,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
+import { FindOrThrowEntityNotFoundError } from './find-or-throw.errors';
 
 /**
  * A Drizzle query builder that supports findFirst. Pass `db.query.<table>`
@@ -110,7 +111,7 @@ export async function findOrThrow<T>(
       message: `${logger.op}: ${logger.entity} not found`,
       context: { [idField]: logger.idValue },
     });
-    throw new Error(`${logger.entity} not found: ${logger.idValue}`);
+    throw new FindOrThrowEntityNotFoundError(logger.entity, logger.idValue);
   }
 
   return row;
