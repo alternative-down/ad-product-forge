@@ -2,6 +2,7 @@ import type { Message } from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
+import { DiscordMessageNoChunksError } from './outbound.errors';
 import type { CommunicationFile } from '@forge-runtime/core';
 import type { DiscordSendableChannel, DiscordOutboundFile } from '../discord-types';
 
@@ -94,7 +95,7 @@ export async function sendDiscordChunks(input: {
   }
 
   if (!lastSentMessage) {
-    throw new Error('Discord message content produced no chunks to send');
+    throw new DiscordMessageNoChunksError();
   }
 
   return lastSentMessage;
