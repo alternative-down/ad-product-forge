@@ -8,6 +8,11 @@ import {
 
 import type { InternalChatService } from './internal-chat-service';
 
+import {
+  InternalChatAccountNotFoundError,
+  InternalChatDispatchFailedError,
+} from './internal-chat-provider.errors';
+
 export function createInternalChatProvider(input: {
   agentId: string;
   internalChat: InternalChatService;
@@ -82,7 +87,7 @@ export function createInternalChatProvider(input: {
           message: 'resolveAccount: internal chat account not found',
           context: { agentId: input.agentId },
         });
-        throw new Error(`Internal chat account not found for agent: ${input.agentId}`);
+        throw new InternalChatAccountNotFoundError(input.agentId);
       }
 
       const sent = await input.internalChat.sendMessage({
@@ -92,7 +97,7 @@ export function createInternalChatProvider(input: {
         attachments: message.attachments,
       });
       if (sent.valid === false) {
-        throw new Error(sent.error);
+        throw new InternalChatDispatchFailedError(sent.error);
       }
 
       return {
