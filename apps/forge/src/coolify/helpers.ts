@@ -10,6 +10,11 @@ import { forgeDebug } from '@forge-runtime/core';
 import z from 'zod';
 import { ApplicationSchema, ApplicationEnvSchema } from './schemas';
 
+import {
+  CoolifyExtractCollectionError,
+  CoolifyExtractItemError,
+} from './helpers.errors';
+
 /**
  * Module-local debug helper. Centralizes the coolify-helpers scope
  * so call sites only specify the level, message, and context.
@@ -107,11 +112,11 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
 
     coolifyHelpersDebug('warn', 'extractCollection: failed to extract item', { dataType: typeof data });
     coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
-    throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
+    throw new CoolifyExtractCollectionError(JSON.stringify(data));
   }
 
   coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
-  throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
+  throw new CoolifyExtractItemError(JSON.stringify(data));
 }
 
 export function coolifyExtractLogs(data: unknown): string {
