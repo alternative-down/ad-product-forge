@@ -10,6 +10,7 @@ import type { AgentSchedule } from '../../database/schema';
 import { errorMsg } from '../../agents/error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
 import { adminDebug } from './helpers-debug';
+import { CredentialsJsonParseError } from './helpers-schedule-crypto.errors';
 
 /**
  * Convert agent schedule row to summary object
@@ -68,6 +69,6 @@ export function decryptProviderConfig(encryptedCredentials: string) {
     return JSON.parse(decrypted) as unknown;
   } catch (err) {
     adminDebug('error', 'Failed to parse credentials JSON: ' + errorMsg(err), { err: errorMsg(err) });
-    throw new Error('Failed to parse credentials JSON: ' + errorMsg(err));
+    throw new CredentialsJsonParseError(errorMsg(err));
   }
 }

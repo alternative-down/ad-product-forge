@@ -2,6 +2,7 @@ import { closeLibsqlClient, type ClosableLibsqlClient } from '../../utils/libsql
 import type { ConversationMessagePart } from 'agent-runtime-core/integrations';
 import path from 'node:path';
 import { conversationHelpersDebug } from './conversation-helpers-debug';
+import { InvalidConversationTypeError } from './conversation-helpers.errors';
 import { errorMsg } from '../../agents/error-formatting';
 import { createClient } from '@libsql/client';
 import {
@@ -118,7 +119,7 @@ async function listRecentExternalConversations(
  */
 function parseConversationType(raw: string | undefined): 'group' | 'dm' {
   if (raw === 'group' || raw === 'dm') return raw;
-  throw new Error(`invalid conversation type: ${JSON.stringify(raw)}`);
+  throw new InvalidConversationTypeError(raw);
 }
 
 async function listRecentInternalChatConversations(

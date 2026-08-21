@@ -11,6 +11,7 @@ import { jsonResponse } from '../index';
 import { adminRoutesParseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
 import { labeledRoute } from './admin-route-error-helper';
+import { AgentOperationSendError } from './operations.errors';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.
@@ -100,7 +101,7 @@ export function registerAgentOperationRoutes(
         attachments: [],
       });
       if (sent.valid === false) {
-        throw new Error(sent.error);
+        throw new AgentOperationSendError(sent.error);
       }
 
       return jsonResponse({

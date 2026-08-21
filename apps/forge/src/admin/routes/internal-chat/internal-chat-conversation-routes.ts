@@ -13,6 +13,7 @@ import {
   archiveInternalChatConversationSchema,
 } from '../schemas/internal-chat';
 import { jsonResponse, adminRoutesParseJsonBody } from '../index';
+import { InternalChatConversationRouteError } from './internal-chat-conversation-routes.errors';
 import {
   withRouteErrorHandler,
   getQueryParam,
@@ -166,7 +167,7 @@ function buildSendMessageHandler(internalChat: InternalChatService): InternalCha
       ),
     });
     if (result.valid === false) {
-      throw new Error(result.error);
+      throw new InternalChatConversationRouteError(result.error);
     }
     return jsonResponse({
       success: true,
