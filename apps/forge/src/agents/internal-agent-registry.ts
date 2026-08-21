@@ -1,4 +1,5 @@
 import { forgeDebug, type AgentWakeEvent } from '@forge-runtime/core';
+import { InternalAgentRegistryReloadConfigError } from './internal-agent-registry.errors';
 
 import type { Database } from '../database/client';
 import type { AgentLoaderConfig } from './agent-loader';
@@ -126,7 +127,7 @@ function createInternalAgentRegistry() {
             level: 'error',
             message: 'internal-agent-registry: validation/requirement failed',
           });
-          throw new Error('Agent loader config is not available for runtime reload');
+          throw new InternalAgentRegistryReloadConfigError();
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
         const reloadCoolify = createPerAgentCoolifyManager(db);
