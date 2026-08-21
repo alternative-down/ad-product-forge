@@ -6,6 +6,7 @@
 import type { Octokit } from 'octokit';
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
+import { AgentAlreadyHasGitHubCredentialsError, AgentMissingGitHubCredentialsToUpdateError } from './apps.errors';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from './types';
@@ -64,7 +65,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const existing = await ctx.getCredentials(input.agentId);
       if (existing) {
         githubAppsDebug('warn', 'GitHub App already exists for agent', { agentId: input?.agentId });
-        throw new Error(`Agent ${input.agentId} already has GitHub credentials`);
+        throw new AgentAlreadyHasGitHubCredentialsError(input.agentId);
       }
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
@@ -110,7 +111,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const existing = await ctx.getCredentials(input.agentId);
       if (!existing) {
         githubAppsDebug('warn', 'GitHub App has no credentials to update', { agentId: input?.agentId });
-        throw new Error(`Agent ${input.agentId} has no GitHub credentials to update`);
+        throw new AgentMissingGitHubCredentialsToUpdateError(input.agentId);
       }
       const updated: GitHubAppCredentials = {
         ...existing,
