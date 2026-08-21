@@ -1,3 +1,4 @@
+import { InternalChatDirectConversationCreationError } from './internal-chat-account-ops.errors';
 import { and, eq } from 'drizzle-orm';
 import {
   internalChatConversationMembers,
@@ -208,7 +209,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
         level: 'error',
         message: 'internal-chat-account-ops: validation/requirement failed',
       });
-      throw new Error('Direct conversation creation failed');
+      throw new InternalChatDirectConversationCreationError();
     }
     return { conversationId: conversation.id, conversationKey: conversation.id };
   }
