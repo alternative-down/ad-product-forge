@@ -1,4 +1,5 @@
 /**
+import { AdminInternalChatRequiredFieldMissingError, AdminInternalChatRouteHelperError } from './internal-chat-route-helpers.errors';
  * Internal Chat Route Helpers — Phase 1 of #2744
  * Extracted error handling and request parsing utilities.
  */
@@ -106,7 +107,7 @@ export function getQueryParam(request: InternalChatRequest, key: string): string
 export function requireQueryParam(request: InternalChatRequest, key: string): string {
   const value = getQueryParam(request, key);
   if (value === null || value === undefined) {
-    throw new Error(`${key} required`);
+    throw new AdminInternalChatRequiredFieldMissingError(key);
   }
   return value;
 }
@@ -123,7 +124,7 @@ export function parseBody<T extends z.ZodTypeAny>(
     return adminRoutesParseJsonBody(request.bodyText, schema);
   } catch (err) {
     // Re-throw as plain Error so withRouteErrorHandler can catch it
-    throw new Error(errorMsg(err));
+    throw new AdminInternalChatRouteHelperError(errorMsg(err));
   }
 }
 
