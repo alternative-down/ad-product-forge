@@ -1,3 +1,4 @@
+import { GitHubIntegrationNotConfiguredError } from './tools.errors';
 import { githubToolsDebug } from './tools-debug';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
@@ -108,7 +109,7 @@ export function createGitHubTools(
             }
 
             if (!provisioning) {
-              throw new Error('GitHub integration is not configured at the platform level.');
+              throw new GitHubIntegrationNotConfiguredError();
             }
 
             return {

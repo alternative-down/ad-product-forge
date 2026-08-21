@@ -1,3 +1,4 @@
+import { NotificationContentTooLongError } from './store.errors';
 import { createId } from '../utils/id';
 import { withDbErrorLogging } from '../database/error-logging';
 import { errorMsg } from '../agents/error-formatting';
@@ -39,9 +40,9 @@ export function createAgentNotificationStore(db: Database) {
         message: 'createNotification content exceeds max length',
         context: { length: input.content.length, max: MAX_NOTIFICATION_CONTENT_LENGTH },
       });
-      throw new Error(
-        'createNotification content length ' + input.content.length +
-        ' exceeds max ' + MAX_NOTIFICATION_CONTENT_LENGTH
+      throw new NotificationContentTooLongError(
+        input.content.length,
+        MAX_NOTIFICATION_CONTENT_LENGTH,
       );
     }
     const now = input.createdAt ?? Date.now();

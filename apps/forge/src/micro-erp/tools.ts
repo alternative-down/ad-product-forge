@@ -1,3 +1,4 @@
+import { MicroErpUnknownCashMovementActionError } from './tools.errors';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { withToolErrorLogging } from '../capabilities/tools/error-wrapper';
 import { z } from 'zod';
@@ -181,7 +182,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
                 result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
                 break;
               default:
-                throw new Error(`Unknown cash movement action: ${(input as { action: string }).action}`);
+                throw new MicroErpUnknownCashMovementActionError((input as { action: string }).action);
             }
             return { valid: true, action: input.action, ...result };
           },

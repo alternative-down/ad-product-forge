@@ -1,3 +1,4 @@
+import { GitHubAppNotActiveError } from './credentials.errors';
 /**
  * Credentials Ops — encrypted storage and retrieval of GitHub App credentials.
  *
@@ -57,7 +58,7 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
 
     if (!credentials || credentials.status !== 'active') {
       credentialsOpsDebug('warn', 'GitHub App not active for agent', { agentId });
-      throw new Error(`GitHub App not active for agent ${agentId}`);
+      throw new GitHubAppNotActiveError(agentId);
     }
 
     return credentials;
