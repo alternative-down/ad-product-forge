@@ -1,4 +1,5 @@
 /**
+import { InvalidSkillArchiveEntryError } from './workspace-skill-helpers.errors';
  * workspace-skill-helpers.ts
  *
  * Shared helpers for workspace skill operations.
@@ -55,7 +56,7 @@ export function normalizeArchiveEntryPath(entryPath: string): NormalizeResult {
 
   if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
     workspaceSkillArchiveDebug('warn', `Blocked invalid archive entry: ${entryPath}`);
-    throw new Error(`Invalid skill archive entry: ${entryPath}`);
+    throw new InvalidSkillArchiveEntryError(entryPath);
   }
 
   return { safePath, isDirectory };

@@ -1,4 +1,5 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
+import { LtmRecallMissingMemorySettingsError } from './orchestrator.errors';
 import { forgeDebug } from '@forge-runtime/core';
 import type { LtmSearchResult } from '../helpers';
 import type { RecallConfig, LtmRecallRuntimeSettings } from './types';
@@ -79,7 +80,7 @@ export class RecallOrchestrator {
         level: 'warn',
         message: 'recallFromLongTermMemory: runtime memory settings required',
       });
-      throw new Error('LTM recall requires runtime memory settings');
+      throw new LtmRecallMissingMemorySettingsError();
     }
 
     // Narrow 4-value LtmRecallSearchMode to the 3-value shape accepted by
