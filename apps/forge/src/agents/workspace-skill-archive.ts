@@ -1,4 +1,9 @@
 import { workspaceSkillArchiveDebug } from './workspace-skill-archive-debug';
+
+import {
+  WorkspaceSkillArchiveEmptyArchiveError,
+  WorkspaceSkillArchiveInvalidEntryError,
+} from './workspace-skill-archive.errors';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
@@ -54,7 +59,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       workspaceSkillArchiveDebug('warn', `Blocked path escape in archive entry: ${entryPath}`);
-      throw new Error(`Invalid skill archive entry: ${entryPath}`);
+      throw new WorkspaceSkillArchiveInvalidEntryError(entryPath);
     }
 
     try {
@@ -75,7 +80,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
 
   if (writtenSkills.size === 0) {
     workspaceSkillArchiveDebug('warn', 'Skill archive did not contain any files');
-    throw new Error('Skill archive did not contain any files');
+    throw new WorkspaceSkillArchiveEmptyArchiveError();
   }
 
   return Array.from(writtenSkills).sort((left, right) => left.localeCompare(right));
