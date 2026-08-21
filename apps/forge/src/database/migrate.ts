@@ -3,6 +3,7 @@ import { migrationsDebug } from './migrations-debug';
 import 'node:process';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { MigrationsJournalNotFoundError } from './migrate.errors';
 
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
@@ -51,7 +52,7 @@ export function findMigrationsFolder(start: string): string {
     if (existsSync(candidate)) return join(dir, 'migrations');
     dir = dirname(dir);
   }
-  throw new Error(`migrations/meta/_journal.json not found above ${start} (walked 5 levels)`);
+  throw new MigrationsJournalNotFoundError(start);
 }
 
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {

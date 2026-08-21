@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { ForgeAdminApiKeyNotConfiguredError } from './forge-bootstrap.errors';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './agents/error-formatting';
 import { z } from 'zod';
@@ -136,10 +137,7 @@ export async function createForgeBootstrap() {
   if (adminApiKey === undefined && !allowInsecureLocal) {
     consoleStartupLog('CONFIGURATION CHECK FAILED: FORGE_ADMIN_API_KEY not configured');
     forgeDebug({ scope: 'main', level: 'error', message: 'main: configuration check failed' });
-    throw new Error(
-      'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set' +
-        ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',
-    );
+    throw new ForgeAdminApiKeyNotConfiguredError();
   }
 
   const db = getDatabase();
