@@ -7,6 +7,11 @@ import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../dat
 import { createId } from '../utils/id';
 import { encryptSecret, decryptSecret } from '../encryption/crypto';
 
+import {
+  WebhookIdempotencyConflictNoExistingEventError,
+  WebhookRouteSecretRotationRouteNotFoundError,
+} from './store.errors';
+
 export type CreateEventResult =
   | { kind: 'created'; eventId: string }
   | { kind: 'duplicate'; eventId: string };
@@ -202,7 +207,7 @@ export function createWebhookStore(db: Database) {
     });
 
     if (updated.length === 0) {
-      throw new Error(`Cannot rotate secret: route ${routeId} not found`);
+      throw new WebhookRouteSecretRotationRouteNotFoundError(routeId);
     }
     return { route: updated[0], plaintextSecret };
   }
@@ -286,9 +291,7 @@ export function createWebhookStore(db: Database) {
     if (existing.length === 0) {
       // Should not happen — INSERT OR IGNORE returned 0 but SELECT finds nothing.
       // Surface a clear error rather than returning a fabricated response.
-      throw new Error(
-        `Idempotency conflict but no existing event found for route=${input.routeId} key=${input.idempotencyKey}`,
-      );
+      throw new WebhookIdempotencyConflictNoExistingEventError(input.routeId, input.idempotencyKey);
     }
 
     return { kind: 'duplicate', eventId: existing[0].eventId };
