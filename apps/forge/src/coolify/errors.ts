@@ -134,3 +134,24 @@ export class CoolifyProviderConfigResolutionError extends Error {
     this.errorMessage = errorMessage;
   }
 }
+
+// ── Pattern L D52 #6502 batch coolify/http: typed Errors for coolify/http.ts ──
+// See apps/forge/src/coolify/http.ts for the source throw site.
+// Message strings preserved verbatim for backward compatibility with
+// http.test.ts string-based assertions (rejects.toThrow('404') etc.).
+
+export class CoolifyHttpRequestError extends Error {
+  readonly code = 'COOLIFY_HTTP_REQUEST' as const;
+  readonly method: string;
+  readonly path: string;
+  readonly status: number;
+  readonly body: unknown;
+  constructor(method: string, path: string, status: number, body: unknown) {
+    super(buildRequestError(method, path, status, body));
+    this.name = 'CoolifyHttpRequestError';
+    this.method = method;
+    this.path = path;
+    this.status = status;
+    this.body = body;
+  }
+}
