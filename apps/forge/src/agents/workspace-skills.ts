@@ -1,3 +1,4 @@
+import { WorkspaceSkillInvalidNameError } from './workspace-skills.errors';
 import { errorMsg } from './error-formatting';
 import { workspaceSkillArchiveDebug } from './workspace-skill-archive-debug';
 import fs from 'node:fs/promises';
@@ -99,7 +100,7 @@ export async function deleteAgentWorkspaceSkill(input: {
 
   if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
     workspaceSkillArchiveDebug('warn', 'deleteAgentWorkspaceSkill: invalid skill name', { skillName: input.skillName });
-    throw new Error(`Invalid skill name: ${input.skillName}`);
+    throw new WorkspaceSkillInvalidNameError(input.skillName);
   }
 
   const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
@@ -111,7 +112,7 @@ export async function deleteAgentWorkspaceSkill(input: {
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     workspaceSkillArchiveDebug('warn', 'deleteAgentWorkspaceSkill: invalid skill name', { skillName: input.skillName });
-    throw new Error(`Invalid skill name: ${input.skillName}`);
+    throw new WorkspaceSkillInvalidNameError(input.skillName);
   }
 
   await fs.rm(skillRoot, { recursive: true, force: false });
