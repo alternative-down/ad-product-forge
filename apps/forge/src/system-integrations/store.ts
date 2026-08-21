@@ -1,3 +1,4 @@
+import { SystemIntegrationsUnknownProviderTypeError } from './store.errors';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -269,7 +270,7 @@ export function createSystemIntegrationStore(db: Database) {
         level: 'error',
         message: 'system-integrations-store: validation/requirement failed',
       });
-      throw new Error('Unknown integration provider type');
+      throw new SystemIntegrationsUnknownProviderTypeError();
     }
     return schema.parse(config);
   }
