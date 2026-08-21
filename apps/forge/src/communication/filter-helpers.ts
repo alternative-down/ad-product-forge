@@ -1,3 +1,4 @@
+import { CommunicationInvalidFilterValueError } from './filter-helpers.errors';
 import { forgeDebug } from '@forge-runtime/core';
 
 /**
@@ -24,7 +25,7 @@ export function parseFilterDate(
       message: 'parseFilterDate: invalid value',
       context: { fieldName, value },
     });
-    throw new Error(`Invalid ${fieldName}: ${value}`);
+    throw new CommunicationInvalidFilterValueError(fieldName, value);
   }
   return parsed;
 }
