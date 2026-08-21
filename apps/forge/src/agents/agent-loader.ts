@@ -1,4 +1,5 @@
 import { errorMsg } from './error-formatting';
+import { AgentLoaderConfigMissingError } from './agent-loader.errors';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/client';
@@ -157,7 +158,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       .map((f) => f.agentId + ':' + errorMsg(f.reason))
       .join(', ');
     throw new Error(
-      'loadAgents: ' + failures.length + ' of ' + agentConfigs.length +
+    throw new AgentLoaderConfigMissingError(configKey);
       ' agents failed to load (' + summary + ')'
     );
   }
