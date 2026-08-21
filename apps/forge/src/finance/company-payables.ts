@@ -6,6 +6,7 @@ import type { Database } from '../database/client';
 import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
+import { RecurringPayableNotFoundError, UnknownRecurrencePeriodError } from './company-payables.errors';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
@@ -121,7 +122,7 @@ export function createCompanyPayables(db: Database) {
         message: 'setRecurringPayableActive: payable not found',
         context: { payableId },
       });
-      throw new Error(`Recurring payable not found: ${payableId}`);
+      throw new RecurringPayableNotFoundError(payableId);
     }
 
     // #5551: use a single `const now` to keep createdAt/updatedAt coherent
@@ -273,7 +274,7 @@ function advanceDueAt(currentDueAt: number, recurrencePeriod: RecurrencePeriod):
       break;
     default: {
       const _exhaustive: never = recurrencePeriod;
-      throw new Error(`Unknown recurrencePeriod: ${String(_exhaustive)}`);
+      throw new UnknownRecurrencePeriodError(String(_exhaustive));
     }
   }
   return date.getTime();
