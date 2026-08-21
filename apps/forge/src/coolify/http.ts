@@ -5,7 +5,8 @@
 
 import { coolifyHttpDebug } from './http-debug';
 import { errorMsg } from '../agents/error-formatting';
-import { removeUndefined, coolifySafeJsonParse, buildRequestError } from './helpers';
+import { removeUndefined, coolifySafeJsonParse } from './helpers';
+import { CoolifyHttpRequestError } from './errors';
 import { getProviderConfig } from './provider-config';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 
@@ -49,7 +50,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
 
     if (!response.ok) {
       coolifyHttpDebug('error', 'requestJson: HTTP error', { method, path, status: response.status });
-      throw new Error(buildRequestError(method, path, response.status, data ?? text));
+      throw new CoolifyHttpRequestError(method, path, response.status, data ?? text);
     }
 
     return data;
