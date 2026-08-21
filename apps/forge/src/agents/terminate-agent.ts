@@ -1,4 +1,5 @@
 import {  errorMsg } from './error-formatting';
+import { TerminateAgentNotFoundError } from './terminate-agent.errors';
 import { rm } from 'node:fs/promises';
 import { terminateInternalAgentDebug } from './terminate-agent-debug-helpers';
 import path from 'node:path';
@@ -39,7 +40,7 @@ export async function terminateInternalAgent(
 
   if (agent === null || agent === undefined) {
     terminateInternalAgentDebug('warn', 'terminateAgent: agent not found', { agentId: input.agentId });
-    throw new Error(`Agent not found: ${input.agentId}`);
+    throw new TerminateAgentNotFoundError(input.agentId);
   }
 
   const contractStore = createAgentContractStore(db);
