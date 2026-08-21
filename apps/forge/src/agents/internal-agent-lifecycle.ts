@@ -1,4 +1,5 @@
 import { errorMsg } from './error-formatting';
+import { InternalAgentLifecycleHiringError } from './internal-agent-lifecycle.errors';
 import type { Database } from '../database/client';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -40,7 +41,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
   });
 
   if (!hiringRh.valid) {
-    throw new Error(hiringRh.error || 'Hiring process failed');
+    throw new InternalAgentLifecycleHiringError(hiringRh.error || 'Hiring process failed');
   }
 
   const profile = await buildHiredAgentProfile(db, {
