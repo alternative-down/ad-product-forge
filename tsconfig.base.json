@@ -15,5 +15,5 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true
   },
-  "exclude": ["node_modules", ".turbo", "dist", "examples"]
+  "exclude": ["node_modules", ".turbo", "dist", "examples", ".github"]
 }
