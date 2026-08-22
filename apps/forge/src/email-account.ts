@@ -1,5 +1,5 @@
-/**
 import { EmailProviderDisposedError, EmailSendMissingTargetKeyError } from './email-account.errors';
+/**
  * Email provider implementation.
  * Pure helper functions are in email-account-helpers.ts for independent testing.
  */

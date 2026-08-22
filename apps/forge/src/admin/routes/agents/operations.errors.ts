@@ -4,7 +4,7 @@
  */
 export class AgentOperationSendError extends Error {
   readonly code = 'AGENT_OPERATION_SEND_ERROR' as const;
-  readonly cause: string;
+  override readonly cause: string;
   constructor(cause: string) {
     super(cause);
     this.name = 'AgentOperationSendError';

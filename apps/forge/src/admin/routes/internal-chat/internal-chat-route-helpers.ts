@@ -1,5 +1,5 @@
-/**
 import { AdminInternalChatRequiredFieldMissingError, AdminInternalChatRouteHelperError } from './internal-chat-route-helpers.errors';
+/**
  * Internal Chat Route Helpers — Phase 1 of #2744
  * Extracted error handling and request parsing utilities.
  */

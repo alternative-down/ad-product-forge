@@ -121,7 +121,7 @@ export function createGitHubAppManager(config: {
     nanoid,
     forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) =>
       // L111: cast retained — runtime ForgeDebugOptions expects `context?: LogContext` (Record<string, unknown>) but OpsContext field uses `context?: unknown`. Cast suppresses a structural type drift; refactoring would ripple OpsContext + ops modules. See #5816 L111-deferred.
-      forgeDebug(opts as Parameters<typeof forgeDebug>[0]),
+      forgeDebug(opts as never),
     getGlobalConfig: () => Promise.reject(new Error('getGlobalConfig not initialized')),
     getDefaultOwner: () => Promise.reject(new Error('getDefaultOwner not initialized')),
     getInstallationOctokit: (_agentId: string): Promise<Octokit> =>

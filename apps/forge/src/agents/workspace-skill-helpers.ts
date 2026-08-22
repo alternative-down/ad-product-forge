@@ -1,5 +1,5 @@
-/**
 import { InvalidSkillArchiveEntryError } from './workspace-skill-helpers.errors';
+/**
  * workspace-skill-helpers.ts
  *
  * Shared helpers for workspace skill operations.
