@@ -6,7 +6,6 @@ import { z } from 'zod';
 
 import { extractCollection, extractItem, coolifyExtractLogs, toTimestamp } from './helpers';
 import { CoolifyEnvBulkUpdateMissingKeyError } from './errors';
-import { pollUntil, retryWithBackoff } from './polling-helpers';
 import { verifyApplicationHealth as verifyApplicationHealthHelper } from './verify-application-health';
 import {
   GitHubAppSchema,
@@ -36,10 +35,6 @@ export function setOptional(
 }
 
 export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
-
-// DeployVerificationResult moved to ./verify-application-health (D53 cycle 2, #6664)
-// Re-exported here for backward compatibility with external consumers.
-export type { DeployVerificationResult } from './verify-application-health';
 
 export function createCoolifyManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
