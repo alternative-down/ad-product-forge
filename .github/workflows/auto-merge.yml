@@ -140,8 +140,8 @@ jobs:
             NON_AUTHOR_REVIEWS=$(echo "$CURRENT_REVIEWS" | jq --arg author "$AUTHOR" \
               '[.[] | select(.user.login != $author)]')
 
-            # 8. L#NN-46 v2: filter to known bot identities (5 forge bot accounts)
-            KNOWN_BOTS='["veritas-ak-0n1[bot]", "orion-qbtvww[bot]", "aldric-zvqgom[bot]", "kaelen-xhhzsg[bot]", "varek-iemmpd[bot]"]'
+            # 8. L#NN-46 v2 + #6661 DRY: load KNOWN_BOTS from single source of truth (6 forge bot accounts)
+            KNOWN_BOTS=$(jq -c . .github/workflows/known-bots.json)
             VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
               '[.[] | select((.user.login | ascii_downcase) as $u | $bots | index($u))]')
 
