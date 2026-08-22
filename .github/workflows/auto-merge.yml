@@ -148,11 +148,11 @@ jobs:
             # 9. L#NN-9 9h: check for exactly 2 unique approvers
             UNIQUE_APPROVERS=$(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | length')
 
-            if [ "$UNIQUE_APPROVERS" -eq 2 ]; then
+            if [ "$UNIQUE_APPROVERS" -ge 2 ]; then
               echo "Auto-merge: 2 unique approvers found, proceeding"
               gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
             else
-              echo "Auto-merge: $UNIQUE_APPROVERS unique approvers (need exactly 2)"
+              echo "Auto-merge: $UNIQUE_APPROVERS unique approvers (need at-least-2)"
               echo "Valid reviewers: $(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | join(", ")')"
             fi
           done
