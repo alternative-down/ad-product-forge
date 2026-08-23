@@ -72,8 +72,8 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // ['communication/internal-chat-participants.ts', 0], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['communication/internal-chat-service.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // #6108 L#NN-50 #33 (D59): cast removed — file no longer needs allowlist entry.
-  ['github/apps.ts', 1],
-  ['http/server.ts', 1],
+  // ['github/apps.ts', 1], // removed D54 Cycle 2f — no longer has as-unknown-as site
+  // ['http/server.ts', 1], // removed D54 Cycle 2f — no longer has as-unknown-as site
 ]);
 function findTsFiles(dir: string): string[] {
   const results: string[] = [];

@@ -70,7 +70,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
         state: ctx.nanoid(16),
-        appName: (ctx.createAppName as unknown as (a: string, b: string) => string)(
+        appName: (ctx.createAppName as (a: string, b: string) => string)(
           input.agentId,
           input.agentName,
         ),

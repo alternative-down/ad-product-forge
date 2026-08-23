@@ -144,13 +144,22 @@ export interface ForgeHttpServer {
   readonly port: number;
 }
 
+/**
+ * Thenable intersection — returned by createForgeHttpServer so callers can
+ * either await for the resolved ForgeHttpServer OR access properties
+ * directly (port, registerRoute) without await. Satisfies the
+ * 'Promise<ForgeHttpServer> & ForgeHttpServer' return type natively
+ * via the 'then' method, removing the prior 'as unknown as' cast.
+ */
+export type ForgeHttpServerThenable = ForgeHttpServer & Promise<ForgeHttpServer>;
+
 /** Adapters that accept ForgeHttpServer as httpServer argument.
  *  Used by admin route modules that don't need start/stop/port. */
 export type ForgeHttpServerAdapter = Pick<ForgeHttpServer, 'registerRoute'>;
 
 export function createForgeHttpServer(
   config: CreateForgeHttpServerConfig,
-): Promise<ForgeHttpServer> & ForgeHttpServer {
+): ForgeHttpServerThenable {
   const allowedOrigins =
     config.allowedOrigins !== null &&
     config.allowedOrigins !== undefined &&
@@ -425,7 +434,7 @@ export function createForgeHttpServer(
     });
   }
 
-  return {
+  const forgeServer: ForgeHttpServer = {
     registerRoute,
     start,
     stop,
@@ -436,7 +445,31 @@ export function createForgeHttpServer(
       }
       return config.port;
     },
-  } as unknown as Promise<ForgeHttpServer> & ForgeHttpServer;
+  };
+
+  // ForgeHttpServerThenable = ForgeHttpServer & Promise<ForgeHttpServer>.
+  // Native intersection via 'then' method — no cast needed.
+  // Build a native Promise<ForgeHttpServer> thenable object — satisfies
+  // the ForgeHttpServerThenable intersection (ForgeHttpServer & Promise<...>)
+  // without 'as unknown as' cast. catch/finally/Symbol.toStringTag delegated
+  // to the underlying resolved Promise.
+  return Object.assign(forgeServer, {
+    then<TResult1 = ForgeHttpServer, TResult2 = never>(
+      onfulfilled?: ((value: ForgeHttpServer) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ): Promise<TResult1 | TResult2> {
+      return Promise.resolve(forgeServer).then(onfulfilled, onrejected);
+    },
+    catch<TResult = never>(
+      onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+    ): Promise<ForgeHttpServer | TResult> {
+      return Promise.resolve(forgeServer).catch(onrejected);
+    },
+    finally(onfinally?: (() => void) | null): Promise<ForgeHttpServer> {
+      return Promise.resolve(forgeServer).finally(onfinally);
+    },
+    [Symbol.toStringTag]: 'Promise' as const,
+  });
 }
 
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
