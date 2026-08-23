@@ -145,11 +145,11 @@ jobs:
             VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
               '[.[] | select((.user.login | ascii_downcase) as $u | $bots | index($u))]')
 
-            # 9. L#NN-9 9h: check for exactly 2 unique approvers
+            # 9. L#NN-9 9h: check for at-least 2 unique approvers (per ruleset 13558497)
             UNIQUE_APPROVERS=$(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | length')
 
             if [ "$UNIQUE_APPROVERS" -ge 2 ]; then
-              echo "Auto-merge: 2 unique approvers found, proceeding"
+              echo "Auto-merge: $UNIQUE_APPROVERS unique approvers found, proceeding (at-least-2)"
               gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
             else
               echo "Auto-merge: $UNIQUE_APPROVERS unique approvers (need at-least-2)"
