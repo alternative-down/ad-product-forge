@@ -90,7 +90,7 @@ describe('withDbErrorLogging', () => {
 
     expect(mockedForgeDebug).toHaveBeenCalledTimes(1);
     // errorMsg from error-formatting handles non-Error values
-    expect(mockedForgeDebug.mock.calls[0][0].context).toHaveProperty('error');
+    expect((mockedForgeDebug.mock.calls[0][0] as { context?: Record<string, unknown> }).context).toHaveProperty('error');
   });
 
   it('merges context fields with the error key (error takes precedence on collision)', async () => {

@@ -75,9 +75,7 @@ describe('capabilitiesStoreDebug', () => {
   it('uses a non-empty scope literal (regression guard against scope-string drift)', () => {
     capabilitiesStoreDebug('warn', 'scope-check', { x: 1 });
 
-    const call = mockedForgeDebug.mock.calls[0]?.[0] as {
-      scope: unknown;
-    };
+    const call = mockedForgeDebug.mock.calls[0]?.[0] as unknown as { scope: string };
     expect(typeof call.scope).toBe('string');
     expect((call.scope as string).length).toBeGreaterThan(0);
     expect(call.scope).toBe('capabilities-store');

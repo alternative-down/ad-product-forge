@@ -4,7 +4,7 @@
  */
 export class InternalChatConversationRouteError extends Error {
   readonly code = 'INTERNAL_CHAT_CONVERSATION_ROUTE_ERROR' as const;
-  readonly cause: string;
+  override readonly cause: string;
   constructor(cause: string) {
     super(cause);
     this.name = 'InternalChatConversationRouteError';
