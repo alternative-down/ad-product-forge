@@ -777,7 +777,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         .filter((schedule) => schedule.kind === 'agent')
         .map((row): ScheduleSummary => toScheduleSummaryHelper(row)),
       heartbeat: ctx.heartbeat ? toScheduleSummaryHelper(ctx.heartbeat) : null,
-    } as unknown as AgentDetail;
+    } as AgentDetail;
   }
 
     async function getAgent(agentId: string): Promise<AgentDetail | null> {

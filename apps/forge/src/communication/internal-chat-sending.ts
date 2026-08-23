@@ -80,7 +80,7 @@ export interface SendingDeps {
     readMessageAttachment: (
       messageId: string,
       attachmentName: string,
-    ) => Promise<{ stream: unknown; contentType: string | undefined }>;
+    ) => Promise<CommunicationFile | null>;
   };
 }
 
