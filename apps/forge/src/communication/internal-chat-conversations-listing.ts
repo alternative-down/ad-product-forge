@@ -18,7 +18,7 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug, type CommunicationFile } from '@forge-runtime/core';
 import { buildConversationParticipantNames } from './internal-chat-helpers';
 import type { Database } from '../database/client';
 
@@ -42,7 +42,7 @@ interface MessageListItem {
   authorId: string;
   targetKey: string;
   content: string;
-  attachments: unknown[];
+  attachments: CommunicationFile[];
   unread: boolean;
   createdAt: string;
   authorDisplayName: string;

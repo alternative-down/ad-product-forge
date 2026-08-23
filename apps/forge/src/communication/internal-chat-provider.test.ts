@@ -216,13 +216,23 @@ describe('createInternalChatProvider', () => {
     });
 
     it('returns result from service', async () => {
-      const conversations = [{ key: 'conv-1' }, { key: 'conv-2' }];
+      const conversations = [
+        {
+          targetKey: 'conv-1',
+          provider: 'test',
+          latestMessageAt: '',
+          unreadCount: 0,
+          name: '',
+          participants: [],
+          messages: [],
+        },
+      ];
       const svc = makeService({ listConversations: vi.fn().mockResolvedValue(conversations) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
       const result = await provider.listConversations!({ limit: 10, unread: false });
 
-      expect(result).toBe(conversations);
+      expect(result).toEqual(conversations);
     });
   });
 

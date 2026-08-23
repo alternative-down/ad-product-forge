@@ -12,6 +12,7 @@ import {
 } from '../database/schema';
 import type {
   InternalChatGroupMember,
+  InternalChatGroupMemberMetadata,
   InternalChatGroupParticipant,
 } from './internal-chat-helpers';
 import { buildGroupMetadata } from './internal-chat-helpers';
@@ -33,7 +34,7 @@ export interface InternalChatDeliveryMessage {
   createdAt: string;
   metadata: {
     conversationType: 'dm' | 'group';
-    groupMembers?: InternalChatGroupMember[];
+    groupMembers?: InternalChatGroupMemberMetadata[];
   };
 }
 
@@ -191,7 +192,7 @@ function createConnectionImpl(
                   displayName: participant.displayName,
                 }))
               : undefined,
-        } as unknown as InternalChatDeliveryMessage['metadata'],
+        },
       });
     }
   }
@@ -246,7 +247,7 @@ function createConnectionImpl(
             params.conversation.type === 'group'
               ? buildGroupMetadata(params.participants)
               : undefined,
-        } as unknown as InternalChatDeliveryMessage['metadata'],
+        },
       });
 
       liveAgentIds.push(participant.agentId as string);
