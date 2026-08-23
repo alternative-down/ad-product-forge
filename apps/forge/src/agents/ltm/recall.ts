@@ -10,6 +10,7 @@ import {
 import { ltmDebug } from '../ltm-debug-helpers';
 import { ltmRecallDebug } from './recall-debug';
 import { errorMsg } from '../error-formatting';
+import type { TextEmbedder } from 'agent-runtime-core/integrations';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 import { createInFlightRecallTracker, InFlightRecallTracker } from './recall/in-flight-tracker';
 import { createIndexManager, IndexManager } from './recall/index-manager';
@@ -174,14 +175,15 @@ export class AgentLongTermMemoryRecall {
           includeExtensions: ['.txt', '.md'],
         }),
         embedder: {
-          embed: async ({ texts }: { texts: string[] }): Promise<unknown> => ({
-            vectors: await Promise.all(
+          embed: async ({ texts }: { texts: string[] }): Promise<{ vectors: number[][]; dimensions: number }> => {
+            const vectors = await Promise.all(
               texts.map((text: string) =>
                 embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text),
               ),
-            ),
-          }),
-        } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval['embedder'],
+            );
+            return { vectors, dimensions: vectors[0]?.length ?? 0 };
+          },
+        } as TextEmbedder,
       });
     }
 

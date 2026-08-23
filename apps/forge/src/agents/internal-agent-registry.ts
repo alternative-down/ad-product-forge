@@ -69,14 +69,17 @@ function createInternalAgentRegistry() {
 
     // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
     // so loadAgents does not attach any manager. We attach per-agent managers
-    // in the loop below.
-    const cleanConfig = {
+    // in the loop below. Pass through the unused fields (loadAgents doesn't
+    // touch them) to satisfy the AgentLoaderConfig shape without an unsafe cast.
+    const cleanConfig: AgentLoaderConfig = {
       workspaceBasePath: config.workspaceBasePath,
       minimax: config.minimax,
       schedules: config.schedules,
       internalChat: config.internalChat,
-      // intentionally omitted: emailMailboxes, coolify, githubApps
-    } as unknown as AgentLoaderConfig;
+      githubApps: config.githubApps,
+      emailMailboxes: config.emailMailboxes,
+      coolify: config.coolify,
+    };
     const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
