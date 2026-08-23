@@ -10,7 +10,7 @@ name: Auto Merge (L#NN-codified v2)
 #   7. head_ref post-merge cleanup verification
 #   8. L#NN-15 v1.1 60s wait before state=closed
 # Plus L#NN-9 9h sub-form coverage for review edits/dismissals.
-# D50 #6423 cycle 14 (L#NN-22 v18a): added ≥35min r1 retention gate.
+# D50 #6423 cycle 14 (L#NN-22 v18a): added ≥35min r1 retention gate (D54 reduced to 15min per L#NN-22 v18c path B interim, see #6676).
 #   - schedule: */5 * * * * (retry every 5 min until retention satisfied)
 #   - retention = now - submitted_at of Veritas APPROVE on current head SHA
 #   - PM bypass via `tpl-pm-fallback` label (PM-Thoren only)
@@ -40,13 +40,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check required approvals + 35min retention gate (L#NN-22 v18a)
+      - name: Check required approvals + 15min retention gate (L#NN-22 v18a → v18c)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           REPO="${{ github.repository }}"
-          RETENTION_MINUTES=35
+          RETENTION_MINUTES=15
           VERITAS_LOGIN='veritas-ak-0n1[bot]'
           PM_BYPASS_LABEL='tpl-pm-fallback'
 
@@ -123,7 +123,7 @@ jobs:
                 echo "Retention gate: HOLD ${RETENTION_MIN}min < ${RETENTION_MINUTES}min. ${REMAINING}min remaining."
                 # Post comment ONLY on PR review/synchronize triggers (avoid noise on schedule)
                 if [ "${{ github.event_name }}" = "pull_request_review" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
-                  gh pr comment "$PR_NUMBER" --body "⏸️ **L#NN-22 v18a 35min retention gate**: ${RETENTION_MIN}min elapsed since Veritas APPROVE (${SUBMITTED_AT}). ${REMAINING}min remaining. Auto-merge will retry on schedule (every 5 min) or next review event. PM bypass: add label \`$PM_BYPASS_LABEL\`." || true
+                  gh pr comment "$PR_NUMBER" --body "⏸️ **L#NN-22 v18c 15min retention gate**: ${RETENTION_MIN}min elapsed since Veritas APPROVE (${SUBMITTED_AT}). ${REMAINING}min remaining. Auto-merge will retry on schedule (every 5 min) or next review event. PM bypass: add label \`$PM_BYPASS_LABEL\`." || true
                 fi
                 continue
               fi
