@@ -112,3 +112,16 @@ export function registerLifecycleOps(
     },
   });
 }
+
+// ─── Named type exports (D54 #6631 Phase 2b infrastructure) ────────────
+// Exported for write-ops.ts to use as cast targets. Refactor-safe: when
+// registerLifecycleOps signature changes, the aliases propagate automatically.
+//
+// Casts in write-ops.ts still require `as unknown as` because the local
+// _split signatures intentionally use Record<string, unknown> / local
+// interfaces (backward-compat). Future refactor: upgrade _split signatures
+// to canonical types (AgentLoaderConfig, InternalAgentRegistry, loadAgent)
+// AND update body code (loadAgent expects SingleAgentLoaderConfig; Registry
+// null vs undefined) — see write-ops.ts:73-74 comment for context.
+export type RegisterLifecycleOpsInput = Parameters<typeof registerLifecycleOps>[1];
+export type RegisterLifecycleOpsOps = Parameters<typeof registerLifecycleOps>[2];
