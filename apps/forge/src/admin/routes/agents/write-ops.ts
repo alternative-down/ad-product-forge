@@ -29,9 +29,17 @@ import type {
   runInternalTermination,
 } from '../../../agents/internal-agent-lifecycle';
 import type { changeAgentRoleFromAdmin } from '../../../capabilities/runtime';
-import { registerLifecycleOps } from './_split/lifecycle-ops';
+import {
+  registerLifecycleOps,
+  type RegisterLifecycleOpsInput,
+  type RegisterLifecycleOpsOps,
+} from './_split/lifecycle-ops';
 import { registerRoleOps } from './_split/role-ops';
-import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
+import {
+  registerLifecycleDelegateOps,
+  type RegisterLifecycleDelegateOpsInput,
+  type RegisterLifecycleDelegateOpsOps,
+} from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
 
@@ -78,16 +86,16 @@ export function registerAgentWriteOpsRoutes(
   // for backward-compat. Cast at the boundary until the _split file is upgraded to canonical.
   registerLifecycleOps(
     httpServer,
-    input as unknown as Parameters<typeof registerLifecycleOps>[1],
-    { ...ops, registry } as unknown as Parameters<typeof registerLifecycleOps>[2],
+    input as unknown as RegisterLifecycleOpsInput,
+    { ...ops, registry } as unknown as RegisterLifecycleOpsOps,
   );
   // Contract ops — extracted to split/contract-ops.ts
   // Lifecycle delegate ops — local _split/lifecycle-delegate-ops.ts uses internal narrow types
   // (Record<string, unknown>). Cast at the boundary until upgraded to canonical.
   registerLifecycleDelegateOps(
     httpServer,
-    input as unknown as Parameters<typeof registerLifecycleDelegateOps>[1],
-    ops as unknown as Parameters<typeof registerLifecycleDelegateOps>[2],
+    input as unknown as RegisterLifecycleDelegateOpsInput,
+    ops as unknown as RegisterLifecycleDelegateOpsOps,
   );
   // MCP ops — extracted to split/mcp-ops.ts
   registerMcpOps(httpServer, input.db, input.loaderConfig);

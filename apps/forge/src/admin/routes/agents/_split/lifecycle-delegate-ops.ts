@@ -96,3 +96,15 @@ export function registerLifecycleDelegateOps(
     }),
   });
 }
+
+// ─── Named type exports (D54 #6631 Phase 2b infrastructure) ────────────
+// Exported for write-ops.ts to use as cast targets. Refactor-safe.
+//
+// Casts in write-ops.ts still require `as unknown as` — the local _split
+// signatures use Record<string, unknown> / `unknown` (backward-compat).
+// Future refactor: upgrade _split Ops to canonical AgentOperations shape
+// (runInternalHiring, runInternalTermination, changeAgentRoleFromAdmin)
+// AND update body code (changeAgentRoleFromAdmin canonical signature now
+// takes 1 arg { db, loaderConfig, targetAgentId, roleId } not 2 args).
+export type RegisterLifecycleDelegateOpsInput = Parameters<typeof registerLifecycleDelegateOps>[1];
+export type RegisterLifecycleDelegateOpsOps = Parameters<typeof registerLifecycleDelegateOps>[2];
