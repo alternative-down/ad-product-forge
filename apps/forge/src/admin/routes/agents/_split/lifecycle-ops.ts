@@ -7,22 +7,17 @@
 import { adminRoutesParseJsonBody, jsonResponse } from '../../index';
 import type { Database } from '../../../../database/client';
 import type { HttpHandler } from '../../../../http/server';
+import type { AgentLoaderConfig } from '../../../../agents/agent-loader-types';
+import type { loadAgent } from '../../../../agents/agent-loader';
+import type { Registry } from '../../../../agents/internal-agent-registry';
 
-// ─── Typed interfaces for lifecycle ops ────────────────────────────────────
-interface RegistryEntry {
-  runner: {
-    notifyExternalEvent: (opts: unknown) => void;
-    forceIdle: () => Promise<void>;
-  };
-}
-
-interface Registry {
-  get(agentId: string): RegistryEntry | null;
-  add(db: Database, runtime: unknown): Promise<void>;
-}
-
+// ─── Ops interface (D54 #6631 Phase 2b v2 — canonical types) ───────────────
+// loadAgent signature matches canonical `loadAgent` from agent-loader.ts
+// (SingleAgentLoaderConfig). Registry matches canonical InternalAgentRegistry
+// (InternalAgentEntry | undefined for get). This eliminates the boundary cast
+// at write-ops.ts:81-82.
 interface Ops {
-  loadAgent: (db: Database, config: Record<string, unknown>) => Promise<unknown>;
+  loadAgent: typeof loadAgent;
   registry: Registry;
 }
 
@@ -35,7 +30,7 @@ export function registerLifecycleOps(
   },
   input: {
     db: Database;
-    loaderConfig: Record<string, unknown>;
+    loaderConfig: AgentLoaderConfig;
   },
   ops: Ops,
 ) {
@@ -64,9 +59,8 @@ export function registerLifecycleOps(
       try {
         const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
         const entry = ops.registry.get(agentId);
-        if (entry !== null) {
-          const runner = (entry as { runner: { forceIdle: () => Promise<void> } }).runner;
-          await runner.forceIdle();
+        if (entry !== undefined && entry.runner !== null) {
+          await entry.runner.forceIdle();
         }
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
@@ -84,9 +78,8 @@ export function registerLifecycleOps(
         const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
         let entry = ops.registry.get(agentId);
 
-        if (entry !== null) {
-          const runner = (entry as { runner: { forceIdle: () => Promise<void> } }).runner;
-          await runner.forceIdle();
+        if (entry !== undefined && entry.runner !== null) {
+          await entry.runner.forceIdle();
         } else {
           const config = input.loaderConfig;
           const runtime = await ops.loadAgent(input.db, { ...config, agentId });
@@ -94,8 +87,10 @@ export function registerLifecycleOps(
           entry = ops.registry.get(agentId);
         }
 
-        const runner = (entry as { runner: { notifyExternalEvent: (opts: unknown) => void } })
-          .runner;
+        if (entry === undefined || entry.runner === null) {
+          return jsonResponse({ success: false, error: 'agent not found' }, 404);
+        }
+        const runner = entry.runner;
         runner.notifyExternalEvent({
           type: 'admin-rewakeup',
           groupKey: `admin-rewakeup:${agentId}`,

@@ -10,7 +10,27 @@ import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/client';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
+import type {
+  runInternalHiring,
+  runInternalTermination,
+} from '../../../../agents/internal-agent-lifecycle';
+import type { changeAgentRoleFromAdmin } from '../../../../capabilities/runtime';
+import type { AgentLoaderConfig } from '../../../../agents/agent-loader-types';
+import type { GitHubAppManager } from '../../../../github/manager';
+import type { AgentScheduleManager } from '../../../../schedules/manager/manager';
+import type { InternalChatService } from '../../../../communication/internal-chat-service';
 import { safeRoute } from '../admin-route-error-helper';
+
+// ─── Ops interface (D54 #6631 Phase 2b v2 — canonical AgentOperations) ────
+// Mirrors AgentOperations from write-ops.ts. Declared locally to avoid circular
+// import. Canonical signatures match — changeAgentRoleFromAdmin signature
+// (1-arg input: { db, loaderConfig, targetAgentId, roleId }) was updated since
+// this _split file was originally extracted.
+interface Ops {
+  runInternalHiring: typeof runInternalHiring;
+  runInternalTermination: typeof runInternalTermination;
+  changeAgentRoleFromAdmin: typeof changeAgentRoleFromAdmin;
+}
 
 export function registerLifecycleDelegateOps(
   httpServer: {
@@ -19,17 +39,14 @@ export function registerLifecycleDelegateOps(
   input: {
     db: Database;
     workspaceBasePath: string;
-    githubApps?: unknown;
-    emailMailboxes?: AgentEmailManager | null;
-    coolify?: CoolifyManager | null;
-    schedules?: unknown;
-    internalChat?: unknown;
+    loaderConfig: AgentLoaderConfig;
+    githubApps: GitHubAppManager;
+    emailMailboxes: AgentEmailManager | null;
+    coolify: CoolifyManager | null;
+    schedules: AgentScheduleManager;
+    internalChat: InternalChatService;
   },
-  ops: {
-    runInternalHiring: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
-    runInternalTermination: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
-    changeAgentRoleFromAdmin: (opts: unknown, extra?: unknown) => Promise<void>;
-  },
+  ops: Ops,
 ) {
   // POST /admin/agent/hire
   httpServer.registerRoute({
@@ -88,8 +105,10 @@ export function registerLifecycleDelegateOps(
           request.bodyText ?? '',
           z.object({ agentId: z.string(), roleId: z.string() }),
         );
-        await ops.changeAgentRoleFromAdmin(input.db, {
-          agentId: body.agentId,
+        await ops.changeAgentRoleFromAdmin({
+          db: input.db,
+          loaderConfig: input.loaderConfig,
+          targetAgentId: body.agentId,
           roleId: body.roleId,
         });
         return jsonResponse({ success: true });
