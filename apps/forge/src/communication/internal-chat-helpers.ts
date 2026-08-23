@@ -218,12 +218,16 @@ export function buildConversationParticipantNames(
  * Transforms an array of participants into the groupMembers metadata format
  * used in live message delivery and unread replay payloads.
  */
-export function buildGroupMetadata(participants: InternalChatGroupParticipant[]): Array<{
+export interface InternalChatGroupMemberMetadata {
   participantId: string;
   agentId: string | null;
   slug: string;
   displayName: string;
-}> {
+}
+
+export function buildGroupMetadata(
+  participants: InternalChatGroupParticipant[],
+): InternalChatGroupMemberMetadata[] {
   return participants.map((p) => ({
     participantId: p.accountId,
     agentId: p.agentId,

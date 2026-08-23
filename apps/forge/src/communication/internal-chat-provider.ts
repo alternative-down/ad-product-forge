@@ -7,11 +7,28 @@ import {
 } from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';
+import type { ConversationListingOutput } from './internal-chat-conversations-listing';
 
 import {
   InternalChatAccountNotFoundError,
   InternalChatDispatchFailedError,
 } from './internal-chat-provider.errors';
+
+// Map InternalChatService.listConversations output to the shared
+// CommunicationProviderConversation shape.
+function mapListingOutputToProviderConversation(
+  output: ConversationListingOutput,
+): CommunicationProviderConversation {
+  return {
+    targetKey: output.targetKey,
+    provider: output.provider,
+    latestMessageAt: output.latestMessageAt,
+    unreadCount: output.unreadCount,
+    name: output.name,
+    participants: output.participants,
+    messages: output.messages as CommunicationProviderMessage[],
+  };
+}
 
 export function createInternalChatProvider(input: {
   agentId: string;
@@ -60,11 +77,12 @@ export function createInternalChatProvider(input: {
       }));
     },
     async listConversations({ limit, unread }) {
-      return (await input.internalChat.listConversations({
+      const listings = await input.internalChat.listConversations({
         agentId: input.agentId,
         limit,
         unread,
-      })) as unknown as CommunicationProviderConversation[];
+      });
+      return listings.map(mapListingOutputToProviderConversation);
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
       return (await input.internalChat.getMessages({
@@ -75,7 +93,7 @@ export function createInternalChatProvider(input: {
         query,
         dateFrom,
         dateTo,
-      })) as unknown as CommunicationProviderMessage[];
+      })) as CommunicationProviderMessage[];
     },
     async sendMessage(message) {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);
