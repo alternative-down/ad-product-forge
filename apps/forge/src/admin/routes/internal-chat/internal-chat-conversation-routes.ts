@@ -114,19 +114,14 @@ function buildGetAttachmentHandler(internalChat: InternalChatService): InternalC
       attachmentName,
     });
     if (attachment === null || attachment === undefined) return { status: 404 };
-    const safeAttachment = attachment as unknown as {
-      name: string;
-      contentType: string;
-      data: string;
-    };
     return {
       status: 200,
       headers: {
-        'content-type': safeAttachment.contentType ?? 'application/octet-stream',
-        'content-disposition': `inline; filename="${encodeURIComponent(safeAttachment.name)}"`,
+        'content-type': attachment.contentType ?? 'application/octet-stream',
+        'content-disposition': `inline; filename="${encodeURIComponent(attachment.name)}"`,
         'cache-control': 'no-store',
       },
-      body: Buffer.from(safeAttachment.data),
+      body: Buffer.from(attachment.data),
     };
   });
 }
@@ -196,8 +191,18 @@ function buildArchiveConversationHandler(internalChat: InternalChatService): Int
       await internalChat.archiveConversationByAccount({
         accountId: body.accountId,
         conversationId: body.conversationId,
-        getRequiredConversationForAccount: async () =>
-          await ({ targetKey: body.conversationId }) as unknown as InternalChatConversation,
+        getRequiredConversationForAccount: async (): Promise<InternalChatConversation> => {
+          // Stub for type compatibility — actual validation is done by archiveConversationByAccount
+          // (the return value is awaited and discarded). Required fields populated with safe defaults.
+          return {
+            id: body.conversationId,
+            type: 'direct',
+            name: null,
+            createdByAccountId: null,
+            createdAt: 0,
+            updatedAt: 0,
+          };
+        },
       }),
     );
   });

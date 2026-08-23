@@ -52,16 +52,16 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
   // ['micro-erp/read-model.ts', 0], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // Phase 2 P2 cleanup targets
-  ['minimax/tools.ts', 1],
+  // ['minimax/tools.ts', 1], // removed D54 Cycle 2e — no longer has as-unknown-as site
   // Single-site files (tracked, lower priority)
   ['agents/error-formatting.ts', 1],
   ['email-account.ts', 0],  // D33 #6216+#6219+#6221: 3 casts removed (getSelfContact async, listConversations shape, getMessages filter/slice). email-account.ts cast cluster fully clean.
-  ['admin/routes/internal-chat/internal-chat-conversation-routes.ts', 2],
+  // ['admin/routes/internal-chat/internal-chat-conversation-routes.ts', 2], // removed D54 Cycle 2e — no longer has as-unknown-as site
   // ['agents/agent-runner.ts', 0], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['communication/internal-chat-connection.ts', 2], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['communication/internal-chat-provider.ts', 2], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['admin/read-model/agents.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
-  ['admin/read-model/agents-list.ts', 1],
+  // ['admin/read-model/agents-list.ts', 1], // removed D54 Cycle 2e — no longer has as-unknown-as site
   // ['agents/agent-contract-store.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['agents/agent-home-metrics.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['agents/internal-agent-registry.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site

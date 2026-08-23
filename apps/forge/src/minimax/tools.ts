@@ -48,7 +48,7 @@ export interface MiniMaxToolContext {
  * descriptive error if filesystem is undefined.
  */
 function getToolWorkspace(context: { toolCallId?: string }): MiniMaxToolContext['workspace'] {
-  return (context as unknown as MiniMaxToolContext).workspace;
+  return (context as MiniMaxToolContext).workspace;
 }
 
 
