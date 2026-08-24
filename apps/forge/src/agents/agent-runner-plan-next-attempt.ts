@@ -65,28 +65,32 @@ export async function planNextAttempt(deps: PlanNextAttemptDeps): Promise<PlanNe
     return { execute: 'idle' };
   }
 
-  const spentUsd = await withTimeout(
-    store.getContractSpend(contract.id),
-    RUNNER_AWAIT_TIMEOUT_MS,
-    `Agent contract spend lookup timed out for ${runtimeId}`,
-  );
+  // Parallelize 3 independent lookups (#6699 — sequential awaits -> Promise.all)
+  // Settings is fetched alongside budget data; consumed only after budget check passes
+  const [spentUsd, estimatedStepUsd, settings] = await Promise.all([
+    withTimeout(
+      store.getContractSpend(contract.id),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent contract spend lookup timed out for ${runtimeId}`,
+    ),
+    withTimeout(
+      usage.estimateStepCostUsd(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent step cost estimate timed out for ${runtimeId}`,
+    ),
+    withTimeout(
+      systemSettings.getSettings(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `System settings lookup timed out for ${runtimeId}`,
+    ),
+  ]);
   const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-  const estimatedStepUsd = await withTimeout(
-    usage.estimateStepCostUsd(),
-    RUNNER_AWAIT_TIMEOUT_MS,
-    `Agent step cost estimate timed out for ${runtimeId}`,
-  );
 
   if (estimatedStepUsd !== null && remainingBudgetUsd < estimatedStepUsd) {
     return { execute: 'idle' };
   }
 
   scheduler.resetBackoff();
-  const settings = await withTimeout(
-    systemSettings.getSettings(),
-    RUNNER_AWAIT_TIMEOUT_MS,
-    `System settings lookup timed out for ${runtimeId}`,
-  );
 
   return {
     execute: true,
