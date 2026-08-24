@@ -196,12 +196,24 @@ describe('crypto', () => {
 
     // L#NN-19 hygiene (#5952 + #5508): clear error on short input instead of
     // confusing "Unsupported state or unable to authenticate data" from GCM.
-    it('throws clear "Invalid encrypted input" on combined.length < 32', async () => {
+    it('returns empty string on empty input (defensive #6701)', async () => {
       process.env.ENCRYPTION_KEY = validKey;
       const { decryptSecret: fn } = await import('./crypto');
-      // Empty base64 → empty buffer → length 0 < 32 → clear error before GCM.
-      expect(() => fn('')).toThrow('Invalid encrypted input');
-      expect(() => fn('')).toThrow('IV (16) + ciphertext + authTag (16)');
+      // Closes #6701: factory reset + seed migration inserts
+      // encrypted_api_key='' for placeholder profiles. decryptSecret('')
+      // now returns '' instead of throwing, so admin/system/llm can render
+      // placeholder profiles without a 500. Non-empty short input below.
+      expect(fn('')).toBe('');
+    });
+
+    it('throws clear "Invalid encrypted input" on combined.length < 32 (non-empty)', async () => {
+      process.env.ENCRYPTION_KEY = validKey;
+      const { decryptSecret: fn } = await import('./crypto');
+      // Non-empty but too-short input still throws. Empty input is the
+      // special case caught above; this test guards the rest of the
+      // combined.length < 32 range.
+      expect(() => fn('aaaa')).toThrow('Invalid encrypted input');
+      expect(() => fn('aaaa')).toThrow('IV (16) + ciphertext + authTag (16)');
     });
 
     it('throws clear "Invalid encrypted input" on combined.length 31', async () => {

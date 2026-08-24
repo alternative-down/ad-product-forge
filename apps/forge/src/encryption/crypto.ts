@@ -61,6 +61,12 @@ export function encryptSecret(plaintext: string): string {
  * Extracts: IV (16 bytes) + ciphertext + authTag (16 bytes).
  */
 export function decryptSecret(encrypted: string): string {
+  // Defensive (Closes #6701): empty encrypted input returns empty string.
+  // Factory reset re-seeds llm_profiles with encrypted_api_key='', which
+  // crashed decrypt and broke /admin/system/llm. Non-empty invalid input
+  // still throws InvalidEncryptedInputError below.
+  if (encrypted === '') return '';
+
   const key = requireEncryptionKey();
 
   const combined = Buffer.from(encrypted, 'base64');
