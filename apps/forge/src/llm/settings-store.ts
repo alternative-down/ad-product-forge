@@ -90,7 +90,12 @@ export function createLlmSettingsStore(db: Database) {
         const rows = await db.query.llmProfiles.findMany({
           orderBy: (fields, { asc }) => [asc(fields.modelKey)],
         });
-        return rows.map(toProfileRecord);
+        // #6701: filter empty profiles (factory reset + seed migration artifacts).
+        // Empty encrypted_api_key is write-incomplete — decrypt returns '' now,
+        // but the profile is not user-configurable and should not surface in
+        // admin UIs. Filtering here keeps consumers honest without schema
+        // changes (0002_seed_llm_profiles.sql inserts encrypted_api_key='').
+        return rows.map(toProfileRecord).filter((p) => p.apiKey !== '');
       },
     });
   }
