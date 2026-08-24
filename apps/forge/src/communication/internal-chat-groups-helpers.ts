@@ -1,5 +1,5 @@
 import { InternalChatParticipantNotFoundError } from './internal-chat-groups-helpers.errors';
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import type { Database, DbOrTx } from "../database/client";
 import {
   internalChatAccounts,
@@ -35,15 +35,27 @@ export async function resolveChatGroupMembers(
 ): Promise<Map<string, ResolvedGroupMember>> {
   const desiredMembers = new Map<string, ResolvedGroupMember>();
 
-  for (const member of members) {
-    const participant = (await db.query.internalChatAccounts.findFirst({
-      where: or(
-        eq(internalChatAccounts.agentId, member.participantKey),
-        eq(internalChatAccounts.slug, member.participantKey),
-      ),
-    }));
+  // Batch fetch all participant accounts in a single query (#6691 — N+1 fix)
+  const participantKeys = members.map((m) => m.participantKey);
+  const participants = participantKeys.length === 0
+    ? []
+    : await db.query.internalChatAccounts.findMany({
+        where: or(
+          inArray(internalChatAccounts.agentId, participantKeys),
+          inArray(internalChatAccounts.slug, participantKeys),
+        ),
+      });
 
-    if (participant === null || participant === undefined) {
+  // Index participants by both agentId and slug for O(1) lookup
+  const byKey = new Map<string, typeof participants[number]>();
+  for (const p of participants) {
+    if (p.agentId !== null) byKey.set(p.agentId, p);
+    byKey.set(p.slug, p);
+  }
+
+  for (const member of members) {
+    const participant = byKey.get(member.participantKey);
+    if (!participant) {
       throw new InternalChatParticipantNotFoundError(member.participantKey);
     }
 
