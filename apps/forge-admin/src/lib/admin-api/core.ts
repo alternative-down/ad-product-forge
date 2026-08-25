@@ -1,4 +1,5 @@
 import { getStoredAdminSecret } from '@/lib/admin-secret';
+import { logger } from '@/lib/logger';
 
 const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
 const FORGE_ADMIN_HOSTNAME_PREFIX = 'forge-admin.';
@@ -51,7 +52,7 @@ async function extractErrorMessage(
     const payload = JSON.parse(rawText) as { error?: string };
     return payload.error ?? defaultMessage;
   } catch {
-    console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
+    logger.warn(`admin-api: ${path}: non-JSON error response (${response.status})`, rawText);
     return defaultMessage;
   }
 }
