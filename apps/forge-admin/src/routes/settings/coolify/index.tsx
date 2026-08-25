@@ -33,7 +33,7 @@ function SettingsCoolifyRoute() {
     (partial: Partial<CoolifyFormValues>) => {
       setLiveDraft((current) =>
         buildCoolifyFormValues(
-          current !== null ? { ...current, ...partial } : (partial as CoolifyFormValues),
+          current !== null ? { ...current, ...partial } : partial,
           integration,
         ),
       );
