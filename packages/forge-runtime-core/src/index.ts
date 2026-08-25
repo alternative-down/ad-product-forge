@@ -174,3 +174,4 @@ export {
   type WorkingMemoryRecord,
 } from './runtime-working-memory.js';
 export { logger } from './logger.js';
+export type { LogContext } from './logger.js';
