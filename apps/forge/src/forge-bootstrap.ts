@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { getDatabase } from './database/client';
 import { runMigrations } from './database/migrate';
+import { fixupMissingColumns } from './database/fixup-missing-columns';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
@@ -152,6 +153,19 @@ export async function createForgeBootstrap() {
     throw err;
   }
   bootstrapDebug('info', 'bootstrap: migrations complete');
+  bootstrapDebug('info', 'bootstrap: running fixup for missing columns');
+  try {
+    const fixupResult = await fixupMissingColumns(db);
+    if (fixupResult.ranFixup) {
+      consoleStartupLog('fixup applied', { reason: fixupResult.reason });
+    } else {
+      bootstrapDebug('info', 'bootstrap: fixup no-op (column present + journal synced)');
+    }
+  } catch (err) {
+    consoleStartupLog('FIXUP FAILED', { error: errorMsg(err) });
+    bootstrapDebug('error', 'bootstrap: fixupMissingColumns FAILED', { error: errorMsg(err) });
+    throw err;
+  }
   try {
     await prepareAgentEmbeddersForStartup({
       db,
