@@ -37,7 +37,6 @@
 
 import { sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '../admin/routes/debug';
 import * as schema from './schema';
 
