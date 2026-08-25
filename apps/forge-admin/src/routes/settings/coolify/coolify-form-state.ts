@@ -10,7 +10,7 @@ export interface CoolifyFormValues {
 }
 
 export function buildCoolifyFormValues(
-  live: CoolifyFormValues | null,
+  live: Partial<CoolifyFormValues> | null,
   saved: SystemIntegration | null,
 ): CoolifyFormValues {
   return {
