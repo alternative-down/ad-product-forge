@@ -11,6 +11,7 @@ import {
   type InternalChatExternalAccount,
   updateInternalChatAccount,
 } from '@/lib/admin-api/index';
+import { logger } from '@/lib/logger';
 import {
   HomeConversationsProvider,
   slugify,
@@ -76,7 +77,7 @@ function HomeConversationsLayoutRoute() {
           setContacts(contactItems);
         }
       } catch (error) {
-        console.error('[HomeConversations] Failed to load internal chat accounts:', error);
+        logger.error('HomeConversations: Failed to load internal chat accounts', error);
       }
     }
 
@@ -120,7 +121,7 @@ function HomeConversationsLayoutRoute() {
 
       setConversations(normalizeConversations(items));
     } catch (error) {
-      console.error('[HomeConversations] Failed to load conversations:', error);
+      logger.error('HomeConversations: Failed to load conversations', error);
       setConversations([]);
     }
   }, [selectedAccountId]);
