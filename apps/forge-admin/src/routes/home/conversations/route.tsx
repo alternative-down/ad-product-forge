@@ -15,18 +15,18 @@ import { logger } from '@/lib/logger';
 import {
   HomeConversationsProvider,
   slugify,
-  type AccountDialogMode,
-  type AccountForm,
   type ConversationForm,
   type LocalConversation,
 } from '@/components/home/conversations/context';
+import {
+  accountDialogReducer,
+  createInitialAccountDialogState,
+} from './account-dialog-state';
 import { AccountDialog } from '@/components/home/conversations/account-dialog';
 import { ConversationListPane } from '@/components/home/conversations/conversation-list-pane';
 import { NewConversationDialog } from '@/components/home/conversations/new-conversation-dialog';
 import {
-  createAccountForm,
   createConversationForm,
-  createEmptyAccountForm,
   normalizeAccount,
   normalizeConversations,
   SELECTED_ACCOUNT_STORAGE_KEY,
@@ -51,14 +51,14 @@ function HomeConversationsLayoutRoute() {
     return window.localStorage.getItem(SELECTED_ACCOUNT_STORAGE_KEY) ?? '';
   });
   const [conversations, setConversations] = useState<LocalConversation[]>([]);
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [accountDialogMode, setAccountDialogMode] = useState<AccountDialogMode>('create');
   const [conversationDialogOpen, setConversationDialogOpen] = useState(false);
-  const [accountFormError, setAccountFormError] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
-  const [accountForm, setAccountForm] = useState<AccountForm>({
-    ...createEmptyAccountForm(),
-  });
+  const [accountDialog, dispatchAccountDialog] = useReducer(
+    accountDialogReducer,
+    undefined,
+    createInitialAccountDialogState,
+  );
+  const { open: accountDialogOpen, mode: accountDialogMode, form: accountForm, formError: accountFormError } = accountDialog;
   const [conversationForm, setConversationForm] =
     useState<ConversationForm>(createConversationForm);
 
@@ -174,16 +174,10 @@ function HomeConversationsLayoutRoute() {
               return;
             }
 
-            setAccountDialogMode('edit');
-            setAccountFormError('');
-            setAccountForm(createAccountForm(selectedAccount));
-            setAccountDialogOpen(true);
+            dispatchAccountDialog({ type: 'open_edit', account: selectedAccount });
           }}
           onCreateAccount={() => {
-            setAccountDialogMode('create');
-            setAccountFormError('');
-            setAccountForm(createEmptyAccountForm());
-            setAccountDialogOpen(true);
+            dispatchAccountDialog({ type: 'open_create' });
           }}
           onCreateConversation={() => {
             setConversationForm(createConversationForm());
@@ -208,13 +202,20 @@ function HomeConversationsLayoutRoute() {
         saving={accountSaving}
         form={accountForm}
         errorMessage={accountFormError}
-        onOpenChange={setAccountDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            dispatchAccountDialog({ type: 'close' });
+          }
+        }}
         onFormChange={(nextForm) =>
-          setAccountForm((current) => ({
-            ...nextForm,
-            slug: nextForm.slugDirty ? nextForm.slug : slugify(nextForm.displayName),
-            accountId: nextForm.accountId ?? current.accountId,
-          }))
+          dispatchAccountDialog({
+            type: 'update_form',
+            updater: (current) => ({
+              ...nextForm,
+              slug: nextForm.slugDirty ? nextForm.slug : slugify(nextForm.displayName),
+              accountId: nextForm.accountId ?? current.accountId,
+            }),
+          })
         }
         onDelete={async () => {
           if (!accountForm.accountId) {
@@ -229,7 +230,7 @@ function HomeConversationsLayoutRoute() {
             current.filter((item) => item.accountId !== accountForm.accountId),
           );
           setSelectedAccountId('');
-          setAccountDialogOpen(false);
+          dispatchAccountDialog({ type: 'close' });
         }}
         onSubmit={() => {
           void (async () => {
@@ -239,7 +240,7 @@ function HomeConversationsLayoutRoute() {
               description: accountForm.description.trim() || undefined,
             };
 
-            setAccountFormError('');
+            dispatchAccountDialog({ type: 'set_error', error: '' });
             setAccountSaving(true);
 
             try {
@@ -276,12 +277,12 @@ function HomeConversationsLayoutRoute() {
                     );
               });
               setSelectedAccountId(normalizedAccount.accountId);
-              setAccountDialogOpen(false);
-              setAccountForm(createEmptyAccountForm());
+              dispatchAccountDialog({ type: 'close' });
             } catch (error) {
-              setAccountFormError(
-                error instanceof Error ? error.message : 'Não foi possível salvar a conta.',
-              );
+              dispatchAccountDialog({
+                type: 'set_error',
+                error: error instanceof Error ? error.message : 'Não foi possível salvar a conta.',
+              });
             } finally {
               setAccountSaving(false);
             }
