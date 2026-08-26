@@ -137,11 +137,13 @@ describe('runMigrations', () => {
     expect(runCalls).toContain('CREATE TABLE foo (id text);');
     expect(runCalls).toContain('CREATE INDEX foo_idx ON foo (id);');
     expect(runCalls).toContain('CREATE TABLE bar (id text);');
-    // Two __drizzle_migrations inserts (one per applied migration).
+    // 3 __drizzle_migrations inserts total (D56 Sprint 0):
+    //   - 1 from cleanupFixupJournalEntry (real hash for migration 0031)
+    //   - 2 from the migration loop (one per applied migration)
     const insertedMigrations = runCalls.filter((stmt) =>
       stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS')
     );
-    expect(insertedMigrations.length).toBe(2);
+    expect(insertedMigrations.length).toBe(3);
   });
 
   test('skips migrations whose folderMillis is already at or below the last applied row', async () => {

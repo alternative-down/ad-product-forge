@@ -152,6 +152,9 @@ export async function createForgeBootstrap() {
     throw err;
   }
   bootstrapDebug('info', 'bootstrap: migrations complete');
+  // D56 Sprint 0: cleanupFixupJournalEntry runs INSIDE runMigrations.
+  // No automatic fixup script. Manual fixup at POST /admin/system/fixup-columns.
+  // See #6722, #6725.
   try {
     await prepareAgentEmbeddersForStartup({
       db,

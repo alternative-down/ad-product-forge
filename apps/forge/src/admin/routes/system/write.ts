@@ -22,6 +22,7 @@ import {
 import { syncOauthSchema } from '../schemas/oauth';
 import { factoryResetSchema } from '../schemas/system';
 import { performFactoryReset } from '../../../system/reset';
+import { fixupColumnsHandler } from './fixup-columns';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { installGlobalSkillsFromZip, deleteGlobalSkill } from '../../../agents/global-skills';
@@ -379,6 +380,27 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const result = await performFactoryReset();
         return jsonResponse(result);
     }),
+  });
+
+  // ==========================================================================
+  // FIXUP COLUMNS (#6722 D56 Sprint 0 retry)
+  // ==========================================================================
+  //
+  // POST /admin/system/fixup-columns
+  //   Auth: admin (server-level path-prefix middleware enforces x-forge-admin-api-key)
+  //   Body: none
+  //   Effect: idempotent full fixup of system_settings.created_at drift:
+  //           - DELETE wrong journal hash (66ab7767...)
+  //           - ALTER TABLE ADD COLUMN if missing (idempotent: skipped if present)
+  //           - INSERT correct journal hash for migration 0031
+  //           See also: cleanupFixupJournalEntry() in apps/forge/src/database/migrate.ts
+  //           (runs on every startup, BEFORE the migration loop, to defuse the
+  //           time-bomb from PR #6723).
+  // ==========================================================================
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/system/fixup-columns',
+    handler: safeRoute('/admin/system/fixup-columns', async () => await fixupColumnsHandler(db)),
   });
 
 }

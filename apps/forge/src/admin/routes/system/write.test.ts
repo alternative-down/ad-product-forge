@@ -235,10 +235,10 @@ describe('registerSystemWriteRoutes', () => {
   }
 
   describe('route registration', () => {
-    it('registers all 12 routes (11 existing + 1 factory reset #5679)', () => {
+    it('registers all 13 routes (11 existing + 1 factory reset #5679 + 1 fixup-columns #6722)', () => {
       registerSystemWriteRoutes(buildInput());
-      expect(mockServer.registerRoute).toHaveBeenCalledTimes(13);
-      expect(mockServer.routes).toHaveLength(13);
+      expect(mockServer.registerRoute).toHaveBeenCalledTimes(14);
+      expect(mockServer.routes).toHaveLength(14);
     });
 
     it('registers settings/upsert as POST', () => {
