@@ -28,6 +28,7 @@ vi.mock('node:path', () => ({
   },
 }));
 
+import { __resetEnvCache } from '../config/env';
 import { getAppDatabasePath } from './config';
 
 describe('getAppDatabasePath', () => {
@@ -35,6 +36,10 @@ describe('getAppDatabasePath', () => {
     mkdirCalls.length = 0;
     vi.clearAllMocks();
     delete process.env.FORGE_DATA_PATH;
+    // Reset env cache so the next parseEnv() call re-reads process.env.
+    // parseEnv() in config/env is memoized; tests that mutate FORGE_DATA_PATH
+    // must invalidate the cache before exercising the SUT.
+    __resetEnvCache();
   });
 
   test('defaults to ./data relative to cwd', () => {
@@ -46,12 +51,14 @@ describe('getAppDatabasePath', () => {
 
   test('uses FORGE_DATA_PATH env var when set', () => {
     process.env.FORGE_DATA_PATH = '/custom/path';
+    __resetEnvCache();
     const result = getAppDatabasePath();
     expect(result).toMatch(/\/custom\/path\/agents\.db$/);
   });
 
   test('resolves absolute path from FORGE_DATA_PATH env var', () => {
     process.env.FORGE_DATA_PATH = '/absolute/custom/data';
+    __resetEnvCache();
     const result = getAppDatabasePath();
     expect(result).toBe('/absolute/custom/data/agents.db');
   });
@@ -70,6 +77,7 @@ describe('getAppDatabasePath', () => {
 
   test('handles relative path in FORGE_DATA_PATH', () => {
     process.env.FORGE_DATA_PATH = 'relative/path';
+    __resetEnvCache();
     const result = getAppDatabasePath();
     expect(result).toMatch(/\/relative\/path\/agents\.db$/);
   });

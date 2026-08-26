@@ -9,11 +9,15 @@ import fs from 'node:fs';
 import 'node:process';
 import path from 'node:path';
 
+import { parseEnv } from '../config/env';
+
 /**
- * Path da aplicação: agents.db dentro do diretório de dados do Forge
+ * Path da aplicação: agents.db dentro do diretório de dados do Forge.
+ * Resolved via the centralized env schema (FORGE_DATA_PATH, defaults to './data').
+ * Closes #6705.
  */
 export function getAppDatabasePath(): string {
-  const dataPath = process.env.FORGE_DATA_PATH ?? './data';
+  const dataPath = parseEnv().FORGE_DATA_PATH;
   const resolvedDataPath = path.resolve(process.cwd(), dataPath);
 
   fs.mkdirSync(resolvedDataPath, { recursive: true });

@@ -61,10 +61,11 @@ vi.mock('./agents/agent-contract-store', () => ({
 
 // SUT imports must come AFTER the vi.mock calls.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { __resetEnvCache } from './config/env';
 import { createForgeBootstrap } from './forge-bootstrap';
 
 // ─── Helper: stub the env to a known state ─────────────────────────────────────
-function setEnv(overrides: Record<string, string | undefined> = {}): void {
+function setEnv(overrides: Record<string, string | undefined> = {}): void { __resetEnvCache();
   const base: Record<string, string | undefined> = {
     FORGE_DATA_PATH: './data',
     WORKSPACE_BASE_PATH: './workspaces',

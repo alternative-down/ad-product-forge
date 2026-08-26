@@ -1,6 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { MiniMaxApiKeyNotSetError, MiniMaxIntegrationNotConfiguredError } from './errors';
 import { MINIMAX_BASE_URL } from './constants';
+import { parseEnv } from '../config/env';
 
 export interface MiniMaxConfig {
   apiKey: string;
@@ -547,7 +548,7 @@ export class MiniMaxClient {
 }
 
 export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
-  const key = (apiKey ?? '') !== '' ? apiKey : process.env.MINIMAX_API_KEY;
+  const key = (apiKey ?? '') !== '' ? apiKey : parseEnv().MINIMAX_API_KEY;
 
   if (key === undefined || key === '') {
     minimaxDebug(

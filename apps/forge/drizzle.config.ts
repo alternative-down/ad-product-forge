@@ -1,11 +1,15 @@
 import type { Config } from 'drizzle-kit';
 
+import { parseEnv } from './src/config/env';
+
+const env = parseEnv();
+
 export default {
   schema: ['./src/database/schema.ts', './src/finance/payment-schema.ts'],
   out: './migrations',
   dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL || 'file:./agents.db',
-    authToken: process.env.DATABASE_AUTH_TOKEN,
+    url: env.DATABASE_URL,
+    authToken: env.DATABASE_AUTH_TOKEN,
   },
 } satisfies Config;

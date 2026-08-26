@@ -1,5 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 
+import { parseEnv } from '../config/env';
+
 import crypto from 'node:crypto';
 
 import {
@@ -11,7 +13,7 @@ import {
 /**
  * Environment-level cache — set once on module load.
  */
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
+const ENCRYPTION_KEY = parseEnv().ENCRYPTION_KEY ?? null;
 
 /**
  * Throws if ENCRYPTION_KEY is absent or not 32 bytes base64.

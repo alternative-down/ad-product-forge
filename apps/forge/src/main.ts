@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
 import { createForgeBootstrap } from './forge-bootstrap';
+import { parseEnv } from './config/env';
 
 // Global exception handlers — must be registered before any async work
 process.on('unhandledRejection', (reason) => {
@@ -14,10 +15,11 @@ export async function main() {
   console.log('[forge-startup] main: creating bootstrap');
   const bootstrap = await createForgeBootstrap();
 
+  const env = parseEnv();
   console.log(`[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
   await bootstrap.httpServer.start();
-  console.log(`[forge-startup] main: HTTP server listening on port ${process.env.FORGE_HTTP_PORT}`);
-  mainDebug('info', `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}`);
+  console.log(`[forge-startup] main: HTTP server listening on port ${env.FORGE_HTTP_PORT}`);
+  mainDebug('info', `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}`);
 
   mainDebug('info', `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`);
   if (bootstrap.allowInsecureLocal) {

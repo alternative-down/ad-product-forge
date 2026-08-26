@@ -3,6 +3,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
+import { parseEnv } from '../config/env';
 import { resetAgentEmbedderIndexes } from '../agents/agent-embedder-maintenance';
 
 const inputSchema = z.object({
@@ -12,7 +13,7 @@ const inputSchema = z.object({
 
 async function main() {
   const input = inputSchema.parse({
-    workspaceBasePath: process.env.WORKSPACE_BASE_PATH ?? './workspaces',
+    workspaceBasePath: parseEnv().WORKSPACE_BASE_PATH,
     agentIds: process.argv.slice(2),
   });
 
