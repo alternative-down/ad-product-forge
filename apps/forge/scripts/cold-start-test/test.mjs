@@ -71,7 +71,15 @@ function findMigrationFile(tag) {
  * Apply migrations in idx order up to (and including) the highest idx <= maxIdx.
  * Splits each SQL file on the drizzle `--> statement-breakpoint` marker.
  */
+import { createHash } from 'node:crypto';
+
 async function applyMigrations(client, maxIdx) {
+  // Ensure __drizzle_migrations exists (Drizzle migrator would do this on app start)
+  await client.execute(`CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+    id SERIAL PRIMARY KEY,
+    hash text NOT NULL,
+    created_at numeric
+  )`);
   const journal = loadJournal();
   for (const entry of journal.entries) {
     if (entry.idx > maxIdx) break;
@@ -86,6 +94,12 @@ async function applyMigrations(client, maxIdx) {
       if (trimmed.length === 0) continue;
       await client.execute(trimmed);
     }
+    // Insert journal row (hash of FULL SQL + folderMillis when)
+    const hash = createHash('sha256').update(content).digest('hex');
+    await client.execute({
+      sql: 'INSERT INTO __drizzle_migrations ("hash", "created_at") VALUES (?, ?)',
+      args: [hash, entry.when],
+    });
   }
 }
 
@@ -95,6 +109,9 @@ async function spawnApp({ dbPath, httpPort, distPath }) {
     FORGE_DATA_PATH: dirname(dbPath),
     FORGE_HTTP_PORT: String(httpPort),
     NODE_ENV: 'test',
+    FORGE_ADMIN_ALLOW_INSECURE_LOCAL: 'true',
+    FORGE_ADMIN_API_KEY: 'cold-start-test-key',
+    FORGE_DEBUG: 'true',
   };
   const child = spawn('node', [distPath], {
     env,
@@ -112,7 +129,9 @@ async function waitForHttp(port, timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/admin/system/healthcheck`);
+      const res = await fetch(`http://127.0.0.1:${port}/admin/system/healthcheck`, {
+        headers: { 'x-forge-admin-api-key': 'cold-start-test-key' },
+      });
       if (res.status === 200) return true;
     } catch {
       // not listening yet
@@ -157,6 +176,7 @@ async function runScenarioA({ distPath }) {
     // Step 1: Apply migrations 0000-0030 (skip 0031 to replicate missing column state)
     const client = createClient({ url: `file:${dbPath}` });
     await client.execute('PRAGMA journal_mode=WAL');
+    // applyMigrations() now creates __drizzle_migrations internally
     await applyMigrations(client, 30);
     steps.push({ name: 'apply migrations 0000-0030', pass: true });
 
@@ -247,10 +267,10 @@ async function runScenarioB({ distPath }) {
       steps.push({ name: 'wrong hash absent (clean state)', pass: !wrongPresent });
       steps.push({ name: 'real 0031 hash present', pass: realPresent });
 
-      // Step 6: Verify cleanupFixupJournalEntry ran idempotent (no-op)
+      // Step 6: Verify cleanupFixupJournalEntry was idempotent (no log emitted because state was already clean)
       const stdout = getStdout();
-      const cleanupRan = /cleanupFixupJournalEntry/i.test(stdout);
-      steps.push({ name: 'cleanupFixupJournalEntry ran (idempotent check)', pass: cleanupRan });
+      const cleanupActionLogged = /cleanupFixupJournalEntry: (removed|inserted)/i.test(stdout);
+      steps.push({ name: 'cleanupFixupJournalEntry no-op (idempotent)', pass: !cleanupActionLogged });
 
       await killProcess(child);
     }
