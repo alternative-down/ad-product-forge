@@ -1,4 +1,5 @@
 /* eslint-disable reexport-check/no-unnecessary-reexports, @typescript-eslint/strict-boolean-expressions */
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
 export {
   LibsqlConversationStore,
@@ -13,6 +14,7 @@ export {
   type TodoItemStatus,
   type UpdateTodosInput,
 } from './libsql-todo-store.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { RuntimePlanMode } from './runtime-plan-mode.js';
 export type { AgentConfig } from './agent-config.js';
 export {
@@ -35,6 +37,7 @@ export {
   createTextStepContextEntry,
 } from 'agent-runtime-core/integrations';
 export type { ConversationStore, RuntimeActionDefinition } from 'agent-runtime-core/integrations';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { ForgeMcpToolset, type ForgeMcpToolsetOptions } from './mcp.js';
 export {
   createForgeAgentRuntime,
@@ -63,9 +66,13 @@ export {
   type ForgeStepUsageRecord,
   type ForgeUsageSink,
 } from './usage.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { CLAUDE_MAX_MODELS, type ClaudeMaxModelId } from './model-ids.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { OPENAI_CODEX_MODELS, type OpenAICodexModelId } from './model-ids.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { claudeCodeProvider } from './claude-max.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export { openaiCodexProvider } from './openai-codex.js';
 export {
   createOAuthGateway,
@@ -141,9 +148,11 @@ export type {
   CommunicationProviderMessage,
 } from './communication.js';
 export { createCommunicationModule } from './communication-module.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
 export type { CommunicationContactsStore } from './communication-module.js';
 export {
   LibsqlCommunicationContactsStore,
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
   type LibsqlCommunicationContactsStoreOptions,
 } from './libsql-communication-contacts-store.js';
 export {

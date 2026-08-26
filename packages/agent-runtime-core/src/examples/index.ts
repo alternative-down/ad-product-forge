@@ -1,3 +1,15 @@
+/**
+ * @internal
+ *
+ * Workspace-internal examples entry for `agent-runtime-core`.
+ * All 39 exports here are dead from both `apps/` AND from any test
+ * in the workspace (verified D57 2026-08-26). Kept for downstream
+ * consumers and documentation purposes.
+ *
+ * See `docs/dead-exports-audit-d57-2026-08-26.md` for the full audit.
+ * See issue #6703 for the original sweep findings.
+ */
+
 export {
   createAutonomousAgentApplication,
   type AutonomousAgentApplicationOptions,
