@@ -2,7 +2,7 @@ import http, { type IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from "zod";
-import { verifyAdminApiKey } from './admin-auth';
+import { ADMIN_API_KEY_HEADER, verifyAdminApiKey } from './admin-auth';
 import { parseEnv } from '../config/env';
 
 const MAX_BODY_BYTES = parseEnv().FORGE_HTTP_MAX_BODY_BYTES;
@@ -49,7 +49,7 @@ export function buildRouteKey(method: string, path: string): RouteKey {
 }
 
 const CORS_METHODS = 'GET,POST,PATCH,DELETE,OPTIONS';
-const CORS_ALLOWED_HEADERS = 'content-type,x-forge-admin-api-key';
+const CORS_ALLOWED_HEADERS = `content-type,${ADMIN_API_KEY_HEADER}`;
 
 function buildCorsHeaders(
   origin: string | null,
