@@ -1,3 +1,18 @@
+/**
+ * @internal
+ *
+ * Workspace-internal entry for the `agent-runtime-core` package.
+ * All 60 exports here are consumed by `packages/forge-runtime-core/`
+ * but NOT by any `apps/` in this monorepo (verified D57 2026-08-26).
+ *
+ * See `docs/dead-exports-audit-d57-2026-08-26.md` for the full audit.
+ * See issue #6703 for the original sweep findings.
+ *
+ * This file is marked `@internal` at file level — all exports are
+ * considered workspace-internal until downstream consumer evidence
+ * proves otherwise.
+ */
+
 export { AgentRuntime, type AgentRuntimeOptions } from './core/runtime.js';
 export { AsyncEventChannel, type AsyncEventListener } from './core/async-event-channel.js';
 export {
