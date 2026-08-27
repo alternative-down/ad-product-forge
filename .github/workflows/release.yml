@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Changesets (version PR + tags/releases)
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: npm run version-packages
           publish: npx changeset tag
