@@ -34,7 +34,7 @@ export type AdminAuthError = {
   body: { error: string };
 };
 
-const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
+export const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
 
 export function verifyAdminApiKey(
   headers: IncomingHttpHeaders,
