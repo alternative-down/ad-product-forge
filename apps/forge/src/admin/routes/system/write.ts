@@ -85,8 +85,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/settings/upsert',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/settings/upsert', async (request) => {
         const body = adminRoutesParseJsonBody(request.bodyText, upsertSystemSettingsSchema);
         const result = await systemSettings.upsertSettings(
           body as Parameters<typeof systemSettings.upsertSettings>[0],
@@ -99,18 +98,14 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         }
 
         return jsonResponse(result);
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/settings/upsert' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/mcp/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/mcp/upsert',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/mcp/upsert', async (request) => {
         const body = adminRoutesParseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
         const serverId = body.serverId ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -177,18 +172,14 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           createdAt: server?.createdAt ?? Date.now(),
           updatedAt: server?.updatedAt ?? Date.now(),
         });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/mcp/upsert' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/mcp/delete
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/system/mcp/delete',
-    handler: async (request) => {
-      try {
+    handler: safeRoute('/admin/system/mcp/delete', async (request) => {
         const body = adminRoutesParseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
         const linkedConfigs = await db.query.agentMcpConfigs.findMany({
           where: eq(agentMcpConfigs.serverId, body.serverId),
@@ -204,10 +195,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
 
         return jsonResponse({ success: true, serverId: body.serverId });
-      } catch (err) {
-        return adminRouteError(err, { path: '/admin/system/mcp/delete' });
-        }
-    },
+    }),
   });
 
   // POST /admin/system/skills/upload
