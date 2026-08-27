@@ -12,13 +12,12 @@ process.on('uncaughtException', (error) => {
 });
 
 export async function main() {
-  console.log('[forge-startup] main: creating bootstrap');
+  mainDebug('info', '[forge-startup] main: creating bootstrap');
   const bootstrap = await createForgeBootstrap();
-
   const env = parseEnv();
-  console.log(`[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
+  mainDebug('info', `[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
   await bootstrap.httpServer.start();
-  console.log(`[forge-startup] main: HTTP server listening on port ${env.FORGE_HTTP_PORT}`);
+  mainDebug('info', `[forge-startup] main: HTTP server listening on port ${env.FORGE_HTTP_PORT}`);
   mainDebug('info', `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}`);
 
   mainDebug('info', `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`);

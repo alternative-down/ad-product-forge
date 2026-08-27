@@ -27,6 +27,7 @@
  */
 
 import type { IncomingHttpHeaders } from 'node:http';
+import { forgeDebug } from '@forge-runtime/core';
 
 export type AdminAuthError = {
   status: 401 | 503;
@@ -50,10 +51,11 @@ export function verifyAdminApiKey(
         },
       };
     }
-    console.warn(
-      '[forge-admin-auth] WARNING: admin route served without authentication.' +
-        ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
-    );
+    forgeDebug({
+      scope: 'forge-admin-auth',
+      level: 'warn',
+      message: 'admin route served without authentication. Set FORGE_ADMIN_API_KEY to protect admin routes.',
+    });
     return null;
   }
 
