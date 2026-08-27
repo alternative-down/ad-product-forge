@@ -22,6 +22,10 @@ import {
   accountDialogReducer,
   createInitialAccountDialogState,
 } from './account-dialog-state';
+import {
+  createInitialDataState,
+  dataReducer,
+} from './data-state';
 import { AccountDialog } from '@/components/home/conversations/account-dialog';
 import { ConversationListPane } from '@/components/home/conversations/conversation-list-pane';
 import { NewConversationDialog } from '@/components/home/conversations/new-conversation-dialog';
@@ -41,16 +45,31 @@ function HomeConversationsLayoutRoute() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [accounts, setAccounts] = useState<InternalChatExternalAccount[]>([]);
-  const [contacts, setContacts] = useState<InternalChatContact[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState(() => {
-    if (typeof window === 'undefined') {
-      return '';
+  const [data, dispatchData] = useReducer(
+    dataReducer,
+    undefined,
+    () => createInitialDataState(SELECTED_ACCOUNT_STORAGE_KEY),
+  );
+  const { accounts, contacts, conversations, selectedAccountId } = data;
+  const setAccounts = (next: InternalChatExternalAccount[] | ((prev: InternalChatExternalAccount[]) => InternalChatExternalAccount[])) => {
+    const value = typeof next === 'function' ? next(data.accounts) : next;
+    dispatchData({ type: 'set_accounts', accounts: value });
+  };
+  const setContacts = (next: InternalChatContact[] | ((prev: InternalChatContact[]) => InternalChatContact[])) => {
+    const value = typeof next === 'function' ? next(data.contacts) : next;
+    dispatchData({ type: 'set_contacts', contacts: value });
+  };
+  const setConversations = (next: LocalConversation[] | ((prev: LocalConversation[]) => LocalConversation[])) => {
+    const value = typeof next === 'function' ? next(data.conversations) : next;
+    dispatchData({ type: 'set_conversations', conversations: value });
+  };
+  const setSelectedAccountId = (value: string) => {
+    if (value === '') {
+      dispatchData({ type: 'clear_selected_account' });
+    } else {
+      dispatchData({ type: 'select_account', accountId: value });
     }
-
-    return window.localStorage.getItem(SELECTED_ACCOUNT_STORAGE_KEY) ?? '';
-  });
-  const [conversations, setConversations] = useState<LocalConversation[]>([]);
+  };
   const [conversationDialogOpen, setConversationDialogOpen] = useState(false);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountDialog, dispatchAccountDialog] = useReducer(
@@ -223,13 +242,7 @@ function HomeConversationsLayoutRoute() {
           }
 
           await deleteInternalChatAccount(accountForm.accountId);
-          setAccounts((current) =>
-            current.filter((item) => item.accountId !== accountForm.accountId),
-          );
-          setContacts((current) =>
-            current.filter((item) => item.accountId !== accountForm.accountId),
-          );
-          setSelectedAccountId('');
+          dispatchData({ type: 'remove_account_by_id', accountId: accountForm.accountId });
           dispatchAccountDialog({ type: 'close' });
         }}
         onSubmit={() => {
@@ -253,29 +266,7 @@ function HomeConversationsLayoutRoute() {
 
               const normalizedAccount = normalizeAccount(account);
 
-              setAccounts((current) =>
-                accountForm.accountId
-                  ? current.map((item) =>
-                      item.accountId === normalizedAccount.accountId ? normalizedAccount : item,
-                    )
-                  : [...current, normalizedAccount].sort((left, right) =>
-                      left.displayName.localeCompare(right.displayName),
-                    ),
-              );
-              setContacts((current) => {
-                const nextContact = {
-                  ...normalizedAccount,
-                  isAgent: false,
-                };
-
-                return accountForm.accountId
-                  ? current.map((item) =>
-                      item.accountId === nextContact.accountId ? nextContact : item,
-                    )
-                  : [...current, nextContact].sort((left, right) =>
-                      left.displayName.localeCompare(right.displayName),
-                    );
-              });
+              dispatchData({ type: 'add_or_replace_account', account: normalizedAccount });
               setSelectedAccountId(normalizedAccount.accountId);
               dispatchAccountDialog({ type: 'close' });
             } catch (error) {
