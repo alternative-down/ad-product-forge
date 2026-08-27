@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { __resetEnvCache } from '../config/env';
 import net from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -1226,7 +1227,7 @@ describe('createForgeHttpServer', () => {
     const originalGitSha = process.env.FORGE_GIT_SHA;
     const originalDeployTime = process.env.FORGE_DEPLOY_TIME;
 
-    beforeEach(() => {
+    beforeEach(() => { __resetEnvCache();
       process.env.FORGE_GIT_SHA = 'abc123def456';
       process.env.FORGE_DEPLOY_TIME = '2026-08-08T10:00:00.000Z';
     });
@@ -1310,7 +1311,7 @@ describe('createForgeHttpServer', () => {
       }
     });
 
-    it('falls back to "unknown" when FORGE_GIT_SHA is unset', async () => {
+    it('falls back to "local-dev" when FORGE_GIT_SHA is unset', async () => {
       delete process.env.FORGE_GIT_SHA;
       const srv = createForgeHttpServer({ port: 0 });
       await srv.start();
@@ -1318,8 +1319,8 @@ describe('createForgeHttpServer', () => {
         const res = await makeRawRequest('GET', '/version', undefined, undefined, srv.port as number);
         expect(res.status).toBe(200);
         const body = JSON.parse(res.body);
-        expect(body.sha).toBe('unknown');
-        expect(res.headers['x-forge-version']).toBe('unknown');
+        expect(body.sha).toBe('local-dev');
+        expect(res.headers['x-forge-version']).toBe('local-dev');
       } finally {
         await srv.stop();
       }

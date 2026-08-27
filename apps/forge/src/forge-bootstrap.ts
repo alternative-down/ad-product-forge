@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { ForgeAdminApiKeyNotConfiguredError } from './forge-bootstrap.errors';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './agents/error-formatting';
-import { z } from 'zod';
+import { parseEnv } from './config/env';
 
 import { getDatabase } from './database/client';
 import { runMigrations } from './database/migrate';
@@ -47,15 +47,6 @@ function consoleStartupLog(message: string, context?: Record<string, unknown>): 
   }
 }
 
-const envSchema = z.object({
-  FORGE_DATA_PATH: z.string().default('./data'),
-  WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
-  FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
-  FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
-  FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
-  FORGE_ADMIN_ALLOW_INSECURE_LOCAL: z.enum(['true', '1']).optional(),
-  FORGE_ADMIN_ALLOWED_ORIGINS: z.string().optional(),
-});
 
 /**
  * Decode a Base64-encoded admin API key.
@@ -107,7 +98,7 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
 export async function createForgeBootstrap() {
   consoleStartupLog('starting');
   bootstrapDebug('info', 'bootstrap: starting');
-  const env = envSchema.parse(process.env);
+  const env = parseEnv();
   consoleStartupLog('env parsed', {
     port: env.FORGE_HTTP_PORT,
     dataPath: env.FORGE_DATA_PATH,

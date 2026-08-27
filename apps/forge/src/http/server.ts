@@ -3,10 +3,9 @@ import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from "zod";
 import { verifyAdminApiKey } from './admin-auth';
+import { parseEnv } from '../config/env';
 
-const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
-const MAX_BODY_BYTES =
-  parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
+const MAX_BODY_BYTES = parseEnv().FORGE_HTTP_MAX_BODY_BYTES;
 
 type BodyResult = { isRejected: true } | { isRejected: false; buffer: Buffer };
 
@@ -99,15 +98,13 @@ function sendError(
 
 /**
  * Returns the version header value for x-forge-version. Reads from
- * FORGE_GIT_SHA env var (set at deploy time) and falls back to "unknown".
+ * FORGE_GIT_SHA env var (set at deploy time) and falls back to "local-dev".
  * This enables deploy verification from outside without SSH access.
  * See L#NN-Deploy-Verification-No-SSH v1.
  */
 function getVersionHeader(): string {
-  return process.env.FORGE_GIT_SHA ?? 'unknown';
+  return parseEnv().FORGE_GIT_SHA;
 }
-
-
 export type CreateForgeHttpServerConfig = {
   port: number;
   /** Admin API key. When absent and allowInsecureLocal is false, /admin/* routes
@@ -258,8 +255,8 @@ export function createForgeHttpServer(
       });
       res.end(
         JSON.stringify({
-          sha: process.env.FORGE_GIT_SHA ?? 'unknown',
-          deployTime: process.env.FORGE_DEPLOY_TIME ?? 'unknown',
+          sha: parseEnv().FORGE_GIT_SHA,
+          deployTime: parseEnv().FORGE_DEPLOY_TIME,
           container: 'forge',
         }),
       );
