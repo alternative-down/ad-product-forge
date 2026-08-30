@@ -126,9 +126,9 @@ const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 1,
   },
   {
-    // D42 cycle 26 scheduleHelpersDebug: module-local helper pattern
-    // expected=1 because helper body has 1 inline forgeDebug call
-    path: 'schedules/notifications/wake-content.ts',
+    // D42 cycle 26 scheduleHelpersDebug: separate-file helper pattern (D46 cycle 13 LHS PERMANENT N=5)
+    // expected=1 because helper body has 1 inline forgeDebug call in wake-content-debug.ts
+    path: 'schedules/notifications/wake-content-debug.ts',
     expectedOneObjectArgCalls: 1,
   },
   {

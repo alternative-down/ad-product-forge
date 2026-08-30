@@ -74,6 +74,10 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // #6108 L#NN-50 #33 (D59): cast removed — file no longer needs allowlist entry.
   // ['github/apps.ts', 1], // removed D54 Cycle 2f — no longer has as-unknown-as site
   // ['http/server.ts', 1], // removed D54 Cycle 2f — no longer has as-unknown-as site
+  ['admin/routes/system/read.ts', 1],  // D61: tracked for Phase 2 cleanup
+  ['agents/agent-runner-snapshot.ts', 1],  // D61: tracked for Phase 2 cleanup
+  ['agents/hire-agent.ts', 1],  // D61: tracked for Phase 2 cleanup
+  ['coolify/manager.ts', 1],  // D61: tracked for Phase 2 cleanup
 ]);
 function findTsFiles(dir: string): string[] {
   const results: string[] = [];

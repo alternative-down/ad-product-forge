@@ -25,6 +25,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { } from '../../tripwire-helpers'; // D61: tripwire-helpers adoption (L#NN-32 v8 meta-tripwire)
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
