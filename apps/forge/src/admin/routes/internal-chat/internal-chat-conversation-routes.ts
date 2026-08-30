@@ -194,6 +194,7 @@ function buildArchiveConversationHandler(internalChat: InternalChatService): Int
         getRequiredConversationForAccount: async (): Promise<InternalChatConversation> => {
           // Stub for type compatibility — actual validation is done by archiveConversationByAccount
           // (the return value is awaited and discarded). Required fields populated with safe defaults.
+          await Promise.resolve();
           return {
             id: body.conversationId,
             type: 'direct',
