@@ -11,7 +11,6 @@ import {
   internalChatMessages,
 } from '../database/schema';
 import type {
-  InternalChatGroupMember,
   InternalChatGroupMemberMetadata,
   InternalChatGroupParticipant,
 } from './internal-chat-helpers';
