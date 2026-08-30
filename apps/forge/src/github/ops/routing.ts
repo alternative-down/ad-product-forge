@@ -233,9 +233,9 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     // Fix uses the existing verifyWebhookSignature helper (HMAC-SHA256 + timingSafeEqual),
     // matching the pattern used by stripe.ts and asaas.ts payment providers.
     const credentials = await ctx.getCredentials(agentId);
-    if (!credentials || typeof credentials.webhookSecret !== "string" || credentials.webhookSecret.length === 0) {
-      routingOpsDebug('warn', 'No credentials configured for webhook', { agentId });
-      return html(500, '<h1>Agent credentials not configured</h1>');
+    if (!credentials || credentials.status === 'pending') {
+      routingOpsDebug('warn', 'No webhook-capable credentials for agent', { agentId });
+      return html(500, '<h1>Agent credentials not configured for webhooks</h1>');
     }
     const signature = ctx.getHeader(headers, 'x-hub-signature-256');
     if (!verifyWebhookSignature(bodyText, signature, credentials.webhookSecret)) {
