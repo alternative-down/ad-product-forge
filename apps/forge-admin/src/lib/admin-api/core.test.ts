@@ -115,10 +115,10 @@ describe('request', () => {
     await expect(request('/admin/agents')).rejects.toThrow('Não foi possível concluir a operação.');
     // core.ts calls console.warn with 2 args: a formatted string and the raw body.
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[admin-api]');
-    expect(warnSpy.mock.calls[0][0]).toContain('/admin/agents');
-    expect(warnSpy.mock.calls[0][0]).toContain('500');
-    expect(warnSpy.mock.calls[0][1]).toBe('<html>Internal Server Error</html>');
+    expect(warnSpy.mock.calls[0][1]).toContain('admin-api:');
+    expect(warnSpy.mock.calls[0][1]).toContain('/admin/agents');
+    expect(warnSpy.mock.calls[0][1]).toContain('500');
+    expect(warnSpy.mock.calls[0][2]).toBe('<html>Internal Server Error</html>');
   });
 
   it('logs non-JSON response body on 4xx', async () => {
@@ -127,10 +127,10 @@ describe('request', () => {
 
     await expect(request('/admin/agents')).rejects.toThrow('Não foi possível concluir a operação.');
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[admin-api]');
-    expect(warnSpy.mock.calls[0][0]).toContain('/admin/agents');
-    expect(warnSpy.mock.calls[0][0]).toContain('403');
-    expect(warnSpy.mock.calls[0][1]).toBe('Forbidden – access denied');
+    expect(warnSpy.mock.calls[0][1]).toContain('admin-api:');
+    expect(warnSpy.mock.calls[0][1]).toContain('/admin/agents');
+    expect(warnSpy.mock.calls[0][1]).toContain('403');
+    expect(warnSpy.mock.calls[0][2]).toBe('Forbidden – access denied');
   });
 });
 
@@ -181,10 +181,10 @@ describe('requestBlob', () => {
       'Não foi possível concluir a operação.',
     );
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[admin-api]');
-    expect(warnSpy.mock.calls[0][0]).toContain('/export/agents');
-    expect(warnSpy.mock.calls[0][0]).toContain('500');
-    expect(warnSpy.mock.calls[0][1]).toBe('Internal error');
+    expect(warnSpy.mock.calls[0][1]).toContain('admin-api:');
+    expect(warnSpy.mock.calls[0][1]).toContain('/export/agents');
+    expect(warnSpy.mock.calls[0][1]).toContain('500');
+    expect(warnSpy.mock.calls[0][2]).toBe('Internal error');
   });
 });
 
@@ -226,9 +226,9 @@ describe('validateAdminSecret', () => {
     expect(result.valid).toBe(false);
     expect(result.message).toBe('Não foi possível validar a chave.');
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('[admin-api]');
-    expect(warnSpy.mock.calls[0][0]).toContain('/admin/overview');
-    expect(warnSpy.mock.calls[0][1]).toBe('Unauthorized');
+    expect(warnSpy.mock.calls[0][1]).toContain('admin-api:');
+    expect(warnSpy.mock.calls[0][1]).toContain('/admin/overview');
+    expect(warnSpy.mock.calls[0][2]).toBe('Unauthorized');
   });
 
   it('returns valid: false with default message for 500 response', async () => {

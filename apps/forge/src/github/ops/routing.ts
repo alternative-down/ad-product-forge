@@ -3,6 +3,7 @@
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
 import { errorMsg } from '../../agents/error-formatting';
+import { verifyWebhookSignature } from '../../webhooks/handler-helpers';
 
 import type { HttpRequest } from '../../http/server';
 import { App, Octokit } from 'octokit';
@@ -226,6 +227,21 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     headers: Record<string, string | undefined>,
     bodyText: string,
   ) {
+    // SECURITY (Closes #6760 P0): verify x-hub-signature-256 BEFORE any processing.
+    // The previous implementation accepted unauthenticated POSTs from anyone reaching
+    // the public webhook URL, allowing forged events to trigger agent wake notifications.
+    // Fix uses the existing verifyWebhookSignature helper (HMAC-SHA256 + timingSafeEqual),
+    // matching the pattern used by stripe.ts and asaas.ts payment providers.
+    const credentials = await ctx.getCredentials(agentId);
+    if (!credentials || credentials.status === 'pending') {
+      routingOpsDebug('warn', 'No webhook-capable credentials for agent', { agentId });
+      return html(500, '<h1>Agent credentials not configured for webhooks</h1>');
+    }
+    const signature = ctx.getHeader(headers, 'x-hub-signature-256');
+    if (!verifyWebhookSignature(bodyText, signature, credentials.webhookSecret)) {
+      routingOpsDebug('warn', 'Invalid webhook signature', { agentId });
+      return html(401, '<h1>Invalid signature</h1>');
+    }
     const event = ctx.getHeader(headers, 'x-github-event');
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
     if (event === null || event === undefined || delivery === null || delivery === undefined)

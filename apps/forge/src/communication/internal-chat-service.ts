@@ -337,7 +337,7 @@ export function createInternalChatService(db: Database) {
       readMessageAttachment: async (messageId: string, attachmentName: string) => {
         const file = await readMessageAttachment(messageId, attachmentName);
         if (file == null) throw new AttachmentNotFoundError(attachmentName);
-        return { stream: file.data, contentType: file.contentType };
+        return { name: attachmentName, data: file.data, contentType: file.contentType };
       },
     },
   });

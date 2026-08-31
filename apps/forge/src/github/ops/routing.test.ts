@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createHmac } from 'node:crypto';
 import type { OpsContext } from './context';
+
+// Test helper: sign a body with the GitHub webhook secret.
+// Returns the value to use for the x-hub-signature-256 header.
+const TEST_WEBHOOK_SECRET = 'test-webhook-secret-for-unit-tests-only';
+function signWebhookBody(body: string, secret: string = TEST_WEBHOOK_SECRET): string {
+  return 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
+}
 
 const makeCtx = (): any => ({
   config: {
@@ -341,8 +349,11 @@ describe('createRoutingOps — handleWebhook', () => {
     ctx.getHeader = vi
       .fn()
       .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
     const routing = createRoutingOps(ctx);
-    const result = await routing.handleWebhook('agent-1', {}, '{}');
+    const body = '{}';
+    const sig = signWebhookBody(body);
+    const result = await routing.handleWebhook('agent-1', { 'x-hub-signature-256': sig }, body);
     expect(result.status).toBe(400);
     expect(result.body).toContain('Missing webhook headers');
   });
@@ -354,11 +365,14 @@ describe('createRoutingOps — handleWebhook', () => {
       .fn()
       .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
     const routing = createRoutingOps(ctx);
+    const body = 'not json';
+    const sig = signWebhookBody(body);
     const result = await routing.handleWebhook(
       'agent-1',
-      { 'x-github-event': 'push', 'x-github-delivery': 'abc' },
-      'not json',
+      { 'x-github-event': 'push', 'x-github-delivery': 'abc', 'x-hub-signature-256': sig },
+      body,
     );
     expect(result.status).toBe(400);
     expect(result.body).toContain('Invalid JSON');
@@ -372,11 +386,14 @@ describe('createRoutingOps — handleWebhook', () => {
       .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(true);
     ctx.notifications = { createNotification: vi.fn() } as unknown as OpsContext['notifications'];
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
     const routing = createRoutingOps(ctx);
+    const body = '{"ref":"refs/heads/main"}';
+    const sig = signWebhookBody(body);
     const result = await routing.handleWebhook(
       'agent-1',
-      { 'x-github-event': 'push', 'x-github-delivery': 'xyz' },
-      '{"ref":"refs/heads/main"}',
+      { 'x-github-event': 'push', 'x-github-delivery': 'xyz', 'x-hub-signature-256': sig },
+      body,
     );
     expect(result.status).toBe(200);
     expect(result.body).toBe('ok');
@@ -394,11 +411,14 @@ describe('createRoutingOps — handleWebhook', () => {
       createNotification: notifyMock,
     } as unknown as OpsContext['notifications'];
     ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
     const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
     const result = await routing.handleWebhook(
       'agent-1',
-      { 'x-github-event': 'issues', 'x-github-delivery': 'def456' },
-      '{"action":"opened","issue":{"id":1}}',
+      { 'x-github-event': 'issues', 'x-github-delivery': 'def456', 'x-hub-signature-256': sig },
+      body,
     );
     expect(result.status).toBe(202);
     expect(result.body).toBe('Accepted');
