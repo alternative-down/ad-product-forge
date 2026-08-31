@@ -34,35 +34,27 @@ import { sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '../admin/routes/debug';
+import { findMigrationsFolder } from "./find-migrations-folder";
 
 const WRONG_HASH = '66ab776775372a9034465edf2720f560ebfb8343';
 const TARGET_TABLE = 'system_settings';
 const TARGET_COLUMN = 'created_at';
 const MIGRATION_0031_TAG = '0031_add_created_at_to_system_settings';
 
-/**
- * Walk up from start directory until migrations/meta/_journal.json is found.
- * Same logic as migrate.ts findMigrationsFolder — duplicated here to avoid
- * pulling the migrator module's side effects (read-only, no migration run).
- */
-function findMigrationsFolder(start: string): string {
-  let dir = start;
-  for (let i = 0; i < 5; i++) {
-    const candidate = join(dir, 'migrations', 'meta', '_journal.json');
-    if (existsSync(candidate)) return join(dir, 'migrations');
-    dir = dirname(dir);
-  }
-  throw new Error(`migrations folder not found walking up from ${start}`);
-}
+
+
 
 /**
  * Compute the Drizzle hash for a migration tag. Mirrors the algorithm in
  * drizzle-orm/migrator.mjs: SHA-256 of the FULL SQL file content (with
  * comments and trailing newlines preserved). NOT a cleaning + truncation.
+ *
+ * Restored after extraction of findMigrationsFolder to shared module
+ * (issue #6761 DRY consolidation).
  */
 function computeMigrationHash(migrationsFolder: string, tag: string): string {
   const sqlPath = join(migrationsFolder, `${tag}.sql`);

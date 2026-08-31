@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 // L#NN-16 fix #5687: process.cwd() removed, use findMigrationsFolder
 import { join } from 'node:path';
-import { findMigrationsFolder } from '../database/migrate';
+import { findMigrationsFolder } from '../database/find-migrations-folder';
 
 import { sql } from 'drizzle-orm';
 
