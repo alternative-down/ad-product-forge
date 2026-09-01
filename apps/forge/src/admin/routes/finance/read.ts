@@ -9,13 +9,9 @@ import type { Database } from '../../../database/index';
 import { jsonResponse } from '../index';
 import { labeledRoute } from '../agents/admin-route-error-helper';
 
-type CompanyCash = {
-  getOverview: () => Promise<unknown>;
-  listContractSummaries: () => Promise<unknown>;
-};
-
 type FinanceReadInput = {
-  companyCash: CompanyCash;
+  getFinance: () => Promise<unknown>;
+  getFinanceContracts: () => Promise<unknown>;
 };
 
 /**
@@ -37,7 +33,7 @@ export function registerFinanceReadRoutes(
     method: 'GET',
     path: '/admin/finance',
     handler: labeledRoute('Finance overview route', async () => {
-      return jsonResponse(await finance?.companyCash.getOverview());
+      return jsonResponse(await finance?.getFinance());
     
 }),
   });
@@ -47,7 +43,7 @@ export function registerFinanceReadRoutes(
     method: 'GET',
     path: '/admin/finance/contracts',
     handler: labeledRoute('Finance contracts route', async () => {
-      return jsonResponse(await finance?.companyCash.listContractSummaries());
+      return jsonResponse(await finance?.getFinanceContracts());
     
 }),
   });

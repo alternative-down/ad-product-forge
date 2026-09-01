@@ -32,8 +32,8 @@ function FinanceIndexRoute() {
     queryFn: getFinanceContracts,
   });
   const movements = useMemo(
-    () => financeQuery.data?.movements.items ?? [],
-    [financeQuery.data?.movements.items],
+    () => financeQuery.data?.movements?.items ?? [],
+    [financeQuery.data?.movements?.items],
   );
   const contracts = contractsQuery.data?.items ?? [];
   const scheduledOutUsd =

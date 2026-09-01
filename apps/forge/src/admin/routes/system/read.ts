@@ -75,7 +75,21 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     method: 'GET',
     path: '/admin/system/integrations',
     handler: safeRoute('/admin/system/integrations', async () => {
-      return jsonResponse(await integrations.listIntegrations());
+      const [summaries, migadu, coolify, github, minimax] = await Promise.all([
+        integrations.listIntegrations(),
+        integrations.getMigaduConfig(),
+        integrations.getCoolifyConfig(),
+        integrations.getGitHubConfig(),
+        integrations.getMinimaxConfig(),
+      ]);
+      const configByProvider = { migadu, coolify, github, minimax };
+
+      return jsonResponse(
+        summaries.map((integration) => ({
+          ...integration,
+          config: configByProvider[integration.providerType],
+        })),
+      );
     }),
   });
 

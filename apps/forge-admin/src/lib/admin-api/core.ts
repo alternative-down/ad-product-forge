@@ -2,7 +2,6 @@ import { getStoredAdminSecret } from '@/lib/admin-secret';
 import { logger } from '@/lib/logger';
 
 const ADMIN_API_KEY_HEADER = 'x-forge-admin-api-key';
-const FORGE_ADMIN_HOSTNAME_PREFIX = 'forge-admin.';
 
 function stripTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -13,20 +12,6 @@ function getConfiguredApiBaseUrl() {
 
   if (configuredBaseUrl) {
     return stripTrailingSlash(configuredBaseUrl);
-  }
-
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  const { protocol, hostname, port } = window.location;
-
-  if (hostname.startsWith(FORGE_ADMIN_HOSTNAME_PREFIX)) {
-    return `${protocol}//forge.${hostname.slice(FORGE_ADMIN_HOSTNAME_PREFIX.length)}`;
-  }
-
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:${port || '3011'}`;
   }
 
   return '';
