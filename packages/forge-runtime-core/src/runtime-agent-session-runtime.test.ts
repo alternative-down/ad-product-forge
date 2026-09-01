@@ -39,6 +39,7 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
     onStepComplete: vi.fn(),
     onGenerationStart: vi.fn(),
   });
+  const consolidateOperationalMemory = vi.fn().mockResolvedValue(undefined);
   const readOperationalMemoryState = vi.fn().mockResolvedValue({ observationMessages: [] });
   const toolToRuntimeAction = vi.fn().mockImplementation((tool: { id: string }) => ({
     name: tool.id,
@@ -66,6 +67,7 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
       conversationMemory,
       createForgeConversationMemory,
       createOperationalMemoryConversationObserver,
+      consolidateOperationalMemory,
       readOperationalMemoryState,
       toolToRuntimeAction,
     },
@@ -84,6 +86,10 @@ vi.mock('./memory.js', () => ({
 vi.mock('./operational-memory-conversation-observer.js', () => ({
   createOperationalMemoryConversationObserver:
     sharedMocks.createOperationalMemoryConversationObserver,
+}));
+
+vi.mock('./operational-memory-consolidation.js', () => ({
+  consolidateOperationalMemory: sharedMocks.consolidateOperationalMemory,
 }));
 
 vi.mock('./tools.js', () => ({

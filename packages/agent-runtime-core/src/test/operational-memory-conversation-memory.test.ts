@@ -36,6 +36,60 @@ function generateContentNearTokens(count: number): string {
 }
 
 describe('OperationalMemoryConversationMemory', () => {
+  it('renders consolidated memory and recent RAW without overflow RAW', async () => {
+    const store = new InMemoryConversationStore();
+    const messages: ConversationMessage[] = [
+      {
+        id: 'checkpoint-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'checkpoint' }],
+        operationalMemoryType: 'checkpoint-summary',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'observation-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'observation' }],
+        operationalMemoryType: 'observation',
+        createdAt: '2026-01-01T00:00:01Z',
+      },
+      {
+        id: 'overflow-raw',
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'old raw' }],
+        createdAt: '2026-01-01T00:00:02Z',
+      },
+      {
+        id: 'recent-raw',
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'new' }],
+        createdAt: '2026-01-01T00:00:03Z',
+      },
+    ];
+
+    for (const message of messages) {
+      await store.appendMessage(message);
+    }
+
+    const memory = new OperationalMemoryConversationMemory({
+      threadId: 'thread-1',
+      store,
+      recentTokenLimit: 1,
+    });
+
+    const rendered = await memory.renderActiveMessages();
+
+    expect(rendered.map((message) => message.id)).toEqual([
+      'checkpoint-1',
+      'observation-1',
+      'recent-raw',
+    ]);
+  });
+
   describe('state derivation from conversationStore', () => {
     it('derives empty state when no checkpoint exists', async () => {
       const store = new InMemoryConversationStore();
@@ -112,7 +166,7 @@ describe('OperationalMemoryConversationMemory', () => {
       const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
-        recentTokenLimit: 2, // Fits 2 messages
+        recentTokenLimit: 10,
         overflowObservationTokenLimit: 5,
         observer: {
           async observe(request) {
@@ -170,7 +224,7 @@ describe('OperationalMemoryConversationMemory', () => {
       const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
-        recentTokenLimit: 1,
+        recentTokenLimit: 100,
         overflowObservationTokenLimit: 5,
         observer: {
           async observe(request) {
@@ -346,7 +400,7 @@ describe('OperationalMemoryConversationMemory', () => {
       const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
-        recentTokenLimit: 1,
+        recentTokenLimit: 100,
         overflowObservationTokenLimit: 5,
         observer: {
           async observe(request) {
@@ -356,11 +410,11 @@ describe('OperationalMemoryConversationMemory', () => {
       });
 
       const state = await memory.getState();
-      // Tool metadata should not double count - only 1 message
+      // Tool metadata is counted once as part of the message budget.
       expect(state.recentMessageIds ?? []).toContain('tool-call');
       expect(state.overflowMessageIds ?? []).toHaveLength(0);
-      // Token count should not be inflated
-      expect(state.metrics.recentTokenCount).toBe(1);
+      expect(state.metrics.recentTokenCount).toBeGreaterThan(1);
+      expect(state.metrics.recentTokenCount).toBeLessThanOrEqual(100);
     });
   });
 

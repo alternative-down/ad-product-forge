@@ -2,6 +2,7 @@ import { logger } from './logger.js';
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
 import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
+import { consolidateOperationalMemory } from './operational-memory-consolidation.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
@@ -167,6 +168,17 @@ export async function createRuntimeAgentSessionRuntime(
         });
         return;
       }
+
+      await consolidateOperationalMemory({
+        threadId: input.threadId,
+        resourceId: input.resourceId,
+        store: input.conversationStore,
+        limits: checkpointedOmLimits,
+        model: input.checkpointedOmModel ?? input.model,
+        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+        onCheckpointAdvanced: input.onCheckpointAdvanced,
+        diagnostics: options?.diagnostics,
+      });
 
       options?.diagnostics?.record({
         at: Date.now(),

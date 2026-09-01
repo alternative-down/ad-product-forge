@@ -351,16 +351,7 @@ export class LibsqlConversationStore
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
-        with recursive checkpoint as (
-          select rowid as checkpoint_rowid
-          from ${escapeIdentifier(this.messageTableName)}
-          where thread_id = ?
-            and om_type = 'checkpoint-summary'
-            and replaced_by_message_id is null
-          order by created_at desc, rowid desc
-          limit 1
-        ),
-        seed as (
+        with recursive seed as (
           select
             rowid,
             id,
@@ -375,10 +366,6 @@ export class LibsqlConversationStore
             created_at
           from ${escapeIdentifier(this.messageTableName)}
           where thread_id = ?
-            and (
-              (select checkpoint_rowid from checkpoint) is null
-              or rowid >= (select checkpoint_rowid from checkpoint)
-            )
         ),
         replacement_chain(root_id, current_id) as (
           select id, id
@@ -425,10 +412,10 @@ export class LibsqlConversationStore
           on messages.id = deduped_terminal_messages.terminal_id
         order by deduped_terminal_messages.source_rowid asc
       `,
-      args: [input.threadId, input.threadId],
+      args: [input.threadId],
     });
 
-    return result.rows.map((row) => ({
+    const messages: ConversationMessage[] = result.rows.map((row) => ({
       id: String(row.id),
       threadId: String(row.thread_id),
       role: row.role as ConversationMessage['role'],
@@ -449,6 +436,20 @@ export class LibsqlConversationStore
             : undefined,
       createdAt: String(row.created_at),
     }));
+    const checkpoint = [...messages]
+      .reverse()
+      .find((message) => message.operationalMemoryType === 'checkpoint-summary');
+
+    if (!checkpoint) return messages;
+
+    const checkpointIndex = messages.findIndex((message) => message.id === checkpoint.id);
+
+    return messages.filter(
+      (message, index) =>
+        message.id === checkpoint.id ||
+        index > checkpointIndex ||
+        message.createdAt > checkpoint.createdAt,
+    );
   }
 
   async clearThread(threadId: string): Promise<void> {

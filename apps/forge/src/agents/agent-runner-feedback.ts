@@ -25,6 +25,8 @@ import {
 import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 import type { GenerateTimeoutHandle } from './agent-runner-generate-timeout';
 
+const MAX_STUCK_NOTIFICATION_SIGNATURE_LENGTH = 12_000;
+
 export interface BuildIterationFeedbackDeps {
   suppressNoToolCallReminderForRun: boolean;
   setSuppressNoToolCallReminder: (val: boolean) => void;
@@ -120,7 +122,7 @@ export async function buildIterationFeedback(
           'The agent repeated the same tool/text pattern and was forced to stop.',
           '',
           'Signature:',
-          loopSignature,
+          loopSignature.slice(0, MAX_STUCK_NOTIFICATION_SIGNATURE_LENGTH),
         ].join('\n'),
       }),
       30_000,
@@ -157,21 +159,10 @@ export async function buildIterationFeedback(
     feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
   }
 
-  const recallStep = buildRecallStepFromIteration({
-    text: iteration.text,
-    toolCalls: iteration.toolCalls,
-    toolResults: iteration.toolResults.map((tr) => ({
-      name: tr.name,
-      result: tr.error as unknown,
-    })),
-  });
   const recallFeedback =
-    (await currentRuntime.longTermMemoryRecall?.recallFromStep({
-      step: recallStep,
-      steps: [recallStep],
-      threadId: currentRuntime.mastraId,
-      resourceId: currentRuntime.mastraId,
-    })) ?? null;
+    iteration.iteration.iteration === 1
+      ? await recallLongTermMemory(iteration, currentRuntime)
+      : null;
   if (recallFeedback !== null && recallFeedback !== undefined && recallFeedback.trim()) {
     feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
   }
@@ -181,4 +172,27 @@ export async function buildIterationFeedback(
   }
 
   return undefined;
+}
+
+async function recallLongTermMemory(
+  iteration: BuildIterationFeedbackInput,
+  currentRuntime: BuildIterationFeedbackDeps['currentRuntime'],
+) {
+  const recallStep = buildRecallStepFromIteration({
+    text: iteration.text,
+    toolCalls: iteration.toolCalls,
+    toolResults: iteration.toolResults.map((toolResult) => ({
+      name: toolResult.name,
+      result: toolResult.error as unknown,
+    })),
+  });
+
+  return (
+    (await currentRuntime.longTermMemoryRecall?.recallFromStep({
+      step: recallStep,
+      steps: [recallStep],
+      threadId: currentRuntime.mastraId,
+      resourceId: currentRuntime.mastraId,
+    })) ?? null
+  );
 }

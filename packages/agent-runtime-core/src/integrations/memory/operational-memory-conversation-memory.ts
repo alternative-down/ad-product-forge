@@ -185,33 +185,11 @@ export class OperationalMemoryConversationMemory {
     const visibleMessages = await this.store.listOperationalMemoryMessages({
       threadId: this.threadId,
     });
-    const visibleMessageMap = new Map(visibleMessages.map((message) => [message.id, message]));
+    const recentMessageIds = new Set(state.recentMessageIds);
 
-    // Find the latest checkpoint-summary from the SQL results.
-    // After the seed-boundary fix, the SQL correctly returns checkpoint-summary
-    // messages as the terminals of replacement chains. Prepend the latest one
-    // to the visible output so the agent retains its consolidated context.
-    const checkpointSummary =
-      visibleMessages
-        .slice()
-        .reverse()
-        .find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
-
-    const terminalMessages = [...state.overflowMessageIds, ...state.recentMessageIds]
-      .map((messageId) => visibleMessageMap.get(messageId))
-      .filter((message): message is ConversationMessage => Boolean(message));
-
-    if (!checkpointSummary) {
-      return terminalMessages;
-    }
-
-    // Deduplicate: only prepend if not already in the terminal list.
-    const hasCheckpoint = terminalMessages.some((m) => m.id === checkpointSummary.id);
-    if (hasCheckpoint) {
-      return terminalMessages;
-    }
-
-    return [checkpointSummary, ...terminalMessages];
+    return visibleMessages.filter(
+      (message) => message.operationalMemoryType || recentMessageIds.has(message.id),
+    );
   }
 
   async getState(): Promise<OperationalMemoryConversationState> {
@@ -354,8 +332,10 @@ export class OperationalMemoryConversationMemory {
   }
 }
 
-function estimateMessageUnits(_message: ConversationMessage) {
-  return 1;
+function estimateMessageUnits(message: ConversationMessage) {
+  const text = getMessageBudgetText(message);
+
+  return text ? Math.max(1, countTokens(text)) : 1;
 }
 
 function getMessageText(message: ConversationMessage) {
@@ -369,7 +349,7 @@ function getMessageText(message: ConversationMessage) {
     .join('\n');
 }
 
-function _getMessageBudgetText(message: ConversationMessage) {
+function getMessageBudgetText(message: ConversationMessage) {
   return [
     getMessageText(message),
     ...getToolInvocationBudgetTexts(message),

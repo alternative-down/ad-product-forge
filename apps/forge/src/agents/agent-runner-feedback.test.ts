@@ -36,7 +36,7 @@ function makeArg(overrides?: {
 }) {
   return {
     iteration: {
-      iteration: overrides?.innerIteration ?? 0,
+      iteration: overrides?.innerIteration ?? 1,
       finishReason: overrides?.innerFinishReason ?? 'stop',
     },
     finishReason: 'stop',
@@ -112,6 +112,19 @@ describe('stuck loop detection', () => {
         content: expect.stringContaining('Stuck loop detected.'),
       }),
     );
+  });
+
+  it('bounds a large loop signature before creating the notification', async () => {
+    const deps = makeDeps({
+      loopDetector: makeLoopDetector(true, 7),
+      loopSignature: 'x'.repeat(20_000),
+      notifications: { createNotification } as any,
+    });
+
+    await buildIterationFeedback(makeArg() as any, deps);
+
+    const notification = createNotification.mock.calls[0]?.[0] as { content: string };
+    expect(notification.content.length).toBeLessThan(16_384);
   });
 
   it('sets next step to null', async () => {
@@ -311,6 +324,23 @@ describe('LTM recall', () => {
     const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toBeUndefined();
+  });
+
+  it('recalls only on the first iteration of a run', async () => {
+    const recallFromStep = vi.fn().mockResolvedValue(null);
+    const deps = makeDeps({
+      suppressNoToolCallReminderForRun: true,
+      currentRuntime: {
+        mastraId: 'thread-1',
+        longTermMemoryRecall: { recallFromStep },
+      },
+    });
+
+    await buildIterationFeedback(makeArg({ innerIteration: 1 }) as any, deps);
+    await buildIterationFeedback(makeArg({ innerIteration: 2 }) as any, deps);
+    await buildIterationFeedback(makeArg({ innerIteration: 3 }) as any, deps);
+
+    expect(recallFromStep).toHaveBeenCalledTimes(1);
   });
 });
 

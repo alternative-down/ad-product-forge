@@ -74,9 +74,7 @@ export function createForgeConversationMemory(
   return {
     memory,
     async captureRunHistoryWindow(options) {
-      const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
-        threadId: input.threadId,
-      });
+      const activeMessages = await memory.renderActiveMessages();
       const visibleHistory =
         options.lastMessages > 0 ? activeMessages.slice(-options.lastMessages) : [];
 
@@ -86,18 +84,13 @@ export function createForgeConversationMemory(
       };
     },
     async renderModelMessages(options) {
-      const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
-        threadId: input.threadId,
-      });
+      const activeMessages = await memory.renderActiveMessages();
       const historyWindow = options?.historyWindow;
       const scopedMessages = historyWindow
         ? selectRunScopedMessages(activeMessages, historyWindow)
         : activeMessages;
 
-      return [
-        createAutonomousContextMessage(),
-        ...createConversationModelMessages(scopedMessages),
-      ];
+      return [createAutonomousContextMessage(), ...createConversationModelMessages(scopedMessages)];
     },
     plugins: [
       createAssistantConversationPersistencePlugin({
