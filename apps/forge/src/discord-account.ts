@@ -64,6 +64,42 @@ export function createDiscordProvider(config: {
   let disposed = false;
   const pendingTypingTimers = new Set<NodeJS.Timeout>();
 
+  client.on(Events.Error, (error) => {
+    discordAccountDebug('error', 'Discord client error', { error: errorMsg(error) });
+  });
+  client.on(Events.Warn, (warning) => {
+    discordAccountDebug('warn', 'Discord client warning', { warning });
+  });
+  client.on(Events.Invalidated, () => {
+    discordAccountDebug('error', 'Discord session invalidated');
+  });
+  client.on(Events.ShardDisconnect, (event, shardId) => {
+    discordAccountDebug('warn', 'Discord shard disconnected', {
+      shardId,
+      code: event.code,
+      reason: event.reason,
+      clean: event.wasClean,
+    });
+  });
+  client.on(Events.ShardError, (error, shardId) => {
+    discordAccountDebug('error', 'Discord shard error', {
+      shardId,
+      error: errorMsg(error),
+    });
+  });
+  client.on(Events.ShardReconnecting, (shardId) => {
+    discordAccountDebug('warn', 'Discord shard reconnecting', { shardId });
+  });
+  client.on(Events.ShardReady, (shardId, unavailableGuilds) => {
+    discordAccountDebug('info', 'Discord shard ready', {
+      shardId,
+      unavailableGuildCount: unavailableGuilds?.size ?? 0,
+    });
+  });
+  client.on(Events.ShardResume, (shardId, replayedEvents) => {
+    discordAccountDebug('info', 'Discord shard resumed', { shardId, replayedEvents });
+  });
+
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
       const visibleMessages = filterRecentByTtl(messages, OUTBOUND_ECHO_TTL_MS, now);

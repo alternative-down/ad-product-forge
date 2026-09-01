@@ -1,5 +1,3 @@
-import { errorMsg } from '../error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
 import { createClient } from '@libsql/client';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -40,13 +38,11 @@ async function pathExists(targetPath: string) {
     await fs.stat(targetPath);
     return true;
   } catch (error) {
-    forgeDebug({
-      scope: 'agent-runtime-platform',
-      level: 'warn',
-      message: 'Path does not exist',
-      context: { error: errorMsg(error), path: targetPath },
-    });
-    return false;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false;
+    }
+
+    throw error;
   }
 }
 
@@ -131,6 +127,7 @@ export async function createAgentRuntimePlatform(input: {
   await fs.mkdir(agentWorkspacePath, { recursive: true });
   await fs.mkdir(agentWorkspaceDir, { recursive: true });
   await moveLegacyMemoryDirectory(legacyAgentMemoryPath, agentMemoryPath);
+  await fs.mkdir(agentMemoryPath, { recursive: true });
 
   const client = createClient({ url: `file:${agentDatabasePath}` });
   client.execute('PRAGMA foreign_keys = ON');
