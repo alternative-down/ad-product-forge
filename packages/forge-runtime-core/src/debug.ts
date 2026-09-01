@@ -48,8 +48,10 @@ export function forgeDebug(
   // 1-object-arg form (L#NN-50 #18 v10)
   const opts = scopeOrOpts;
   const prefix = `[forge:${opts.scope}:${opts.level}]`;
-  if (opts.context && hasKeys(opts.context as Record<string, unknown>)) {
-    console.log(prefix, opts.message, opts.context);
+  const { scope: _scope, level: _level, message: _message, context, ...fields } = opts;
+  const logData = { ...fields, ...context };
+  if (hasKeys(logData)) {
+    console.log(prefix, opts.message, logData);
     return;
   }
   console.log(prefix, opts.message);

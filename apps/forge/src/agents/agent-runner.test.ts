@@ -31,6 +31,8 @@ type MockMessageManager = {
   flushPendingRunMessages: any;
   updateFlushSettings: any;
   resetFlushedRunEventKeys: any;
+  rememberFlushedRunEventKey: any;
+  shouldIncludePendingRunEventInFlush: any;
   getPendingCount: any;
 };
 
@@ -85,11 +87,12 @@ function resetAllMocks() {
     mockMessageManager.flushPendingRunMessages.mockReset();
     mockMessageManager.updateFlushSettings.mockReset();
     mockMessageManager.resetFlushedRunEventKeys.mockReset();
+    mockMessageManager.rememberFlushedRunEventKey.mockReset();
+    mockMessageManager.shouldIncludePendingRunEventInFlush.mockReset().mockReturnValue(true);
     mockMessageManager.getPendingCount.mockReset().mockReturnValue(0);
   }
   if (mockStore) {
     mockStore.getExecutionState.mockReset().mockResolvedValue('idle');
-    mockStore.setExecutionState.mockReset().mockResolvedValue(undefined);
     mockStore.setExecutionState.mockReset().mockResolvedValue(undefined);
     mockStore.getRunnableContract.mockReset().mockResolvedValue(null);
     mockStore.getRunLastMessages.mockReset().mockResolvedValue([]);
@@ -232,6 +235,8 @@ vi.mock('./agent-runner-messages', () => ({
       flushPendingRunMessages: vi.fn().mockResolvedValue(undefined),
       updateFlushSettings: vi.fn().mockResolvedValue(undefined),
       resetFlushedRunEventKeys: vi.fn(),
+      rememberFlushedRunEventKey: vi.fn(),
+      shouldIncludePendingRunEventInFlush: vi.fn().mockReturnValue(true),
       getPendingCount: vi.fn().mockReturnValue(0),
     };
     return mockMessageManager;
@@ -412,6 +417,28 @@ describe('createAgentRunner', () => {
       expect(mockScheduler.startHealthcheck).toHaveBeenCalled();
     });
 
+    it('start() recovers a persisted running state as idle without generating', async () => {
+      const { createAgentRunner } = await import('./agent-runner.js');
+      const runner = createAgentRunner(makeDb(), makeRuntime());
+      mockStore.getExecutionState.mockResolvedValue('running');
+
+      await runner.start();
+
+      expect(mockStore.setExecutionState).toHaveBeenCalledWith('test-agent-1', 'idle');
+      expect(mockStore.getRunnableContract).not.toHaveBeenCalled();
+    });
+
+    it('start() recovers a persisted absent state as idle without generating', async () => {
+      const { createAgentRunner } = await import('./agent-runner.js');
+      const runner = createAgentRunner(makeDb(), makeRuntime());
+      mockStore.getExecutionState.mockResolvedValue('absent');
+
+      await runner.start();
+
+      expect(mockStore.setExecutionState).toHaveBeenCalledWith('test-agent-1', 'idle');
+      expect(mockStore.getRunnableContract).not.toHaveBeenCalled();
+    });
+
     it('stop() calls scheduler.clearTimer()', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       const runner = createAgentRunner(makeDb(), makeRuntime());
@@ -543,13 +570,6 @@ describe('createAgentRunner', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       await runner.forceIdle();
       expect(mockLoopDetector.reset).toHaveBeenCalled();
-    });
-
-    it('forceIdle calls messageManager resetFlushedRunEventKeys', async () => {
-      const { createAgentRunner } = await import('./agent-runner.js');
-      const runner = createAgentRunner(makeDb(), makeRuntime());
-      await runner.forceIdle();
-      expect(mockMessageManager.resetFlushedRunEventKeys).toHaveBeenCalled();
     });
 
     it('forceIdle calls scheduler.setInstant(false)', async () => {
