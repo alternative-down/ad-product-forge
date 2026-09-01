@@ -236,7 +236,7 @@ describe('createRoutingOps — handleRegisterPage', () => {
 });
 
 describe('createRoutingOps — handleSetupCallback', () => {
-  it('returns 404 when credentials not in created status', async () => {
+  it('returns 404 when no credentials exist', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
     ctx.getCredentials = vi.fn().mockResolvedValue(null);
@@ -244,6 +244,70 @@ describe('createRoutingOps — handleSetupCallback', () => {
     const result = await routing.handleSetupCallback('agent-1', '12345');
     expect(result.status).toBe(404);
     expect(result.body).toContain('not ready');
+  });
+
+  it('returns 404 when credentials are in pending state (manifest callback not complete)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeCtx();
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'pending',
+      state: 'state-xyz',
+      appName: 'pending-app',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      createdAt: 1,
+    });
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleSetupCallback('agent-1', '12345');
+    expect(result.status).toBe(404);
+    expect(result.body).toContain('not complete');
+  });
+
+  it('accepts reinstall for active credentials with different installationId (cascade recovery)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'active',
+      appId: 999,
+      privateKey: 'pk',
+      webhookSecret: 'ws',
+      installationId: 11111, // OLD installation (dead)
+      appSlug: 'my-app',
+      appName: 'My App',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      createdAt: 1,
+    });
+    ctx.saveCredentials = saveMock;
+    ctx.getGlobalConfig = vi
+      .fn()
+      .mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubInstallWakeContent = vi.fn().mockReturnValue('wake-content');
+    const routing = createRoutingOps(ctx);
+    const result = await routing.handleSetupCallback('agent-1', '22222');
+    expect(result.status).toBe(200);
+    expect(saveMock).toHaveBeenCalledWith(
+      'agent-1',
+      expect.objectContaining({ status: 'active', installationId: 22222 }),
+    );
+    expect(notifyMock).toHaveBeenCalled();
   });
 
   it('returns 400 when installation_id missing', async () => {
