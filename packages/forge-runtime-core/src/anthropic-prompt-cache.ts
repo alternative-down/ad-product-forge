@@ -12,27 +12,23 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
       return params;
     }
 
-    // Cache ALL messages except the last one (latest step output)
-    const lastIndex = prompt.length - 1;
+    // One breakpoint on the stable prefix caches every preceding message.
+    // Marking every message exceeds Anthropic's four-breakpoint limit and makes
+    // request preparation scale with the complete conversation history.
+    const stablePrefixIndex = prompt.length - 2;
+    const stablePrefixMessage = prompt[stablePrefixIndex] as {
+      providerOptions?: Record<string, Record<string, unknown>>;
+    };
 
-    for (let index = 0; index < lastIndex; index++) {
-      const message = prompt[index] as {
-        content?: unknown;
-        providerOptions?: Record<string, Record<string, unknown>>;
-        role?: string;
-      };
-
-      // Skip if already has cache control
-      if (message.providerOptions?.anthropic?.cacheControl) {
-        continue;
-      }
-
-      // Always add providerOptions at message level
-      prompt[index] = {
-        ...message,
+    if (!stablePrefixMessage.providerOptions?.anthropic?.cacheControl) {
+      prompt[stablePrefixIndex] = {
+        ...stablePrefixMessage,
         providerOptions: {
-          ...message.providerOptions,
-          anthropic: { ...message.providerOptions?.anthropic, cacheControl },
+          ...stablePrefixMessage.providerOptions,
+          anthropic: {
+            ...stablePrefixMessage.providerOptions?.anthropic,
+            cacheControl,
+          },
         },
       };
     }

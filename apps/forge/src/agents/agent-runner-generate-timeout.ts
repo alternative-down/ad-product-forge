@@ -5,9 +5,9 @@
 // iteration progress, and clears on completion.
 // =============================================================================
 
-import { TWO_MINUTES_MS } from './time-constants';
+import { FIVE_MINUTES_MS } from './time-constants';
 
-const GENERATE_TIMEOUT_MS = TWO_MINUTES_MS;
+const GENERATE_TIMEOUT_MS = FIVE_MINUTES_MS;
 
 export interface GenerateTimeoutHandle {
   promise: Promise<never>;
@@ -17,7 +17,7 @@ export interface GenerateTimeoutHandle {
 
 /**
  * Creates a timeout guard that will abort the controller if no iteration
- * progress is made within GENERATE_TIMEOUT_MS (2 minutes).
+ * progress is made within GENERATE_TIMEOUT_MS (5 minutes).
  * Returns a handle with the timeout promise and a settable timeoutId.
  */
 export function createGenerateTimeoutGuard(controller: AbortController): GenerateTimeoutHandle {

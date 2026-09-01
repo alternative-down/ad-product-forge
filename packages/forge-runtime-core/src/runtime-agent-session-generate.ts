@@ -144,8 +144,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
     try {
       logStage('model request starting', {
         iterationNumber,
-        messageCount: messages.length,
-        actionCount: runtimeActions.length,
+        ...requestDiagnostics,
       });
       result = await generateText({
         model: input.runtime.model,

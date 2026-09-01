@@ -6,7 +6,7 @@ import {
   type GenerateTimeoutHandle,
 } from './agent-runner-generate-timeout';
 
-const GENERATE_TIMEOUT_MS = 2 * 60 * 1000;
+const GENERATE_TIMEOUT_MS = 5 * 60 * 1000;
 
 describe('agent-runner-generate-timeout', () => {
   beforeEach(() => {
