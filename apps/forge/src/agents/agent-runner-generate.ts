@@ -100,6 +100,23 @@ export function isAbortedError(err: unknown): boolean {
 
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = FIVE_SECONDS_MS;
+const EVENT_LOOP_PROBE_INTERVAL_MS = 5_000;
+const EVENT_LOOP_LAG_WARNING_MS = 2_000;
+
+function startGenerateEventLoopProbe(runtimeId: string) {
+  let expectedAt = Date.now() + EVENT_LOOP_PROBE_INTERVAL_MS;
+  const interval = setInterval(() => {
+    const now = Date.now();
+    const lagMs = now - expectedAt;
+    expectedAt = now + EVENT_LOOP_PROBE_INTERVAL_MS;
+
+    if (lagMs >= EVENT_LOOP_LAG_WARNING_MS) {
+      agentRunnerDebug('warn', 'event loop blocked during generate', { runtimeId, lagMs });
+    }
+  }, EVENT_LOOP_PROBE_INTERVAL_MS);
+
+  return () => clearInterval(interval);
+}
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 export const RUNNER_AWAIT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 export const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
@@ -262,6 +279,7 @@ export async function generateWithTimeoutRetries(
         heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         externalMb: Math.round(memoryUsage.external / 1024 / 1024),
       });
+      const stopEventLoopProbe = startGenerateEventLoopProbe(deps.runtime.id);
 
       const result = await Promise.race<RuntimeGenerateResult | null>([
         deps.currentRuntime.agent.generate(effectivePromptText, {
@@ -271,7 +289,7 @@ export async function generateWithTimeoutRetries(
           runId: deps.activeRunId !== null ? deps.activeRunId : `${deps.runtime.id}:${runEpoch}`,
         }),
         timeout.promise,
-      ]);
+      ]).finally(stopEventLoopProbe);
 
       clearGenerateTimeout(timeout);
       finishGenerateAttempt(generateToken, controller, deps);

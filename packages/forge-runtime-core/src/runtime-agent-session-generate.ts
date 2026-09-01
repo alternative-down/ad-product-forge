@@ -31,6 +31,7 @@ import type {
 } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
 import { truncateToolOutputValue } from './tool-output-truncation.js';
+import { logger } from './logger.js';
 
 export async function runRuntimeAgentSessionGenerate(input: {
   runtime: RuntimeAgentSessionRuntime;
@@ -41,6 +42,13 @@ export async function runRuntimeAgentSessionGenerate(input: {
   text: string;
   usage?: RuntimeAgentSessionStepResult['usage'];
 }> {
+  const logStage = (stage: string, context?: Record<string, unknown>) => {
+    logger.debug('runtime-generate', stage, {
+      agentId: input.session.agentId,
+      ...context,
+    });
+  };
+  logStage('session generation started');
   const promptMessages =
     typeof input.prompt === 'string'
       ? [
@@ -62,13 +70,16 @@ export async function runRuntimeAgentSessionGenerate(input: {
     threadId: input.session.threadId,
     agentId: input.session.agentId,
   });
+  logStage('session thread ready');
   await appendRuntimeSessionPromptMessages({
     store: input.runtime.conversationStore,
     threadId: input.session.threadId,
     agentId: input.session.agentId,
     messages: promptMessages,
   });
+  logStage('prompt messages persisted');
   await input.runtime.syncState();
+  logStage('operational memory synchronized');
 
   let finalText = '';
   let finalUsage: RuntimeAgentSessionStepResult['usage'];
@@ -112,7 +123,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
     const messages = await input.runtime.conversationMemory.renderModelMessages({
       historyWindow: runHistoryWindow,
     });
+    logStage('model messages rendered', { iterationNumber, messageCount: messages.length });
     const runtimeActions = await input.runtime.getRuntimeActions();
+    logStage('runtime actions loaded', { iterationNumber, actionCount: runtimeActions.length });
     const stepId = randomUUID();
     const tools = buildAiSdkToolSet({
       runtimeId: input.session.agentId,
@@ -129,6 +142,11 @@ export async function runRuntimeAgentSessionGenerate(input: {
     let result;
 
     try {
+      logStage('model request starting', {
+        iterationNumber,
+        messageCount: messages.length,
+        actionCount: runtimeActions.length,
+      });
       result = await generateText({
         model: input.runtime.model,
         system: system.text,
@@ -138,6 +156,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
         stopWhen: stepCountIs(1),
         abortSignal: input.options.abortSignal,
       });
+      logStage('model request completed', { iterationNumber });
     } catch (error) {
       throw appendGenerateDiagnostics(error, requestDiagnostics);
     }

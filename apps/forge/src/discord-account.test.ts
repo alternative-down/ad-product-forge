@@ -48,6 +48,7 @@ vi.mock('discord.js', () => {
     once: vi.fn(),
     removeAllListeners: vi.fn(),
     destroy: vi.fn(),
+    ws: { status: 0 },
     user: mockUser,
     channels: {
       cache: new Map([['ch-123', mockChannel]]),

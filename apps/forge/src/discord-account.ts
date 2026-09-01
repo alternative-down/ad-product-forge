@@ -321,6 +321,10 @@ export function createDiscordProvider(config: {
       void flushPendingMessages();
     },
     dispose() {
+      discordAccountDebug('warn', 'Disposing Discord provider', {
+        tag: client.user?.tag ?? null,
+        readyStatus: client.ws.status,
+      });
       disposed = true;
       clearTypingTimers(pendingTypingTimers);
       onInboundMessage = null;
