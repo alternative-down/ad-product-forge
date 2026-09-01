@@ -35,12 +35,14 @@ Depois que PRD-18 (Chat Interno) implementar participants/grupos, criar equivale
 Implementar ferramentas de gerenciamento de grupos **por provedor**:
 
 ### Discord
+
 - Agentes conseguem criar canais
 - Enviar mensagens para canais
 - Gerenciar membros do canal
 - Deletar canais
 
 ### Email
+
 - Agentes conseguem criar listas de distribuição
 - Enviar email para múltiplos via CC/BCC
 - Histórico de comunicações em grupo

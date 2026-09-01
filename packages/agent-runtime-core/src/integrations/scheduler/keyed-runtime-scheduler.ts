@@ -99,14 +99,12 @@ export class KeyedRuntimeScheduler {
     this.activeIntervals.clear();
   }
 
-  private async dispatchIntoRuntime<TPayload>(
-    options: {
-      runtimeId: string;
-      input: Omit<RuntimeInput<TPayload>, 'receivedAt'> & { receivedAt?: string };
-      runAfterDispatch?: boolean;
-      maxSteps?: number;
-    },
-  ) {
+  private async dispatchIntoRuntime<TPayload>(options: {
+    runtimeId: string;
+    input: Omit<RuntimeInput<TPayload>, 'receivedAt'> & { receivedAt?: string };
+    runAfterDispatch?: boolean;
+    maxSteps?: number;
+  }) {
     const runtime = this.registry.get(options.runtimeId);
 
     if (!runtime) {

@@ -1,7 +1,4 @@
-import type {
-  ConversationStore,
-  RuntimePlugin,
-} from 'agent-runtime-core/integrations';
+import type { ConversationStore, RuntimePlugin } from 'agent-runtime-core/integrations';
 
 export function createAssistantConversationPersistencePlugin(input: {
   store: ConversationStore;
@@ -36,10 +33,12 @@ export function createAssistantConversationPersistencePlugin(input: {
         role: 'assistant',
         authorId: input.authorId,
         parts: messageText
-          ? [{
-            type: 'text',
-            text: messageText,
-          }]
+          ? [
+              {
+                type: 'text',
+                text: messageText,
+              },
+            ]
           : [],
         metadata: {
           runtimeId: context.snapshot.runtimeId,

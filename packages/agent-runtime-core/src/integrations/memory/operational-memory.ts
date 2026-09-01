@@ -44,4 +44,3 @@ export interface OperationalMemory {
   getSnapshot(): Promise<OperationalMemorySnapshot>;
   renderContext(): Promise<StepContextEntry[]>;
 }
-

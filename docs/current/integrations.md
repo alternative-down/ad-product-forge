@@ -2,7 +2,7 @@
 
 ## Communication
 
-Communication providers are loaded through [provider-loader.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/communication/provider-loader.ts).
+Communication providers are loaded through [provider-loader.ts](apps/forge/src/communication/provider-loader.ts).
 
 Current communication providers:
 
@@ -38,7 +38,7 @@ Per-agent mailbox credentials are stored encrypted in `agent_providers`.
 
 ## GitHub
 
-GitHub integration is owned by [github/manager.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/github/manager.ts).
+GitHub integration is owned by [github/manager.ts](apps/forge/src/github/manager.ts).
 
 Current model:
 
@@ -61,7 +61,7 @@ Git operations use HTTPS installation credentials, not SSH.
 
 ## Coolify
 
-Coolify integration is owned by [coolify/manager.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/coolify/manager.ts).
+Coolify integration is owned by [coolify/manager.ts](apps/forge/src/coolify/manager.ts).
 
 Current model:
 
@@ -86,8 +86,8 @@ Current webhook support for Coolify is not implemented.
 
 MiniMax text model access is owned by:
 
-- [profile-token-gateway.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/profile-token-gateway.ts)
-- [settings-store.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/llm/settings-store.ts)
+- [profile-token-gateway.ts](apps/forge/src/llm/profile-token-gateway.ts)
+- [settings-store.ts](apps/forge/src/llm/settings-store.ts)
 
 Current model:
 

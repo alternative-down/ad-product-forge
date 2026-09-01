@@ -22,11 +22,12 @@ export class InMemoryBrowserSessionRecorder implements BrowserSessionRecorder {
   private readonly events: BrowserSessionEvent[] = [];
 
   async record(event: BrowserSessionEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 
   list(sessionId?: string) {
-    return sessionId
+    return sessionId != null
       ? this.events.filter((event) => event.sessionId === sessionId)
       : [...this.events];
   }

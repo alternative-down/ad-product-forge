@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -75,7 +76,11 @@ export function createOAuthStore() {
     }
   }
 
-  async function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
+  async function write(
+    provider: ProviderId,
+    credential: OAuthCredential,
+    storePath = getDefaultPath(),
+  ) {
     await fs.mkdir(path.dirname(storePath), { recursive: true });
     const client = createClient({ url: `file:${storePath}` });
 

@@ -8,6 +8,7 @@
 Define the workflow used to terminate a permanent agent from the company.
 
 Termination is simple:
+
 - remove the agent from the company
 - stop the agent in the runtime
 - delete the agent resources
@@ -18,6 +19,7 @@ This is a hard termination workflow.
 ## Scope
 
 This PRD covers:
+
 - terminating an agent by workflow
 - removing the agent from the runtime
 - deleting the agent record
@@ -25,6 +27,7 @@ This PRD covers:
 - cleaning provider credentials and related runtime data
 
 This PRD does not cover:
+
 - graceful shutdown logic
 - agent recovery
 - retention policies
@@ -36,6 +39,7 @@ This PRD does not cover:
 If an agent is terminated, it leaves the company.
 
 The system should:
+
 - stop using that agent
 - remove it from the runtime
 - delete its operational data and files
@@ -51,6 +55,7 @@ It is a direct removal process.
 A workflow receives a request to terminate an agent.
 
 Input:
+
 - `agentId`
 - optional reason
 
@@ -75,6 +80,7 @@ This is a hard delete.
 The workflow deletes provider configuration records related to the agent.
 
 This includes:
+
 - provider credentials
 - related provider records owned by the agent
 - external integrations that must be deprovisioned before local cleanup finishes
@@ -94,6 +100,7 @@ workspaces/
 ```
 
 So termination should remove:
+
 - `workspaces/{agentId}/database.db`
 - `workspaces/{agentId}/workspace/`
 - `workspaces/{agentId}/workspace-memory/`
@@ -106,6 +113,7 @@ The workflow returns confirmation that the agent was terminated and its resource
 ## Current Resource Model
 
 The workflow should assume the agent owns these runtime resources:
+
 - agent registry record
 - provider configuration records
 - runtime instance in memory
@@ -116,6 +124,7 @@ The workflow should assume the agent owns these runtime resources:
 If more agent-owned resources are added later, they can be included in the same cleanup workflow.
 
 Current external cleanup direction includes:
+
 - uninstalling the active GitHub App installation for the agent
 - deleting the agent mailbox in Migadu
 
@@ -124,6 +133,7 @@ Current external cleanup direction includes:
 No new table is required for the first version.
 
 The main records affected are:
+
 - `agents`
 - provider records related to the agent
 
@@ -132,6 +142,7 @@ Termination should remove those records completely.
 ## File System Direction
 
 The workflow should delete the full agent workspace root:
+
 - `workspaces/{agentId}/`
 
 That keeps the cleanup simple and avoids leaving orphan files.
@@ -155,6 +166,7 @@ This keeps agent termination simple: terminate, clean up, and free the space.
 ## Implementation Status
 
 Implemented today:
+
 - internal termination workflow exists in the Forge app
 - the workflow removes the agent from the internal in-memory registry before cleanup
 - the agent row is hard-deleted from the database
@@ -164,4 +176,5 @@ Implemented today:
 - the full `workspaces/{agentId}/` directory is deleted recursively
 
 Current implementation note:
+
 - like hiring, termination must happen inside the running Forge app process because it mutates the live in-memory agent registry

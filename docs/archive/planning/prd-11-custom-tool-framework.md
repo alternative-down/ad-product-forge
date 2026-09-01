@@ -59,20 +59,24 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ### Recursos Principais
 
 **FR1: Criação de Ferramenta**
+
 - Agentes podem criar ferramentas customizadas com nome, descrição e implementação
 - Criação de ferramenta especifica: nome, descrição, tipo, detalhes de implementação
 - Sistema valida definições de ferramenta antes de salvar
 
 **FR2: Métodos de Implementação de Ferramenta**
+
 - **Wrapper de Skill:** Referenciar uma Skill existente por ID
 - **Integração HTTP:** Chamar um endpoint de API externo
 
 **FR3: Armazenamento & Persistência de Ferramenta**
+
 - Ferramentas customizadas armazenadas em tabela simples de banco de dados
 - Ferramentas persistem através de reinicializações de agente
 - Ferramentas incluem metadados: timestamp de criação, criador
 
 **FR4: Acesso & Execução de Ferramenta**
+
 - Agentes podem chamar ferramentas customizadas como ferramentas de sistema
 - Ferramentas executam com proteção de timeout (padrão 30 segundos)
 - Execução de ferramenta é registrada
@@ -93,15 +97,18 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ## 6. Requisitos Não-Funcionais
 
 **Performance:**
+
 - Criação de ferramenta: <5 segundos
 - Execução de ferramenta funciona confiável
 
 **Confiabilidade:**
+
 - Falha de execução de ferramenta não derruba agente
 - Chamadas falhadas são registradas; agente pode retornar
 - Persistência de ferramenta sobrevive reinicialização de agente
 
 **Segurança:**
+
 - Integrações HTTP apenas para APIs públicas (sem vazamento de credenciais)
 - Todas as modificações registradas com timestamp e criador
 
@@ -110,6 +117,7 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ## 7. Escopo
 
 ### Incluído
+
 - Criação e validação de ferramenta
 - Implementação de wrapper de Skill
 - Implementação de integração HTTP
@@ -117,6 +125,7 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 - Execução de ferramenta com logging
 
 ### Não Incluído
+
 - Versionamento e gerenciamento de ciclo de vida de ferramenta
 - API de descoberta/busca de ferramenta
 - Composição de ferramentas (combinando ferramentas)
@@ -139,6 +148,7 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ### Schema do Banco de Dados
 
 **Tabela `forge_custom_tools`:**
+
 ```
 - tool_id (UUID, chave primária)
 - agent_id (UUID)
@@ -156,6 +166,7 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ## Exemplos de Definições de Ferramenta
 
 ### Ferramenta Wrapper de Skill
+
 ```json
 {
   "toolName": "send_slack_message",
@@ -182,6 +193,7 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem os princípios KI
 ```
 
 ### Ferramenta de Integração HTTP
+
 ```json
 {
   "toolName": "weather_lookup",

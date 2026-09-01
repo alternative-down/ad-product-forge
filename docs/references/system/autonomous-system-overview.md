@@ -1,6 +1,7 @@
 # Sistema Autônomo — Visão Geral
 
 ## Objetivo
+
 Criar uma empresa digital operada por agentes LLM autônomos que funcionam sem intervenção humana, de forma coordenada e contínua.
 
 ## Princípios Operacionais
@@ -57,6 +58,7 @@ Combinação de três camadas:
 **Memória observacional (Observational Memory)**: Reflexões curtas sobre observações do LLM durante runs
 
 **Memória de longo prazo (Long-Term Memory)**:
+
 - Armazenadas em LibSQL (SQLite) + LibSQLVector
 - Busca híbrida: vetorial via fastembed + BM25 fulltext
 - Grafo de conhecimento construído com GraphRAG

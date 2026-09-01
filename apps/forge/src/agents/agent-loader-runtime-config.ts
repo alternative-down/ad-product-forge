@@ -1,10 +1,14 @@
-import type { CreateAgentConfig } from './agent-runtime-types';
+import type { AgentRuntimeData } from './agent-loader-data';
+import type { AgentToolset } from './agent-loader-tools';
+import type { CreateAgentConfig } from './runtime/types';
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+  WorkspaceSkillsConfigSchema,
+} from '../database/schema';
+import { resolveWorkspaceEmbedderId, type CommunicationModule } from "@forge-runtime/core";
+import type { z } from 'zod';
 import type { AgentLoaderConfig } from './agent-loader-types';
-import type { loadAgentRuntimeData } from './agent-loader-data';
-import type { loadAgentToolset } from './agent-loader-tools';
-
-type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
-type AgentToolset = Awaited<ReturnType<typeof loadAgentToolset>>;
 
 export function buildAgentRuntimeConfig(
   loaderConfig: AgentLoaderConfig,
@@ -14,7 +18,7 @@ export function buildAgentRuntimeConfig(
   return {
     id: runtimeData.agent.id,
     name: runtimeData.agent.name,
-    description: runtimeData.agent.description || undefined,
+    description: runtimeData.agent.description ?? undefined,
     instructions: runtimeData.agent.instructions,
     model: runtimeData.primaryRuntimeModel,
     pricingModelKey: runtimeData.primaryProfile.modelKey,
@@ -25,7 +29,8 @@ export function buildAgentRuntimeConfig(
     companyName: runtimeData.companySettings.companyName,
     companyContext: runtimeData.companySettings.companyContext,
     communicationDmFlushingEnabled: runtimeData.companySettings.communicationDmFlushingEnabled,
-    communicationGroupFlushingEnabled: runtimeData.companySettings.communicationGroupFlushingEnabled,
+    communicationGroupFlushingEnabled:
+      runtimeData.companySettings.communicationGroupFlushingEnabled,
     memoryLastMessagesFullEnabled: runtimeData.companySettings.memoryLastMessagesFullEnabled,
     memoryLastMessagesCount: runtimeData.companySettings.memoryLastMessagesCount,
     tokenCountFilterEnabled: runtimeData.companySettings.tokenCountFilterEnabled,
@@ -48,9 +53,36 @@ export function buildAgentRuntimeConfig(
     tools: toolset.tools,
     providers: runtimeData.providers,
     workspaceBasePath: loaderConfig.workspaceBasePath,
-    workspaceFilesystem: runtimeData.agent.workspaceFilesystem ?? undefined,
-    workspaceSandbox: runtimeData.agent.workspaceSandbox ?? undefined,
-    workspaceSkills: runtimeData.agent.workspaceSkills ?? undefined,
-    workspaceEmbedder: runtimeData.agent.workspaceEmbedder,
+    workspaceFilesystem: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceFilesystem,
+      WorkspaceFilesystemConfigSchema,
+    ),
+    workspaceSandbox: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceSandbox,
+      WorkspaceSandboxConfigSchema,
+    ),
+    workspaceSkills: parseWorkspaceJsonConfig(
+      runtimeData.agent.workspaceSkills,
+      WorkspaceSkillsConfigSchema,
+    ),
+    workspaceEmbedder: resolveWorkspaceEmbedderId(runtimeData.agent.workspaceEmbedder),
+    agents: undefined as Record<string, unknown> | undefined,
+    communication: undefined as CommunicationModule | undefined,
   };
+}
+
+/**
+ * Parses and validates a JSON-encoded workspace config field from the agents table.
+ * Returns undefined for null/undefined/empty input. Throws on malformed JSON
+ * or schema validation failure (the value was stored by HireInternalAgentInput
+ * validation, so this should not happen in practice).
+ */
+export function parseWorkspaceJsonConfig<T>(
+  value: string | null | undefined,
+  schema: z.ZodType<T>,
+): T | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  return schema.parse(JSON.parse(value));
 }

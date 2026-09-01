@@ -1,12 +1,15 @@
 # Feature Request — Base de Observabilidade por App
 
 ## Status
+
 Draft inicial
 
 ## Premissa
+
 Todo app novo nasce com uma base padrão já incluída.
 
 ## Base padrão mínima
+
 - métricas
 - logging
 - eventos de runtime com contexto adicional
@@ -14,6 +17,7 @@ Todo app novo nasce com uma base padrão já incluída.
 - suporte via email
 
 ## Fluxo de eventos e suporte
+
 1. eventos são disparados pela aplicação em execução
 2. eventos chegam com contexto adicional suficiente para diagnóstico
 3. agente LLM consulta os dados necessários
@@ -28,4 +32,5 @@ Todo app novo nasce com uma base padrão já incluída.
 12. criador de issues coleta contexto adicional antes de abrir a issue
 
 ## Objetivo
+
 Padronizar visibilidade operacional e transformar automaticamente sinais de runtime em backlog acionável.

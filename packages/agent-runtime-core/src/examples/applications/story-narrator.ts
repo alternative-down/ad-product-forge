@@ -11,18 +11,18 @@ export type StoryNarratorApplicationOptions = {
   storyEvents?: StoryEventStore;
 };
 
-export function createStoryNarratorApplication(
-  options: StoryNarratorApplicationOptions,
-) {
+export function createStoryNarratorApplication(options: StoryNarratorApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
   });
   const storyEvents = options.storyEvents ?? new InMemoryStoryEventStore();
 
-  host.runtime.use(createJournalHistoryPlugin({
-    journal: host.journal,
-    maxSteps: 5,
-  }));
+  host.runtime.use(
+    createJournalHistoryPlugin({
+      journal: host.journal,
+      maxSteps: 5,
+    }),
+  );
   host.runtime.registerAction({
     name: 'story_record_event',
     description: 'Record a new story event in the narrator archive.',
@@ -80,10 +80,10 @@ export function createStoryNarratorApplication(
       return storedEvent;
     },
     async readRecentStoryEvents(limit = 10) {
-      return storyEvents.readRecent(limit);
+      return await storyEvents.readRecent(limit);
     },
     async narrate(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
   };
 }

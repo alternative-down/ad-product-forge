@@ -15,21 +15,21 @@ O sistema de tarefas entre agentes permite que um agente crie, gerencie e monito
 
 ## Papéis no Sistema de Tarefas
 
-| Papel | Descrição | Permissões |
-|-------|-----------|------------|
+| Papel           | Descrição              | Permissões                                                     |
+| --------------- | ---------------------- | -------------------------------------------------------------- |
 | **COORDINATOR** | Coordenador de tarefas | Criar, listar, cancelar e atualizar tarefas de qualquer agente |
-| **AGENT** | Agente executor | Listar e atualizar apenas próprias tarefas |
+| **AGENT**       | Agente executor        | Listar e atualizar apenas próprias tarefas                     |
 
 ### Quem Pode Fazer O Quê
 
-| Ação | COORDINATOR | AGENT |
-|------|:-----------:|:-----:|
-| Criar tarefa para outro | ✅ | ❌ |
-| Listar tarefas de qualquer agente | ✅ | ❌ |
-| Listar próprias tarefas | ✅ | ✅ |
-| Cancelar tarefa de outro | ✅ | ❌ |
-| Atualizar tarefa de outro | ✅ | ❌ |
-| Atualizar própria tarefa | ✅ | ✅ |
+| Ação                              | COORDINATOR | AGENT |
+| --------------------------------- | :---------: | :---: |
+| Criar tarefa para outro           |     ✅      |  ❌   |
+| Listar tarefas de qualquer agente |     ✅      |  ❌   |
+| Listar próprias tarefas           |     ✅      |  ✅   |
+| Cancelar tarefa de outro          |     ✅      |  ❌   |
+| Atualizar tarefa de outro         |     ✅      |  ❌   |
+| Atualizar própria tarefa          |     ✅      |  ✅   |
 
 ---
 
@@ -229,13 +229,13 @@ Use `manage_self_crons` com a mesma estrutura quando o cron for do próprio agen
 
 ## Status das Tarefas
 
-| Status | Descrição | Transições Permitidas |
-|--------|-----------|---------------------|
-| `pending` | Aguardando execução | → in_progress, → cancelled |
-| `in_progress` | Em andamento | → completed, → cancelled |
-| `completed` | Finalizada com sucesso | (estado final) |
-| `failed` | Falhou na execução | → pending (reagendar) |
-| `cancelled` | Cancelada | (estado final) |
+| Status        | Descrição              | Transições Permitidas      |
+| ------------- | ---------------------- | -------------------------- |
+| `pending`     | Aguardando execução    | → in_progress, → cancelled |
+| `in_progress` | Em andamento           | → completed, → cancelled   |
+| `completed`   | Finalizada com sucesso | (estado final)             |
+| `failed`      | Falhou na execução     | → pending (reagendar)      |
+| `cancelled`   | Cancelada              | (estado final)             |
 
 ---
 

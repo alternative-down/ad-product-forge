@@ -12,8 +12,14 @@ export const forgeCustomToolIds = [
   'list_internal_agent_contracts',
   'adjust_agent_contract_budget',
   'list_agent_notifications',
+  'mark_notifications_read',
   'get_github_git_credentials',
-  'get_coolify_credentials',
+  'get_github_provisioning_status',
+  'start_github_app_provisioning',
+  'list_coolify_applications',
+  'start_coolify_application',
+  'stop_coolify_application',
+  'get_coolify_application_logs',
   'list_self_crons',
   'manage_self_crons',
   'list_crons',
@@ -31,11 +37,14 @@ export const forgeCustomToolIds = [
   'terminate-internal-agent',
 ] as const;
 
-export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
-export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
-export type ForgeCapabilityId = typeof forgeCapabilityIds[number];
 
-export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
+export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
+export type ForgeCustomToolId = (typeof forgeCustomToolIds)[number];
+
+export function hasToolPermission(
+  allowedToolIds: Set<string> | null | undefined,
+  toolId: ForgeCustomToolId,
+) {
   if (!allowedToolIds) {
     return true;
   }
@@ -45,10 +54,6 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
   }
 
   return false;
-}
-
-export function isToolCapabilityId(capabilityId: string): capabilityId is ForgeCustomToolId {
-  return forgeCustomToolIds.some((toolId) => toolId === capabilityId);
 }
 
 export function normalizeToolPermissionIds(toolIds: readonly string[]) {

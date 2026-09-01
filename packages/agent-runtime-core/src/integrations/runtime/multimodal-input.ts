@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-import { createDefaultContextFormatter, type ContextFormatter } from '../../core/context-formatters.js';
+import {
+  createDefaultContextFormatter,
+  type ContextFormatter,
+} from '../../core/context-formatters.js';
 import type { RuntimeInput, StepContextPart } from '../../core/types.js';
 
 const textPartSchema = z.object({
@@ -20,7 +23,9 @@ export const multimodalRuntimeInputPayloadSchema = z.object({
 
 export type MultimodalRuntimeInputPayload = z.infer<typeof multimodalRuntimeInputPayloadSchema>;
 
-export function createMultimodalRuntimeInputPayload(parts: StepContextPart[]): MultimodalRuntimeInputPayload {
+export function createMultimodalRuntimeInputPayload(
+  parts: StepContextPart[],
+): MultimodalRuntimeInputPayload {
   return multimodalRuntimeInputPayloadSchema.parse({
     parts,
   });

@@ -29,27 +29,27 @@ MCP (Model Context Protocol) permite expandir as capacidades dos agentes com fer
 
 ### Servidor MCP Global (`mcpServerConfigs`)
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | string | ID único |
-| `name` | string | Nome do servidor |
-| `description` | string | Descrição opcional |
-| `command` | string | Comando para iniciar (stdio) |
-| `args` | JSON | Argumentos do comando |
-| `envVars` | JSON | Variáveis de ambiente |
-| `transport` | enum | `stdio` ou `http_streamable` |
-| `url` | string | URL do servidor (http) |
-| `headers` | JSON | Headers HTTP customizados |
-| `isActive` | boolean | Se está ativo |
+| Campo         | Tipo    | Descrição                    |
+| ------------- | ------- | ---------------------------- |
+| `id`          | string  | ID único                     |
+| `name`        | string  | Nome do servidor             |
+| `description` | string  | Descrição opcional           |
+| `command`     | string  | Comando para iniciar (stdio) |
+| `args`        | JSON    | Argumentos do comando        |
+| `envVars`     | JSON    | Variáveis de ambiente        |
+| `transport`   | enum    | `stdio` ou `http_streamable` |
+| `url`         | string  | URL do servidor (http)       |
+| `headers`     | JSON    | Headers HTTP customizados    |
+| `isActive`    | boolean | Se está ativo                |
 
 ### Configuração por Agente (`agentMcpConfigs`)
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | string | ID único |
-| `agentId` | string | ID do agente |
-| `serverId` | string | ID do servidor MCP |
-| `isActive` | boolean | Se está ativo |
+| Campo      | Tipo    | Descrição          |
+| ---------- | ------- | ------------------ |
+| `id`       | string  | ID único           |
+| `agentId`  | string  | ID do agente       |
+| `serverId` | string  | ID do servidor MCP |
+| `isActive` | boolean | Se está ativo      |
 
 ## Fluxo de Carregamento
 
@@ -151,14 +151,14 @@ await createMcpServerConfig({
   args: ['@minhaorg/mcp-server'],
   envVars: { API_URL: 'https://api.exemplo.com' },
   transport: 'stdio',
-  isActive: true
+  isActive: true,
 });
 
 // 2. Associar a um agente
 await createAgentMcpConfig({
   agentId: 'agente-123',
   serverId: 'servidor-mcp-id',
-  isActive: true
+  isActive: true,
 });
 
 // 3. Agente carrega ferramentas automaticamente
@@ -177,8 +177,8 @@ O `client-manager.ts` mantém cache de `MCPClient` por agente:
 
 ## Erros Comuns
 
-| Erro | Causa | Solução |
-|------|-------|---------|
+| Erro                  | Causa                     | Solução                          |
+| --------------------- | ------------------------- | -------------------------------- |
 | `Failed to get tools` | Servidor MCP não responde | Verificar se servidor está ativo |
-| Empty tools | Agent não tem configs MCP | Associar servidor ao agente |
-| Connection timeout | URL inacessível | Verificar firewall/network |
+| Empty tools           | Agent não tem configs MCP | Associar servidor ao agente      |
+| Connection timeout    | URL inacessível           | Verificar firewall/network       |

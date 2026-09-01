@@ -2,7 +2,13 @@ import { Client } from '@modelcontextprotocol/sdk/client';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
-import type { McpGateway, McpJsonSchema, McpSession, McpToolDescriptor, McpTransport } from './contracts.js';
+import type {
+  McpGateway,
+  McpJsonSchema,
+  McpSession,
+  McpToolDescriptor,
+  McpTransport,
+} from './contracts.js';
 
 export type SdkMcpGatewayOptions = {
   clientName?: string;
@@ -31,15 +37,14 @@ export class SdkMcpGateway implements McpGateway {
       listTools: async () => {
         const result = await client.listTools();
 
-        return result.tools.map((tool: {
-          name: string;
-          description?: string;
-          inputSchema?: unknown;
-        }) => ({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema as McpJsonSchema | undefined,
-        }) satisfies McpToolDescriptor);
+        return result.tools.map(
+          (tool: { name: string; description?: string; inputSchema?: unknown }) =>
+            ({
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.inputSchema as McpJsonSchema | undefined,
+            }) satisfies McpToolDescriptor,
+        );
       },
       async callTool(name, input) {
         const result = await client.callTool({
@@ -68,8 +73,8 @@ function createSdkTransport(transport: McpTransport) {
   return new StreamableHTTPClientTransport(new URL(transport.url), {
     requestInit: transport.headers
       ? {
-        headers: transport.headers,
-      }
+          headers: transport.headers,
+        }
       : undefined,
   });
 }

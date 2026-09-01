@@ -68,6 +68,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 
   async streamStep(request: StepModelRequest): Promise<StepModelStream> {
+    await Promise.resolve();
     const prompt = buildAiSdkPrompt({
       baseSystem: this.system,
       context: request.context,
@@ -108,10 +109,7 @@ export class AiSdkStepModelAdapter implements StepModelAdapter, StreamingStepMod
   }
 }
 
-function buildAiSdkPrompt(input: {
-  baseSystem?: string;
-  context: StepContextEntry[];
-}) {
+function buildAiSdkPrompt(input: { baseSystem?: string; context: StepContextEntry[] }) {
   const systemTexts: string[] = [];
   const historyMessages: ModelMessage[] = [];
   const toolResultMessages: ModelMessage[] = [];
@@ -168,20 +166,13 @@ function buildAiSdkPrompt(input: {
     remainingContext.push(entry);
   }
 
-  const messages = [
-    ...historyMessages,
-    ...toolResultMessages,
-    ...currentInputMessages,
-  ];
+  const messages = [...historyMessages, ...toolResultMessages, ...currentInputMessages];
 
   if (remainingContext.length > 0 || messages.length === 0) {
     messages.push(buildContextMessage(remainingContext));
   }
 
-  const system = [
-    input.baseSystem?.trim(),
-    ...systemTexts,
-  ]
+  const system = [input.baseSystem?.trim(), ...systemTexts]
     .filter((value): value is string => Boolean(value))
     .join('\n\n')
     .trim();
@@ -197,16 +188,17 @@ function buildConversationMessages(entry: StepContextEntry, role: string): Model
   const toolHistory = parseConversationToolHistory(entry);
 
   if (role === 'system') {
-    return [{
-      role: 'system',
-      content: getStepContextText(entry) || '',
-    }];
+    return [
+      {
+        role: 'system',
+        content: getStepContextText(entry) || '',
+      },
+    ];
   }
 
   if (role === 'assistant') {
-    const assistantTextContent = toolHistory.toolInvocations.length > 0 && isEmptyPlaceholderContent(content)
-      ? []
-      : content;
+    const assistantTextContent =
+      toolHistory.toolInvocations.length > 0 && isEmptyPlaceholderContent(content) ? [] : content;
     const assistantContent = [
       ...assistantTextContent,
       ...toolHistory.toolInvocations.map((toolInvocation, index) => ({
@@ -216,33 +208,39 @@ function buildConversationMessages(entry: StepContextEntry, role: string): Model
         input: toolInvocation.args,
       })),
     ];
-    const messages: ModelMessage[] = [{
-      role: 'assistant',
-      content: assistantContent,
-    } as ModelMessage];
+    const messages: ModelMessage[] = [
+      {
+        role: 'assistant',
+        content: assistantContent,
+      } as ModelMessage,
+    ];
 
     for (const [index, toolResult] of toolHistory.toolResults.entries()) {
       messages.push({
         role: 'tool',
-        content: [{
-          type: 'tool-result',
-          toolCallId: `${entry.id}:tool:${index}`,
-          toolName: toolResult.toolName,
-          output: {
-            type: 'json',
-            value: toolResult.result,
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: `${entry.id}:tool:${index}`,
+            toolName: toolResult.toolName,
+            output: {
+              type: 'json',
+              value: toolResult.result,
+            },
           },
-        }],
+        ],
       } as ModelMessage);
     }
 
     return messages;
   }
 
-  return [{
-    role: role === 'tool' ? 'tool' : 'user',
-    content,
-  } as ModelMessage];
+  return [
+    {
+      role: role === 'tool' ? 'tool' : 'user',
+      content,
+    } as ModelMessage,
+  ];
 }
 
 function buildActionResultMessages(entry: StepContextEntry): ModelMessage[] {
@@ -254,37 +252,40 @@ function buildActionResultMessages(entry: StepContextEntry): ModelMessage[] {
     return [
       {
         role: 'assistant',
-        content: [{
-          type: 'tool-call',
-          toolCallId,
-          toolName: actionResult.name,
-          input: actionResult.input,
-        }],
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId,
+            toolName: actionResult.name,
+            input: actionResult.input,
+          },
+        ],
       } as ModelMessage,
       {
         role: 'tool',
-        content: [{
-          type: 'tool-result',
-          toolCallId,
-          toolName: actionResult.name,
-          output: {
-            type: 'json',
-            value: actionResult.output,
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId,
+            toolName: actionResult.name,
+            output: {
+              type: 'json',
+              value: actionResult.output,
+            },
           },
-        }],
+        ],
       } as ModelMessage,
     ];
   });
 }
 
 function buildContextMessage(context: StepContextEntry[]): ModelMessage {
-  const content: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image'; image: string }
-  > = [{
-    type: 'text',
-    text: renderContextSection(context),
-  }];
+  const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [
+    {
+      type: 'text',
+      text: renderContextSection(context),
+    },
+  ];
 
   for (const entry of context) {
     for (const part of getStepContextParts(entry)) {
@@ -306,10 +307,7 @@ function buildContextMessage(context: StepContextEntry[]): ModelMessage {
 }
 
 function buildMessageContent(entry: StepContextEntry) {
-  const content: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image'; image: string }
-  > = [];
+  const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [];
   const text = getStepContextText(entry);
 
   if (text) {
@@ -345,26 +343,30 @@ function renderContextSection(context: StepContextEntry[]) {
     return 'No context entries were provided.';
   }
 
-  return context.map((entry) => [
-    `<entry id="${entry.id}" kind="${entry.kind}" image-parts="${countImageParts(entry)}">`,
-    `<title>${entry.title}</title>`,
-    getStepContextText(entry) || '[No text content]',
-    '</entry>',
-  ].join('\n')).join('\n\n');
+  return context
+    .map((entry) =>
+      [
+        `<entry id="${entry.id}" kind="${entry.kind}" image-parts="${countImageParts(entry)}">`,
+        `<title>${entry.title}</title>`,
+        getStepContextText(entry) || '[No text content]',
+        '</entry>',
+      ].join('\n'),
+    )
+    .join('\n\n');
 }
 
 function parseActionResults(entry: StepContextEntry) {
   if (Array.isArray(entry.data)) {
-    return entry.data
-      .filter((value): value is { name: string; input: Record<string, unknown>; output: unknown } => (
-        typeof value === 'object'
-        && value !== null
-        && 'name' in value
-        && typeof value.name === 'string'
-        && 'input' in value
-        && isRecord(value.input)
-        && 'output' in value
-      ));
+    return entry.data.filter(
+      (value): value is { name: string; input: Record<string, unknown>; output: unknown } =>
+        typeof value === 'object' &&
+        value !== null &&
+        'name' in value &&
+        typeof value.name === 'string' &&
+        'input' in value &&
+        isRecord(value.input) &&
+        'output' in value,
+    );
   }
 
   const text = getStepContextText(entry);
@@ -380,23 +382,23 @@ function parseActionResults(entry: StepContextEntry) {
       return [];
     }
 
-    return parsed
-      .filter((value): value is { name: string; input: Record<string, unknown>; output: unknown } => (
-        typeof value === 'object'
-        && value !== null
-        && 'name' in value
-        && typeof value.name === 'string'
-        && 'input' in value
-        && isRecord(value.input)
-        && 'output' in value
-      ));
+    return parsed.filter(
+      (value): value is { name: string; input: Record<string, unknown>; output: unknown } =>
+        typeof value === 'object' &&
+        value !== null &&
+        'name' in value &&
+        typeof value.name === 'string' &&
+        'input' in value &&
+        isRecord(value.input) &&
+        'output' in value,
+    );
   } catch {
     return [];
   }
 }
 
 function parseConversationToolHistory(entry: StepContextEntry) {
-  if (!entry.data || typeof entry.data !== 'object') {
+  if (entry.data == null || typeof entry.data !== 'object') {
     return {
       toolInvocations: [] as Array<{ toolName: string; args: Record<string, unknown> }>,
       toolResults: [] as Array<{ toolName: string; result: unknown }>,
@@ -411,11 +413,13 @@ function parseConversationToolHistory(entry: StepContextEntry) {
   return {
     toolInvocations: Array.isArray(data.toolInvocations)
       ? data.toolInvocations
-          .filter((value): value is { toolName: string; args?: unknown } =>
-            typeof value === 'object'
-            && value !== null
-            && 'toolName' in value
-            && typeof value.toolName === 'string')
+          .filter(
+            (value): value is { toolName: string; args?: unknown } =>
+              typeof value === 'object' &&
+              value !== null &&
+              'toolName' in value &&
+              typeof value.toolName === 'string',
+          )
           .map((toolInvocation) => ({
             toolName: toolInvocation.toolName,
             args: isRecord(toolInvocation.args) ? toolInvocation.args : {},
@@ -423,11 +427,13 @@ function parseConversationToolHistory(entry: StepContextEntry) {
       : [],
     toolResults: Array.isArray(data.toolResults)
       ? data.toolResults
-          .filter((value): value is { toolName: string; result?: unknown } =>
-            typeof value === 'object'
-            && value !== null
-            && 'toolName' in value
-            && typeof value.toolName === 'string')
+          .filter(
+            (value): value is { toolName: string; result?: unknown } =>
+              typeof value === 'object' &&
+              value !== null &&
+              'toolName' in value &&
+              typeof value.toolName === 'string',
+          )
           .map((toolResult) => ({
             toolName: toolResult.toolName,
             result: toolResult.result,
@@ -436,8 +442,12 @@ function parseConversationToolHistory(entry: StepContextEntry) {
   };
 }
 
-function isEmptyPlaceholderContent(content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }>) {
-  return content.length === 1 && content[0]?.type === 'text' && content[0]?.text === '[No text content]';
+function isEmptyPlaceholderContent(
+  content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }>,
+) {
+  return (
+    content.length === 1 && content[0]?.type === 'text' && content[0]?.text === '[No text content]'
+  );
 }
 
 function buildToolSet(actions: StepActionDescriptor[]) {
@@ -497,7 +507,7 @@ async function forwardAiSdkStreamEvents(input: {
 }) {
   try {
     for await (const part of input.fullStream) {
-      if (part.type === 'text-delta' && part.text?.length) {
+      if (part.type === 'text-delta' && part.text != null && part.text.length > 0) {
         input.events.publish({
           type: 'segment-delta',
           segment: {
@@ -508,7 +518,7 @@ async function forwardAiSdkStreamEvents(input: {
         continue;
       }
 
-      if (part.type === 'reasoning-delta' && part.text?.length) {
+      if (part.type === 'reasoning-delta' && part.text != null && part.text.length > 0) {
         input.events.publish({
           type: 'segment-delta',
           segment: {
@@ -519,7 +529,7 @@ async function forwardAiSdkStreamEvents(input: {
         continue;
       }
 
-      if (part.type === 'tool-call' && part.toolName) {
+      if (part.type === 'tool-call' && part.toolName != null) {
         input.events.publish({
           type: 'action-request',
           actionRequest: {
@@ -538,7 +548,7 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
   const segments: StepContentSegment[] = [];
 
   for (const part of content) {
-    if (part.type === 'text' && part.text?.trim()) {
+    if (part.type === 'text' && part.text != null && part.text.trim().length > 0) {
       segments.push({
         kind: 'message',
         text: part.text.trim(),
@@ -546,7 +556,7 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
       continue;
     }
 
-    if (part.type === 'reasoning' && part.text?.trim()) {
+    if (part.type === 'reasoning' && part.text != null && part.text.trim().length > 0) {
       segments.push({
         kind: 'reasoning',
         text: part.text.trim(),
@@ -557,13 +567,13 @@ function mapContentToSegments(content: Array<{ type: string; text?: string }>) {
   return segments;
 }
 
-function mapToolCallsToActionRequests(
-  toolCalls: Array<{ toolName: string; input: unknown }>,
-) {
-  return toolCalls.map((toolCall): ActionRequest => ({
-    name: toolCall.toolName,
-    input: isRecord(toolCall.input) ? toolCall.input : {},
-  }));
+function mapToolCallsToActionRequests(toolCalls: Array<{ toolName: string; input: unknown }>) {
+  return toolCalls.map(
+    (toolCall): ActionRequest => ({
+      name: toolCall.toolName,
+      input: isRecord(toolCall.input) ? toolCall.input : {},
+    }),
+  );
 }
 
 function countImageParts(entry: StepContextEntry) {

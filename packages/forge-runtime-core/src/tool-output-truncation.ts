@@ -55,9 +55,10 @@ function truncateToolOutputText(text: string) {
   const allLines = text.split('\n');
   const limitedLinesArray = allLines.slice(0, MAX_TOOL_OUTPUT_LINES);
   const limitedLines = limitedLinesArray.join('\n');
-  const limitedChars = limitedLines.length > MAX_TOOL_OUTPUT_CHARS
-    ? limitedLines.slice(0, MAX_TOOL_OUTPUT_CHARS)
-    : limitedLines;
+  const limitedChars =
+    limitedLines.length > MAX_TOOL_OUTPUT_CHARS
+      ? limitedLines.slice(0, MAX_TOOL_OUTPUT_CHARS)
+      : limitedLines;
 
   if (limitedChars === text) {
     return text;

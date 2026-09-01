@@ -1,12 +1,14 @@
+import { CommunicationProviderMissingServiceError } from './provider-loader.errors';
 import { z } from 'zod';
 
+import { providerLoaderDebug } from './provider-loader-debug';
 import type { CommunicationProvider } from '@forge-runtime/core';
 import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
 import { createInternalChatProvider } from './internal-chat-provider';
 import type { InternalChatService } from './internal-chat-service';
 
-export const internalChatCredentialsSchema = z.object({
+const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
   displayName: z.string().min(1).nullish(),
   description: z.string().nullish(),
@@ -14,13 +16,15 @@ export const internalChatCredentialsSchema = z.object({
 
 const discordChannelCredentialsSchema = z.object({
   token: z.string(),
-  channels: z.array(
-    z.object({
-      channelId: z.string(),
-      channelName: z.string().nullish(),
-      respondToMentionsOnly: z.boolean(),
-    }),
-  ).nullish(),
+  channels: z
+    .array(
+      z.object({
+        channelId: z.string(),
+        channelName: z.string().nullish(),
+        respondToMentionsOnly: z.boolean(),
+      }),
+    )
+    .nullish(),
 });
 
 const discordLegacyCredentialsSchema = z.object({
@@ -29,7 +33,7 @@ const discordLegacyCredentialsSchema = z.object({
   respondToMentionsOnly: z.boolean().nullish(),
 });
 
-export const discordCredentialsSchema = z
+const discordCredentialsSchema = z
   .union([discordChannelCredentialsSchema, discordLegacyCredentialsSchema])
   .transform((credentials) => {
     if ('allowedChannelIds' in credentials || 'respondToMentionsOnly' in credentials) {
@@ -55,7 +59,7 @@ export const discordCredentialsSchema = z
     };
   });
 
-export const emailCredentialsSchema = z.object({
+const emailCredentialsSchema = z.object({
   imap: z.object({
     host: z.string(),
     port: z.number(),
@@ -105,13 +109,16 @@ export async function loadCommunicationProviders(
     const internalChat = internalChatCredentialsSchema.parse(credentials['internal-chat']);
 
     if (!config?.internalChat) {
-      throw new Error('Internal chat provider requires the internalChat service');
+      providerLoaderDebug('error', 'loadProvider: internalChat service required');
+      throw new CommunicationProviderMissingServiceError();
     }
 
-    providers.push(createInternalChatProvider({
-      agentId: internalChat.agentId,
-      internalChat: config.internalChat,
-    }));
+    providers.push(
+      createInternalChatProvider({
+        agentId: internalChat.agentId,
+        internalChat: config.internalChat,
+      }),
+    );
   }
 
   if (credentials.discord) {
@@ -122,32 +129,38 @@ export async function loadCommunicationProviders(
         channels: discord.channels ?? undefined,
       });
 
-      try {
-        await provider.getSelfContact?.();
-      } catch (error) {
-        await provider.dispose?.();
-        throw error;
-      }
+      // Forward-compat: CommunicationProvider.getSelfContact is OPTIONAL in the
+      // type contract (see packages/forge-runtime-core/src/communication.ts).
+      // Discord + internal-chat always provide it; third-party providers may not.
+      // The optional chain ensures the loader doesn't crash if a future provider
+      // omits the method. Throw is caught by the surrounding try/catch above.
+      await provider.getSelfContact?.();
 
       providers.push(provider);
     } catch (error) {
-      console.warn('[ProviderLoader] Skipping Discord provider because it failed to start:', error);
+      providerLoaderDebug('warn', 'Skipping Discord provider because it failed to start', { error: errorMsg(error) });
     }
   }
 
   if (credentials.email) {
-    const email = emailCredentialsSchema.parse(credentials.email);
-    providers.push(
-      createEmailProvider({
-        imap: email.imap,
-        smtp: email.smtp,
-        bcc: email.bcc ?? undefined,
-      })
-    );
+    try {
+      const email = emailCredentialsSchema.parse(credentials.email);
+      providers.push(
+        createEmailProvider({
+          imap: email.imap,
+          smtp: email.smtp,
+          bcc: email.bcc ?? undefined,
+        }),
+      );
+    } catch (error) {
+      providerLoaderDebug('error', 'Failed to load email provider', { error: errorMsg(error) });
+      throw error;
+    }
   }
 
   return providers;
 }
+import { errorMsg } from '../agents/error-formatting';
 
 export function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,

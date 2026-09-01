@@ -1,0 +1,122 @@
+/**
+ * Role Admin Operations — extracted from write-ops.ts
+ */
+
+import { z } from 'zod';
+
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
+import { createCapabilityStore } from '../../../../capabilities/store';
+import { RoleHasAssignedAgentsError } from '../../../../capabilities/errors';
+import type { HttpHandler } from '../../../../http/server';
+import { forgeDebug } from '../../debug';
+
+const createRoleSchema = z
+  .object({
+    name: z.string(),
+    description: z.string().optional(),
+  })
+  .strict();
+
+const updateRoleSchema = z
+  .object({
+    roleId: z.string(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .strict();
+
+const deleteRoleSchema = z
+  .object({
+    roleId: z.string(),
+  })
+  .strict();
+
+const roleToolPermissionSchema = z
+  .object({
+    roleId: z.string(),
+    toolName: z.string(),
+    allowed: z.boolean(),
+  })
+  .strict();
+
+import { errorMsg } from '../../../../agents/error-formatting';
+import { adminRouteError, safeRoute } from '../admin-route-error-helper';
+
+export function registerRoleOps(
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
+  db: Parameters<typeof createCapabilityStore>[0],
+) {
+  const capabilities = createCapabilityStore(db);
+  const resolvePermissionId = (name: string) => name;
+
+  // POST /admin/roles/create
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/create',
+    handler: safeRoute('/admin/roles/create', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, createRoleSchema);
+        const result = await capabilities.createRole({
+          name: body.name,
+          description: body.description,
+        });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+    }),
+  });
+
+  // POST /admin/roles/update
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/update',
+    handler: safeRoute('/admin/roles/update', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, updateRoleSchema);
+        const result = await capabilities.updateRole({
+          roleId: body.roleId,
+          name: body.name,
+          description: body.description,
+        });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+    }),
+  });
+
+  // POST /admin/roles/delete
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/delete',
+    handler: async (request) => {
+      try {
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteRoleSchema);
+        await capabilities.deleteRole(body.roleId);
+        return jsonResponse({ success: true, roleId: body.roleId });
+      } catch (err) {
+        if (err instanceof RoleHasAssignedAgentsError) {
+          forgeDebug({
+            scope: 'admin',
+            level: 'warn',
+            message: '/admin/roles/delete conflict (role has assigned agents)',
+            context: { path: '/admin/roles/delete', error: errorMsg(err) },
+          });
+          return jsonResponse({ error: errorMsg(err) }, 409);
+        }
+        return adminRouteError(err, { path: '/admin/roles/delete' });
+      }
+    },
+  });
+
+  // POST /admin/roles/tool-permissions
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/tool-permissions',
+    handler: safeRoute('/admin/roles/tool-permissions', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const toolId = resolvePermissionId(body.toolName);
+        if (body.allowed === true) {
+          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+        } else {
+          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+        }
+        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
+    }),
+  });
+}

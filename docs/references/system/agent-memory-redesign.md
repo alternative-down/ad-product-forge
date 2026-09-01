@@ -1,14 +1,17 @@
 # Agent Memory Redesign
 
 ## Status
+
 - Draft
 - Branch: `feat/custom-observational-memory`
 - Purpose: describe the desired memory behavior before implementation
 
 ## Objective
+
 The system needs an active context-management layer that continuously compresses older thread material without losing operational continuity.
 
 This layer must:
+
 - keep the live context bounded
 - keep recent raw interaction visible
 - progressively consolidate older material
@@ -18,7 +21,9 @@ This layer must:
 The main goal is not retrieval. The main goal is controlled context compression.
 
 ## What The New Memory Must Do
+
 The desired behavior is:
+
 - keep some recent raw messages fresh in context
 - accumulate older raw messages into bounded batches
 - turn those batches into observations
@@ -30,6 +35,7 @@ The desired behavior is:
 This should create a sliding context with multiple compression layers instead of a flat "last N messages" view.
 
 ## Target Mental Model
+
 At any point, the active context should be thought of as:
 
 1. system and runtime instructions
@@ -42,6 +48,7 @@ At any point, the active context should be thought of as:
 Everything older than the active checkpoint should no longer compete for live context unless intentionally reintroduced by another mechanism.
 
 ## Desired Sliding Context Behavior
+
 The active context should move forward continuously.
 
 It should work like this:
@@ -60,19 +67,23 @@ It should work like this:
 12. Those reflections become the material that LTM should later process.
 
 This means:
+
 - raw messages compress into observations
 - observations compress into reflections
 - old reflections age out through checkpoint advancement
 - if enough material is available, multiple transitions can happen in cascade during the same management execution
 
 ## Checkpoint Semantics
+
 The checkpoint is the boundary between:
+
 - what still belongs to live active context
 - what has already been consolidated enough to leave that live context
 
 The checkpoint should represent a semantic boundary in the compression pipeline, not a message-count boundary.
 
 In practice, that means:
+
 - the checkpoint must not be "last 20 messages"
 - the checkpoint must not be "everything older than N messages"
 - the checkpoint should advance only when enough newer consolidated context exists to replace older active material safely
@@ -86,19 +97,23 @@ In practice, that means:
 - the model assumes that when checkpoint advancement is needed, sufficient reflection material already exists for that advancement; this should be guaranteed by the compression flow rather than handled as an exceptional branch
 
 Another way to state it:
+
 - the checkpoint marks the oldest point from which active context still needs to be reconstructed
 - there must be one primary checkpoint per thread for active-context reconstruction
 - auxiliary internal checkpoints can exist if they help manage batch buffers, but they are optional implementation details and not the main semantic boundary
 
 ## Recent RAW Message Layer
+
 The system should intentionally preserve a small recent raw layer.
 
 Why:
+
 - the latest interaction often depends on exact wording
 - the agent needs some immediate conversational continuity
 - very recent details should not be compressed too early
 
 Desired behavior:
+
 - keep about `10,000` tokens of recent raw messages
 - keep them as raw messages, not observations
 - they should be the freshest part of the active context
@@ -108,14 +123,17 @@ Raw messages inside this reserve should not be compressed yet.
 If a message causes the raw reserve to overflow, messages should not be truncated. Any true excess should flow into the next batching layer.
 
 ## Observation Layer
+
 Observations are the first compression stage over raw messages.
 
 An observation should:
+
 - summarize a bounded batch of older raw messages
 - preserve the important facts, actions, decisions, and local implications of that batch
 - replace those raw messages inside the active context
 
 Observations should be:
+
 - more compact than the raw batch
 - still close to the concrete events
 - specific enough to preserve operational detail
@@ -124,6 +142,7 @@ Observations should be:
 The intent is not to produce a timeless summary yet. The intent is to compact a recent region of raw conversation while keeping local usefulness.
 
 Rule:
+
 - once a raw batch becomes an observation, that raw batch should leave the active context completely
 - the observation becomes the only active representation of that older raw region
 - the raw batch should be closed by token threshold only, not by message count
@@ -136,14 +155,17 @@ Rule:
 - raw blocks are strict: one raw message belongs to only one raw block and must not be replaced twice by different observations
 
 ## Reflection Layer
+
 Reflections are the second compression stage over observations.
 
 A reflection should:
+
 - synthesize a bounded batch of observations
 - extract the more durable or cross-cutting meaning from them
 - replace those observations inside the active context
 
 Reflections should be:
+
 - more compact than a stack of observations
 - more abstract and durable
 - less tied to one local conversation moment
@@ -152,6 +174,7 @@ Reflections should be:
 Reflections are what should carry medium-term continuity inside the active context.
 
 Rule:
+
 - once an observation batch becomes a reflection, those observations should leave the active context completely
 - the reflection becomes the only active representation of that older observation region
 - the observation batch should be closed by token threshold only, not by message count
@@ -167,11 +190,13 @@ Rule:
 - that supporting-context token limit should be configurable
 
 ## LTM Handoff
+
 LTM should not work from the full live thread.
 
 Instead, LTM should receive only material that has already left the active context.
 
 The preferred handoff unit is:
+
 - reflections that moved behind the latest checkpoint
 
 That means LTM is downstream from the active compression system.
@@ -179,12 +204,14 @@ The handoff flow can initially follow the same general downstream model already 
 No other trigger should send material to LTM in the first version; the handoff should happen only through checkpoint advancement.
 
 Why this is desirable:
+
 - LTM receives already-consolidated material
 - LTM is less coupled to live thread noise
 - active context remains the primary operational layer
 - LTM becomes a later-stage memory layer instead of trying to manage live continuity directly
 
 ## Desired Token Strategy
+
 The active context should be managed primarily by token budget, not by message count.
 Token accounting can initially follow the same counting approach currently used by the existing OM implementation.
 The active context budget described in this document applies to the reconstructed active memory layers before the current flush input is added.
@@ -194,6 +221,7 @@ In practice, the OM-managed budget applies only to the message-derived active co
 Anything loaded into that reconstructed checkpoint-derived context should count toward the budget.
 
 The current target idea is:
+
 - total active context target: about `50,000` tokens
 - recent raw reserve: about `10,000` tokens
 - raw-to-observation batch buffer: about `5,000` tokens
@@ -201,12 +229,14 @@ The current target idea is:
 - active reflection history budget: whatever remains from the total target after the three reserved areas above
 
 These values are not final, but they express the intended shape:
+
 - preserve a fixed recent raw reserve
 - compress older material in bounded chunks
 - keep most of the active historical continuity in reflections
 - all these thresholds should be configurable rather than treated as fixed constants
 
 This also clarifies the active layout:
+
 - newest `10k` tokens stay as raw recent context
 - raw material older than that does not stay raw in active context
 - once raw material accumulates another `5k` tokens beyond the recent reserve, it should become an observation
@@ -214,10 +244,12 @@ This also clarifies the active layout:
 - reflections occupy the remaining active historical budget
 
 Examples:
+
 - if the total target is `50k`, the reflection history budget is about `30k`
 - if the total target is `100k`, the reflection history budget is about `80k`
 
 ## Context Assembly Expectations
+
 When a model call is prepared, active context assembly should behave roughly like this:
 
 1. include base runtime/system instructions
@@ -229,6 +261,7 @@ When a model call is prepared, active context assembly should behave roughly lik
 7. enforce the total target token budget
 
 The assembly process should prefer:
+
 - keeping the recent raw reserve
 - then keeping the active reflection history
 - then keeping the newest active observations that have not yet been reflected
@@ -237,9 +270,11 @@ Anything older should be compressed or pushed behind the checkpoint instead of b
 Within each active layer, ordering should remain chronological from oldest to newest.
 
 ## What "Replace" Means
+
 In this design, replacement is important.
 
 When:
+
 - raw messages become an observation
 - or observations become a reflection
 
@@ -252,11 +287,14 @@ Without replacement, context only grows.
 With replacement, context slides.
 
 ## Why This Is Different From Naive Summarization
+
 This is not just:
+
 - summarize sometimes
 - keep a summary around
 
 It is a structured pipeline with:
+
 - checkpoints
 - bounded raw reserve
 - bounded observation batches
@@ -267,6 +305,7 @@ It is a structured pipeline with:
 The design is closer to a rolling compression system than to a one-off memory summary.
 
 ## Important Behavioral Requirements
+
 The future implementation must satisfy these requirements:
 
 - It must be possible to tell what the current active checkpoint is.
@@ -279,6 +318,7 @@ The future implementation must satisfy these requirements:
 The behavior must be inspectable and predictable.
 
 ## Remaining Technical Specification Work
+
 The desired behavior is now much more defined, but the implementation spec still needs to define these technical details:
 
 - the exact persisted entities and fields for:
@@ -301,9 +341,11 @@ The desired behavior is now much more defined, but the implementation spec still
 - the exact observability/debug output needed so the system is inspectable in production
 
 ## What This Document Is Trying To Lock In
+
 This document is trying to lock in the desired behavior, not the implementation mechanism.
 
 The essential behavior to preserve is:
+
 - recent raw context stays visible
 - older context compresses progressively
 - the active window slides forward

@@ -1,17 +1,10 @@
-import type {
-  RuntimePlugin,
-  StepContextEntry,
-} from 'agent-runtime-core/integrations';
-import {
-  createTextStepContextEntry,
-} from 'agent-runtime-core/integrations';
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import type { RuntimePlugin, StepContextEntry } from 'agent-runtime-core/integrations';
+import { createTextStepContextEntry } from 'agent-runtime-core/integrations';
 import { z } from 'zod';
 
 import { createTool, type Tool } from './tools.js';
-import {
-  WORKING_MEMORY_SCHEMA,
-  WORKING_MEMORY_UPDATE_SCHEMA,
-} from './working-memory.js';
+import { WORKING_MEMORY_SCHEMA, WORKING_MEMORY_UPDATE_SCHEMA } from './working-memory.js';
 
 export type WorkingMemoryRecord = {
   threadId: string;
@@ -21,10 +14,7 @@ export type WorkingMemoryRecord = {
 };
 
 export interface RuntimeWorkingMemoryStore {
-  read(input: {
-    threadId: string;
-    resourceId: string;
-  }): Promise<WorkingMemoryRecord | null>;
+  read(input: { threadId: string; resourceId: string }): Promise<WorkingMemoryRecord | null>;
   write(input: {
     threadId: string;
     resourceId: string;
@@ -63,7 +53,9 @@ export function createUpdateWorkingMemoryTool(input: {
       });
       const currentWorkingMemory = parseWorkingMemoryRecord(currentRecord?.workingMemory);
       const mergedWorkingMemory = mergeWorkingMemory(currentWorkingMemory, value.workingMemory);
-      const normalizedWorkingMemory = JSON.stringify(WORKING_MEMORY_SCHEMA.parse(mergedWorkingMemory));
+      const normalizedWorkingMemory = JSON.stringify(
+        WORKING_MEMORY_SCHEMA.parse(mergedWorkingMemory),
+      );
 
       await input.store.write({
         threadId: input.threadId,
@@ -95,9 +87,7 @@ export function createWorkingMemoryPlugin(input: {
         return [];
       }
 
-      return [
-        createWorkingMemoryContextEntry(record.workingMemory),
-      ];
+      return [createWorkingMemoryContextEntry(record.workingMemory)];
     },
   };
 }
@@ -111,7 +101,7 @@ export function createWorkingMemoryContextEntry(workingMemory: string): StepCont
   });
 }
 
-export async function loadWorkingMemoryContextText(input: {
+async function _loadWorkingMemoryContextText(input: {
   threadId: string;
   resourceId: string;
   store: RuntimeWorkingMemoryStore;

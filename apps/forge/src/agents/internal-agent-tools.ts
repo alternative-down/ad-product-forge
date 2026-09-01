@@ -1,12 +1,12 @@
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+import type { Database } from '../database/client';
 import { runInternalHiring, runInternalTermination } from './internal-agent-lifecycle';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import type { AgentScheduleManager } from '../schedules/manager/index';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 const hireInternalAgentInputSchema = z.object({
@@ -18,7 +18,7 @@ const hireInternalAgentInputSchema = z.object({
 const hireInternalAgentOutputSchema = z.object({
   agentId: z.string(),
   emailAddress: z.string().nullable(),
-  githubAppRegistrationUrl: z.string().nullable(),
+  githubAppRegistrationUrl: z.string().nullish(),  // per L#NN-TSC-Phase-4 v1 producer fix: accepts null OR undefined
 });
 
 const terminateInternalAgentInputSchema = z.object({
@@ -35,7 +35,7 @@ export function createInternalAgentTools(config: {
   githubApps: GitHubAppManager;
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
+  schedules: AgentScheduleManager;
   internalChat: InternalChatService;
 }) {
   return {
@@ -45,7 +45,7 @@ export function createInternalAgentTools(config: {
       inputSchema: hireInternalAgentInputSchema,
       outputSchema: hireInternalAgentOutputSchema,
       execute: async (input) => {
-        return runInternalHiring(config.db, {
+        return await runInternalHiring(config.db, {
           ...input,
           workspaceBasePath: config.workspaceBasePath,
           githubApps: config.githubApps,
@@ -62,13 +62,14 @@ export function createInternalAgentTools(config: {
       inputSchema: terminateInternalAgentInputSchema,
       outputSchema: terminateInternalAgentOutputSchema,
       execute: async (input) => {
-        return runInternalTermination(config.db, {
+        return await runInternalTermination(config.db, {
           ...input,
           workspaceBasePath: config.workspaceBasePath,
           githubApps: config.githubApps,
           emailMailboxes: config.emailMailboxes,
           coolify: config.coolify,
           schedules: config.schedules,
+          internalChat: config.internalChat,
         });
       },
     }),

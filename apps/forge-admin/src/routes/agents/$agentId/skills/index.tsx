@@ -1,13 +1,23 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteAgentSkill, getAgent, getSystemSkills, installGlobalSkillForAgent, publishAgentSkillToGlobalCatalog } from '@/lib/admin-api';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  deleteAgentSkill,
+  getAgent,
+  getSystemSkills,
+  installGlobalSkillForAgent,
+  publishAgentSkillToGlobalCatalog,
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/skills/')({
@@ -62,9 +72,10 @@ function AgentSkillsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {(agentQuery.isLoading && !agentQuery.data) || (systemSkillsQuery.isLoading && !systemSkillsQuery.data)
-        ? <AdminLoadingState label="Carregando skills..." />
-        : null}
+      {(agentQuery.isLoading && !agentQuery.data) ||
+      (systemSkillsQuery.isLoading && !systemSkillsQuery.data) ? (
+        <AdminLoadingState label="Carregando skills..." />
+      ) : null}
 
       <PageHeader
         title="Skills"
@@ -75,7 +86,8 @@ function AgentSkillsIndexRoute() {
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Skills locais</div>
           <div className="text-sm text-muted-foreground">
-            Essas são as skills presentes na workspace do agente. Você pode removê-las localmente ou promovê-las para o catálogo compartilhado.
+            Essas são as skills presentes na workspace do agente. Você pode removê-las localmente ou
+            promovê-las para o catálogo compartilhado.
           </div>
         </div>
 
@@ -90,7 +102,10 @@ function AgentSkillsIndexRoute() {
             </TableHeader>
             <TableBody>
               {localSkills.map((skill) => {
-                const busy = installMutation.isPending || deleteMutation.isPending || publishMutation.isPending;
+                const busy =
+                  installMutation.isPending ||
+                  deleteMutation.isPending ||
+                  publishMutation.isPending;
                 const inCatalog = catalogSkillNames.has(skill.skillName);
 
                 return (
@@ -103,23 +118,25 @@ function AgentSkillsIndexRoute() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3">{inCatalog ? 'Publicada' : 'Somente local'}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      {inCatalog ? 'Publicada' : 'Somente local'}
+                    </TableCell>
                     <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <AdminButton
+                        <Button
                           variant="outline"
                           disabled={busy}
                           onClick={() => publishMutation.mutate(skill.skillName)}
                         >
                           {inCatalog ? 'Atualizar catálogo' : 'Publicar no catálogo'}
-                        </AdminButton>
-                        <AdminButton
+                        </Button>
+                        <Button
                           variant="outline"
                           disabled={busy}
                           onClick={() => deleteMutation.mutate(skill.skillName)}
                         >
                           Remover local
-                        </AdminButton>
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -139,7 +156,11 @@ function AgentSkillsIndexRoute() {
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Catálogo compartilhado</div>
           <div className="text-sm text-muted-foreground">
-            Gerencie o catálogo em <Link to="/settings/skills" className="underline underline-offset-4">Configurações &gt; Skills</Link> e apenas instale ou remova aqui.
+            Gerencie o catálogo em{' '}
+            <Link to="/settings/skills" className="underline underline-offset-4">
+              Configurações &gt; Skills
+            </Link>{' '}
+            e apenas instale ou remova aqui.
           </div>
         </div>
 
@@ -155,7 +176,10 @@ function AgentSkillsIndexRoute() {
             <TableBody>
               {skills.map((skill) => {
                 const installed = installedSkills.has(skill.skillName);
-                const busy = installMutation.isPending || deleteMutation.isPending || publishMutation.isPending;
+                const busy =
+                  installMutation.isPending ||
+                  deleteMutation.isPending ||
+                  publishMutation.isPending;
 
                 return (
                   <TableRow key={skill.skillName}>
@@ -167,24 +191,26 @@ function AgentSkillsIndexRoute() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3">{skill.source === 'bundled' ? 'Bundled' : 'Catálogo'}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      {skill.source === 'bundled' ? 'Bundled' : 'Catálogo'}
+                    </TableCell>
                     <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         {installed ? (
-                          <AdminButton
+                          <Button
                             variant="outline"
                             disabled={busy}
                             onClick={() => deleteMutation.mutate(skill.skillName)}
                           >
                             Remover
-                          </AdminButton>
+                          </Button>
                         ) : (
-                          <AdminButton
+                          <Button
                             disabled={busy}
                             onClick={() => installMutation.mutate(skill.skillName)}
                           >
                             Instalar
-                          </AdminButton>
+                          </Button>
                         )}
                       </div>
                     </TableCell>
@@ -202,8 +228,12 @@ function AgentSkillsIndexRoute() {
           </Table>
         </div>
 
-        {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
-        {systemSkillsQuery.error ? <div className="text-sm text-destructive">{systemSkillsQuery.error.message}</div> : null}
+        {agentQuery.error ? (
+          <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+        ) : null}
+        {systemSkillsQuery.error ? (
+          <div className="text-sm text-destructive">{systemSkillsQuery.error.message}</div>
+        ) : null}
       </section>
     </div>
   );

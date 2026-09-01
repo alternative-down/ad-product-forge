@@ -8,10 +8,7 @@ export type HookedStepModelAdapterOptions = {
     request: StepModelRequest;
     response: StepModelResponse;
   }): Promise<void> | void;
-  onError?(context: {
-    request: StepModelRequest;
-    error: unknown;
-  }): Promise<void> | void;
+  onError?(context: { request: StepModelRequest; error: unknown }): Promise<void> | void;
 };
 
 export class HookedStepModelAdapter implements StepModelAdapter {

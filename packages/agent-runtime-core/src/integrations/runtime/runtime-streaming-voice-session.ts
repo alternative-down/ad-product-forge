@@ -1,5 +1,8 @@
 import type { AudioChunk, RealtimeTextToSpeechGateway } from '../gateways/speech.js';
-import type { RuntimeMessageChunkEvent, RuntimeMessageChunkStream } from './runtime-message-chunk-stream.js';
+import type {
+  RuntimeMessageChunkEvent,
+  RuntimeMessageChunkStream,
+} from './runtime-message-chunk-stream.js';
 
 export type RuntimeStreamingVoiceSessionOptions = {
   messageStream: RuntimeMessageChunkStream;
@@ -55,7 +58,7 @@ export class RuntimeStreamingVoiceSession {
     const completion = (async () => {
       try {
         for await (const event of this.messageStream) {
-          if (this.runtimeId && event.runtimeId !== this.runtimeId) {
+          if (this.runtimeId != null && event.runtimeId !== this.runtimeId) {
             continue;
           }
 

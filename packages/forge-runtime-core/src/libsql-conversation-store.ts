@@ -5,13 +5,10 @@ import type {
   ConversationThread,
 } from 'agent-runtime-core/integrations';
 import type {
-  CheckpointedConversationState,
-  CheckpointedConversationStateStore,
+  OperationalMemoryConversationState,
+  OperationalMemoryConversationStateStore,
 } from 'agent-runtime-core/integrations';
-import type {
-  RuntimeWorkingMemoryStore,
-  WorkingMemoryRecord,
-} from './runtime-working-memory.js';
+import type { RuntimeWorkingMemoryStore, WorkingMemoryRecord } from './runtime-working-memory.js';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -37,7 +34,8 @@ export type LibsqlConversationStoreOptions = {
 };
 
 export class LibsqlConversationStore
-implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorkingMemoryStore {
+  implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWorkingMemoryStore
+{
   private readonly client: Client;
   private readonly threadTableName: string;
   private readonly messageTableName: string;
@@ -103,13 +101,13 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 
     return {
       id: String(row.id),
-      title: row.title ? String(row.title) : undefined,
+      title: row.title != null ? String(row.title) : undefined,
       participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
       createdAt: String(row.created_at),
@@ -133,7 +131,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
 
     return result.rows.map((row) => ({
       id: String(row.id),
-      title: row.title ? String(row.title) : undefined,
+      title: row.title != null ? String(row.title) : undefined,
       participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
       createdAt: String(row.created_at),
@@ -143,9 +141,10 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
 
   async appendMessage(message: ConversationMessage): Promise<void> {
     await this.ensureSchema();
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           insert or ignore into ${escapeIdentifier(this.threadTableName)} (
             id,
             title,
@@ -155,10 +154,10 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             updated_at
           ) values (?, null, '[]', null, ?, ?)
         `,
-        args: [message.threadId, message.createdAt, message.createdAt],
-      },
-      {
-        sql: `
+          args: [message.threadId, message.createdAt, message.createdAt],
+        },
+        {
+          sql: `
           insert into ${escapeIdentifier(this.messageTableName)} (
             id,
             thread_id,
@@ -172,28 +171,30 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             created_at
           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        args: [
-          message.id,
-          message.threadId,
-          message.role,
-          message.authorId ?? null,
-          serializeJson(message.parts),
-          serializeJson(message.metadata ?? null),
-          message.replacedByMessageId ?? null,
-          message.operationalMemoryType ?? null,
-          message.operationalMemoryGeneration ?? null,
-          message.createdAt,
-        ],
-      },
-      {
-        sql: `
+          args: [
+            message.id,
+            message.threadId,
+            message.role,
+            message.authorId ?? null,
+            serializeJson(message.parts),
+            serializeJson(message.metadata ?? null),
+            message.replacedByMessageId ?? null,
+            message.operationalMemoryType ?? null,
+            message.operationalMemoryGeneration ?? null,
+            message.createdAt,
+          ],
+        },
+        {
+          sql: `
           update ${escapeIdentifier(this.threadTableName)}
           set updated_at = ?
           where id = ?
         `,
-        args: [message.createdAt, message.threadId],
-      },
-    ], 'write');
+          args: [message.createdAt, message.threadId],
+        },
+      ],
+      'write',
+    );
   }
 
   async updateMessage(input: {
@@ -241,11 +242,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
         set metadata_json = ?
         where thread_id = ? and id = ?
       `,
-      args: [
-        serializeJson(input.metadata ?? null),
-        input.threadId,
-        input.messageId,
-      ],
+      args: [serializeJson(input.metadata ?? null), input.threadId, input.messageId],
     });
   }
 
@@ -261,11 +258,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
         set replaced_by_message_id = ?
         where thread_id = ? and id = ?
       `,
-      args: [
-        input.replacedByMessageId,
-        input.threadId,
-        input.messageId,
-      ],
+      args: [input.replacedByMessageId, input.threadId, input.messageId],
     });
   }
 
@@ -280,7 +273,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     const conditions = ['thread_id = ?'];
     const args: Array<string | number> = [query.threadId];
 
-    if (query.beforeMessageId) {
+    if (query.beforeMessageId != null) {
       conditions.push(
         `(
           created_at < (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
@@ -293,7 +286,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       args.push(query.beforeMessageId, query.beforeMessageId, query.beforeMessageId);
     }
 
-    if (query.afterMessageId) {
+    if (query.afterMessageId != null) {
       conditions.push(
         `(
           created_at > (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
@@ -306,7 +299,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       args.push(query.afterMessageId, query.afterMessageId, query.afterMessageId);
     }
 
-    if (query.limit) {
+    if (query.limit != null) {
       args.push(query.limit);
     }
 
@@ -326,7 +319,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
         from ${escapeIdentifier(this.messageTableName)}
         where ${conditions.join(' and ')}
         order by created_at ${query.order === 'desc' ? 'desc' : 'asc'}, rowid ${query.order === 'desc' ? 'desc' : 'asc'}
-        ${query.limit ? 'limit ?' : ''}
+        ${query.limit != null ? 'limit ?' : ''}
       `,
       args,
     });
@@ -335,22 +328,26 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       id: String(row.id),
       threadId: String(row.thread_id),
       role: row.role as ConversationMessage['role'],
-      authorId: row.author_id ? String(row.author_id) : undefined,
+      authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type
-        ? row.om_type as ConversationMessage['operationalMemoryType']
-        : undefined,
+      replacedByMessageId:
+        row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType:
+        row.om_type != null
+          ? ((row.om_type ?? null) as ConversationMessage['operationalMemoryType'])
+          : undefined,
       operationalMemoryGeneration:
-        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
+        typeof row.om_generation === 'number'
+          ? row.om_generation
+          : row.om_generation === null
+            ? null
+            : undefined,
       createdAt: String(row.created_at),
     }));
   }
 
-  async listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]> {
+  async listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -380,7 +377,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
           where thread_id = ?
             and (
               (select checkpoint_rowid from checkpoint) is null
-              or rowid >= (select checkpoint_rowid from checkpoint)
+              or rowid < (select checkpoint_rowid from checkpoint)
             )
         ),
         replacement_chain(root_id, current_id) as (
@@ -435,54 +432,63 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       id: String(row.id),
       threadId: String(row.thread_id),
       role: row.role as ConversationMessage['role'],
-      authorId: row.author_id ? String(row.author_id) : undefined,
+      authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type
-        ? row.om_type as ConversationMessage['operationalMemoryType']
-        : undefined,
+      replacedByMessageId:
+        row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType:
+        row.om_type != null
+          ? ((row.om_type ?? null) as ConversationMessage['operationalMemoryType'])
+          : undefined,
       operationalMemoryGeneration:
-        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
+        typeof row.om_generation === 'number'
+          ? row.om_generation
+          : row.om_generation === null
+            ? null
+            : undefined,
       createdAt: String(row.created_at),
     }));
   }
 
   async clearThread(threadId: string): Promise<void> {
     await this.ensureSchema();
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           delete from ${escapeIdentifier(this.messageTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.stateTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.workingMemoryTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.threadTableName)}
           where id = ?
         `,
-        args: [threadId],
-      },
-    ], 'write');
+          args: [threadId],
+        },
+      ],
+      'write',
+    );
   }
 
-  async load(threadId: string): Promise<CheckpointedConversationState | null> {
+  async load(threadId: string): Promise<OperationalMemoryConversationState | null> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -495,14 +501,14 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 
-    return parseJson<CheckpointedConversationState>(row.state_json);
+    return parseJson<OperationalMemoryConversationState>(row.state_json);
   }
 
-  async save(state: CheckpointedConversationState): Promise<void> {
+  async save(state: OperationalMemoryConversationState): Promise<void> {
     await this.ensureSchema();
     await this.client.execute({
       sql: `
@@ -519,10 +525,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     });
   }
 
-  async read(input: {
-    threadId: string;
-    resourceId: string;
-  }): Promise<WorkingMemoryRecord | null> {
+  async read(input: { threadId: string; resourceId: string }): Promise<WorkingMemoryRecord | null> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -539,7 +542,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 
@@ -584,9 +587,10 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       return;
     }
 
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.threadTableName)} (
             id text primary key,
             title text,
@@ -596,9 +600,9 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             updated_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.messageTableName)} (
             id text primary key,
             thread_id text not null,
@@ -612,24 +616,24 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             created_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create index if not exists ${escapeIdentifier(`${this.messageTableName}_thread_created_idx`)}
           on ${escapeIdentifier(this.messageTableName)} (thread_id, created_at)
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.stateTableName)} (
             thread_id text primary key,
             state_json text not null,
             updated_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.workingMemoryTableName)} (
             thread_id text not null,
             resource_id text not null,
@@ -638,8 +642,10 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             primary key (thread_id, resource_id)
           )
         `,
-      },
-    ], 'write');
+        },
+      ],
+      'write',
+    );
     await ensureColumn(this.client, this.messageTableName, 'replaced_by_message_id', 'text');
     await ensureColumn(this.client, this.messageTableName, 'om_type', 'text');
     await ensureColumn(this.client, this.messageTableName, 'om_generation', 'integer');
@@ -660,5 +666,7 @@ async function ensureColumn(
     return;
   }
 
-  await client.execute(`alter table ${escapeIdentifier(tableName)} add column ${escapeIdentifier(columnName)} ${columnDefinition}`);
+  await client.execute(
+    `alter table ${escapeIdentifier(tableName)} add column ${escapeIdentifier(columnName)} ${columnDefinition}`,
+  );
 }

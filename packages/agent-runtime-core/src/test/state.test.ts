@@ -27,9 +27,11 @@ describe('context note store', () => {
       }),
     });
 
-    runtime.use(createContextNotesPlugin({
-      store,
-    }));
+    runtime.use(
+      createContextNotesPlugin({
+        store,
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',
@@ -62,9 +64,11 @@ describe('context note store', () => {
       }),
     });
 
-    runtime.use(createContextNotesPlugin({
-      store,
-    }));
+    runtime.use(
+      createContextNotesPlugin({
+        store,
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',

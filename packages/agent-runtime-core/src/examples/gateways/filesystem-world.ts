@@ -46,8 +46,8 @@ export class FilesystemWorldGateway implements WorldGateway {
 
   async readRecentEvents(input: { actorId?: string; limit?: number }): Promise<WorldEvent[]> {
     const state = await this.readState();
-    const filteredEvents = input.actorId
-      ? state.events.filter((event) => event.actorId === input.actorId || !event.actorId)
+    const filteredEvents = input.actorId != null
+      ? state.events.filter((event) => event.actorId === input.actorId || event.actorId == null)
       : state.events;
     const limit = input.limit ?? 10;
 

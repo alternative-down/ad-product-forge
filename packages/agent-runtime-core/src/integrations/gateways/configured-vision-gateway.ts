@@ -1,8 +1,4 @@
-import type {
-  VisionGateway,
-  VisionRequest,
-  VisionResponse,
-} from './vision.js';
+import type { VisionGateway, VisionRequest, VisionResponse } from './vision.js';
 
 export type ConfiguredVisionGatewayOptions = {
   base: VisionGateway;
@@ -19,7 +15,7 @@ export class ConfiguredVisionGateway implements VisionGateway {
   }
 
   async analyze(request: VisionRequest): Promise<VisionResponse> {
-    return this.base.analyze({
+    return await this.base.analyze({
       ...request,
       headers: {
         ...this.headers,

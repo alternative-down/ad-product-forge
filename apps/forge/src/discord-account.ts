@@ -1,24 +1,49 @@
-import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
+import {
+  ChannelType,
+  Events,
+  Message,
+  User,
+} from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
+import type {
+  CommunicationInboundMessage,
+  CommunicationProvider,
+} from '@forge-runtime/core';
 
-type DiscordSendableChannel = {
-  id: string;
-  name?: string | null;
-  sendTyping(): Promise<unknown>;
-  send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
-  messages: {
-    fetch(messageId: string): Promise<Message>;
-    fetch(options: { limit: number; before?: string }): Promise<Collection<string, Message>>;
-  };
-};
+import type { DiscordSendableChannel } from './discord-types';
+import { filterRecentByTtl } from './email-account-helpers';
+import {
+  createDiscordClient,
+  listCandidateChannels,
+  resolveDiscordTargetChannel,
+  listChannelMessages,
+} from './discord/channels';
+import { withTyping, clearTypingTimers } from './discord/typing';
+import { sendDiscordChunks } from './discord/outbound';
+import { downloadDiscordAttachments, extractDiscordMessageContent } from './discord/message-parser';
+import { getDiscordConversationName, getDiscordConversationParticipants } from './discord/helpers';
+import {
+  DiscordClientNotReadyError,
+  DiscordTargetNotReadableError,
+} from './discord/errors';
 
-type DiscordOutboundFile = {
-  attachment: Buffer;
-  name: string;
-};
+// ─── module-level helpers ──────────────────────────────────────────────────────
+
+export function discordAccountDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({
+    scope: 'discord-account',
+    level,
+    message,
+    context,
+  });
+}
+
 
 export function createDiscordProvider(config: {
   token: string;
@@ -28,17 +53,8 @@ export function createDiscordProvider(config: {
     respondToMentionsOnly: boolean;
   }>;
 }): CommunicationProvider {
-  const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
-  const client = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMembers,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.DirectMessages,
-      GatewayIntentBits.MessageContent,
-    ],
-    partials: [Partials.Channel, Partials.Message],
-  });
+  const OUTBOUND_ECHO_TTL_MS = 2 * ONE_MINUTE_MS;
+  const client = createDiscordClient(config.token);
   const configuredChannels = new Map(
     (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
   );
@@ -46,10 +62,11 @@ export function createDiscordProvider(config: {
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
   let disposed = false;
+  const pendingTypingTimers = new Set<NodeJS.Timeout>();
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
-      const visibleMessages = messages.filter((message) => now - message.createdAt <= OUTBOUND_ECHO_TTL_MS);
+      const visibleMessages = filterRecentByTtl(messages, OUTBOUND_ECHO_TTL_MS, now);
 
       if (visibleMessages.length === 0) {
         recentOutboundMessages.delete(conversationKey);
@@ -75,157 +92,29 @@ export function createDiscordProvider(config: {
     return messages.some((message) => message.content === content);
   }
 
-  function splitDiscordMessageContent(content: string) {
-    const chunks: string[] = [];
-    const normalizedContent = content.trim();
+  async function toInboundMessage(
+    message: Message,
+    botUserId: string,
+  ): Promise<CommunicationInboundMessage | null> {
+    discordAccountDebug('info', 'MessageCreate received', {
+        authorId: message.author.id,
+        botUserId,
+        channelType: message.channel.type,
+        channelId: message.channelId,
+      });
+    discordAccountDebug('info', 'configuredChannels check', {
+        size: configuredChannels.size,
+        hasChannel: configuredChannels.has(message.channelId),
+      });
 
-    if (!normalizedContent) {
-      return [''];
-    }
-
-    for (const paragraph of normalizedContent.split('\n\n')) {
-      if (paragraph.length <= 2_000) {
-        const nextChunk = chunks[chunks.length - 1];
-
-        if (!nextChunk) {
-          chunks.push(paragraph);
-          continue;
-        }
-
-        const separator = nextChunk.length === 0 ? '' : '\n\n';
-        if (nextChunk.length + separator.length + paragraph.length <= 2_000) {
-          chunks[chunks.length - 1] = `${nextChunk}${separator}${paragraph}`;
-          continue;
-        }
-
-        chunks.push(paragraph);
-        continue;
-      }
-
-      let remainingParagraph = paragraph;
-
-      while (remainingParagraph.length > 2_000) {
-        const slice = remainingParagraph.slice(0, 2_000);
-        const breakIndex = Math.max(slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
-        const chunkEnd = breakIndex >= 1_500 ? breakIndex : 2_000;
-        chunks.push(remainingParagraph.slice(0, chunkEnd).trim());
-        remainingParagraph = remainingParagraph.slice(chunkEnd).trim();
-      }
-
-      if (remainingParagraph.length > 0) {
-        chunks.push(remainingParagraph);
-      }
-    }
-
-    return chunks;
-  }
-
-  function parseFilterDate(value: string | undefined, fieldName: string) {
-    if (!value) {
-      return null;
-    }
-
-    const parsed = Date.parse(value);
-
-    if (Number.isNaN(parsed)) {
-      throw new Error(`Invalid ${fieldName}: ${value}`);
-    }
-
-    return parsed;
-  }
-
-  async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
-    return Promise.all(
-      Array.from(message.attachments.values()).map(async (attachment) => {
-        const response = await fetch(attachment.url);
-
-        if (!response.ok) {
-          throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-
-        return {
-          name: attachment.name ?? attachment.id,
-          data: new Uint8Array(arrayBuffer),
-          contentType: attachment.contentType ?? undefined,
-          sizeBytes: attachment.size,
-        };
-      }),
-    );
-  }
-
-  function toDiscordOutboundFiles(attachments: CommunicationFile[]): DiscordOutboundFile[] {
-    return attachments.map((attachment) => ({
-      attachment: Buffer.from(attachment.data),
-      name: attachment.name,
-    }));
-  }
-
-  async function sendDiscordChunks(input: {
-    channel: DiscordSendableChannel;
-    content: string;
-    attachments: CommunicationFile[];
-  }) {
-    const messageChunks = splitDiscordMessageContent(input.content);
-    let lastSentMessage: Message | null = null;
-    const outboundFiles = toDiscordOutboundFiles(input.attachments);
-
-    for (const [index, chunk] of messageChunks.entries()) {
-      if (index === 0) {
-        lastSentMessage = await input.channel.send({
-          content: chunk,
-          ...(outboundFiles.length > 0 ? { files: outboundFiles } : {}),
-        });
-      } else {
-        lastSentMessage = await input.channel.send(chunk);
-      }
-
-      rememberOutboundMessage(lastSentMessage.channelId, chunk);
-    }
-
-    if (!lastSentMessage) {
-      throw new Error('Discord message content produced no chunks to send');
-    }
-
-    return lastSentMessage;
-  }
-
-  async function withTyping<T extends { sendTyping(): Promise<unknown> }>(
-    channel: T,
-    run: () => Promise<{
-      targetKey: string;
-      messageId?: string;
-      conversationName?: string;
-    }>,
-  ) {
-    await channel.sendTyping();
-
-    const typingTimer = setInterval(() => {
-      void channel.sendTyping();
-    }, 8_000);
-
-    try {
-      return await run();
-    } finally {
-      clearInterval(typingTimer);
-    }
-  }
-
-  async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
-    forgeDebug('discord', 'MessageCreate received', { authorId: message.author.id, botUserId, channelType: message.channel.type, channelId: message.channelId });
-    forgeDebug('discord', 'configuredChannels check', { size: configuredChannels.size, hasChannel: configuredChannels.has(message.channelId) });
-
-    // Ignore messages from the bot itself
     if (message.author.id === botUserId) {
-      forgeDebug('discord', 'filtered: message from bot');
+      discordAccountDebug('info', 'filtered: message from bot');
       return null;
     }
 
-    // Allow DMs through regardless of configured guild channels
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-        forgeDebug('discord', 'filtered: guild channel not in configuredChannels');
+        discordAccountDebug('info', 'filtered: guild channel not in configuredChannels');
         return null;
       }
     }
@@ -235,24 +124,25 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
-      forgeDebug('discord', 'filtered: guild channel requires mention but no mention');
+      discordAccountDebug('info', 'filtered: guild channel requires mention but no mention');
       return null;
     }
 
-    const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
+    const authorDisplayName =
+      message.member?.displayName ?? message.author.globalName ?? message.author.username;
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
-      forgeDebug('discord', 'filtered: empty content and no attachments');
+      discordAccountDebug('info', 'filtered: empty content and no attachments');
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
-      forgeDebug('discord', 'filtered: recent outbound echo');
+      discordAccountDebug('info', 'filtered: recent outbound echo');
       return null;
     }
 
-    forgeDebug('discord', 'message accepted');
+    discordAccountDebug('info', 'message accepted');
 
     return {
       targetKey: message.channelId,
@@ -261,7 +151,7 @@ export function createDiscordProvider(config: {
       authorId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
-      content: content || '[attachment only]',
+      content: content ?? '[attachment only]',
       attachments: await downloadDiscordAttachments(message),
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
@@ -271,10 +161,10 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
-    forgeDebug('discord', 'deliverMessage called', { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length });
+    discordAccountDebug('info', 'deliverMessage called', { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length });
     if (!onInboundMessage) {
       pendingMessages.push(message);
-      forgeDebug('discord', 'pushed to pendingMessages', { total: pendingMessages.length });
+      discordAccountDebug('info', 'pushed to pendingMessages', { total: pendingMessages.length });
       return;
     }
 
@@ -289,7 +179,7 @@ export function createDiscordProvider(config: {
     while (pendingMessages.length > 0) {
       const message = pendingMessages.shift();
 
-      if (!message) {
+      if (message == null) {
         return;
       }
 
@@ -297,13 +187,12 @@ export function createDiscordProvider(config: {
     }
   }
 
-  forgeDebug('discord', 'Starting login');
-  
-  const ready = client.login(config.token)
-    .then(() => {
-    forgeDebug('discord', 'Login succeeded');
+  discordAccountDebug('info', 'Starting login');
+
+  const ready = client.login(config.token).then(() => {
+    discordAccountDebug('info', 'Login succeeded');
     if (!client.user) {
-      throw new Error('Discord client did not become ready after login');
+      throw new DiscordClientNotReadyError();
     }
 
     client.on(Events.MessageCreate, async (message) => {
@@ -311,56 +200,35 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      forgeDebug('discord', 'MessageCreate received', { author: message.author.username, channelType: message.channel.type, guildId: message.guildId });
+      discordAccountDebug('info', 'MessageCreate received', {
+          author: message.author.username,
+          channelType: message.channel.type,
+          guildId: message.guildId,
+        });
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
-        if (!inboundMessage) {
-          forgeDebug('discord', 'toInboundMessage returned null');
+        if (inboundMessage == null) {
+          discordAccountDebug('info', 'toInboundMessage returned null');
           return;
         }
 
-        forgeDebug('discord', 'calling deliverMessage');
+        discordAccountDebug('info', 'calling deliverMessage');
         await deliverMessage(inboundMessage);
-        forgeDebug('discord', 'deliverMessage completed');
+        discordAccountDebug('info', 'deliverMessage completed');
       } catch (error) {
-        console.error('[discord] Error handling MessageCreate event:', error);
+        discordAccountDebug('error', 'Error handling MessageCreate event', { error: errorMsg(error) });
       }
     });
 
-    forgeDebug('discord', 'logged in', { tag: client.user.tag });
+    discordAccountDebug('info', 'logged in', { tag: client.user.tag });
 
     return client.user;
   });
 
   async function getReadyClient() {
-    return ready;
-  }
-
-  async function listCandidateChannels() {
-    await getReadyClient();
-    const channelIds = new Set<string>(configuredChannels.keys());
-
-    for (const channel of client.channels.cache.values()) {
-      if (channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM) {
-        channelIds.add(channel.id);
-      }
-    }
-
-    const channels: DiscordSendableChannel[] = [];
-
-    for (const channelId of channelIds) {
-      const channel = await client.channels.fetch(channelId);
-
-      if (!channel?.isTextBased() || !channel.isSendable()) {
-        continue;
-      }
-
-      channels.push(channel as DiscordSendableChannel);
-    }
-
-    return channels;
+    return await ready;
   }
 
   async function loadCandidateUsers() {
@@ -383,11 +251,11 @@ export function createDiscordProvider(config: {
           rememberUser(member.user);
         }
       } catch (error) {
-        console.warn(`[discord] Failed to fetch members for guild ${guild.id}:`, error);
+        discordAccountDebug('warn', 'Failed to fetch members for guild', { guildId: guild.id, error: errorMsg(error) });
       }
     }
 
-    const channels = await listCandidateChannels();
+    const { channels } = await listCandidateChannels(client, configuredChannels, getReadyClient());
 
     for (const channel of channels) {
       if ('recipient' in channel && channel.recipient instanceof User) {
@@ -410,102 +278,15 @@ export function createDiscordProvider(config: {
       }));
   }
 
-  async function resolveDiscordTargetChannel(targetKey: string) {
-    await getReadyClient();
-
-    if (/^\d+$/.test(targetKey)) {
-      const channel = await client.channels.fetch(targetKey);
-
-      if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${targetKey}`);
-      }
-
-      return channel as DiscordSendableChannel;
-    }
-
-    const candidateUsers = await loadCandidateUsers();
-    const matchedUser = candidateUsers.find((user) => user.username === targetKey);
-
-    if (!matchedUser) {
-      throw new Error(`Discord user not found: ${targetKey}`);
-    }
-
-    const channel = await matchedUser.createDM();
-    return channel as DiscordSendableChannel;
-  }
-
-  async function listChannelMessages(input: {
-    channel: DiscordSendableChannel;
-    limit: number;
-    offset: number;
-    query?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }) {
-    const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
-    const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
-    const matchesMessage = (message: Message) =>
-      (!input.query || message.content.includes(input.query) || message.attachments.size > 0) &&
-      (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
-      (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
-    const targetCount = input.limit + input.offset;
-    const collected = new Collection<string, Message>();
-    let before: string | undefined;
-
-    while (collected.size < targetCount) {
-      const batch = await input.channel.messages.fetch({
-        limit: Math.min(100, targetCount - collected.size),
-        ...(before ? { before } : {}),
-      });
-
-      if (batch.size === 0) {
-        break;
-      }
-
-      for (const [messageId, message] of batch) {
-        collected.set(messageId, message);
-      }
-
-      const oldestMessage = Array.from(batch.values()).at(-1);
-
-      if (!oldestMessage) {
-        break;
-      }
-
-      before = oldestMessage.id;
-    }
-
-    const sortedMessages = Array.from(collected.values())
-      .filter(matchesMessage)
-      .sort((left, right) => left.createdTimestamp - right.createdTimestamp);
-    const filteredMessages = sortedMessages.slice(
-      Math.max(0, sortedMessages.length - targetCount),
-      input.offset > 0 ? sortedMessages.length - input.offset : undefined,
-    );
-
-    return Promise.all(
-      filteredMessages.map(async (message) => ({
-        messageId: message.id,
-        provider: 'discord',
-        authorId: message.author.id,
-        targetKey: input.channel.id,
-        content: extractDiscordMessageContent(message) || '[attachment only]',
-        attachments: await downloadDiscordAttachments(message),
-        unread: false,
-        createdAt: new Date(message.createdTimestamp).toISOString(),
-        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
-      })),
-    );
-  }
-
   return {
     id: 'discord',
     onMessage(callback) {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
-    async dispose() {
+    dispose() {
       disposed = true;
+      clearTypingTimers(pendingTypingTimers);
       onInboundMessage = null;
       pendingMessages.length = 0;
       recentOutboundMessages.clear();
@@ -523,10 +304,10 @@ export function createDiscordProvider(config: {
       };
     },
     async listContacts() {
-      return listCandidateUsers();
+      return await listCandidateUsers();
     },
     async listConversations({ limit }) {
-      const channels = await listCandidateChannels();
+      const { channels } = await listCandidateChannels(client, configuredChannels, getReadyClient());
       const conversations = [];
 
       for (const channel of channels) {
@@ -556,11 +337,12 @@ export function createDiscordProvider(config: {
       await getReadyClient();
       const channel = await client.channels.fetch(targetKey);
 
-      if (!channel?.isTextBased() || !channel.isSendable()) {
-        throw new Error(`Discord target is not readable: ${targetKey}`);
+      if (channel === null || channel?.isTextBased() === false || channel?.isSendable() === false) {
+        discordAccountDebug('error', 'getMessages discord target not readable', { targetKey });
+        throw new DiscordTargetNotReadableError(targetKey);
       }
 
-      return listChannelMessages({
+      return await listChannelMessages({
         channel: channel as DiscordSendableChannel,
         limit,
         offset,
@@ -570,116 +352,34 @@ export function createDiscordProvider(config: {
       });
     },
     async sendMessage(input) {
-      const channel = await resolveDiscordTargetChannel(input.targetKey);
+      const channel = await resolveDiscordTargetChannel(
+        client,
+        input.targetKey,
+        getReadyClient,
+        loadCandidateUsers,
+      );
 
-      return withTyping(channel, async () => {
-        const sent = await sendDiscordChunks({
-          channel: channel as DiscordSendableChannel,
-          content: input.content,
-          attachments: input.attachments,
-        });
+      return await withTyping(
+        channel,
+        async () => {
+          const sent = await sendDiscordChunks({
+            channel: channel as DiscordSendableChannel,
+            content: input.content,
+            attachments: input.attachments,
+            rememberOutboundMessage,
+          });
 
-        return {
-          targetKey: sent.channelId,
-          messageId: sent.id,
-          conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
-        };
-      });
+          return {
+            targetKey: sent.channelId,
+            messageId: sent.id,
+            conversationName: 'name' in channel ? (channel.name ?? undefined) : undefined,
+          };
+        },
+        pendingTypingTimers,
+      );
     },
   };
 }
 
-function extractDiscordMessageContent(message: Message, botUserId?: string) {
-  const textContent = (botUserId
-    ? message.content
-      .replaceAll(`<@${botUserId}>`, '')
-      .replaceAll(`<@!${botUserId}>`, '')
-    : message.content)
-    .trim();
-
-  const embedContent = message.embeds
-    .map((embed) =>
-      [
-        embed.title?.trim(),
-        embed.description?.trim(),
-        embed.fields
-          .map((field) => `${field.name}: ${field.value}`.trim())
-          .filter(Boolean)
-          .join('\n'),
-        embed.footer?.text?.trim(),
-        embed.url?.trim(),
-      ]
-        .filter((value) => value && value.length > 0)
-        .join('\n'),
-    )
-    .filter((value) => value.length > 0)
-    .join('\n\n');
-
-  return [textContent, embedContent]
-    .filter((value) => value.length > 0)
-    .join('\n\n');
-}
-
-function getDiscordConversationName(
-  channel: unknown,
-  fallbackName?: string,
-) {
-  if (
-    typeof channel === 'object' &&
-    channel !== null &&
-    'type' in channel &&
-    channel.type === ChannelType.DM
-  ) {
-    const recipient =
-      'recipient' in channel && typeof channel.recipient === 'object' && channel.recipient !== null
-        ? channel.recipient
-        : null;
-
-    return (
-      (recipient && 'globalName' in recipient && typeof recipient.globalName === 'string' ? recipient.globalName : null)
-      ?? (recipient && 'username' in recipient && typeof recipient.username === 'string' ? recipient.username : null)
-      ?? fallbackName
-      ?? 'direct-message'
-    );
-  }
-
-  if (typeof channel === 'object' && channel !== null && 'name' in channel && typeof channel.name === 'string') {
-    return channel.name;
-  }
-
-  return 'unknown-channel';
-}
-
-function getDiscordConversationParticipants(channel: unknown, messages: Array<{ authorDisplayName?: string }>) {
-  const participants = new Set<string>();
-
-  if (
-    typeof channel === 'object' &&
-    channel !== null &&
-    'recipients' in channel &&
-    Array.isArray(channel.recipients)
-  ) {
-    for (const recipient of channel.recipients) {
-      if (typeof recipient !== 'object' || recipient === null) {
-        continue;
-      }
-
-      if ('globalName' in recipient && typeof recipient.globalName === 'string') {
-        participants.add(recipient.globalName);
-        continue;
-      }
-
-      if ('username' in recipient && typeof recipient.username === 'string') {
-        participants.add(recipient.username);
-      }
-    }
-  }
-
-  for (const message of messages) {
-    if (message.authorDisplayName) {
-      participants.add(message.authorDisplayName);
-    }
-  }
-
-  return [...participants];
-}
+import { errorMsg } from './agents/error-formatting';
+import { ONE_MINUTE_MS } from './agents/time-constants';

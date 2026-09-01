@@ -1,0 +1,286 @@
+/**
+ * Routing Ops — buildProvisioning, registerAgentRoutes,
+ * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
+ */
+import { errorMsg } from '../../agents/error-formatting';
+import { verifyWebhookSignature } from '../../webhooks/handler-helpers';
+
+import type { HttpRequest } from '../../http/server';
+import { App, Octokit } from 'octokit';
+import type { OpsContext } from './context';
+import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
+import { LogLevel } from '../../types/log-level';
+import {
+  githubAppInfoResponseSchema,
+  githubAppManifestConversionResponseSchema,
+} from '../types';
+
+// Subset of AppProvisioningOps fields actually used by routing.
+// createAppName/nanoid/normalizeManifestConfig/DEFAULT_GITHUB_APP_MANIFEST_CONFIG
+// are on ctx, not AppProvisioningOps. routeCleanups does not exist on AppProvisioningOps.
+type RoutingOpsDeps = {
+  getGlobalConfig: OpsContext['getGlobalConfig'];
+  createAppName: (payload: unknown) => string;
+  getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
+  saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
+  buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
+};
+
+export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
+  const routingOpsDebug = (
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+  ): void => {
+    ctx.forgeDebug({ scope: 'github-ops', level, message, context });
+  };
+
+  function html(status: number, body: string) {
+    return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
+  }
+
+  function buildProvisioning(
+    agentId: string,
+    credentials: GitHubAppCredentials,
+  ): GitHubAppProvisioning {
+    if (routingDeps?.buildProvisioning) return routingDeps.buildProvisioning(agentId, credentials);
+    const registrationUrl = `${ctx.config.publicBaseUrl}${ctx.getRegisterPath(agentId)}`;
+    const manifestConfig = credentials.manifestConfig;
+    if (credentials.status === 'created' || credentials.status === 'active') {
+      return {
+        agentId,
+        status: credentials.status,
+        registrationUrl,
+        installUrl: `https://github.com/apps/${credentials.appSlug}/installations/new`,
+        manifestConfig,
+      };
+    }
+    return { agentId, status: credentials.status, registrationUrl, manifestConfig };
+  }
+
+  function registerAgentRoutes(agentId: string) {
+    const cleanups = [
+      ctx.config.httpServer.registerRoute({
+        method: 'GET',
+        path: ctx.getRegisterPath(agentId),
+        handler: async () => await handleRegisterPage(agentId),
+      }),
+      ctx.config.httpServer.registerRoute({
+        method: 'GET',
+        path: ctx.getManifestCallbackPath(agentId),
+        handler: async (request: HttpRequest) =>
+          await handleManifestCallback(
+            agentId,
+            request.query.get('code'),
+            request.query.get('state'),
+          ),
+      }),
+      ctx.config.httpServer.registerRoute({
+        method: 'GET',
+        path: ctx.getSetupPath(agentId),
+        handler: async (request: HttpRequest) =>
+          await handleSetupCallback(agentId, request.query.get('installation_id')),
+      }),
+      ctx.config.httpServer.registerRoute({
+        method: 'POST',
+        path: ctx.getWebhookPath(agentId),
+        handler: async (request: HttpRequest) => {
+          const headers = request.headers;
+          const bodyText = request.bodyText;
+          return await handleWebhook(
+            agentId,
+            headers as Record<string, string | undefined>,
+            bodyText ?? '',
+          );
+        },
+      }),
+    ];
+    ctx.routeCleanups.set(agentId, cleanups);
+  }
+
+  async function handleRegisterPage(agentId: string) {
+    const credentials = await ctx.getCredentials(agentId);
+    if (!credentials) {
+      return html(
+        404,
+        `<h1>GitHub App not provisioned</h1><p>No pending GitHub App configuration exists for agent ${ctx.githubEscapeHtml(agentId)}.</p>`,
+      );
+    }
+    if (credentials.status !== 'pending') {
+      return html(200, `<h1>GitHub App ${ctx.githubEscapeHtml(credentials.status)}</h1>`);
+    }
+    const githubConfig = await ctx.getGlobalConfig();
+    const manifest = JSON.stringify({
+      name: credentials.appName,
+      url: githubConfig.appHomeUrl,
+      redirect_url: `${ctx.config.publicBaseUrl}${ctx.getManifestCallbackPath(agentId)}`,
+      setup_url: `${ctx.config.publicBaseUrl}${ctx.getSetupPath(agentId)}`,
+      hook_attributes: {
+        url: `${ctx.config.publicBaseUrl}${ctx.getWebhookPath(agentId)}`,
+        active: true,
+      },
+      public: false,
+      default_permissions: ctx.buildManifestPermissions(credentials.manifestConfig as never),
+      default_events: ctx.buildManifestEvents(credentials.manifestConfig as never),
+    });
+    const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
+    return html(
+      200,
+      `<!doctype html><html><body><form id="f" action="${ctx.githubEscapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.githubEscapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`,
+    );
+  }
+
+  async function handleManifestCallback(
+    agentId: string,
+    code: string | null,
+    state: string | null,
+  ) {
+    const credentials = await ctx.getCredentials(agentId);
+    if (!credentials || credentials.status !== 'pending') {
+      return html(404, '<h1>GitHub App registration not pending</h1>');
+    }
+    if (code === null || code === undefined || state !== credentials.state) {
+      return html(400, '<h1>Invalid manifest callback</h1>');
+    }
+    // Unauthenticated Octokit is sufficient for the manifest-conversion
+    // endpoint (POST /app-manifests/{code}/conversions). The previous
+    // implementation instantiated an App with an empty config object and
+    // cast the result to a manually-typed shape, hiding the real Octokit
+    // surface (paginate, retry, hooks) and bypassing type safety.
+    const anonymousOctokit = new Octokit();
+    try {
+      const conversionResponse = await anonymousOctokit.request(
+        'POST /app-manifests/{code}/conversions',
+        { code },
+      );
+      // Runtime-validated destructure: throws ZodError on missing fields,
+      // surfaced as a 500 in the catch below.
+      const { pem, id: appId, webhook_secret } =
+        githubAppManifestConversionResponseSchema.parse(conversionResponse.data);
+      const app = new App({ appId, privateKey: pem });
+      const appInfoResponse = await app.octokit.request('GET /app');
+      // Runtime-validated app info: surfaces missing `name` (cast site E in
+      // the previous implementation) as a 500 instead of silently persisting
+      // undefined into the credentials store.
+      const appInfo = githubAppInfoResponseSchema.parse(appInfoResponse.data);
+      const created = {
+        status: 'created' as const,
+        appId,
+        privateKey: pem,
+        webhookSecret: webhook_secret,
+        appSlug: appInfo.slug ?? 'unknown',
+        appName: appInfo.name,
+        manifestConfig: credentials.manifestConfig,
+        createdAt: credentials.createdAt,
+      };
+      await ctx.saveCredentials(agentId, created);
+      return html(
+        200,
+        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.githubEscapeHtml(appInfo.slug ?? 'unknown')}/installations/new">install the app</a>.</p>`,
+      );
+    } catch (err) {
+      routingOpsDebug('error', 'handleSetupCreate createApp failed', { error: errorMsg(err) });
+      return html(500, `<h1>Failed</h1><pre>${ctx.githubEscapeHtml(String(err))}</pre>`);
+    }
+  }
+
+  async function handleSetupCallback(agentId: string, installationIdValue: string | null) {
+    const credentials = await ctx.getCredentials(agentId);
+    if (!credentials) {
+      return html(404, '<h1>GitHub App not ready</h1>');
+    }
+    if (credentials.status === 'pending') {
+      return html(404, '<h1>GitHub App registration not complete</h1>');
+    }
+    if (installationIdValue === null || installationIdValue === undefined)
+      return html(400, '<h1>Missing installation_id</h1>');
+    const installationId = Number.parseInt(installationIdValue, 10);
+    if (!Number.isInteger(installationId)) return html(400, '<h1>Invalid installation_id</h1>');
+    const activeCredentials: Extract<GitHubAppCredentials, { status: 'active' }> = {
+      status: 'active',
+      appId: credentials.appId,
+      privateKey: credentials.privateKey,
+      webhookSecret: credentials.webhookSecret,
+      installationId,
+      appSlug: credentials.appSlug,
+      appName: credentials.appName,
+      manifestConfig: credentials.manifestConfig,
+      createdAt: credentials.createdAt,
+    };
+    if (credentials.status === 'active' && credentials.installationId !== installationId) {
+      routingOpsDebug('info', 'handleSetupCallback: reinstall detected, updating installationId', {
+        agentId,
+        oldInstallationId: credentials.installationId,
+        newInstallationId: installationId,
+      });
+    }
+    await ctx.saveCredentials(agentId, activeCredentials);
+    const githubConfig = await ctx.getGlobalConfig();
+    await ctx.notifications.createNotification({
+      agentId,
+      content: String(
+        ctx.createGitHubInstallWakeContent({
+          agentId,
+          installationId,
+          organization: githubConfig.organization,
+          appName: activeCredentials.appName,
+          appSlug: activeCredentials.appSlug,
+          timestamp: Date.now(),
+        }),
+      ),
+    });
+    return html(200, '<h1>GitHub App installed</h1>');
+  }
+
+  async function handleWebhook(
+    agentId: string,
+    headers: Record<string, string | undefined>,
+    bodyText: string,
+  ) {
+    // SECURITY (Closes #6760 P0): verify x-hub-signature-256 BEFORE any processing.
+    // The previous implementation accepted unauthenticated POSTs from anyone reaching
+    // the public webhook URL, allowing forged events to trigger agent wake notifications.
+    // Fix uses the existing verifyWebhookSignature helper (HMAC-SHA256 + timingSafeEqual),
+    // matching the pattern used by stripe.ts and asaas.ts payment providers.
+    const credentials = await ctx.getCredentials(agentId);
+    if (!credentials || credentials.status === 'pending') {
+      routingOpsDebug('warn', 'No webhook-capable credentials for agent', { agentId });
+      return html(500, '<h1>Agent credentials not configured for webhooks</h1>');
+    }
+    const signature = ctx.getHeader(headers, 'x-hub-signature-256');
+    if (!verifyWebhookSignature(bodyText, signature, credentials.webhookSecret)) {
+      routingOpsDebug('warn', 'Invalid webhook signature', { agentId });
+      return html(401, '<h1>Invalid signature</h1>');
+    }
+    const event = ctx.getHeader(headers, 'x-github-event');
+    const delivery = ctx.getHeader(headers, 'x-github-delivery');
+    if (event === null || event === undefined || delivery === null || delivery === undefined)
+      return html(400, '<h1>Missing webhook headers</h1>');
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(bodyText);
+    } catch (err) {
+      routingOpsDebug('info', 'Invalid JSON: ' + errorMsg(err));
+      return html(400, '<h1>Invalid JSON</h1>');
+    }
+    if (ctx.isGitHubSelfEvent(payload)) {
+      routingOpsDebug('info', 'Ignoring self event', { agentId, event });
+      return html(200, 'ok');
+    }
+    routingOpsDebug('info', `Webhook ${event}`, { agentId, delivery });
+    await ctx.notifications.createNotification({
+      agentId,
+      content: String(ctx.createGitHubWebhookWakeContent({ event, delivery, payload })),
+    });
+    return html(202, 'Accepted');
+  }
+
+  return {
+    buildProvisioning,
+    registerAgentRoutes,
+    handleRegisterPage,
+    handleManifestCallback,
+    handleSetupCallback,
+    handleWebhook,
+  };
+}

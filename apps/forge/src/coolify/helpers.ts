@@ -1,0 +1,224 @@
+/**
+ * Pure helper functions for Coolify API integration.
+ * Extracted from coolify/manager.ts to enable independent unit testing
+ * and reduce the surface area of the main manager module.
+ *
+ * No external dependencies beyond zod — fully testable without HTTP mocking.
+ */
+
+import { forgeDebug } from '@forge-runtime/core';
+import z from 'zod';
+import { ApplicationSchema, ApplicationEnvSchema } from './schemas';
+
+import {
+  CoolifyExtractCollectionError,
+  CoolifyExtractItemError,
+} from './helpers.errors';
+
+/**
+ * Module-local debug helper. Centralizes the coolify-helpers scope
+ * so call sites only specify the level, message, and context.
+ */
+function coolifyHelpersDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'coolify-helpers', level, message, context });
+}
+
+
+export function normalizeDomainHost(value: string | null | undefined): string | null {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const normalized = /^[a-z]+:\/\//i.test(trimmed)
+    ? new URL(trimmed).host
+    : trimmed.replace(/^\./, '').replace(/\/+$/, '');
+
+  return normalized ?? null;
+}
+
+export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[] {
+  if (Array.isArray(data)) {
+    const parsed = z.array(schema).safeParse(data);
+    if (parsed.success) return parsed.data;
+    coolifyHelpersDebug('warn', "extractCollection: array parse failed", {});
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>;
+
+    for (const key of [
+      'data',
+      'applications',
+      'github_apps',
+      'repositories',
+      'deployments',
+      'envs',
+      'projects',
+      'environments',
+      'servers',
+      'branches',
+    ]) {
+      if (Array.isArray(record[key])) {
+        const parsed = z.array(schema).safeParse(record[key]);
+        if (parsed.success) return parsed.data;
+        coolifyHelpersDebug('warn', "extractCollection: record parse failed", { key });
+        return [];
+      }
+    }
+  }
+
+  return [];
+}
+
+export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>;
+
+    for (const key of [
+      'deployment',
+      'application',
+      'github_app',
+      'server',
+      'project',
+      'environment',
+      'env',
+      'data',
+    ]) {
+      const value = record[key];
+
+      if (value !== null && value !== undefined && typeof value === 'object') {
+        return schema.parse(value);
+      }
+    }
+
+    const parsed = schema.safeParse(data);
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    coolifyHelpersDebug('warn', 'extractCollection: failed to extract item', { dataType: typeof data });
+    coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
+    throw new CoolifyExtractCollectionError(JSON.stringify(data));
+  }
+
+  coolifyHelpersDebug('warn', 'extractItem: failed to extract item', { dataType: typeof data });
+  throw new CoolifyExtractItemError(JSON.stringify(data));
+}
+
+export function coolifyExtractLogs(data: unknown): string {
+  if (typeof data === 'string') {
+    return data;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>;
+
+    for (const key of ['logs', 'data', 'output']) {
+      const value = record[key];
+
+      if (typeof value === 'string') {
+        return value;
+      }
+    }
+  }
+
+  return '';
+}
+
+export function removeUndefined(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+}
+
+export function coolifySafeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    forgeDebug({
+      scope: 'coolify/manager',
+      level: 'warn',
+      message: 'Failed to parse JSON',
+      context: { error, text: text.substring(0, 100) },
+    });
+    return text;
+  }
+}
+
+export function buildRequestError(
+  method: string,
+  path: string,
+  status: number,
+  data: unknown,
+): string {
+  const payload = typeof data === 'string' ? data : JSON.stringify(data);
+  return `Coolify API ${method} ${path} failed with ${status}: ${payload}`;
+}
+
+export function toTimestamp(value: string | number | null): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const numeric = Number(value);
+
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function _toApplicationSummary(application: z.infer<typeof ApplicationSchema>) {
+  return {
+    applicationUuid: application.uuid,
+    name: application.name ?? null,
+    fqdn: application.fqdn ?? null,
+    status: application.status ?? null,
+    repository: application.repository ?? null,
+    branch: application.git_branch ?? null,
+  };
+}
+
+function _toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
+  return {
+    applicationUuid: application.uuid,
+    name: application.name ?? null,
+    fqdn: application.fqdn ?? null,
+    status: application.status ?? null,
+    repository: application.repository ?? null,
+    branch: application.git_branch ?? null,
+    port: application.ports_exposes ?? null,
+  };
+}
+
+function _toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
+  return {
+    envId: env.uuid ?? env.id ?? env.key,
+    key: env.key,
+    value: env.value ?? '',
+    isPreview: env.is_preview ?? false,
+    isBuildTime: env.is_build_time ?? false,
+    isLiteral: env.is_literal ?? false,
+    isMultiline: env.is_multiline ?? false,
+    isShownOnce: env.is_shown_once ?? false,
+  };
+}

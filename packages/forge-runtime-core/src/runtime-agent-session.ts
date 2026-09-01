@@ -5,10 +5,11 @@ import type {
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type { CreateForgeAgentRuntimeOptions } from './runtime.js';
+import type { CreateForgeAgentRuntimeOptions as _CreateForgeAgentRuntimeOptions } from './runtime.js';
 import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
 import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
+import type { RuntimePlanMode } from './runtime-plan-mode.js';
 import { type Tool } from './tools.js';
 
 export type RuntimeAgentSessionGenerateMessage =
@@ -76,25 +77,26 @@ export type RuntimeAgentSessionGenerateOptions = {
     };
   };
   providerOptions?: Record<string, unknown>;
+  loadTodosText?: () => Promise<string | undefined>;
+  loadPlanText?: () => Promise<string | undefined>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
-  onIterationComplete?: (
-    iteration: RuntimeAgentSessionIteration,
-  ) => Promise<{
-      continue?: boolean;
-      feedback?: string;
-      feedbackMessages?: Array<{
-        role: 'assistant' | 'user';
-        content: string;
-      }>;
-    } | void>
+  onIterationComplete?: (iteration: RuntimeAgentSessionIteration) =>
+    | Promise<{
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{
+          role: 'assistant' | 'user';
+          content: string;
+        }>;
+      } | void>
     | {
-      continue?: boolean;
-      feedback?: string;
-      feedbackMessages?: Array<{
-        role: 'assistant' | 'user';
-        content: string;
-      }>;
-    }
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{
+          role: 'assistant' | 'user';
+          content: string;
+        }>;
+      }
     | void;
 };
 
@@ -107,11 +109,9 @@ export type RuntimeAgentSession = {
     usage?: RuntimeAgentSessionStepResult['usage'];
   }>;
   hasOwnMemory(): boolean;
+  // eslint-disable-next-line @typescript-eslint/require-await
   getMemory(): Promise<{
-    getWorkingMemory(input: {
-      threadId: string;
-      resourceId: string;
-    }): Promise<string | null>;
+    getWorkingMemory(input: { threadId: string; resourceId: string }): Promise<string | null>;
     updateWorkingMemory(input: {
       threadId: string;
       resourceId: string;
@@ -130,9 +130,8 @@ export type CreateRuntimeAgentSessionOptions = {
   model: LanguageModel;
   system?: string;
   conversationStore: ConversationStore;
-  checkpointedStateStore?: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
-  workingMemoryStore: RuntimeWorkingMemoryStore;
-  checkpointedOmStateStore?: unknown;
+  checkpointedStateStore?: unknown;
+  workingMemoryStore?: RuntimeWorkingMemoryStore;
   checkpointedOmLimits?: {
     totalContextTokens: number;
     recentRawTokens: number;
@@ -171,9 +170,16 @@ export type CreateRuntimeAgentSessionOptions = {
     }>;
   }) => Promise<void>;
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
-  loadRuntimeActions?: () => Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
+  loadRuntimeActions?: () => Promise<
+    Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>
+  >;
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
+  todoStore?: {
+    client: { execute(sql: string, args?: unknown[]): Promise<{ rows: unknown[] }> };
+    tablePrefix?: string;
+  };
+  planMode?: RuntimePlanMode;
   consolidateConversationOverflow?: boolean;
 };
 
@@ -184,7 +190,7 @@ export async function createRuntimeAgentSession(
 
   return {
     async generate(prompt, options = {}) {
-      return runRuntimeAgentSessionGenerate({
+      return await runRuntimeAgentSessionGenerate({
         runtime,
         session: input,
         prompt,
@@ -194,18 +200,26 @@ export async function createRuntimeAgentSession(
     hasOwnMemory() {
       return true;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await
     async getMemory() {
+      const store = input.workingMemoryStore;
       return {
         async getWorkingMemory(value) {
+          if (!store) {
+            return null;
+          }
           return (
-            await input.workingMemoryStore.read({
+            (await store.read({
               threadId: value.threadId,
               resourceId: value.resourceId,
-            })
-          )?.workingMemory ?? null;
+            }))?.workingMemory ?? null
+          );
         },
         async updateWorkingMemory(value) {
-          await input.workingMemoryStore.write(value);
+          if (!store) {
+            return;
+          }
+          await store.write(value);
         },
       };
     },

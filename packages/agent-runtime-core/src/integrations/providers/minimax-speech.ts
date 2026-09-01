@@ -70,10 +70,10 @@ export class MiniMaxTextToSpeechGateway implements TextToSpeechGateway {
       throw new Error(`MiniMax TTS request failed with status ${response.status}`);
     }
 
-    const json = await response.json() as MiniMaxTtsJsonResponse;
+    const json = (await response.json()) as MiniMaxTtsJsonResponse;
     const audioHex = json.data?.audio;
 
-    if (!audioHex) {
+    if (audioHex == null) {
       throw new Error(
         `MiniMax TTS returned no audio: ${json.base_resp?.status_msg ?? 'unknown error'}`,
       );

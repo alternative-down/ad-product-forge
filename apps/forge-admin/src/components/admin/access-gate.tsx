@@ -1,14 +1,16 @@
 import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput } from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ThemeToggleButton } from '@/components/admin/theme-toggle-button';
+import type { ThemeMode } from '@/types';
 
 export function AccessGate(input: {
   initialValue: string;
   warningMessage?: string | null;
   submitting?: boolean;
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
   onThemeToggle(): void;
   onSave(value: string): void | Promise<void>;
 }) {
@@ -20,19 +22,23 @@ export function AccessGate(input: {
         <ThemeToggleButton theme={input.theme} onToggle={input.onThemeToggle} />
       </div>
       <form
-        className={input.submitting
-          ? 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200 opacity-72'
-          : 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200'}
+        className={
+          input.submitting
+            ? 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200 opacity-72'
+            : 'flex w-full max-w-sm flex-col gap-3 transition-opacity duration-200'
+        }
         onSubmit={(event) => {
           event.preventDefault();
           input.onSave(value);
         }}
       >
-        <div className="text-center text-5xl font-semibold tracking-[-0.07em] sm:text-6xl">Forja</div>
+        <div className="text-center text-5xl font-semibold tracking-[-0.07em] sm:text-6xl">
+          Forja
+        </div>
         <div className="text-center text-base text-muted-foreground">
           Informe sua chave de acesso.
         </div>
-        <AdminInput
+        <Input
           type="password"
           value={value}
           onChange={(event) => setValue(event.target.value)}
@@ -42,10 +48,10 @@ export function AccessGate(input: {
           <div className="text-sm text-destructive">{input.warningMessage}</div>
         ) : null}
         <div className="flex justify-end">
-          <AdminButton type="submit" className="gap-2" disabled={!value.trim() || input.submitting}>
+          <Button type="submit" className="gap-2" disabled={!value.trim() || input.submitting}>
             {input.submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             {input.submitting ? 'Entrando...' : 'Entrar'}
-          </AdminButton>
+          </Button>
         </div>
       </form>
     </div>

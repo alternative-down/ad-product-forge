@@ -3,12 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  AgentAvatar,
-  AdminButton,
-  AdminLoadingState,
-  AdminScrollArea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { AgentAvatar, AdminLoadingState, AdminScrollArea } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import {
   changeAgentRole,
@@ -19,10 +15,10 @@ import {
   reloadAgent,
   rewakeupAgent,
   updateAgentConfig,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { AgentProfileDialog } from './-agent-profile-dialog';
+import { AgentProfileDialog } from '@/components/agents/agent-profile-dialog';
 import {
   createAgentProfileForm,
   formatAverageInterval,
@@ -30,7 +26,7 @@ import {
   formatUsd,
   humanizeAgentStatus,
   type AgentProfileForm,
-} from './-agent-detail-helpers';
+} from '@/components/agents/agent-detail-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,
@@ -150,7 +146,7 @@ function AgentDetailIndexRoute() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="text-2xl font-semibold tracking-[-0.04em]">{agent.name}</div>
-                    <AdminButton
+                    <Button
                       variant="ghost"
                       size="icon"
                       disabled={reloadMutation.isPending}
@@ -158,8 +154,8 @@ function AgentDetailIndexRoute() {
                     >
                       <RotateCw className="h-4 w-4" />
                       <span className="sr-only">Recarregar agente</span>
-                    </AdminButton>
-                    <AdminButton
+                    </Button>
+                    <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => {
@@ -169,26 +165,28 @@ function AgentDetailIndexRoute() {
                     >
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Editar perfil</span>
-                    </AdminButton>
+                    </Button>
                   </div>
-                  <div className="text-sm text-muted-foreground">{agent.role?.name ?? 'Sem papel'}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {agent.role?.name ?? 'Sem papel'}
+                  </div>
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <AdminButton
+                    <Button
                       variant="outline"
                       size="sm"
                       disabled={forceIdleMutation.isPending}
                       onClick={() => forceIdleMutation.mutate()}
                     >
                       Forçar ocioso
-                    </AdminButton>
-                    <AdminButton
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       disabled={rewakeupMutation.isPending}
                       onClick={() => rewakeupMutation.mutate()}
                     >
                       Rewakeup
-                    </AdminButton>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -198,7 +196,9 @@ function AgentDetailIndexRoute() {
           {agent.description ? (
             <section className="space-y-3">
               <div className="text-lg font-semibold tracking-[-0.03em]">Descrição</div>
-              <div className="max-w-3xl text-sm leading-6 text-muted-foreground">{agent.description}</div>
+              <div className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                {agent.description}
+              </div>
             </section>
           ) : null}
 
@@ -206,11 +206,19 @@ function AgentDetailIndexRoute() {
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
               <MetricItem
                 label="Valor do contrato"
-                value={agent.activeContract ? formatUsd(agent.activeContract.weeklyValueUsd) : 'Sem contrato'}
+                value={
+                  agent.activeContract
+                    ? formatUsd(agent.activeContract.weeklyValueUsd)
+                    : 'Sem contrato'
+                }
               />
               <MetricItem
                 label="% de uso"
-                value={agent.activeContract ? `${formatPercent(agent.activeContract.spentPercent)}%` : '0%'}
+                value={
+                  agent.activeContract
+                    ? `${formatPercent(agent.activeContract.spentPercent)}%`
+                    : '0%'
+                }
               />
               <MetricItem
                 label="Tempo médio de intervalo"
@@ -234,7 +242,10 @@ function AgentDetailIndexRoute() {
 
           <section className="space-y-3">
             <div className="text-lg font-semibold tracking-[-0.03em]">Instruções</div>
-            <AdminScrollArea className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background" contentClassName="px-4 py-3">
+            <AdminScrollArea
+              className="h-[min(20rem,calc(100dvh-18rem))] rounded-sm border border-border bg-background"
+              contentClassName="px-4 py-3"
+            >
               <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
                 {agent.instructions.trim() || 'Sem instruções.'}
               </div>
@@ -243,10 +254,18 @@ function AgentDetailIndexRoute() {
         </>
       ) : null}
 
-      {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
-      {reloadMutation.error ? <div className="text-sm text-destructive">{reloadMutation.error.message}</div> : null}
-      {forceIdleMutation.error ? <div className="text-sm text-destructive">{forceIdleMutation.error.message}</div> : null}
-      {rewakeupMutation.error ? <div className="text-sm text-destructive">{rewakeupMutation.error.message}</div> : null}
+      {agentQuery.error ? (
+        <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+      ) : null}
+      {reloadMutation.error ? (
+        <div className="text-sm text-destructive">{reloadMutation.error.message}</div>
+      ) : null}
+      {forceIdleMutation.error ? (
+        <div className="text-sm text-destructive">{forceIdleMutation.error.message}</div>
+      ) : null}
+      {rewakeupMutation.error ? (
+        <div className="text-sm text-destructive">{rewakeupMutation.error.message}</div>
+      ) : null}
 
       <AgentProfileDialog
         open={dialogOpen}
@@ -279,10 +298,7 @@ function AgentDetailIndexRoute() {
   );
 }
 
-function MetricItem(input: {
-  label: string;
-  value: string;
-}) {
+function MetricItem(input: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <div className="text-sm text-muted-foreground">{input.label}</div>

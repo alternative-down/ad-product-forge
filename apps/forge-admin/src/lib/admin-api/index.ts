@@ -5,3 +5,5 @@ export * from './internal-chat';
 export * from './roles';
 export * from './system';
 export * from './types';
+
+export type { InternalChatParticipantRole } from '@/types';

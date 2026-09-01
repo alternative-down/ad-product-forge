@@ -56,15 +56,16 @@ export class MiniMaxImageGenerationGateway implements ImageGenerationGateway {
       throw new Error(`MiniMax image generation failed with status ${response.status}`);
     }
 
-    const json = await response.json() as MiniMaxImageJsonResponse;
+    const json = (await response.json()) as MiniMaxImageJsonResponse;
     const encodedImages = json.data?.image_base64 ?? [];
 
     return {
-      images: encodedImages.map((image): GeneratedImage => ({
-        mimeType: 'image/jpeg',
-        bytes: Uint8Array.from(Buffer.from(image, 'base64')),
-      })),
+      images: encodedImages.map(
+        (image): GeneratedImage => ({
+          mimeType: 'image/jpeg',
+          bytes: Uint8Array.from(Buffer.from(image, 'base64')),
+        }),
+      ),
     };
   }
 }
-

@@ -1,0 +1,44 @@
+-- =============================================================================
+-- Migration 0031: Add created_at column to system_settings
+-- =============================================================================
+--
+-- ROOT CAUSE
+-- ---------
+-- `apps/forge/src/system-settings/store.ts` (pre-#5525) tried to write
+-- `createdAt` to the `system_settings` table, but `created_at` was NOT in
+-- the schema (apps/forge/src/database/schema-config.ts:25-80). In production
+-- SQLite, this would crash with "no such column: created_at". The pre-#5525
+-- bug (INVERTED update/insert) masked this — when `existing !== null`,
+-- `db.insert()` would have failed with the column error FIRST, so admin
+-- got a 500.
+--
+-- After #5525 (atomic `onConflictDoUpdate`), if the original intent was to
+-- have `createdAt`, the silent removal is a data loss. This migration adds
+-- the column so creation timestamp can be persisted.
+--
+-- SYMPTOM (resolved by this migration)
+-- ------------------------------------
+-- Pre-#5525: silent no-op on new save, 500 on update (column error)
+-- Post-#5525 (current): no crash, but no createdAt persistence either
+-- Post-0031 (this): createdAt persisted on first insert, preserved on update
+--
+-- TABLES MODIFIED
+-- ---------------
+--   1. system_settings (1 column added)
+--
+-- Total: 1 statement. Well below the 27 libsql batch transaction threshold.
+--
+-- IDEMPOTENCY
+-- -----------
+-- SQLite has NO `ADD COLUMN IF NOT EXISTS` (Postgres-only). We rely on
+-- Drizzle's `__drizzle_migrations` journal to prevent re-application.
+--
+-- REFERENCES
+-- ----------
+--   - #5526 (this issue): column missing on system_settings
+--   - #5525 (PR): Aldric's atomic upsert fix
+--   - #5520 (now fixed): original P1 bug
+--   - Pattern: schema-vs-migration drift (see #5489 schema-drift CI follow-up)
+-- =============================================================================
+
+ALTER TABLE `system_settings` ADD COLUMN `created_at` integer NOT NULL DEFAULT (unixepoch());

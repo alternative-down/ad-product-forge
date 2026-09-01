@@ -2,9 +2,11 @@ import {
   ForgeMcpToolset,
   type ForgeMcpServerConfig,
   type RuntimeActionDefinition,
+  forgeDebug,
 } from '@forge-runtime/core';
 
 import { getAgentMcpServers } from './store';
+import { FIVE_SECONDS_MS, ONE_MINUTE_MS } from '../time-constants';
 
 type AgentMcpRuntimeActionSource = {
   start(): void;
@@ -18,8 +20,8 @@ type ManagedMcpServer = {
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 };
 
-const MCP_RETRY_BASE_DELAY_MS = 5_000;
-const MCP_RETRY_MAX_DELAY_MS = 60_000;
+const MCP_RETRY_BASE_DELAY_MS = FIVE_SECONDS_MS;
+const MCP_RETRY_MAX_DELAY_MS = ONE_MINUTE_MS;
 
 export function createAgentMcpRuntimeActionSource(agentId: string): AgentMcpRuntimeActionSource {
   return new AgentMcpRuntimeActionSourceManager(agentId);
@@ -43,8 +45,8 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     void this.refresh();
   }
 
-  async getActions() {
-    return this.actions;
+  getActions() {
+    return Promise.resolve(this.actions);
   }
 
   async dispose() {
@@ -59,9 +61,11 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     this.servers.clear();
     this.actions = [];
 
-    await Promise.all(entries.map(async (entry) => {
-      await entry.toolset?.dispose();
-    }));
+    await Promise.all(
+      entries.map(async (entry) => {
+        await entry.toolset?.dispose();
+      }),
+    );
   }
 
   private async refresh() {
@@ -70,15 +74,14 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     }
 
     if (this.refreshPromise) {
-      return this.refreshPromise;
+      return await this.refreshPromise;
     }
 
-    this.refreshPromise = this.refreshNow()
-      .finally(() => {
-        this.refreshPromise = null;
-      });
+    this.refreshPromise = this.refreshNow().finally(() => {
+      this.refreshPromise = null;
+    });
 
-    return this.refreshPromise;
+    return await this.refreshPromise;
   }
 
   private async refreshNow() {
@@ -87,9 +90,12 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       this.retryTimer = null;
     }
 
-    const linkedServers = await getAgentMcpServers(this.agentId);
+    const rawLinkedServers = await getAgentMcpServers(this.agentId);
+    const linkedServers = Array.isArray(rawLinkedServers) ? rawLinkedServers : [];
     const nextServerIds = new Set(linkedServers.map(({ server }) => server.id));
-    const staleServerIds = Array.from(this.servers.keys()).filter((serverId) => !nextServerIds.has(serverId));
+    const staleServerIds = Array.from(this.servers.keys()).filter(
+      (serverId) => !nextServerIds.has(serverId),
+    );
 
     for (const serverId of staleServerIds) {
       await this.disposeServer(serverId);
@@ -114,7 +120,12 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         await previous?.toolset?.dispose();
       } catch (error) {
         hasConnectionFailure = true;
-        console.warn(`[MCP] Failed to refresh server ${serverConfig.name} for agent ${this.agentId}:`, error);
+        forgeDebug({
+          scope: 'mcp-client-manager',
+          level: 'warn',
+          message: 'Failed to refresh server',
+          context: { serverName: serverConfig.name, agentId: this.agentId, error },
+        });
       }
     }
 
@@ -145,15 +156,18 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     serverId: string,
     action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
   ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
-    const manager = this;
-
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- cycle 18 #6568 hotfix preserved: closure capture for async execute callback
+    const self = this;
     return {
       ...action,
-      async execute(input, context) {
+      async execute(
+        input: Record<string, unknown>,
+        context: { runtimeId: string; stepId: string; stepNumber: number },
+      ) {
         try {
           return await action.execute(input, context);
         } catch (error) {
-          void manager.handleServerDisconnect(serverId, error);
+          void self.handleServerDisconnect(serverId, error);
           throw error;
         }
       },
@@ -167,7 +181,12 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       return;
     }
 
-    console.warn(`[MCP] Server disconnected for agent ${this.agentId}:`, error);
+    forgeDebug({
+      scope: 'mcp-client-manager',
+      level: 'warn',
+      message: 'Server disconnected',
+      context: { agentId: this.agentId, error },
+    });
     this.servers.set(serverId, {
       ...server,
       toolset: null,
@@ -184,7 +203,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
 
   private scheduleRetry() {
     const delayMs = Math.min(
-      MCP_RETRY_BASE_DELAY_MS * (2 ** Math.min(this.retryAttempt, 4)),
+      MCP_RETRY_BASE_DELAY_MS * 2 ** Math.min(this.retryAttempt, 4),
       MCP_RETRY_MAX_DELAY_MS,
     );
 
@@ -232,9 +251,10 @@ function mapServerConfig(
       id: server.id,
       name: server.name,
       transport: 'stdio',
-      command: server.command || '',
-      args: server.args ? JSON.parse(server.args) : [],
-      env: server.envVars ? JSON.parse(server.envVars) : {},
+      command: server.command !== null && server.command !== undefined ? server.command : '',
+      args: server.args !== null && server.args !== undefined ? JSON.parse(server.args) : [],
+      env:
+        server.envVars !== null && server.envVars !== undefined ? JSON.parse(server.envVars) : {},
     };
   }
 
@@ -242,8 +262,11 @@ function mapServerConfig(
     id: server.id,
     name: server.name,
     transport: 'http-stream',
-    url: server.url || 'http://localhost:3000/mcp',
-    headers: server.headers ? JSON.parse(server.headers) : undefined,
+    url: server.url !== null && server.url !== undefined ? server.url : 'http://localhost:3000/mcp',
+    headers:
+      server.headers !== null && server.headers !== undefined
+        ? JSON.parse(server.headers)
+        : undefined,
   };
 }
 

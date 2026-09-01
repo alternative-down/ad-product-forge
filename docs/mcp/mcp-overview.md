@@ -42,7 +42,7 @@ bun add @mastra/mcp@latest
 The `MCPClient` connects Mastra primitives to external MCP servers, which can be local packages (invoked using `npx`) or remote HTTP(S) endpoints. Each server must be configured with either a `command` or a `url`, depending on how it's hosted.
 
 ```typescript
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 export const testMcpClient = new MCPClient({
   id: 'test-mcp-client',
@@ -57,7 +57,7 @@ export const testMcpClient = new MCPClient({
       ),
     },
   },
-})
+});
 ```
 
 > **Info:** Visit [MCPClient](https://mastra.ai/reference/tools/mcp-client) for a full list of configuration options.
@@ -69,8 +69,8 @@ export const testMcpClient = new MCPClient({
 To use tools from an MCP server in an agent, import your `MCPClient` and call `.listTools()` in the `tools` parameter. This loads from the defined MCP servers, making them available to the agent.
 
 ```typescript
-import { Agent } from '@mastra/core/agent'
-import { testMcpClient } from '../mcp/test-mcp-client'
+import { Agent } from '@mastra/core/agent';
+import { testMcpClient } from '../mcp/test-mcp-client';
 
 export const testAgent = new Agent({
   id: 'test-agent',
@@ -84,7 +84,7 @@ export const testAgent = new Agent({
       Answer questions using the information you find using the MCP Servers.`,
   model: 'openai/gpt-5.4',
   tools: await testMcpClient.listTools(),
-})
+});
 ```
 
 > **Info:** Visit [Agent Class](https://mastra.ai/reference/agents/agent) for a full list of configuration options.
@@ -94,11 +94,11 @@ export const testAgent = new Agent({
 To expose agents, tools, and workflows from your Mastra application to external systems over HTTP(S) use the `MCPServer` class. This makes them accessible to any system or agent that supports the protocol.
 
 ```typescript
-import { MCPServer } from '@mastra/mcp'
+import { MCPServer } from '@mastra/mcp';
 
-import { testAgent } from '../agents/test-agent'
-import { testWorkflow } from '../workflows/test-workflow'
-import { testTool } from '../tools/test-tool'
+import { testAgent } from '../agents/test-agent';
+import { testWorkflow } from '../workflows/test-workflow';
+import { testTool } from '../tools/test-tool';
 
 export const testMcpServer = new MCPServer({
   id: 'test-mcp-server',
@@ -107,7 +107,7 @@ export const testMcpServer = new MCPServer({
   agents: { testAgent },
   tools: { testTool },
   workflows: { testWorkflow },
-})
+});
 ```
 
 > **Info:** Visit [MCPServer](https://mastra.ai/reference/tools/mcp-server) for a full list of configuration options.
@@ -119,13 +119,13 @@ export const testMcpServer = new MCPServer({
 To make an MCP server available to other systems or agents that support the protocol, register it in the main `Mastra` instance using `mcpServers`.
 
 ```typescript
-import { Mastra } from '@mastra/core/mastra'
+import { Mastra } from '@mastra/core/mastra';
 
-import { testMcpServer } from './mcp/test-mcp-server'
+import { testMcpServer } from './mcp/test-mcp-server';
 
 export const mastra = new Mastra({
   mcpServers: { testMcpServer },
-})
+});
 ```
 
 ## Static and dynamic tools
@@ -146,14 +146,14 @@ Use the `.listTools()` method to fetch tools from all configured MCP servers. Th
 > **Info:** Visit [listTools()](https://mastra.ai/reference/tools/mcp-client) for more information.
 
 ```typescript
-import { Agent } from '@mastra/core/agent'
+import { Agent } from '@mastra/core/agent';
 
-import { testMcpClient } from '../mcp/test-mcp-client'
+import { testMcpClient } from '../mcp/test-mcp-client';
 
 export const testAgent = new Agent({
   id: 'test-agent',
   tools: await testMcpClient.listTools(),
-})
+});
 ```
 
 ### Dynamic tools
@@ -161,8 +161,8 @@ export const testAgent = new Agent({
 Use the `.listToolsets()` method when tool configuration may vary by request or user, such as in a multi-tenant system where each user provides their own API key. This method returns toolsets that can be passed to the `toolsets` option in the agent's `.generate()` or `.stream()` calls.
 
 ```typescript
-import { MCPClient } from '@mastra/mcp'
-import { mastra } from './mastra'
+import { MCPClient } from '@mastra/mcp';
+import { mastra } from './mastra';
 
 async function handleRequest(userPrompt: string, userApiKey: string) {
   const userMcp = new MCPClient({
@@ -176,19 +176,19 @@ async function handleRequest(userPrompt: string, userApiKey: string) {
         },
       },
     },
-  })
+  });
 
-  const agent = mastra.getAgent('testAgent')
+  const agent = mastra.getAgent('testAgent');
 
   const response = await agent.generate(userPrompt, {
     toolsets: await userMcp.listToolsets(),
-  })
+  });
 
-  await userMcp.disconnect()
+  await userMcp.disconnect();
 
   return Response.json({
     data: response.text,
-  })
+  });
 }
 ```
 
@@ -203,7 +203,7 @@ MCP servers can be discovered through registries. Here's how to connect to some 
 [Klavis AI](https://klavis.ai) provides hosted, enterprise-authenticated, high-quality MCP servers.
 
 ```typescript
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({
   servers: {
@@ -216,7 +216,7 @@ const mcp = new MCPClient({
       url: new URL('https://hubspot-mcp-server.klavis.ai/mcp/?instance_id={private-instance-id}'),
     },
   },
-})
+});
 ```
 
 Klavis AI offers enterprise-grade authentication and security for production deployments.
@@ -228,7 +228,7 @@ For more details on how to integrate Mastra with Klavis, check out their [docume
 [mcp.run](https://www.mcp.run/) provides pre-authenticated, managed MCP servers. Tools are grouped into Profiles, each with a unique, signed URL.
 
 ```typescript
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({
   servers: {
@@ -237,7 +237,7 @@ const mcp = new MCPClient({
       url: new URL(process.env.MCP_RUN_SSE_URL!), // Get URL from mcp.run profile
     },
   },
-})
+});
 ```
 
 > **Important:** Treat the mcp.run SSE URL like a password. Store it securely, for example, in an environment variable.
@@ -251,7 +251,7 @@ const mcp = new MCPClient({
 [Composio.dev](https://composio.dev) offers a registry of [SSE-based MCP servers](https://mcp.composio.dev). You can use the SSE URL generated for tools like Cursor directly.
 
 ```typescript
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({
   servers: {
@@ -262,7 +262,7 @@ const mcp = new MCPClient({
       url: new URL('https://mcp.composio.dev/gmail/[private-url-path]'),
     },
   },
-})
+});
 ```
 
 Authentication with services like Google Sheets often happens interactively through the agent conversation.
@@ -275,7 +275,7 @@ _Note: Composio URLs are typically tied to a single user account, making them be
 
 ```typescript
 // Unix/Mac
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({
   servers: {
@@ -291,12 +291,12 @@ const mcp = new MCPClient({
       ],
     },
   },
-})
+});
 ```
 
 ```typescript
 // Windows
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({
   servers: {
@@ -312,7 +312,7 @@ const mcp = new MCPClient({
       ],
     },
   },
-})
+});
 ```
 
 **Ampersand**:
@@ -332,12 +332,12 @@ export const mcp = new MCPClient({
       })}`,
     },
   },
-})
+});
 ```
 
 ```typescript
 // If you prefer to run the MCP server locally:
-import { MCPClient } from '@mastra/mcp'
+import { MCPClient } from '@mastra/mcp';
 
 // MCPClient with Ampersand MCP Server using stdio transport
 export const mcp = new MCPClient({
@@ -361,7 +361,7 @@ export const mcp = new MCPClient({
       },
     },
   },
-})
+});
 ```
 
 As an alternative to MCP, Ampersand's AI SDK also has an adapter for Mastra, so you can [directly import Ampersand tools](https://docs.withampersand.com/ai-sdk#use-with-mastra) for your agent to access.

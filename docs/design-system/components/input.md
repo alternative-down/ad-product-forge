@@ -3,6 +3,7 @@
 ## Anatomy
 
 An input field consists of:
+
 - Label (required)
 - Input element
 - Helper text (optional)
@@ -23,14 +24,18 @@ An input field consists of:
   border: 1px solid var(--color-gray-300);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-inner);
-  transition: border-color 150ms, box-shadow 150ms;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
 }
 
 /* Focus */
 .input:focus {
   outline: none;
   border-color: var(--color-brand-primary);
-  box-shadow: var(--shadow-inner), 0 0 0 2px var(--color-brand-primary-alpha);
+  box-shadow:
+    var(--shadow-inner),
+    0 0 0 2px var(--color-brand-primary-alpha);
 }
 
 /* Disabled */
@@ -44,34 +49,42 @@ An input field consists of:
 ## States
 
 ### Default
+
 ```css
 border-color: var(--color-gray-300);
 background: var(--color-white);
 ```
 
 ### Hover
+
 ```css
 border-color: var(--color-gray-400);
 ```
 
 ### Focus
+
 ```css
 border-color: var(--color-brand-primary);
-box-shadow: var(--shadow-inner), 0 0 0 2px rgba(99, 102, 241, 0.2);
+box-shadow:
+  var(--shadow-inner),
+  0 0 0 2px rgba(99, 102, 241, 0.2);
 ```
 
 ### Error
+
 ```css
 border-color: var(--color-error-500);
 background: var(--color-error-50);
 ```
 
 ### Success
+
 ```css
 border-color: var(--color-success-500);
 ```
 
 ### Disabled
+
 ```css
 background: var(--color-gray-100);
 color: var(--color-gray-400);
@@ -80,46 +93,38 @@ cursor: not-allowed;
 
 ## Input Sizes
 
-| Size | Height | Padding | Font |
-|------|--------|---------|------|
-| `sm` | 32px | 6px 10px | text-xs |
-| `md` | 40px | 8px 12px | text-sm |
-| `lg` | 48px | 12px 16px | text-base |
+| Size | Height | Padding   | Font      |
+| ---- | ------ | --------- | --------- |
+| `sm` | 32px   | 6px 10px  | text-xs   |
+| `md` | 40px   | 8px 12px  | text-sm   |
+| `lg` | 48px   | 12px 16px | text-base |
 
 ## Input Variants
 
 ### Text Input
+
 ```jsx
 <div className="input-wrapper">
   <Label htmlFor="name">Name</Label>
-  <Input 
-    id="name"
-    type="text"
-    placeholder="Enter agent name"
-  />
+  <Input id="name" type="text" placeholder="Enter agent name" />
   <HelperText>Your agent's display name</HelperText>
 </div>
 ```
 
 ### Number Input
+
 ```jsx
-<Input 
-  type="number"
-  min="0.01"
-  step="0.01"
-  placeholder="0.00"
-/>
+<Input type="number" min="0.01" step="0.01" placeholder="0.00" />
 ```
 
 ### Password Input
+
 ```jsx
-<Input 
-  type="password"
-  placeholder="Enter password"
-/>
+<Input type="password" placeholder="Enter password" />
 ```
 
 ### With Prefix/Suffix
+
 ```css
 .input-with-prefix,
 .input-with-suffix {
@@ -147,24 +152,19 @@ cursor: not-allowed;
 ## Error States
 
 ### Error with Message
+
 ```jsx
 <div className="input-wrapper">
   <Label htmlFor="budget">Budget</Label>
-  <Input 
-    id="budget"
-    state="error"
-    aria-invalid="true"
-    aria-describedby="budget-error"
-  />
-  <ErrorMessage id="budget-error">
-    Budget é obrigatório
-  </ErrorMessage>
+  <Input id="budget" state="error" aria-invalid="true" aria-describedby="budget-error" />
+  <ErrorMessage id="budget-error">Budget é obrigatório</ErrorMessage>
 </div>
 ```
 
 ### Validation Rules Display
+
 ```jsx
-<Input 
+<Input
   state={isValid ? 'success' : 'default'}
 />
 <HelperText>
@@ -175,6 +175,7 @@ cursor: not-allowed;
 ## Helper Text & Labels
 
 ### Label
+
 ```css
 .label {
   display: block;
@@ -186,6 +187,7 @@ cursor: not-allowed;
 ```
 
 ### Helper Text
+
 ```css
 .helper-text {
   font-size: var(--text-xs);
@@ -195,6 +197,7 @@ cursor: not-allowed;
 ```
 
 ### Error Message
+
 ```css
 .error-message {
   font-size: var(--text-xs);
@@ -221,25 +224,15 @@ cursor: not-allowed;
   {/* Default */}
   <InputWrapper>
     <Label htmlFor="agentName">Nome do Agent</Label>
-    <Input 
-      id="agentName"
-      placeholder="Ex: Coding Assistant"
-    />
+    <Input id="agentName" placeholder="Ex: Coding Assistant" />
     <HelperText>Nome que aparece na listagem</HelperText>
   </InputWrapper>
 
   {/* With error */}
   <InputWrapper>
     <Label htmlFor="budget">Budget semanal</Label>
-    <Input 
-      id="budget"
-      state="error"
-      aria-invalid="true"
-      aria-describedby="budget-error"
-    />
-    <ErrorMessage id="budget-error">
-      Budget é obrigatório
-    </ErrorMessage>
+    <Input id="budget" state="error" aria-invalid="true" aria-describedby="budget-error" />
+    <ErrorMessage id="budget-error">Budget é obrigatório</ErrorMessage>
   </InputWrapper>
 </div>
 ```

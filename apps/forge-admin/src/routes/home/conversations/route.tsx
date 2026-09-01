@@ -10,26 +10,31 @@ import {
   getInternalChatContacts,
   type InternalChatExternalAccount,
   updateInternalChatAccount,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
+import { logger } from '@/lib/logger';
 import {
   HomeConversationsProvider,
   slugify,
-  type AccountDialogMode,
-  type AccountForm,
   type ConversationForm,
   type LocalConversation,
-} from './-context';
-import { AccountDialog } from './-account-dialog';
-import { ConversationListPane } from './-conversation-list-pane';
-import { NewConversationDialog } from './-new-conversation-dialog';
+} from '@/components/home/conversations/context';
 import {
-  createAccountForm,
+  accountDialogReducer,
+  createInitialAccountDialogState,
+} from './account-dialog-state';
+import {
+  createInitialDataState,
+  dataReducer,
+} from './data-state';
+import { AccountDialog } from '@/components/home/conversations/account-dialog';
+import { ConversationListPane } from '@/components/home/conversations/conversation-list-pane';
+import { NewConversationDialog } from '@/components/home/conversations/new-conversation-dialog';
+import {
   createConversationForm,
-  createEmptyAccountForm,
   normalizeAccount,
   normalizeConversations,
   SELECTED_ACCOUNT_STORAGE_KEY,
-} from './-route-helpers';
+} from '@/components/home/conversations/route-helpers';
 
 export const Route = createFileRoute('/home/conversations')({
   component: HomeConversationsLayoutRoute,
@@ -40,25 +45,41 @@ function HomeConversationsLayoutRoute() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [accounts, setAccounts] = useState<InternalChatExternalAccount[]>([]);
-  const [contacts, setContacts] = useState<InternalChatContact[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState(() => {
-    if (typeof window === 'undefined') {
-      return '';
+  const [data, dispatchData] = useReducer(
+    dataReducer,
+    undefined,
+    () => createInitialDataState(SELECTED_ACCOUNT_STORAGE_KEY),
+  );
+  const { accounts, contacts, conversations, selectedAccountId } = data;
+  const setAccounts = (next: InternalChatExternalAccount[] | ((prev: InternalChatExternalAccount[]) => InternalChatExternalAccount[])) => {
+    const value = typeof next === 'function' ? next(data.accounts) : next;
+    dispatchData({ type: 'set_accounts', accounts: value });
+  };
+  const setContacts = (next: InternalChatContact[] | ((prev: InternalChatContact[]) => InternalChatContact[])) => {
+    const value = typeof next === 'function' ? next(data.contacts) : next;
+    dispatchData({ type: 'set_contacts', contacts: value });
+  };
+  const setConversations = (next: LocalConversation[] | ((prev: LocalConversation[]) => LocalConversation[])) => {
+    const value = typeof next === 'function' ? next(data.conversations) : next;
+    dispatchData({ type: 'set_conversations', conversations: value });
+  };
+  const setSelectedAccountId = (value: string) => {
+    if (value === '') {
+      dispatchData({ type: 'clear_selected_account' });
+    } else {
+      dispatchData({ type: 'select_account', accountId: value });
     }
-
-    return window.localStorage.getItem(SELECTED_ACCOUNT_STORAGE_KEY) ?? '';
-  });
-  const [conversations, setConversations] = useState<LocalConversation[]>([]);
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [accountDialogMode, setAccountDialogMode] = useState<AccountDialogMode>('create');
+  };
   const [conversationDialogOpen, setConversationDialogOpen] = useState(false);
-  const [accountFormError, setAccountFormError] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
-  const [accountForm, setAccountForm] = useState<AccountForm>({
-    ...createEmptyAccountForm(),
-  });
-  const [conversationForm, setConversationForm] = useState<ConversationForm>(createConversationForm);
+  const [accountDialog, dispatchAccountDialog] = useReducer(
+    accountDialogReducer,
+    undefined,
+    createInitialAccountDialogState,
+  );
+  const { open: accountDialogOpen, mode: accountDialogMode, form: accountForm, formError: accountFormError } = accountDialog;
+  const [conversationForm, setConversationForm] =
+    useState<ConversationForm>(createConversationForm);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +96,7 @@ function HomeConversationsLayoutRoute() {
           setContacts(contactItems);
         }
       } catch (error) {
-        console.error('[HomeConversations] Failed to load internal chat accounts:', error);
+        logger.error('HomeConversations: Failed to load internal chat accounts', error);
       }
     }
 
@@ -99,7 +120,8 @@ function HomeConversationsLayoutRoute() {
     window.localStorage.setItem(SELECTED_ACCOUNT_STORAGE_KEY, selectedAccountId);
   }, [selectedAccountId]);
 
-  const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
+  const selectedAccount =
+    accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.accountId !== selectedAccountId);
   const selectedConversationId = pathname.startsWith('/home/conversations/')
@@ -118,7 +140,7 @@ function HomeConversationsLayoutRoute() {
 
       setConversations(normalizeConversations(items));
     } catch (error) {
-      console.error('[HomeConversations] Failed to load conversations:', error);
+      logger.error('HomeConversations: Failed to load conversations', error);
       setConversations([]);
     }
   }, [selectedAccountId]);
@@ -141,16 +163,19 @@ function HomeConversationsLayoutRoute() {
     };
   }, [reloadConversations, selectedAccountId]);
 
-  const contextValue = useMemo(() => ({
-    accounts,
-    contacts,
-    selectedAccountId,
-    setSelectedAccountId,
-    selectedAccount,
-    conversations,
-    setConversations,
-    reloadConversations,
-  }), [accounts, contacts, conversations, reloadConversations, selectedAccount, selectedAccountId]);
+  const contextValue = useMemo(
+    () => ({
+      accounts,
+      contacts,
+      selectedAccountId,
+      setSelectedAccountId,
+      selectedAccount,
+      conversations,
+      setConversations,
+      reloadConversations,
+    }),
+    [accounts, contacts, conversations, reloadConversations, selectedAccount, selectedAccountId],
+  );
 
   return (
     <HomeConversationsProvider value={contextValue}>
@@ -168,16 +193,10 @@ function HomeConversationsLayoutRoute() {
               return;
             }
 
-            setAccountDialogMode('edit');
-            setAccountFormError('');
-            setAccountForm(createAccountForm(selectedAccount));
-            setAccountDialogOpen(true);
+            dispatchAccountDialog({ type: 'open_edit', account: selectedAccount });
           }}
           onCreateAccount={() => {
-            setAccountDialogMode('create');
-            setAccountFormError('');
-            setAccountForm(createEmptyAccountForm());
-            setAccountDialogOpen(true);
+            dispatchAccountDialog({ type: 'open_create' });
           }}
           onCreateConversation={() => {
             setConversationForm(createConversationForm());
@@ -185,7 +204,13 @@ function HomeConversationsLayoutRoute() {
           }}
         />
 
-        <div className={mobileDetailOpen ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'hidden h-full min-h-0 flex-col overflow-hidden md:flex'}>
+        <div
+          className={
+            mobileDetailOpen
+              ? 'flex h-full min-h-0 flex-col overflow-hidden'
+              : 'hidden h-full min-h-0 flex-col overflow-hidden md:flex'
+          }
+        >
           <Outlet />
         </div>
       </div>
@@ -196,13 +221,20 @@ function HomeConversationsLayoutRoute() {
         saving={accountSaving}
         form={accountForm}
         errorMessage={accountFormError}
-        onOpenChange={setAccountDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            dispatchAccountDialog({ type: 'close' });
+          }
+        }}
         onFormChange={(nextForm) =>
-          setAccountForm((current) => ({
-            ...nextForm,
-            slug: nextForm.slugDirty ? nextForm.slug : slugify(nextForm.displayName),
-            accountId: nextForm.accountId ?? current.accountId,
-          }))
+          dispatchAccountDialog({
+            type: 'update_form',
+            updater: (current) => ({
+              ...nextForm,
+              slug: nextForm.slugDirty ? nextForm.slug : slugify(nextForm.displayName),
+              accountId: nextForm.accountId ?? current.accountId,
+            }),
+          })
         }
         onDelete={async () => {
           if (!accountForm.accountId) {
@@ -210,10 +242,8 @@ function HomeConversationsLayoutRoute() {
           }
 
           await deleteInternalChatAccount(accountForm.accountId);
-          setAccounts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
-          setContacts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
-          setSelectedAccountId('');
-          setAccountDialogOpen(false);
+          dispatchData({ type: 'remove_account_by_id', accountId: accountForm.accountId });
+          dispatchAccountDialog({ type: 'close' });
         }}
         onSubmit={() => {
           void (async () => {
@@ -223,7 +253,7 @@ function HomeConversationsLayoutRoute() {
               description: accountForm.description.trim() || undefined,
             };
 
-            setAccountFormError('');
+            dispatchAccountDialog({ type: 'set_error', error: '' });
             setAccountSaving(true);
 
             try {
@@ -236,26 +266,14 @@ function HomeConversationsLayoutRoute() {
 
               const normalizedAccount = normalizeAccount(account);
 
-              setAccounts((current) =>
-                accountForm.accountId
-                  ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
-                  : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
-              );
-              setContacts((current) => {
-                const nextContact = {
-                  ...normalizedAccount,
-                  isAgent: false,
-                };
-
-                return accountForm.accountId
-                  ? current.map((item) => (item.accountId === nextContact.accountId ? nextContact : item))
-                  : [...current, nextContact].sort((left, right) => left.displayName.localeCompare(right.displayName));
-              });
+              dispatchData({ type: 'add_or_replace_account', account: normalizedAccount });
               setSelectedAccountId(normalizedAccount.accountId);
-              setAccountDialogOpen(false);
-              setAccountForm(createEmptyAccountForm());
+              dispatchAccountDialog({ type: 'close' });
             } catch (error) {
-              setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
+              dispatchAccountDialog({
+                type: 'set_error',
+                error: error instanceof Error ? error.message : 'Não foi possível salvar a conta.',
+              });
             } finally {
               setAccountSaving(false);
             }
@@ -273,11 +291,13 @@ function HomeConversationsLayoutRoute() {
         onSubmit={() => {
           void (async () => {
             const participants = availableContacts
-              .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
+              .filter((contact) =>
+                conversationForm.selectedParticipantIds.includes(contact.accountId),
+              )
               .map((contact) => contact.displayName);
             const conversationName =
               conversationForm.type === 'dm'
-                ? participants[0] ?? 'Nova conversa'
+                ? (participants[0] ?? 'Nova conversa')
                 : conversationForm.name.trim() || 'Novo grupo';
             const created = await createHomeInternalChatConversation({
               accountId: selectedAccountId,

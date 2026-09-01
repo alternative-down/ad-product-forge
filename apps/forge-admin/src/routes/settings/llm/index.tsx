@@ -2,7 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminLoadingState, PageHeader } from '@/components/admin';
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/./layout/page-header';
 import {
   getSystemLlm,
   getSystemOauth,
@@ -10,12 +11,12 @@ import {
   upsertLlmProfile,
   type LlmProfile,
   type UpsertLlmProfileInput,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { LlmProfileDialog } from '../../integrations/-llm-profile-form';
-import { OauthSection } from '../../integrations/-oauth-section';
-import { ProfilesSection } from '../../integrations/-profiles-section';
+import { LlmProfileDialog } from '../../../components/integrations/llm-profile-form';
+import { OauthSection } from '../../../components/integrations/oauth-section';
+import { ProfilesSection } from '../../../components/integrations/profiles-section';
 
 export const Route = createFileRoute('/settings/llm/')({
   component: SettingsLlmProfilesRoute,
@@ -59,7 +60,8 @@ function SettingsLlmProfilesRoute() {
   const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>(createEmptyProfileForm);
   const mutation = useMutation({
     mutationFn: upsertLlmProfile,
-    onMutate: (input) => startAdminAction(input.profileId ? 'Salvando perfil...' : 'Criando perfil...'),
+    onMutate: (input) =>
+      startAdminAction(input.profileId ? 'Salvando perfil...' : 'Criando perfil...'),
     onSuccess: async (_data, input, context) => {
       succeedAdminAction(context, input.profileId ? 'Perfil atualizado.' : 'Perfil criado.');
       setDialogOpen(false);
@@ -93,7 +95,10 @@ function SettingsLlmProfilesRoute() {
     },
   });
   const profiles = useMemo(
-    () => [...(llmQuery.data?.profiles ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    () =>
+      [...(llmQuery.data?.profiles ?? [])].sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
     [llmQuery.data?.profiles],
   );
   const filteredProfiles = useMemo(
@@ -102,15 +107,17 @@ function SettingsLlmProfilesRoute() {
   );
   const modelKeys = useMemo(
     () =>
-      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) =>
-        left.localeCompare(right),
+      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort(
+        (left, right) => left.localeCompare(right),
       ),
     [llmQuery.data?.prices],
   );
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando perfis..." /> : null}
+      {llmQuery.isLoading && !llmQuery.data ? (
+        <AdminLoadingState label="Carregando perfis..." />
+      ) : null}
       <PageHeader title="Perfis" />
 
       <OauthSection

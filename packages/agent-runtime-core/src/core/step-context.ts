@@ -1,7 +1,4 @@
-import type {
-  StepContextEntry,
-  StepContextPart,
-} from './types.js';
+import type { StepContextEntry, StepContextPart } from './types.js';
 
 export function createTextStepContextEntry(input: {
   id: string;
@@ -15,10 +12,12 @@ export function createTextStepContextEntry(input: {
     kind: input.kind,
     title: input.title,
     data: input.data,
-    content: [{
-      type: 'text',
-      text: input.text,
-    }],
+    content: [
+      {
+        type: 'text',
+        text: input.text,
+      },
+    ],
   };
 }
 
@@ -32,7 +31,7 @@ export function createImageStepContextEntry(input: {
 }): StepContextEntry {
   const content: StepContextPart[] = [];
 
-  if (input.text) {
+  if (input.text != null) {
     content.push({
       type: 'text',
       text: input.text,
@@ -58,11 +57,13 @@ export function getStepContextParts(entry: StepContextEntry): StepContextPart[] 
     return entry.content;
   }
 
-  if (entry.text) {
-    return [{
-      type: 'text',
-      text: entry.text,
-    }];
+  if (entry.text != null) {
+    return [
+      {
+        type: 'text',
+        text: entry.text,
+      },
+    ];
   }
 
   return [];

@@ -1,0 +1,394 @@
+import type { HttpRequest } from '../../../http/server';
+import { z } from 'zod';
+import type { Database } from '../../../database/client';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader';
+import { createId } from '../../../utils/id';
+import { eq, and } from 'drizzle-orm';
+import { adminRoutesParseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
+import { reloadAgentMcp } from '../../routes/mcp-helpers';
+import { safeRoute } from './admin-route-error-helper';
+import { updateAgentMcpServer, deleteAgentMcpServer } from './mcp-server-helpers';
+import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
+import { parseProviderCredentials } from '../../../communication/provider-loader';
+import { encryptSecret } from '../../../encryption/crypto';
+import { discordProviderDeleteSignalSchema } from '../schemas/discord';
+
+// Schemas co-located with routes (extracted from schemas.ts for locality)
+const upsertAgentProviderSchema = z.object({
+  agentId: z.string().min(1),
+  providerType: z.string().min(1),
+  credentials: z.record(z.string(), z.unknown()),
+});
+const deleteAgentProviderSchema = z.object({
+  agentId: z.string().min(1),
+  providerType: z.string().min(1),
+});
+const createAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  transport: z.enum(['stdio', 'http_streamable']),
+  command: z.string().optional(),
+  argsText: z.string().optional(),
+  envVarsText: z.string().optional(),
+  url: z.string().optional(),
+  headersText: z.string().optional(),
+  isActive: z.boolean().default(false),
+});
+const updateAgentMcpServerSchema = z.object({
+  serverId: z.string().min(1),
+  // D34 #6214 L#NN-50 #36: agentId and configId made required. The update handler
+  // always uses them (configId for the where clause, agentId for reloadAgentMcp),
+  // and the previous optional declarations forced '?? ""' fallbacks that masked
+  // a silent-bug cluster. Required strings surface missing fields via zod parse
+  // error instead of silently matching zero rows.
+  agentId: z.string().min(1),
+  configId: z.string().min(1),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  transport: z.enum(['stdio', 'http_streamable']).optional(),
+  command: z.string().optional(),
+  argsText: z.string().optional(),
+  envVarsText: z.string().optional(),
+  url: z.string().optional(),
+  headersText: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+const deleteAgentMcpServerSchema = z.object({
+  // D34 L#NN-50 #36: configId added to schema (handler uses it as row ID for delete).
+  // Previously missing from schema, which forced L313/L334 to use 'as unknown as' cast
+  // that hid the schema/code drift.
+  configId: z.string().min(1),
+  agentId: z.string().min(1),
+  serverId: z.string().min(1),
+});
+const assignAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  serverId: z.string().min(1),
+  isActive: z.boolean().default(true),
+});
+const setAgentMcpServerActiveSchema = z.object({
+  configId: z.string().min(1),
+  agentId: z.string().optional(),
+  isActive: z.boolean(),
+});
+const detachAgentMcpServerSchema = z.object({
+  configId: z.string().min(1),
+  agentId: z.string().min(1),
+});
+
+/**
+ * Agent provider (credentials) and MCP server lifecycle routes.
+ * Extracted from routes.ts #1874 — 8 routes: agent-provider/upsert, agent-provider/delete,
+ * agent-mcp/create, agent-mcp/update, agent-mcp/delete, agent-mcp/assign,
+ * agent-mcp/set-active, agent-mcp/detach.
+ */
+export function registerAgentProviderMcpRoutes({
+  httpServer,
+  db,
+  loaderConfig,
+}: {
+  httpServer: { registerRoute(opts: object): void };
+  db: Database;
+  loaderConfig: AgentLoaderConfig;
+}) {
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-provider/upsert',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, upsertAgentProviderSchema);
+      if (body.providerType === 'discord') {
+        const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
+
+        if (deleteSignal.token.trim().length === 0) {
+          await db
+            .delete(agentProviders)
+            .where(
+              and(
+                eq(agentProviders.agentId, body.agentId),
+                eq(agentProviders.providerType, body.providerType),
+              ),
+            );
+
+          await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+
+          return jsonResponse({
+            success: true,
+            agentId: body.agentId,
+            providerType: body.providerType,
+          });
+        }
+      }
+
+      const credentials = parseProviderCredentials(
+        body.providerType as 'internal-chat' | 'discord' | 'email',
+        body.credentials,
+      );
+      const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
+      const existing = await db.query.agentProviders.findFirst({
+        where: and(
+          eq(agentProviders.agentId, body.agentId),
+          eq(agentProviders.providerType, body.providerType),
+        ),
+      });
+
+      if (existing) {
+        await db
+          .update(agentProviders)
+          .set({
+            encryptedCredentials,
+          })
+          .where(eq(agentProviders.id, existing.id));
+      } else {
+        // D34 L#NN-50 #36: remove Drizzle 0.26 cast and add missing updatedAt
+        // (the cast was hiding a missing-column bug that Drizzle's typed chain now catches).
+        await db.insert(agentProviders).values({
+          id: createId(),
+          agentId: body.agentId,
+          providerType: body.providerType,
+          encryptedCredentials,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+
+      await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        providerType: body.providerType,
+      });
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-provider/delete',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentProviderSchema);
+
+      await db
+        .delete(agentProviders)
+        .where(
+          and(
+            eq(agentProviders.agentId, body.agentId),
+            eq(agentProviders.providerType, body.providerType),
+          ),
+        );
+
+      await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        providerType: body.providerType,
+      });
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/create',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, createAgentMcpServerSchema);
+      const serverId = createId();
+      const configId = createId();
+
+      await db.insert(mcpServerConfigs).values({
+        id: serverId,
+        name: body.name,
+        description: normalizeOptionalText(body.description),
+        transport: body.transport,
+        command: body.transport === 'stdio' ? body.command : null,
+        args:
+          body.transport === 'stdio'
+            ? normalizeJsonText(body.argsText, 'argsText', 'array')
+            : null,
+        envVars:
+          body.transport === 'stdio'
+            ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+            : null,
+        url: body.transport === 'http_streamable' ? body.url : null,
+        headers:
+          body.transport === 'http_streamable'
+            ? normalizeJsonText(body.headersText, 'headersText', 'object')
+            : null,
+        version: 1,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      await db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+
+      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/update',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+      // D34 #6214 L#NN-50 #36: extract updateAgentMcpServer helper (DRY).
+      // The helper at mcp-server-helpers.ts:74 was dormant until now.
+      await updateAgentMcpServer(db, body);
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        serverId: body.serverId,
+      });
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/delete',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+      // D34 #6214 L#NN-50 #36: extract deleteAgentMcpServer helper (DRY).
+      // The helper at mcp-server-helpers.ts:111 was dormant until now.
+      await deleteAgentMcpServer(db, body.configId, body.agentId, body.serverId);
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        serverId: body.serverId,
+      });
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/assign',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+      const existing = await db.query.agentMcpConfigs.findFirst({
+        where: and(
+          eq(agentMcpConfigs.agentId, body.agentId),
+          eq(agentMcpConfigs.serverId, body.serverId),
+        ),
+      });
+
+      if (existing) {
+        await db
+          .update(agentMcpConfigs)
+          .set({
+            isActive: body.isActive === true ? 1 : 0,
+            updatedAt: Date.now(),
+          })
+          .where(eq(agentMcpConfigs.id, existing.id));
+
+        await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          configId: existing.id,
+          serverId: body.serverId,
+        });
+      }
+
+      const configId = createId();
+
+      await db.insert(agentMcpConfigs).values({
+        id: configId,
+        agentId: body.agentId,
+        serverId: body.serverId,
+        isActive: body.isActive === true ? 1 : 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse(
+        { success: true, agentId: body.agentId, configId, serverId: body.serverId },
+        201,
+      );
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/set-active',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+
+      await db
+        .update(agentMcpConfigs)
+        .set({
+          isActive: body.isActive === true ? 1 : 0,
+          updatedAt: Date.now(),
+        })
+        .where(
+          and(
+            eq(agentMcpConfigs.id, body.configId),
+            eq(agentMcpConfigs.agentId, body.agentId ?? ''),
+          ),
+        );
+
+      await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+        isActive: body.isActive,
+      });
+    
+}),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/detach',
+    handler: safeRoute(async (request: HttpRequest) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+      const config = await db.query.agentMcpConfigs.findFirst({
+        where: and(
+          eq(agentMcpConfigs.id, body.configId),
+          eq(agentMcpConfigs.agentId, body.agentId),
+        ),
+      });
+
+      if (!config) {
+        return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
+      }
+
+      await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
+      await reloadAgentMcp(db, loaderConfig, body.agentId);
+
+      return jsonResponse({
+        success: true,
+        agentId: body.agentId,
+        configId: body.configId,
+      });
+    
+}),
+  });
+}

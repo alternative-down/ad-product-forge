@@ -28,9 +28,7 @@ export class RealtimeVoiceAgent {
     this.runtime = options.runtime;
     this.stt = options.stt;
     this.tts = options.tts;
-    this.avatarDirector = options.avatar
-      ? new AvatarDirector({ avatar: options.avatar })
-      : null;
+    this.avatarDirector = options.avatar ? new AvatarDirector({ avatar: options.avatar }) : null;
     this.language = options.language;
   }
 

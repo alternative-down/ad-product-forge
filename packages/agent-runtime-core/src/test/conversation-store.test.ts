@@ -11,9 +11,11 @@ import { createConversationRuntimeInputPayload } from '../integrations/conversat
 const tempPaths: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempPaths.splice(0).map((tempPath) => {
-    return rm(tempPath, { recursive: true, force: true });
-  }));
+  await Promise.all(
+    tempPaths.splice(0).map((tempPath) => {
+      return rm(tempPath, { recursive: true, force: true });
+    }),
+  );
 });
 
 describe('conversation stores', () => {
@@ -55,11 +57,13 @@ describe('conversation stores', () => {
       id: 'message-1',
       threadId: 'thread-1',
       role: 'user',
-      parts: [{
-        type: 'image',
-        mimeType: 'image/png',
-        bytes: new Uint8Array([1, 2, 3]),
-      }],
+      parts: [
+        {
+          type: 'image',
+          mimeType: 'image/png',
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      ],
       createdAt: '2026-01-01T00:00:01.000Z',
     });
 

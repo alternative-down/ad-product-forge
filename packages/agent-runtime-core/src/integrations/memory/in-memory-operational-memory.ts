@@ -29,6 +29,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
   }
 
   async append(entry: OperationalMemoryRawEntry): Promise<void> {
+    await Promise.resolve();
     this.rawEntries.push(entry);
   }
 
@@ -48,7 +49,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
       text: response.text,
       sourceEntryIds: observedEntries.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
-      units: estimateTextUnits(response.text),
+      units: countTokens(response.text),
     };
 
     this.rawEntries.splice(0, observedEntries.length);
@@ -62,6 +63,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
   }
 
   async getSnapshot(): Promise<OperationalMemorySnapshot> {
+    await Promise.resolve();
     const recentRaw: OperationalMemoryRawEntry[] = [];
     const overflowRaw: OperationalMemoryRawEntry[] = [];
     let reservedUnits = 0;
@@ -90,27 +92,27 @@ export class InMemoryOperationalMemory implements OperationalMemory {
     const context: StepContextEntry[] = [];
 
     for (const observation of snapshot.observations) {
-      context.push(createTextStepContextEntry({
-        id: observation.id,
-        kind: 'operational-observation',
-        title: 'Operational Observation',
-        text: observation.text,
-      }));
+      context.push(
+        createTextStepContextEntry({
+          id: observation.id,
+          kind: 'operational-observation',
+          title: 'Operational Observation',
+          text: observation.text,
+        }),
+      );
     }
 
     for (const entry of snapshot.recentRaw) {
-      context.push(createTextStepContextEntry({
-        id: entry.id,
-        kind: 'operational-raw',
-        title: `Recent ${entry.source}`,
-        text: entry.text,
-      }));
+      context.push(
+        createTextStepContextEntry({
+          id: entry.id,
+          kind: 'operational-raw',
+          title: `Recent ${entry.source}`,
+          text: entry.text,
+        }),
+      );
     }
 
     return context;
   }
-}
-
-function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
 }

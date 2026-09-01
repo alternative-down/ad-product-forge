@@ -13,9 +13,7 @@ export type WorkspaceAgentApplicationOptions = {
   skillBasePath?: string;
 };
 
-export function createWorkspaceAgentApplication(
-  options: WorkspaceAgentApplicationOptions,
-) {
+export function createWorkspaceAgentApplication(options: WorkspaceAgentApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
   });
@@ -25,9 +23,8 @@ export function createWorkspaceAgentApplication(
     env: z.record(z.string(), z.string()).optional(),
     timeoutMs: z.number().int().positive().optional(),
   });
-  const executeWorkspaceCommand = (input: z.infer<typeof workspaceCommandSchema>) => (
-    options.workspace.execute(input)
-  );
+  const executeWorkspaceCommand = (input: z.infer<typeof workspaceCommandSchema>) =>
+    options.workspace.execute(input);
 
   host.runtime.registerAction({
     name: 'workspace_execute',
@@ -52,11 +49,7 @@ export function createWorkspaceAgentApplication(
     runtime: host.runtime,
     journal: host.journal,
     notes: host.notes,
-    async queueTask(task: {
-      id: string;
-      text: string;
-      cwd?: string;
-    }) {
+    async queueTask(task: { id: string; text: string; cwd?: string }) {
       await host.runtime.dispatch({
         id: task.id,
         type: 'workspace-task',
@@ -69,18 +62,18 @@ export function createWorkspaceAgentApplication(
       env?: Record<string, string>;
       timeoutMs?: number;
     }) {
-      return options.workspace.execute(request);
+      return await options.workspace.execute(request);
     },
     async loadSkillNotes() {
-      if (!options.skills && !options.skillBasePath) {
+      if (options.skills == null && options.skillBasePath == null) {
         return [];
       }
 
       const skills = options.skills
         ? await options.skills.list()
         : await loadSkillsFromDirectory({
-          basePath: options.skillBasePath as string,
-        });
+            basePath: options.skillBasePath as string,
+          });
       const runtimeId = host.runtime.getSnapshot().runtimeId;
 
       for (const skill of skills) {
@@ -94,7 +87,7 @@ export function createWorkspaceAgentApplication(
       return skills;
     },
     async run(options: { maxSteps?: number } = {}) {
-      return host.runtime.run(options);
+      return await host.runtime.run(options);
     },
   };
 }

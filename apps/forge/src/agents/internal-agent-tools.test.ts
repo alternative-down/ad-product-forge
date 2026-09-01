@@ -1,13 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+  createTool: vi.fn((config) => ({
+    name: config.id,
+    inputSchema: config.inputSchema,
+    type: 'tool',
+  })),
+  toolsToRuntimeActions: vi.fn((tools: Record<string, unknown>): Array<{ name: string; inputSchema: unknown }> =>
+    Object.values(tools).map((t) => ({ name: (t as { name: string }).name, inputSchema: (t as { inputSchema: unknown }).inputSchema })),
+  ),
+}));
 
 import { toolsToRuntimeActions } from '@forge-runtime/core';
 
 import { createInternalAgentTools } from './internal-agent-tools';
-import type { Database } from '../database';
+import type { Database } from '../database/client';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import type { createAgentScheduleManager } from '../schedules/manager/index';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 function createInternalAgentToolConfig() {
@@ -38,14 +50,17 @@ describe('createInternalAgentTools', () => {
       hireAction?.inputSchema.parse({
         hiringRequest: 'Hire a backend engineer focused on reliability.',
         weeklyBudgetUsd: 250,
-      })).not.toThrow();
+      }),
+    ).not.toThrow();
     expect(() =>
       terminateAction?.inputSchema.parse({
         agentId: 'agent-1',
-      })).not.toThrow();
+      }),
+    ).not.toThrow();
     expect(() =>
       hireAction?.inputSchema.parse({
         weeklyBudgetUsd: 250,
-      })).toThrow();
+      }),
+    ).toThrow();
   });
 });

@@ -1,4 +1,9 @@
-import type { Database } from '../database/index';
+import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../types/log-level';
+import { errorMsg } from '../agents/error-formatting';
+
+import type { Database } from '../database/client';
+import { findOrThrow } from '../database/find-or-throw';
 import { and, eq } from 'drizzle-orm';
 
 import { agents, agentProviders, agentRoles } from '../database/schema';
@@ -6,11 +11,33 @@ import { loadAgent, type AgentLoaderConfig } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import {
+  ChangeAgentRolePermissionError,
+  ParsedCredentialsShapeMismatchError,
+  UpdateInternalChatProviderProfileCredentialsError,
+  UpdateInternalChatProviderProfileUpdateError,
+} from './errors';
 
-export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfig, agentId: string) {
+// Extracted from inline forgeDebug calls in PR #6345 (closes #6338, D42 cycle by varek).
+// Logs under the 'capabilities-runtime' scope; use this helper instead of calling
+// forgeDebug directly so the scope is centralized.
+export function capabilitiesRuntimeDebug(
+  level: LogLevel,
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'capabilities-runtime', level, message, context });
+}
+
+export async function reloadAgentIfLoaded(
+  db: Database,
+  config: AgentLoaderConfig,
+  agentId: string,
+) {
   const registry = getInternalAgentRegistry();
 
   if (!registry.get(agentId)) {
+    capabilitiesRuntimeDebug('debug', 'Agent not in registry, skipping reload', { agentId });
     return;
   }
 
@@ -20,6 +47,7 @@ export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfi
   });
 
   await registry.add(db, runtime);
+  capabilitiesRuntimeDebug('info', 'Agent reloaded', { agentId });
 }
 
 export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfig, roleId: string) {
@@ -30,9 +58,205 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
     },
   });
 
-  for (const agent of assignedAgents) {
-    await reloadAgentIfLoaded(db, config, agent.id);
+  capabilitiesRuntimeDebug('info', 'Reloading agents for role', { roleId, agentCount: assignedAgents.length });
+
+  await Promise.all(assignedAgents.map((agent) => reloadAgentIfLoaded(db, config, agent.id)));
+}
+
+// L#NN-32 v13 type-guard for stored credentials
+interface StoredCredentials {
+  agentId: string;
+  displayName?: string;
+  description?: string;
+}
+
+function isStoredCredentials(value: unknown): value is StoredCredentials {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('agentId' in value)) return false;
+  return typeof (value as { agentId: unknown }).agentId === 'string';
+}
+
+/**
+ * Updates the internal-chat provider's encrypted credentials to reflect the
+ * agent's current displayName and description.
+ *
+ * Behavior change (closes #5974): decrypt/parse errors and DB update errors
+ * now THROW (was: silent return). Missing provider is still a legitimate
+ * no-op (returns {updated: false, reason: 'no-provider'}).
+ */
+export async function updateInternalChatProviderProfile(
+  db: Database,
+  input: { agentId: string; displayName: string; description: string },
+): Promise<{ updated: true } | { updated: false; reason: 'no-provider' }> {
+  const provider = await db.query.agentProviders.findFirst({
+    where: and(
+      eq(agentProviders.agentId, input.agentId),
+      eq(agentProviders.providerType, 'internal-chat'),
+    ),
+  });
+
+  if (provider === undefined) {
+    capabilitiesRuntimeDebug('debug', 'No internal-chat provider found for agent', { agentId: input.agentId });
+    return { updated: false, reason: 'no-provider' };
   }
+
+  let credentials: StoredCredentials;
+  try {
+    const decrypted = decryptSecret(provider.encryptedCredentials);
+    const parsed: unknown = JSON.parse(decrypted);
+    if (!isStoredCredentials(parsed)) {
+      throw new ParsedCredentialsShapeMismatchError();
+    }
+    credentials = parsed;
+  } catch (err) {
+    throw new UpdateInternalChatProviderProfileCredentialsError(input.agentId, err);
+  }
+
+  const nextCredentials = {
+    ...credentials,
+    agentId: input.agentId,
+    displayName: input.displayName,
+    description: input.description,
+  };
+
+  try {
+    await db
+      .update(agentProviders)
+      .set({
+        encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
+      })
+      .where(eq(agentProviders.id, provider.id));
+    capabilitiesRuntimeDebug('info', 'Internal chat provider profile updated', { agentId: input.agentId });
+  } catch (err) {
+    throw new UpdateInternalChatProviderProfileUpdateError(input.agentId, err);
+  }
+
+  return { updated: true };
+}
+
+// Shared helper for changeAgentRole + changeAgentRoleFromAdmin (closes #5971 DRY)
+
+interface ChangeAgentRoleInternalInput {
+  db: Database;
+  loaderConfig: AgentLoaderConfig;
+  targetAgentId: string;
+  roleId: string;
+  changedBy: string;
+  changedByAgentId?: string;
+  source: 'capabilities' | 'admin-console';
+}
+
+interface ChangeAgentRoleInternalResult {
+  changedByAgentId?: string;
+  agentId: string;
+  roleId: string;
+  roleName: string;
+  changedBy: 'capabilities' | 'admin-console';
+}
+
+/**
+ * Shared internal flow for role changes (closes #5971 DRY + #5973 TOCTOU).
+ *
+ * Reads + write are wrapped in db.transaction so concurrent delete or
+ * role change cannot interleave. Side effects run AFTER the transaction
+ * commits (they are not transactional).
+ */
+async function _changeAgentRoleInternal(input: ChangeAgentRoleInternalInput): Promise<ChangeAgentRoleInternalResult> {
+  const { targetAgent, agentRole } = await input.db.transaction(async (tx) => {
+    const targetAgent = await findOrThrow(
+      tx.query.agents,
+      {
+        scope: 'capabilities-runtime',
+        entity: 'Target agent',
+        op: 'changeAgentRole',
+        idValue: input.targetAgentId,
+        idField: 'targetAgentId',
+      },
+      { where: eq(agents.id, input.targetAgentId) },
+    );
+    const agentRole = await findOrThrow(
+      tx.query.agentRoles,
+      {
+        scope: 'capabilities-runtime',
+        entity: 'Agent role',
+        op: 'changeAgentRole',
+        idValue: input.roleId,
+        idField: 'roleId',
+      },
+      { where: eq(agentRoles.id, input.roleId) },
+    );
+
+    await tx
+      .update(agents)
+      .set({
+        roleId: input.roleId,
+        updatedAt: Date.now(),
+      })
+      .where(eq(agents.id, input.targetAgentId));
+
+    return { targetAgent, agentRole };
+  });
+
+  capabilitiesRuntimeDebug('info', `Changing agent role (${input.source})`, {
+      targetAgentId: input.targetAgentId,
+      roleId: input.roleId,
+    });
+
+  // Side effects OUTSIDE transaction.
+  // Provider profile update (closes #5974): catches and logs partial failures.
+  try {
+    const result = await updateInternalChatProviderProfile(input.db, {
+      agentId: input.targetAgentId,
+      displayName: targetAgent.name,
+      description: agentRole.description ?? agentRole.name,
+    });
+    if (!result.updated) {
+      capabilitiesRuntimeDebug('info', 'No internal-chat provider to update; role change committed', { targetAgentId: input.targetAgentId });
+    }
+  } catch (err) {
+    capabilitiesRuntimeDebug('error', 'Provider profile update failed; role change still committed', { targetAgentId: input.targetAgentId, error: errorMsg(err) });
+  }
+
+  const notifications = createAgentNotificationStore(input.db);
+  const changeTimestamp = Date.now();
+  const eventContent = createRoleChangeContent({
+    targetAgentId: input.targetAgentId,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
+    changedBy: input.changedBy,
+    changedByAgentId: input.changedByAgentId,
+    timestamp: changeTimestamp,
+  });
+
+  await notifications.createNotification({
+    agentId: input.targetAgentId,
+    content: eventContent,
+  });
+
+  await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
+
+  const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
+  targetEntry?.runner?.notifyExternalEvent({
+    type: 'role-change',
+    groupKey: `role-change:${input.targetAgentId}`,
+    groupMetadata: {
+      source: input.source,
+      targetAgentId: input.targetAgentId,
+    },
+    idempotencyKey: `role-change:${input.targetAgentId}:${changeTimestamp}`,
+    text: eventContent,
+    timestamp: changeTimestamp,
+  });
+
+  capabilitiesRuntimeDebug('info', 'Agent role changed', { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name, source: input.source });
+
+  return {
+    agentId: input.targetAgentId,
+    roleId: agentRole.id,
+    roleName: agentRole.name,
+    changedBy: input.source,
+    changedByAgentId: input.changedByAgentId,
+  };
 }
 
 export async function changeAgentRole(input: {
@@ -42,82 +266,40 @@ export async function changeAgentRole(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  const actorAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.actorAgentId),
-  });
+  const actorAgent = await findOrThrow(
+    input.db.query.agents,
+    {
+      scope: 'capabilities-runtime',
+      entity: 'Actor agent',
+      op: 'changeAgentRole',
+      idValue: input.actorAgentId,
+      idField: 'actorAgentId',
+    },
+    { where: eq(agents.id, input.actorAgentId) },
+  );
 
-  if (!actorAgent) {
-    throw new Error(`Actor agent not found: ${input.actorAgentId}`);
+  const actorIsSelf = input.actorAgentId === input.targetAgentId;
+  const actorIsAdmin = actorAgent.roleId === 'admin';
+  if (!(actorIsSelf || actorIsAdmin)) {
+    capabilitiesRuntimeDebug('warn', 'changeAgentRole: actor lacks permission', {
+        actorAgentId: input.actorAgentId,
+        actorRoleId: actorAgent.roleId,
+        targetAgentId: input.targetAgentId,
+      });
+    throw new ChangeAgentRolePermissionError(input.actorAgentId, input.targetAgentId);
   }
 
-  const targetAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.targetAgentId),
-  });
+  const actorLabel = actorIsSelf ? `${actorAgent.name} (self)` : actorAgent.name;
 
-  if (!targetAgent) {
-    throw new Error(`Target agent not found: ${input.targetAgentId}`);
-  }
-
-  const agentRole = await input.db.query.agentRoles.findFirst({
-    where: eq(agentRoles.id, input.roleId),
-  });
-
-  if (!agentRole) {
-    throw new Error(`Role not found: ${input.roleId}`);
-  }
-
-  await input.db
-    .update(agents)
-    .set({
-      roleId: input.roleId,
-      updatedAt: Date.now(),
-    })
-    .where(eq(agents.id, input.targetAgentId));
-
-  await updateInternalChatProviderProfile(input.db, {
-    agentId: input.targetAgentId,
-    displayName: targetAgent.name,
-    description: agentRole.description ?? agentRole.name,
-  });
-
-  const notifications = createAgentNotificationStore(input.db);
-  const actorLabel = input.actorAgentId === input.targetAgentId ? `${actorAgent.name} (self)` : actorAgent.name;
-  const changeTimestamp = Date.now();
-  const eventContent = createRoleChangeContent({
+  return await _changeAgentRoleInternal({
+    db: input.db,
+    loaderConfig: input.loaderConfig,
     targetAgentId: input.targetAgentId,
-    roleId: agentRole.id,
-    roleName: agentRole.name,
+    roleId: input.roleId,
     changedBy: actorLabel,
     changedByAgentId: input.actorAgentId,
-    timestamp: changeTimestamp,
+    source: 'capabilities',
   });
-
-  await notifications.createNotification({
-    agentId: input.targetAgentId,
-    content: eventContent,
-  });
-
-  await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
-
-  const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent({
-    type: 'role-change',
-    groupKey: `role-change:${input.targetAgentId}`,
-    groupMetadata: {
-      Source: 'capabilities',
-      TargetAgentId: input.targetAgentId,
-    },
-    idempotencyKey: `role-change:${input.targetAgentId}:${changeTimestamp}`,
-    text: eventContent,
-    timestamp: changeTimestamp,
-  });
-
-  return {
-    agentId: input.targetAgentId,
-    roleId: agentRole.id,
-    roleName: agentRole.name,
-    changedByAgentId: input.actorAgentId,
-  };
 }
 
 export async function changeAgentRoleFromAdmin(input: {
@@ -126,110 +308,14 @@ export async function changeAgentRoleFromAdmin(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  const targetAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.targetAgentId),
-  });
-
-  if (!targetAgent) {
-    throw new Error(`Target agent not found: ${input.targetAgentId}`);
-  }
-
-  const agentRole = await input.db.query.agentRoles.findFirst({
-    where: eq(agentRoles.id, input.roleId),
-  });
-
-  if (!agentRole) {
-    throw new Error(`Role not found: ${input.roleId}`);
-  }
-
-  await input.db
-    .update(agents)
-    .set({
-      roleId: input.roleId,
-      updatedAt: Date.now(),
-    })
-    .where(eq(agents.id, input.targetAgentId));
-
-  await updateInternalChatProviderProfile(input.db, {
-    agentId: input.targetAgentId,
-    displayName: targetAgent.name,
-    description: agentRole.description ?? agentRole.name,
-  });
-
-  const notifications = createAgentNotificationStore(input.db);
-  const changeTimestamp = Date.now();
-  const eventContent = createRoleChangeContent({
+  return await _changeAgentRoleInternal({
+    db: input.db,
+    loaderConfig: input.loaderConfig,
     targetAgentId: input.targetAgentId,
-    roleId: agentRole.id,
-    roleName: agentRole.name,
+    roleId: input.roleId,
     changedBy: 'admin console',
-    timestamp: changeTimestamp,
+    source: 'admin-console',
   });
-
-  await notifications.createNotification({
-    agentId: input.targetAgentId,
-    content: eventContent,
-  });
-
-  await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
-
-  const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent({
-    type: 'role-change',
-    groupKey: `role-change:${input.targetAgentId}`,
-    groupMetadata: {
-      Source: 'admin-console',
-      TargetAgentId: input.targetAgentId,
-    },
-    idempotencyKey: `role-change:${input.targetAgentId}:${changeTimestamp}`,
-    text: eventContent,
-    timestamp: changeTimestamp,
-  });
-
-  return {
-    agentId: input.targetAgentId,
-    roleId: agentRole.id,
-    roleName: agentRole.name,
-    changedBy: 'admin-console',
-  };
-}
-
-export async function updateInternalChatProviderProfile(
-  db: Database,
-  input: {
-    agentId: string;
-    displayName: string;
-    description: string;
-  },
-) {
-  const provider = await db.query.agentProviders.findFirst({
-    where: and(eq(agentProviders.agentId, input.agentId), eq(agentProviders.providerType, 'internal-chat')),
-  });
-
-  if (!provider) {
-    return;
-  }
-
-  const decryptedCredentials = decryptSecret(provider.encryptedCredentials);
-  const credentials = JSON.parse(decryptedCredentials) as {
-    agentId: string;
-    displayName?: string;
-    description?: string;
-  };
-
-  const nextCredentials = {
-    ...credentials,
-    agentId: input.agentId,
-    displayName: input.displayName,
-    description: input.description,
-  };
-
-  await db
-    .update(agentProviders)
-    .set({
-      encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
-    })
-    .where(eq(agentProviders.id, provider.id));
 }
 
 function createRoleChangeContent(input: {
@@ -249,7 +335,7 @@ function createRoleChangeContent(input: {
     `Timestamp: ${new Date(input.timestamp).toISOString()}`,
   ];
 
-  if (input.changedByAgentId) {
+  if (input.changedByAgentId != null) {
     lines.push(`Changed by agent id: ${input.changedByAgentId}`);
   }
 

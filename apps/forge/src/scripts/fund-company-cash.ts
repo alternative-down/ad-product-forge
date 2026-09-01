@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from '../database/index';
+import { getDatabase } from '../database/client';
+import { runMigrations } from '../database/migrate';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
@@ -17,7 +19,7 @@ async function fundCompanyCash() {
     description: process.argv[3],
   });
   const db = getDatabase();
-  const companyCash = createCompanyCashLedger(db);
+  const _companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
   await runMigrations(db);
@@ -27,13 +29,21 @@ async function fundCompanyCash() {
     description: input.description ?? 'Manual company cash funding',
   });
 
-  const balanceUsd = await companyCash.getCurrentBalanceUsd();
-
-  console.log(`[Cash] Added USD ${input.amountUsd.toFixed(2)}`);
-  console.log(`[Cash] Current balance: USD ${balanceUsd.toFixed(2)}`);
+  forgeDebug({
+    scope: 'fund-cash',
+    level: 'info',
+    message: 'Added company cash',
+    context: { amountUsd: input.amountUsd },
+  });
 }
+import { errorMsg } from '../agents/error-formatting';
 
 fundCompanyCash().catch((error) => {
-  console.error('[Cash] Failed to fund company cash:', error);
+  forgeDebug({
+    scope: 'fund-cash',
+    level: 'error',
+    message: 'Failed to fund company cash',
+    context: { error: errorMsg(error) },
+  });
   process.exit(1);
 });

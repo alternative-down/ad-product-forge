@@ -5,18 +5,14 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "agent-runtime-core": [
-        "../agent-runtime-core/dist/core-entry.d.ts"
-      ],
-      "agent-runtime-core/integrations": [
-        "../agent-runtime-core/dist/integrations-entry.d.ts"
-      ]
+      "agent-runtime-core": ["../agent-runtime-core/dist/core-entry.d.ts"],
+      "agent-runtime-core/integrations": ["../agent-runtime-core/dist/integrations-entry.d.ts"]
     },
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", ".turbo", "dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", ".turbo", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

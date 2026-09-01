@@ -2,11 +2,14 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
-import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
+import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/layout/page-header';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/github/')({
   component: SettingsGithubRoute,
 });
@@ -38,13 +41,15 @@ function SettingsGithubRoute() {
       failAdminAction(context, error);
     },
   });
-  const organization = draft?.organization ?? (integration?.config?.organization ?? '');
-  const appHomeUrl = draft?.appHomeUrl ?? (integration?.config?.appHomeUrl ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
+  const organization = draft?.organization ?? integration?.config?.organization ?? '';
+  const appHomeUrl = draft?.appHomeUrl ?? integration?.config?.appHomeUrl ?? '';
+  const isEnabled = draft?.isEnabled ?? integration?.isEnabled ?? false;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando Github..." /> : null}
+      {integrationsQuery.isLoading && !integrationsQuery.data ? (
+        <AdminLoadingState label="Carregando Github..." />
+      ) : null}
       <PageHeader
         title="Github"
         description="Conecta o sistema ao GitHub para provisionar apps e operar os repositórios dos agentes."
@@ -69,7 +74,7 @@ function SettingsGithubRoute() {
             <label className="text-sm font-medium" htmlFor="github-organization">
               Organização
             </label>
-            <AdminInput
+            <Input
               id="github-organization"
               value={organization}
               onChange={(event) =>
@@ -86,7 +91,7 @@ function SettingsGithubRoute() {
             <label className="text-sm font-medium" htmlFor="github-app-home-url">
               App home URL
             </label>
-            <AdminInput
+            <Input
               id="github-app-home-url"
               value={appHomeUrl}
               onChange={(event) =>
@@ -118,12 +123,19 @@ function SettingsGithubRoute() {
               />
             </div>
           </div>
-          {integrationsQuery.error ? <div className="text-sm text-destructive">{integrationsQuery.error.message}</div> : null}
-          {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+          {integrationsQuery.error ? (
+            <div className="text-sm text-destructive">{integrationsQuery.error.message}</div>
+          ) : null}
+          {mutation.error ? (
+            <div className="text-sm text-destructive">{mutation.error.message}</div>
+          ) : null}
           <div className="flex justify-end">
-            <AdminButton type="submit" disabled={mutation.isPending || !organization.trim() || !appHomeUrl.trim()}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !organization.trim() || !appHomeUrl.trim()}
+            >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
-            </AdminButton>
+            </Button>
           </div>
         </form>
       </div>

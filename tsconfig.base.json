@@ -3,14 +3,17 @@
     "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "strict": true,
     "noImplicitAny": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "noEmit": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true
   },
-  "exclude": ["node_modules", ".turbo", "dist", "examples"]
+  "exclude": ["node_modules", ".turbo", "dist", "examples", ".github"]
 }

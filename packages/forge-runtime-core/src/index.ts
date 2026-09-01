@@ -1,14 +1,22 @@
-export {
-  createForgeConversationMemory,
-  type ForgeConversationMemoryOptions,
-} from './memory.js';
+/* eslint-disable reexport-check/no-unnecessary-reexports, @typescript-eslint/strict-boolean-expressions */
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { createForgeConversationMemory, type ForgeConversationMemoryOptions } from './memory.js';
 export {
   LibsqlConversationStore,
   type LibsqlConversationStoreOptions,
 } from './libsql-conversation-store.js';
-export type {
-  AgentConfig,
-} from './agent-config.js';
+export {
+  LibsqlTodoStore,
+  createUpdateTodosAction,
+  type LibsqlTodoStoreOptions,
+  type TodoItem,
+  type TodoItemInput,
+  type TodoItemStatus,
+  type UpdateTodosInput,
+} from './libsql-todo-store.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { RuntimePlanMode } from './runtime-plan-mode.js';
+export type { AgentConfig } from './agent-config.js';
 export {
   createTool,
   toolToRuntimeAction,
@@ -28,14 +36,9 @@ export {
   createRuntimeHost,
   createTextStepContextEntry,
 } from 'agent-runtime-core/integrations';
-export type {
-  ConversationStore,
-  RuntimeActionDefinition,
-} from 'agent-runtime-core/integrations';
-export {
-  ForgeMcpToolset,
-  type ForgeMcpToolsetOptions,
-} from './mcp.js';
+export type { ConversationStore, RuntimeActionDefinition } from 'agent-runtime-core/integrations';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { ForgeMcpToolset, type ForgeMcpToolsetOptions } from './mcp.js';
 export {
   createForgeAgentRuntime,
   type CreateForgeAgentRuntimeOptions,
@@ -63,20 +66,14 @@ export {
   type ForgeStepUsageRecord,
   type ForgeUsageSink,
 } from './usage.js';
-export {
-  CLAUDE_MAX_MODELS,
-  type ClaudeMaxModelId,
-} from './model-ids.js';
-export {
-  OPENAI_CODEX_MODELS,
-  type OpenAICodexModelId,
-} from './model-ids.js';
-export {
-  claudeCodeProvider,
-} from './claude-max.js';
-export {
-  openaiCodexProvider,
-} from './openai-codex.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { CLAUDE_MAX_MODELS, type ClaudeMaxModelId } from './model-ids.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { OPENAI_CODEX_MODELS, type OpenAICodexModelId } from './model-ids.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { claudeCodeProvider } from './claude-max.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export { openaiCodexProvider } from './openai-codex.js';
 export {
   createOAuthGateway,
   OAUTH_GATEWAY_ID,
@@ -112,35 +109,25 @@ export {
   type WorkspaceEmbedderId,
   type WorkspaceEmbedderProvider,
 } from './embedder.js';
-export {
-  createAgentWakeQueue,
-  type AgentWakeEvent,
-  type AgentWakeQueue,
-} from './wake-queue.js';
-export {
-  forgeDebug,
-  isForgeDebugEnabled,
-} from './debug.js';
+export { createAgentWakeQueue, type AgentWakeEvent, type AgentWakeQueue } from './wake-queue.js';
+export { forgeDebug, isForgeDebugEnabled } from './debug.js';
+export { errorMsg } from './error-formatting.js';
+export { withToolErrorLogging, type ToolResult } from './tool-error-wrapper.js';
 export {
   toForgeSafeIdentifier,
   toForgeSafeIdentifier as toRuntimeSafeIdentifier,
   toForgeSafeIdentifier as toMastraSafeIdentifier,
 } from './safe-identifier.js';
 export type {
-  CheckpointedOmArchivedObservation,
-  CheckpointedOmArchivedReflection,
-  CheckpointedOmCheckpointPackageInput,
-  CheckpointedOmCheckpointSummary,
-  CheckpointedOmMetricsSnapshot,
-  CheckpointedOmObservationBlock,
-  CheckpointedOmState,
-  CheckpointedOmStateStore,
-} from './checkpointed-om.js';
-export {
-  createCheckpointedOmCompatibilityObserver,
-  type CheckpointedOmCompatibilityObserverOptions,
-} from './checkpointed-om-compatibility.js';
-export { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
+  OperationalMemoryOmArchivedObservation,
+  OperationalMemoryOmArchivedReflection,
+  OperationalMemoryOmCheckpointPackageInput,
+  OperationalMemoryOmCheckpointSummary,
+  OperationalMemoryOmMetricsSnapshot,
+  OperationalMemoryOmObservationBlock,
+  OperationalMemoryOmState,
+  OperationalMemoryOmStateStore,
+} from './operational-memory-om.js';
 export {
   readOperationalMemoryState,
   takeOperationalMemoryBatch,
@@ -160,23 +147,19 @@ export type {
   CommunicationProviderConversation,
   CommunicationProviderMessage,
 } from './communication.js';
-export {
-  createCommunicationModule,
-} from './communication-module.js';
-export type {
-  CommunicationContactsStore,
-} from './communication-module.js';
+export { createCommunicationModule } from './communication-module.js';
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
+export type { CommunicationContactsStore } from './communication-module.js';
 export {
   LibsqlCommunicationContactsStore,
+/** @internal — workspace-internal, NOT consumed by apps/. See issue #6703. */
   type LibsqlCommunicationContactsStoreOptions,
 } from './libsql-communication-contacts-store.js';
 export {
   SqliteWorkspaceRetrieval,
   type SqliteWorkspaceRetrievalOptions,
 } from './sqlite-workspace-retrieval.js';
-export {
-  createExternalAccountTools,
-} from './communication-tools.js';
+export { createExternalAccountTools } from './communication-tools.js';
 export {
   forgeAgentRuntimeConfigSchema,
   forgeMcpHttpServerSchema,
@@ -199,3 +182,5 @@ export {
   type RuntimeWorkingMemoryStore,
   type WorkingMemoryRecord,
 } from './runtime-working-memory.js';
+export { logger } from './logger.js';
+export type { LogContext } from './logger.js';

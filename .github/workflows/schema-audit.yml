@@ -1,0 +1,32 @@
+name: Schema Audit (L#NN-46 v4.8)
+
+# Per L#NN-46 v4.8 schema-completeness codification.
+# Validates schema tables (TS drizzle) match snapshots and CREATE TABLE statements.
+# Drift detection: warns if schema tables not in latest snapshot.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/forge/src/database/**'
+      - 'apps/forge/src/finance/payment-schema.ts'
+      - 'apps/forge/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run schema audit
+        run: npx tsx apps/forge/src/database/scripts/schema-completeness-audit.ts
+        continue-on-error: false

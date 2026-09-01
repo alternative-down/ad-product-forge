@@ -1,9 +1,4 @@
-import type {
-  AvatarAnimation,
-  AvatarExpression,
-  AvatarGateway,
-  AvatarMovement,
-} from './avatar.js';
+import type { AvatarAnimation, AvatarExpression, AvatarGateway, AvatarMovement } from './avatar.js';
 
 export type AvatarEvent =
   | { type: 'expression'; expression: AvatarExpression; recordedAt: string }
@@ -18,6 +13,7 @@ export class InMemoryAvatarEventRecorder implements AvatarEventRecorder {
   private readonly events: AvatarEvent[] = [];
 
   async record(event: AvatarEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

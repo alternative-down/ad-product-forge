@@ -2,29 +2,29 @@ import type { RuntimeActionDefinition } from '../../core/actions.js';
 
 export type McpTransport =
   | {
-    type: 'stdio';
-    command: string;
-    args?: string[];
-    env?: Record<string, string>;
-  }
+      type: 'stdio';
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+    }
   | {
-    type: 'streamable-http';
-    url: string;
-    headers?: Record<string, string>;
-  };
+      type: 'streamable-http';
+      url: string;
+      headers?: Record<string, string>;
+    };
 
 export type McpJsonSchema =
   | boolean
   | {
-    type?: string | string[];
-    description?: string;
-    enum?: unknown[];
-    const?: unknown;
-    properties?: Record<string, McpJsonSchema>;
-    required?: string[];
-    items?: McpJsonSchema;
-    additionalProperties?: boolean | McpJsonSchema;
-  };
+      type?: string | string[];
+      description?: string;
+      enum?: unknown[];
+      const?: unknown;
+      properties?: Record<string, McpJsonSchema>;
+      required?: string[];
+      items?: McpJsonSchema;
+      additionalProperties?: boolean | McpJsonSchema;
+    };
 
 export type McpToolDescriptor = {
   name: string;

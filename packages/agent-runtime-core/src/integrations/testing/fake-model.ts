@@ -7,7 +7,9 @@ import type {
   StepModelStreamEvent,
 } from '../../core/types.js';
 
-export type FakeModelHandler = (request: StepModelRequest) => Promise<StepModelResponse> | StepModelResponse;
+export type FakeModelHandler = (
+  request: StepModelRequest,
+) => Promise<StepModelResponse> | StepModelResponse;
 export type FakeStreamModelHandler = (
   request: StepModelRequest,
 ) => Promise<StepModelStream> | StepModelStream;
@@ -16,7 +18,7 @@ export class FakeStepModelAdapter implements StepModelAdapter {
   constructor(private readonly handler: FakeModelHandler) {}
 
   async generateStep(request: StepModelRequest): Promise<StepModelResponse> {
-    return this.handler(request);
+    return await this.handler(request);
   }
 }
 
@@ -27,12 +29,12 @@ export class FakeStreamingStepModelAdapter implements StreamingStepModelAdapter 
   ) {}
 
   async generateStep(request: StepModelRequest): Promise<StepModelResponse> {
-    return this.handler(request);
+    return await this.handler(request);
   }
 
   async streamStep(request: StepModelRequest): Promise<StepModelStream> {
     if (this.streamHandler) {
-      return this.streamHandler(request);
+      return await this.streamHandler(request);
     }
 
     const events = new AsyncEventChannel<StepModelStreamEvent>();

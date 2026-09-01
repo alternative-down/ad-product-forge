@@ -103,4 +103,3 @@ class PlaywrightBrowserSession implements BrowserSession {
     await this.browser.close();
   }
 }
-

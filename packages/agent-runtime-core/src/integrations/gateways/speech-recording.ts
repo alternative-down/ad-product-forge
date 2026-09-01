@@ -1,8 +1,4 @@
-import type {
-  TextToSpeechGateway,
-  TextToSpeechRequest,
-  TextToSpeechResponse,
-} from './speech.js';
+import type { TextToSpeechGateway, TextToSpeechRequest, TextToSpeechResponse } from './speech.js';
 
 export type SpeechSynthesisEvent = {
   text: string;
@@ -20,6 +16,7 @@ export class InMemorySpeechSynthesisRecorder implements SpeechSynthesisRecorder 
   private readonly events: SpeechSynthesisEvent[] = [];
 
   async record(event: SpeechSynthesisEvent): Promise<void> {
+    await Promise.resolve();
     this.events.push(event);
   }
 

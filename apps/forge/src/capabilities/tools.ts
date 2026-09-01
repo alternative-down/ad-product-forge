@@ -1,12 +1,24 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { LogLevel } from '../types/log-level';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { AgentLoaderConfig } from '../agents/agent-loader';
-import type { Database } from '../database/index';
+
+import type { Database } from '../database/client';
 import { changeAgentRole, reloadAgentsForRole } from './runtime';
 import { createCapabilityStore } from './store';
 import { forgeCapabilityIds, hasToolPermission } from './catalog';
+import { withToolErrorLogging } from './tools/error-wrapper';
+
+// L#NN-YYY v4 helper: scope-injection for tools:capabilities forgeDebug calls
+export function capabilitiesToolsDebug(
+  level: LogLevel,
+  message: string,
+  context?: Record<string, unknown>,
+): void {
+  forgeDebug({ scope: 'tools:capabilities', level, message, context });
+}
 
 const capabilityIdSchema = z.enum(forgeCapabilityIds);
 
@@ -25,27 +37,24 @@ export function createCapabilityTools(
       description: 'List the roles available in the system.',
       inputSchema: z.object({}),
       execute: async () => {
-        forgeDebug('tools:capabilities', 'list_agent_roles called');
+        capabilitiesToolsDebug('info', 'list_agent_roles called');
 
-        try {
-          const result = await capabilities.listRoles();
-          forgeDebug('tools:capabilities', 'list_agent_roles result', {
-            count: result.length,
-            roles: result.map((role) => ({
-              roleId: role.roleId,
-              name: role.name,
-            })),
-          });
-          return result;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_agent_roles error', { error: message });
-          return {
-            valid: false,
-            error: message,
-            hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'list_agent_roles',
+          hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
+          fn: async () => {
+            const result = await capabilities.listRoles();
+            capabilitiesToolsDebug('info', 'list_agent_roles result', {
+              count: result.length,
+              roles: result.map((role) => ({
+                roleId: role.roleId,
+                name: role.name,
+              })),
+            });
+            return result;
+          },
+        });
       },
     });
   }
@@ -56,122 +65,145 @@ export function createCapabilityTools(
       description: 'Create, update, or delete a role.',
       inputSchema: z.object({
         action: z.enum(['create', 'update', 'delete']).describe('The role operation to perform.'),
-        create: z.object({
-          name: z.string().optional().describe('Required role name for the new role.'),
-          description: z.string().optional().describe('Optional description for the new role.'),
-        }).optional().describe('Provide this object only when action is create.'),
-        update: z.object({
-          roleId: z.string().optional().describe('Required roleId to update one existing role.'),
-          name: z.string().optional().describe('Optional new role name.'),
-          description: z.string().optional().describe('Optional new description.'),
-        }).optional().describe('Provide this object only when action is update.'),
-        delete: z.object({
-          roleId: z.string().optional().describe('Required roleId to delete one existing role.'),
-        }).optional().describe('Provide this object only when action is delete.'),
+        create: z
+          .object({
+            name: z.string().optional().describe('Required role name for the new role.'),
+            description: z.string().optional().describe('Optional description for the new role.'),
+          })
+          .optional()
+          .describe('Provide this object only when action is create.'),
+        update: z
+          .object({
+            roleId: z.string().optional().describe('Required roleId to update one existing role.'),
+            name: z.string().optional().describe('Optional new role name.'),
+            description: z.string().optional().describe('Optional new description.'),
+          })
+          .optional()
+          .describe('Provide this object only when action is update.'),
+        delete: z
+          .object({
+            roleId: z.string().optional().describe('Required roleId to delete one existing role.'),
+          })
+          .optional()
+          .describe('Provide this object only when action is delete.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'manage_agent_role called', { input });
+        capabilitiesToolsDebug('info', 'manage_agent_role called', { input });
 
-        try {
-          if (input.action === 'create') {
-            if (!input.create) {
-              return {
-                valid: false,
-                error: 'create is required when action is create',
-                hint: 'Provide create.name and optionally create.description.',
-              };
-            }
-
-            if (!input.create.name) {
-              return {
-                valid: false,
-                error: 'create.name is required when action is create',
-                hint: 'Provide the new role name in create.name.',
-              };
-            }
-
-            const result = await capabilities.manageRole({
-              action: 'create',
-              name: input.create.name,
-              description: input.create.description,
-            });
-
-            if ('roleId' in result && result.roleId) {
-              await reloadAgentsForRole(db, loaderConfig, result.roleId);
-            }
-
-            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
-            return { valid: true, ...result };
-          }
-
-          if (input.action === 'update') {
-            if (!input.update) {
-              return {
-                valid: false,
-                error: 'update is required when action is update',
-                hint: 'Provide update.roleId and at least one field to change.',
-              };
-            }
-
-            if (!input.update.roleId) {
-              return {
-                valid: false,
-                error: 'update.roleId is required when action is update',
-                hint: 'Use list_agent_roles to find the roleId you want to change.',
-              };
-            }
-
-            const result = await capabilities.manageRole({
-              action: 'update',
-              roleId: input.update.roleId,
-              name: input.update.name,
-              description: input.update.description,
-            });
-
-            if ('roleId' in result && result.roleId) {
-              await reloadAgentsForRole(db, loaderConfig, result.roleId);
-            }
-
-            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
-            return { valid: true, ...result };
-          }
-
-          if (!input.delete) {
+        if (input.action === 'create') {
+          if (input.create == null) {
             return {
               valid: false,
-              error: 'delete is required when action is delete',
-              hint: 'Provide delete.roleId.',
+              error: 'create is required when action is create',
+              hint: 'Provide create.name and optionally create.description.',
             };
           }
 
-          if (!input.delete.roleId) {
+          if (input.create.name == null) {
             return {
               valid: false,
-              error: 'delete.roleId is required when action is delete',
-              hint: 'Use list_agent_roles to find the roleId you want to delete.',
+              error: 'create.name is required when action is create',
+              hint: 'Provide the new role name in create.name.',
             };
           }
 
-          const result = await capabilities.manageRole({
-            action: 'delete',
-            roleId: input.delete.roleId,
+          const createInput = input.create;
+          return await withToolErrorLogging({
+            scope: 'tools:capabilities',
+            op: 'manage_agent_role',
+            hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
+            fn: async () => {
+              const result = await capabilities.manageRole({
+                action: 'create',
+                name: createInput.name,
+                description: createInput.description,
+              });
+
+              if ('roleId' in result && result.roleId != null) {
+                await reloadAgentsForRole(db, loaderConfig, result.roleId);
+              }
+
+              capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
+              return result;
+            },
           });
+        }
 
-          if ('roleId' in result && result.roleId) {
-            await reloadAgentsForRole(db, loaderConfig, result.roleId);
+        if (input.action === 'update') {
+          if (input.update == null) {
+            return {
+              valid: false,
+              error: 'update is required when action is update',
+              hint: 'Provide update.roleId and at least one field to change.',
+            };
           }
 
-          forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
-          return { valid: true, ...result };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'manage_agent_role error', { error: message });
+          if (input.update.roleId == null) {
+            return {
+              valid: false,
+              error: 'update.roleId is required when action is update',
+              hint: 'Use list_agent_roles to find the roleId you want to change.',
+            };
+          }
+
+          const updateInput = input.update;
+          return await withToolErrorLogging({
+            scope: 'tools:capabilities',
+            op: 'manage_agent_role',
+            hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
+            fn: async () => {
+              const result = await capabilities.manageRole({
+                action: 'update',
+                roleId: updateInput.roleId,
+                name: updateInput.name,
+                description: updateInput.description,
+              });
+
+              if ('roleId' in result && result.roleId != null) {
+                await reloadAgentsForRole(db, loaderConfig, result.roleId);
+              }
+
+              capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
+              return result;
+            },
+          });
+        }
+
+        if (input.delete == null) {
           return {
             valid: false,
-            error: message,
-            hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
+            error: 'delete is required when action is delete',
+            hint: 'Provide delete.roleId.',
           };
         }
+
+        if (input.delete.roleId == null) {
+          return {
+            valid: false,
+            error: 'delete.roleId is required when action is delete',
+            hint: 'Use list_agent_roles to find the roleId you want to delete.',
+          };
+        }
+
+        const deleteInput = input.delete;
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'manage_agent_role',
+          hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
+          fn: async () => {
+            const result = await capabilities.manageRole({
+              action: 'delete',
+              roleId: deleteInput.roleId,
+            });
+
+            if ('roleId' in result && result.roleId != null) {
+              await reloadAgentsForRole(db, loaderConfig, result.roleId);
+            }
+
+            capabilitiesToolsDebug('info', 'manage_agent_role success', { result });
+            return result;
+          },
+        });
       },
     });
   }
@@ -185,27 +217,24 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('The new roleId that should be assigned to that agent.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'change_agent_role called', { input });
+        capabilitiesToolsDebug('info', 'change_agent_role called', { input });
 
-        try {
-          const result = await changeAgentRole({
-            db,
-            loaderConfig,
-            actorAgentId: currentAgentId,
-            targetAgentId: input.agentId,
-            roleId: input.roleId,
-          });
-          forgeDebug('tools:capabilities', 'change_agent_role success', { result });
-          return { valid: true, ...result };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'change_agent_role error', { error: message });
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'change_agent_role',
+          hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
+          fn: async () => {
+            const result = await changeAgentRole({
+              db,
+              loaderConfig,
+              actorAgentId: currentAgentId,
+              targetAgentId: input.agentId,
+              roleId: input.roleId,
+            });
+            capabilitiesToolsDebug('info', 'change_agent_role success', { result });
+            return result;
+          },
+        });
       },
     });
   }
@@ -213,30 +242,34 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_agent_statuses')) {
     tools.list_agent_statuses = createTool({
       id: 'list_agent_statuses',
-      description: 'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
+      description:
+        'List the current execution status of agents, such as idle or running. You can filter by one agentId or by one executionState.',
       inputSchema: z.object({
-        agentId: z.string().optional().describe('Optional agentId if you want to inspect one specific agent.'),
-        executionState: z.enum(['idle', 'running']).optional().describe('Optional execution state filter. Use idle or running.'),
+        agentId: z
+          .string()
+          .optional()
+          .describe('Optional agentId if you want to inspect one specific agent.'),
+        executionState: z
+          .enum(['idle', 'running'])
+          .optional()
+          .describe('Optional execution state filter. Use idle or running.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });
+        capabilitiesToolsDebug('info', 'list_agent_statuses called', { input });
 
-        try {
-          const result = await capabilities.listAgentStatuses({
-            agentId: input.agentId ?? undefined,
-            executionState: input.executionState ?? undefined,
-          });
-          forgeDebug('tools:capabilities', 'list_agent_statuses result', { count: result.length });
-          return result;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_agent_statuses error', { error: message });
-          return {
-            valid: false,
-            error: message,
-            hint: 'Verify the agentId when filtering one agent.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'list_agent_statuses',
+          hint: 'Verify the agentId when filtering one agent.',
+          fn: async () => {
+            const result = await capabilities.listAgentStatuses({
+              agentId: input.agentId ?? undefined,
+              executionState: input.executionState ?? undefined,
+            });
+            capabilitiesToolsDebug('info', 'list_agent_statuses result', { count: result.length });
+            return result;
+          },
+        });
       },
     });
   }
@@ -244,24 +277,20 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'list_role_capabilities')) {
     tools.list_role_capabilities = createTool({
       id: 'list_role_capabilities',
-      description: 'List every capability in the system for one role, marking each one with granted true or false.',
+      description:
+        'List every capability in the system for one role, marking each one with granted true or false.',
       inputSchema: z.object({
         roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'list_role_capabilities called', { roleId: input.roleId });
+        capabilitiesToolsDebug('info', 'list_role_capabilities called', { roleId: input.roleId });
 
-        try {
-          return await capabilities.listRoleCapabilities(input.roleId);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_role_capabilities error', { error: message });
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_agent_roles to confirm the roleId.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'list_role_capabilities',
+          hint: 'Use list_agent_roles to confirm the roleId.',
+          fn: () => capabilities.listRoleCapabilities(input.roleId),
+        });
       },
     });
   }
@@ -269,29 +298,29 @@ export function createCapabilityTools(
   if (hasToolPermission(allowedToolIds, 'manage_role_capabilities')) {
     tools.manage_role_capabilities = createTool({
       id: 'manage_role_capabilities',
-      description: 'Add or remove one capability from a role. A capability can be either a tool or a workflow.',
+      description:
+        'Add or remove one capability from a role. A capability can be either a tool or a workflow.',
       inputSchema: z.object({
-        action: z.enum(['add', 'remove']).describe('Choose add to grant the capability or remove to revoke it.'),
+        action: z
+          .enum(['add', 'remove'])
+          .describe('Choose add to grant the capability or remove to revoke it.'),
         roleId: z.string().min(1).describe('The roleId you want to change.'),
         capabilityId: capabilityIdSchema.describe('The capabilityId to grant or revoke.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'manage_role_capabilities called', { input });
+        capabilitiesToolsDebug('info', 'manage_role_capabilities called', { input });
 
-        try {
-          const result = await capabilities.manageRoleCapability(input);
-          await reloadAgentsForRole(db, loaderConfig, input.roleId);
-          forgeDebug('tools:capabilities', 'manage_role_capabilities success', { result });
-          return { valid: true, ...result };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'manage_role_capabilities error', { error: message });
-          return {
-            valid: false,
-            error: message,
-            hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
-          };
-        }
+        return await withToolErrorLogging({
+          scope: 'tools:capabilities',
+          op: 'manage_role_capabilities',
+          hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
+          fn: async () => {
+            const result = await capabilities.manageRoleCapability(input);
+            await reloadAgentsForRole(db, loaderConfig, input.roleId);
+            capabilitiesToolsDebug('info', 'manage_role_capabilities success', { result });
+            return result;
+          },
+        });
       },
     });
   }

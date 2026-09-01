@@ -48,6 +48,7 @@ Criado e gerenciado pela classe `LongTermMemory` quando a opção `longTermMemor
 Diretório local: `.forge-memory/{agentId}/`
 
 Armazena observações em arquivos Markdown organizados por data:
+
 - `observations/2024-03-15.md` — observações do dia
 - `observations/2024-03-16.md` — próximo dia
 - etc.
@@ -71,6 +72,7 @@ Cada observação é indexada para busca híbrida (vetorial + BM25).
 **Escopo**: Coletada durante a execução e persistida por thread
 
 **Config**:
+
 ```typescript
 {
   observation: { messageTokens: 15000 },    // Limite de tokens por observação
@@ -79,6 +81,7 @@ Cada observação é indexada para busca híbrida (vetorial + BM25).
 ```
 
 **Fluxo**:
+
 1. Durante execução, o LLM gera observações sobre o que aprendeu
 2. Observações são armazenadas no banco de dados de memória
 3. Reflections são geradas automaticamente sobre conjuntos de observações
@@ -90,6 +93,7 @@ Cada observação é indexada para busca híbrida (vetorial + BM25).
 **Ativação**: Apenas se `options.longTermMemory = true` em `createAgent()`
 
 **Fluxo Automático**:
+
 1. **Input Step**: Antes de cada step, LongTermMemory injeta memória relevante
    - Busca híbrida por similaridade vetorial + BM25 fulltext no workspace
    - Também consulta grafo de conhecimento via GraphRAG
@@ -109,6 +113,7 @@ Cada observação é indexada para busca híbrida (vetorial + BM25).
 ### 4.1 Acionamento
 
 Jobs chegam na fila do agente via:
+
 - `agent.generate()` — chamada direta do código
 - `communication.onReceiveMessage()` — mensagens de provedores de comunicação
 - Wake queue — debounce 1s, máx 10s entre notificações
@@ -192,6 +197,7 @@ Recomendado para a maioria dos agentes.
 Executa um prompt no agente.
 
 **Argumentos**:
+
 - `prompt`: String com instruções/tarefa
 - `memory.thread`: ID da thread para contexto
 - `memory.resource`: ID do recurso associado (para queries de memória)
@@ -210,8 +216,12 @@ const agent = await createForgeAgent({
   description: 'Pesquisa e sintetiza informações de múltiplas fontes',
   instructions: 'You are a research agent...',
   model: { name: 'claude-3-5-sonnet-20241022' },
-  tools: { /* custom tools */ },
-  providers: [ /* communication providers */ ],
+  tools: {
+    /* custom tools */
+  },
+  providers: [
+    /* communication providers */
+  ],
 });
 
 await agent.generate('Start daily research cycle', {

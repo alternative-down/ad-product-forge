@@ -1,0 +1,101 @@
+import { vi } from 'vitest';
+
+/** Replaces MockFn for mock functions. */
+type MockFn<T = unknown> = {
+  mockReset: () => void;
+  mockResolvedValue: (val: T) => MockFn<T>;
+  mockRejectedValue: (err: unknown) => MockFn<T>;
+  mockImplementation: (fn: (...args: unknown[]) => unknown) => MockFn<T>;
+  mockReturnValue: (val: T) => MockFn<T>;
+};
+
+/**
+ * Creates a minimal mock DB object matching what the read-model factories expect.
+ * This is the canonical mock DB factory shared across admin read-model test files.
+ */
+export function createMockDb(overrides = {}) {
+  const db = {
+    query: {
+      agents: {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      agentNotifications: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      agentExecutionContracts: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      agentRoles: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      llmProfiles: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      agentExecutionSteps: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      agentMcpConfigs: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      agentSchedules: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      mcpServerConfigs: {
+        findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      agentHomeMetricSnapshots: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    },
+    // Additional LibSQLDatabase methods that TypeScript requires
+    batch: vi.fn().mockReturnThis(),
+    resultKind: vi.fn().mockReturnThis(),
+    _: vi.fn().mockReturnThis(),
+    $with: vi.fn().mockReturnThis(),
+    run: vi.fn().mockReturnThis(),
+    prepare: vi.fn().mockReturnThis(),
+    transaction: vi.fn().mockReturnThis(),
+    drizzle: vi.fn().mockReturnThis(),
+    $primary: vi.fn().mockReturnThis(),
+    $client: vi.fn().mockReturnThis(),
+    $nodes: vi.fn().mockReturnThis(),
+    $docs: vi.fn().mockReturnThis(),
+    $count: vi.fn().mockResolvedValue(0),
+    $relation: vi.fn().mockReturnThis(),
+    $get: vi.fn().mockReturnThis(),
+    with: vi.fn().mockReturnThis(),
+
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
+        }),
+      }),
+    }),
+    ...overrides,
+  };
+  return db as typeof db & Record<string, unknown>;
+}
+
+/**
+ * Resets shared agent read-model mocks that need per-test reset behaviour.
+ * Call in `beforeEach` of any test file that uses the shared agents test setup.
+ *
+ * The following hoisted mock refs must be in scope where this is called:
+ *   mockReadOperationalMemoryState, mockListThreadMessages,
+ *   mockReadLongTermMemoryState
+ */
+export function resetAgentReadModelMocks(sharedMocks: {
+  mockReadOperationalMemoryState: MockFn;
+  mockListThreadMessages: MockFn;
+  mockReadLongTermMemoryState: MockFn;
+}) {
+  sharedMocks.mockReadOperationalMemoryState.mockReset();
+  sharedMocks.mockReadOperationalMemoryState.mockResolvedValue(null);
+  sharedMocks.mockListThreadMessages.mockReset();
+  sharedMocks.mockListThreadMessages.mockResolvedValue({ items: [], hasMore: false });
+  sharedMocks.mockReadLongTermMemoryState.mockReset();
+  sharedMocks.mockReadLongTermMemoryState.mockResolvedValue(null);
+}

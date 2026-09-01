@@ -1,12 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { BlobStore } from '../assets/blob-store.js';
-import type {
-  VisionGateway,
-  VisionImageInput,
-  VisionRequest,
-  VisionResponse,
-} from './vision.js';
+import type { VisionGateway, VisionImageInput, VisionRequest, VisionResponse } from './vision.js';
 
 export type PersistingVisionGatewayOptions = {
   vision: VisionGateway;

@@ -17,10 +17,7 @@ export const forgeMcpHttpServerSchema = z.object({
   headers: z.record(z.string(), z.string()).default({}),
 });
 
-export const forgeMcpServerSchema = z.union([
-  forgeMcpStdioServerSchema,
-  forgeMcpHttpServerSchema,
-]);
+export const forgeMcpServerSchema = z.union([forgeMcpStdioServerSchema, forgeMcpHttpServerSchema]);
 
 export type ForgeMcpServerConfig = z.infer<typeof forgeMcpServerSchema>;
 

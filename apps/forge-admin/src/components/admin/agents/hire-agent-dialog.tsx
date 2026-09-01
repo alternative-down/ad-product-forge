@@ -1,18 +1,12 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import {
-  AdminButton,
-  AdminDialogBody,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminDialogTitle,
-  AdminInput,
-  AdminTextarea,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { hireAgent } from '@/lib/admin-api';
+import { hireAgent } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 type HireAgentDialogProps = {
@@ -98,7 +92,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
                 <label className="text-sm font-medium" htmlFor="hire-request">
                   Pedido
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="hire-request"
                   rows={5}
                   value={form.hiringRequest}
@@ -116,7 +110,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
                 <label className="text-sm font-medium" htmlFor="hire-context">
                   Contexto
                 </label>
-                <AdminTextarea
+                <Textarea
                   id="hire-context"
                   rows={5}
                   value={form.additionalContext}
@@ -134,7 +128,7 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
                 <label className="text-sm font-medium" htmlFor="hire-weekly-budget">
                   Valor semanal
                 </label>
-                <AdminInput
+                <Input
                   id="hire-weekly-budget"
                   type="number"
                   step="0.01"
@@ -150,14 +144,19 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
                 />
               </div>
 
-              {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+              {mutation.error ? (
+                <div className="text-sm text-destructive">{mutation.error.message}</div>
+              ) : null}
             </div>
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton type="submit" disabled={mutation.isPending || !form.hiringRequest.trim() || !validBudget}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !form.hiringRequest.trim() || !validBudget}
+            >
               {mutation.isPending ? 'Contratando...' : 'Contratar'}
-            </AdminButton>
+            </Button>
           </AdminDialogFooter>
         </form>
       </AdminDialogContent>

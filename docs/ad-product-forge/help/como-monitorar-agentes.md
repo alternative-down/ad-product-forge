@@ -12,13 +12,13 @@ O monitoramento é essencial para garantir que seus agentes estão funcionando c
 
 Cada agente pode estar em um destes estados:
 
-| Status | Descrição | O que fazer |
-|--------|-----------|-------------|
-| **idle** | Aguardando tarefa | Normal. Agente disponível. |
-| **running** | Executando tarefa | Normal. Agente trabalhando. |
-| **paused** | Pausado | Verificar se foi intencional |
-| **error** | Erro detectado | Investigar e resolver |
-| **terminated** | Desligado | Remover ou recontratar |
+| Status         | Descrição         | O que fazer                  |
+| -------------- | ----------------- | ---------------------------- |
+| **idle**       | Aguardando tarefa | Normal. Agente disponível.   |
+| **running**    | Executando tarefa | Normal. Agente trabalhando.  |
+| **paused**     | Pausado           | Verificar se foi intencional |
+| **error**      | Erro detectado    | Investigar e resolver        |
+| **terminated** | Desligado         | Remover ou recontratar       |
 
 ### Como Verificar Status
 
@@ -59,12 +59,12 @@ O painel mostra métricas importantes:
 
 Fique atento a estes sinais:
 
-| Indicador | Limite | Ação Recomendada |
-|-----------|--------|------------------|
-| Saldo < 20% | ⚠️ | Fazer top-up ou ajustar orçamento |
-| Taxa de erro > 10% | ⚠️ | Investigar logs do agente |
-| Tempo de resposta > 5min | ⚠️ | Verificar carga ou modelo |
-| Tasks pendentes > 10 | ⚠️ | Verificar capacidade |
+| Indicador                | Limite | Ação Recomendada                  |
+| ------------------------ | ------ | --------------------------------- |
+| Saldo < 20%              | ⚠️     | Fazer top-up ou ajustar orçamento |
+| Taxa de erro > 10%       | ⚠️     | Investigar logs do agente         |
+| Tempo de resposta > 5min | ⚠️     | Verificar carga ou modelo         |
+| Tasks pendentes > 10     | ⚠️     | Verificar capacidade              |
 
 ---
 
@@ -78,12 +78,12 @@ Fique atento a estes sinais:
 
 ### Tipos de Log
 
-| Tipo | Descrição | Para que serve |
-|------|-----------|----------------|
-| `execution` | Execução de tarefa | Ver o que foi feito |
-| `error` | Erros ocurridos | Diagnosticar problemas |
+| Tipo        | Descrição              | Para que serve         |
+| ----------- | ---------------------- | ---------------------- |
+| `execution` | Execução de tarefa     | Ver o que foi feito    |
+| `error`     | Erros ocurridos        | Diagnosticar problemas |
 | `tool_call` | Chamadas de ferramenta | Entender comportamento |
-| `budget` | Operações financeiras | Auditar gastos |
+| `budget`    | Operações financeiras  | Auditar gastos         |
 
 ### Exemplo de Entrada de Log
 
@@ -143,12 +143,12 @@ Período: 20/03 a 27/03/2026
 
 ### Problemas Comuns e Soluções
 
-| Problema | Causa Provável | Solução |
-|----------|----------------|---------|
-| Agente não responde | Sem saldo | Fazer top-up |
-| Erro de ferramenta | Sem permissão | Verificar role |
-| Tarefa travada | Timeout | Cancelar e recriar |
-| Alto custo | Modelo muito caro | Trocar para modelo menor |
+| Problema            | Causa Provável    | Solução                  |
+| ------------------- | ----------------- | ------------------------ |
+| Agente não responde | Sem saldo         | Fazer top-up             |
+| Erro de ferramenta  | Sem permissão     | Verificar role           |
+| Tarefa travada      | Timeout           | Cancelar e recriar       |
+| Alto custo          | Modelo muito caro | Trocar para modelo menor |
 
 ### Como Resolver
 
@@ -205,12 +205,12 @@ Soluções:
 
 ### Canais de Notificação
 
-| Canal | Configuração | Uso |
-|-------|-------------|-----|
-| Dashboard | Automático | Visualizar online |
-| Email | Configurar SMTP | Relatórios diários |
-| Slack | Integração via webhook | Alertas em tempo real |
-| Discord | Integração via webhook | Alertas em tempo real |
+| Canal     | Configuração           | Uso                   |
+| --------- | ---------------------- | --------------------- |
+| Dashboard | Automático             | Visualizar online     |
+| Email     | Configurar SMTP        | Relatórios diários    |
+| Slack     | Integração via webhook | Alertas em tempo real |
+| Discord   | Integração via webhook | Alertas em tempo real |
 
 ---
 

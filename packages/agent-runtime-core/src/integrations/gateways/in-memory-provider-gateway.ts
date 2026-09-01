@@ -20,7 +20,7 @@ export class InMemoryProviderGateway implements StepModelProviderGateway {
       throw new Error(`No provider factory registered for ${providerId}`);
     }
 
-    return factory(config);
+    return await factory(config);
   }
 }
 
@@ -33,4 +33,3 @@ function extractProviderId(modelId: string) {
 
   return providerId;
 }
-

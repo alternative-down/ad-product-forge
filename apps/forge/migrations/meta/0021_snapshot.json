@@ -53,9 +53,7 @@
       "indexes": {
         "agent_checkpointed_om_states_thread_id_idx": {
           "name": "agent_checkpointed_om_states_thread_id_idx",
-          "columns": [
-            "thread_id"
-          ],
+          "columns": ["thread_id"],
           "isUnique": true
         }
       },
@@ -64,12 +62,8 @@
           "name": "agent_checkpointed_om_states_agent_id_agents_id_fk",
           "tableFrom": "agent_checkpointed_om_states",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -142,16 +136,12 @@
       "indexes": {
         "agent_execution_contracts_agent_id_idx": {
           "name": "agent_execution_contracts_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_execution_contracts_ends_at_idx": {
           "name": "agent_execution_contracts_ends_at_idx",
-          "columns": [
-            "ends_at"
-          ],
+          "columns": ["ends_at"],
           "isUnique": false
         }
       },
@@ -160,12 +150,8 @@
           "name": "agent_execution_contracts_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_contracts",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -291,30 +277,22 @@
       "indexes": {
         "agent_execution_steps_agent_id_idx": {
           "name": "agent_execution_steps_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_execution_steps_contract_id_idx": {
           "name": "agent_execution_steps_contract_id_idx",
-          "columns": [
-            "contract_id"
-          ],
+          "columns": ["contract_id"],
           "isUnique": false
         },
         "agent_execution_steps_llm_profile_id_idx": {
           "name": "agent_execution_steps_llm_profile_id_idx",
-          "columns": [
-            "llm_profile_id"
-          ],
+          "columns": ["llm_profile_id"],
           "isUnique": false
         },
         "agent_execution_steps_created_at_idx": {
           "name": "agent_execution_steps_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -323,12 +301,8 @@
           "name": "agent_execution_steps_contract_id_agent_execution_contracts_id_fk",
           "tableFrom": "agent_execution_steps",
           "tableTo": "agent_execution_contracts",
-          "columnsFrom": [
-            "contract_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contract_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -336,12 +310,8 @@
           "name": "agent_execution_steps_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_steps",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -349,12 +319,8 @@
           "name": "agent_execution_steps_llm_profile_id_llm_profiles_id_fk",
           "tableFrom": "agent_execution_steps",
           "tableTo": "llm_profiles",
-          "columnsFrom": [
-            "llm_profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["llm_profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -422,12 +388,8 @@
           "name": "agent_long_term_memory_recall_states_agent_id_agents_id_fk",
           "tableFrom": "agent_long_term_memory_recall_states",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -481,12 +443,8 @@
           "name": "agent_long_term_memory_states_agent_id_agents_id_fk",
           "tableFrom": "agent_long_term_memory_states",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -545,31 +503,22 @@
       "indexes": {
         "idx_agent_mcp_configs_agent_id": {
           "name": "idx_agent_mcp_configs_agent_id",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "idx_agent_mcp_configs_server_id": {
           "name": "idx_agent_mcp_configs_server_id",
-          "columns": [
-            "server_id"
-          ],
+          "columns": ["server_id"],
           "isUnique": false
         },
         "idx_agent_mcp_configs_is_active": {
           "name": "idx_agent_mcp_configs_is_active",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "unique_agent_server": {
           "name": "unique_agent_server",
-          "columns": [
-            "agent_id",
-            "server_id"
-          ],
+          "columns": ["agent_id", "server_id"],
           "isUnique": true
         }
       },
@@ -578,12 +527,8 @@
           "name": "agent_mcp_configs_agent_id_agents_id_fk",
           "tableFrom": "agent_mcp_configs",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -591,12 +536,8 @@
           "name": "agent_mcp_configs_server_id_mcp_server_configs_id_fk",
           "tableFrom": "agent_mcp_configs",
           "tableTo": "mcp_server_configs",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -647,23 +588,17 @@
       "indexes": {
         "agent_notifications_agent_id_idx": {
           "name": "agent_notifications_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_notifications_created_at_idx": {
           "name": "agent_notifications_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         },
         "agent_notifications_read_at_idx": {
           "name": "agent_notifications_read_at_idx",
-          "columns": [
-            "read_at"
-          ],
+          "columns": ["read_at"],
           "isUnique": false
         }
       },
@@ -672,12 +607,8 @@
           "name": "agent_notifications_agent_id_agents_id_fk",
           "tableFrom": "agent_notifications",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -728,10 +659,7 @@
       "indexes": {
         "agent_provider_unique": {
           "name": "agent_provider_unique",
-          "columns": [
-            "agent_id",
-            "provider_type"
-          ],
+          "columns": ["agent_id", "provider_type"],
           "isUnique": true
         }
       },
@@ -740,12 +668,8 @@
           "name": "agent_providers_agent_id_agents_id_fk",
           "tableFrom": "agent_providers",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -796,9 +720,7 @@
       "indexes": {
         "agent_roles_name_idx": {
           "name": "agent_roles_name_idx",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -936,30 +858,22 @@
       "indexes": {
         "agent_schedules_agent_id_idx": {
           "name": "agent_schedules_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_schedules_is_active_idx": {
           "name": "agent_schedules_is_active_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "agent_schedules_next_trigger_at_idx": {
           "name": "agent_schedules_next_trigger_at_idx",
-          "columns": [
-            "next_trigger_at"
-          ],
+          "columns": ["next_trigger_at"],
           "isUnique": false
         },
         "idx_schedules_creator_id": {
           "name": "idx_schedules_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         }
       },
@@ -968,12 +882,8 @@
           "name": "agent_schedules_agent_id_agents_id_fk",
           "tableFrom": "agent_schedules",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1122,12 +1032,8 @@
           "name": "agents_role_id_agent_roles_id_fk",
           "tableFrom": "agents",
           "tableTo": "agent_roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1135,12 +1041,8 @@
           "name": "agents_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
           "tableTo": "llm_profiles",
-          "columnsFrom": [
-            "model_profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1148,12 +1050,8 @@
           "name": "agents_om_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
           "tableTo": "llm_profiles",
-          "columnsFrom": [
-            "om_model_profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["om_model_profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1246,16 +1144,12 @@
       "indexes": {
         "company_cash_ledger_status_idx": {
           "name": "company_cash_ledger_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "company_cash_ledger_effective_at_idx": {
           "name": "company_cash_ledger_effective_at_idx",
-          "columns": [
-            "effective_at"
-          ],
+          "columns": ["effective_at"],
           "isUnique": false
         }
       },
@@ -1335,16 +1229,12 @@
       "indexes": {
         "company_recurring_payables_is_active_idx": {
           "name": "company_recurring_payables_is_active_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "company_recurring_payables_next_due_at_idx": {
           "name": "company_recurring_payables_next_due_at_idx",
-          "columns": [
-            "next_due_at"
-          ],
+          "columns": ["next_due_at"],
           "isUnique": false
         }
       },
@@ -1409,16 +1299,12 @@
       "indexes": {
         "forge_internal_chat_accounts_slug_idx": {
           "name": "forge_internal_chat_accounts_slug_idx",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "forge_internal_chat_accounts_agent_id_idx": {
           "name": "forge_internal_chat_accounts_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": true
         }
       },
@@ -1427,12 +1313,8 @@
           "name": "forge_internal_chat_accounts_agent_id_agents_id_fk",
           "tableFrom": "forge_internal_chat_accounts",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1477,17 +1359,12 @@
       "indexes": {
         "forge_internal_chat_conversation_members_unique_idx": {
           "name": "forge_internal_chat_conversation_members_unique_idx",
-          "columns": [
-            "conversation_id",
-            "account_id"
-          ],
+          "columns": ["conversation_id", "account_id"],
           "isUnique": true
         },
         "forge_internal_chat_conversation_members_account_idx": {
           "name": "forge_internal_chat_conversation_members_account_idx",
-          "columns": [
-            "account_id"
-          ],
+          "columns": ["account_id"],
           "isUnique": false
         }
       },
@@ -1496,12 +1373,8 @@
           "name": "forge_internal_chat_conversation_members_conversation_id_forge_internal_chat_conversations_id_fk",
           "tableFrom": "forge_internal_chat_conversation_members",
           "tableTo": "forge_internal_chat_conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1509,12 +1382,8 @@
           "name": "forge_internal_chat_conversation_members_account_id_forge_internal_chat_accounts_id_fk",
           "tableFrom": "forge_internal_chat_conversation_members",
           "tableTo": "forge_internal_chat_accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1572,16 +1441,12 @@
       "indexes": {
         "forge_internal_chat_conversations_type_idx": {
           "name": "forge_internal_chat_conversations_type_idx",
-          "columns": [
-            "type"
-          ],
+          "columns": ["type"],
           "isUnique": false
         },
         "forge_internal_chat_conversations_updated_at_idx": {
           "name": "forge_internal_chat_conversations_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
+          "columns": ["updated_at"],
           "isUnique": false
         }
       },
@@ -1590,12 +1455,8 @@
           "name": "forge_internal_chat_conversations_created_by_account_id_forge_internal_chat_accounts_id_fk",
           "tableFrom": "forge_internal_chat_conversations",
           "tableTo": "forge_internal_chat_accounts",
-          "columnsFrom": [
-            "created_by_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_account_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1632,24 +1493,17 @@
       "indexes": {
         "forge_internal_chat_message_reads_unique_idx": {
           "name": "forge_internal_chat_message_reads_unique_idx",
-          "columns": [
-            "message_id",
-            "agent_id"
-          ],
+          "columns": ["message_id", "agent_id"],
           "isUnique": true
         },
         "forge_internal_chat_message_reads_agent_idx": {
           "name": "forge_internal_chat_message_reads_agent_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "forge_internal_chat_message_reads_read_at_idx": {
           "name": "forge_internal_chat_message_reads_read_at_idx",
-          "columns": [
-            "read_at"
-          ],
+          "columns": ["read_at"],
           "isUnique": false
         }
       },
@@ -1658,12 +1512,8 @@
           "name": "forge_internal_chat_message_reads_message_id_forge_internal_chat_messages_id_fk",
           "tableFrom": "forge_internal_chat_message_reads",
           "tableTo": "forge_internal_chat_messages",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1671,12 +1521,8 @@
           "name": "forge_internal_chat_message_reads_agent_id_agents_id_fk",
           "tableFrom": "forge_internal_chat_message_reads",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1734,16 +1580,12 @@
       "indexes": {
         "forge_internal_chat_messages_conversation_idx": {
           "name": "forge_internal_chat_messages_conversation_idx",
-          "columns": [
-            "conversation_id"
-          ],
+          "columns": ["conversation_id"],
           "isUnique": false
         },
         "forge_internal_chat_messages_created_at_idx": {
           "name": "forge_internal_chat_messages_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -1752,12 +1594,8 @@
           "name": "forge_internal_chat_messages_conversation_id_forge_internal_chat_conversations_id_fk",
           "tableFrom": "forge_internal_chat_messages",
           "tableTo": "forge_internal_chat_conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1765,12 +1603,8 @@
           "name": "forge_internal_chat_messages_author_account_id_forge_internal_chat_accounts_id_fk",
           "tableFrom": "forge_internal_chat_messages",
           "tableTo": "forge_internal_chat_accounts",
-          "columnsFrom": [
-            "author_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_account_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1903,23 +1737,17 @@
       "indexes": {
         "llm_profiles_name_idx": {
           "name": "llm_profiles_name_idx",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         },
         "llm_profiles_model_key_idx": {
           "name": "llm_profiles_model_key_idx",
-          "columns": [
-            "model_key"
-          ],
+          "columns": ["model_key"],
           "isUnique": false
         },
         "llm_profiles_is_enabled_idx": {
           "name": "llm_profiles_is_enabled_idx",
-          "columns": [
-            "is_enabled"
-          ],
+          "columns": ["is_enabled"],
           "isUnique": false
         }
       },
@@ -2028,16 +1856,12 @@
       "indexes": {
         "idx_mcp_server_configs_name": {
           "name": "idx_mcp_server_configs_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": false
         },
         "idx_mcp_server_configs_is_active": {
           "name": "idx_mcp_server_configs_is_active",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         }
       },
@@ -2074,17 +1898,12 @@
       "indexes": {
         "role_tool_permissions_unique_idx": {
           "name": "role_tool_permissions_unique_idx",
-          "columns": [
-            "role_id",
-            "tool_id"
-          ],
+          "columns": ["role_id", "tool_id"],
           "isUnique": true
         },
         "role_tool_permissions_role_id_idx": {
           "name": "role_tool_permissions_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
+          "columns": ["role_id"],
           "isUnique": false
         }
       },
@@ -2093,12 +1912,8 @@
           "name": "role_tool_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_tool_permissions",
           "tableTo": "agent_roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2135,17 +1950,12 @@
       "indexes": {
         "role_workflow_permissions_unique_idx": {
           "name": "role_workflow_permissions_unique_idx",
-          "columns": [
-            "role_id",
-            "workflow_id"
-          ],
+          "columns": ["role_id", "workflow_id"],
           "isUnique": true
         },
         "role_workflow_permissions_role_id_idx": {
           "name": "role_workflow_permissions_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
+          "columns": ["role_id"],
           "isUnique": false
         }
       },
@@ -2154,12 +1964,8 @@
           "name": "role_workflow_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_workflow_permissions",
           "tableTo": "agent_roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

@@ -6,9 +6,7 @@ export type UsageMeterPluginOptions = {
   meter: UsageMeter;
 };
 
-export function createUsageMeterPlugin(
-  options: UsageMeterPluginOptions,
-): RuntimePlugin {
+export function createUsageMeterPlugin(options: UsageMeterPluginOptions): RuntimePlugin {
   return {
     name: options.name ?? 'usage-meter',
     async onAfterStep(context) {

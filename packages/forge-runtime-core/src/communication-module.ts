@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import { logger } from './logger.js';
 import path from 'node:path';
 
 import { z } from 'zod';
@@ -14,13 +16,13 @@ import type {
   CommunicationProviderMessage,
 } from './communication.js';
 
-const contactRecordSchema = z.object({
+const _contactRecordSchema = z.object({
   slug: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string().optional(),
 });
 
-type ContactRecord = z.infer<typeof contactRecordSchema>;
+type ContactRecord = z.infer<typeof _contactRecordSchema>;
 
 type RuntimeWorkspaceFilesystem = {
   readFile(path: string): Promise<string | Uint8Array | Buffer>;
@@ -50,6 +52,51 @@ export async function createCommunicationModule(config: {
   const activeFilesystem = workspaceFilesystem;
 
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
+  const pendingMessages: Array<{ providerId: string; message: CommunicationInboundMessage }> = [];
+
+  async function dispatchMessage(providerId: string, message: CommunicationInboundMessage) {
+    const messageView = await toAgentMessageView(activeFilesystem, {
+      messageId: message.messageId,
+      provider: providerId,
+      authorId: message.authorId,
+      targetKey: message.targetKey,
+      content: message.content.trim(),
+      attachments: message.attachments ?? [],
+      unread: true,
+      createdAt: message.createdAt,
+      authorDisplayName: message.authorDisplayName,
+    });
+
+    receiveMessageHandler!({
+      type: `message:${providerId}`,
+      groupKey: `message:${providerId}:${message.targetKey}`,
+      groupMetadata: buildGroupMetadata(providerId, message),
+      idempotencyKey: `${providerId}:${message.messageId}`,
+      itemMetadata: buildItemMetadata(messageView, message),
+      text: message.content.trim(),
+      timestamp: Date.parse(message.createdAt) || Date.now(),
+    });
+  }
+
+  async function flushPendingMessages() {
+    if (!receiveMessageHandler || pendingMessages.length === 0) {
+      return;
+    }
+
+    while (pendingMessages.length > 0) {
+      const pending = pendingMessages.shift();
+      if (!pending) {
+        continue;
+      }
+
+      try {
+        await dispatchMessage(pending.providerId, pending.message);
+      } catch (error) {
+        logger.error('communication', 'Failed to dispatch pending message', { error });
+        // Continue processing remaining messages
+      }
+    }
+  }
 
   for (const provider of providers.values()) {
     if (!provider.onMessage) {
@@ -58,49 +105,33 @@ export async function createCommunicationModule(config: {
 
     await provider.onMessage(async (message) => {
       if (!receiveMessageHandler) {
+        pendingMessages.push({ providerId: provider.id, message });
         return;
       }
 
-      const messageView = await toAgentMessageView(activeFilesystem, {
-        messageId: message.messageId,
-        provider: provider.id,
-        authorId: message.authorId,
-        targetKey: message.targetKey,
-        content: message.content.trim(),
-        attachments: message.attachments ?? [],
-        unread: true,
-        createdAt: message.createdAt,
-        authorDisplayName: message.authorDisplayName,
-      });
-
-      receiveMessageHandler({
-        type: `message:${provider.id}`,
-        groupKey: `message:${provider.id}:${message.targetKey}`,
-        groupMetadata: buildGroupMetadata(provider.id, message),
-        idempotencyKey: `${provider.id}:${message.messageId}`,
-        itemMetadata: buildItemMetadata(messageView, message),
-        text: message.content.trim(),
-        timestamp: Date.parse(message.createdAt) || Date.now(),
-      });
+      try {
+        await dispatchMessage(provider.id, message);
+      } catch (error) {
+        logger.error('communication', 'Failed to dispatch message', { error });
+      }
     });
   }
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
     const contacts = await config.contactsStore.listContacts();
-    const self = filter === 'others'
-      ? []
-      : await listSelfContacts(providers);
-    const others = filter === 'self'
-      ? []
-      : contacts.map((contact) => ({
-        targetKey: contact.slug,
-        slug: contact.slug,
-        displayName: contact.displayName,
-        description: contact.description,
-        metadata: {
-          slug: contact.slug,
-        },
-      }));
+    const self = filter === 'others' ? [] : await listSelfContacts(providers);
+    const others =
+      filter === 'self'
+        ? []
+        : contacts.map((contact) => ({
+            targetKey: contact.slug,
+            slug: contact.slug,
+            displayName: contact.displayName,
+            description: contact.description,
+            metadata: {
+              slug: contact.slug,
+            },
+          }));
 
     return {
       self,
@@ -108,11 +139,7 @@ export async function createCommunicationModule(config: {
     };
   }
 
-  async function upsertContact(input: {
-    slug: string;
-    displayName: string;
-    description?: string;
-  }) {
+  async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
     const existingContacts = await config.contactsStore.listContacts();
     const normalized: ContactRecord = {
       slug: input.slug,
@@ -144,6 +171,7 @@ export async function createCommunicationModule(config: {
     for (const provider of selectedProviders) {
       if (!provider.listConversations) {
         if (input.provider) {
+          logger.warn('communication', 'listConversations: provider does not support listing');
           throw new Error(`Provider does not support listing conversations: ${provider.id}`);
         }
 
@@ -177,6 +205,7 @@ export async function createCommunicationModule(config: {
     const provider = resolveProvider(providers, input.provider);
 
     if (!provider.getMessages) {
+      logger.warn('communication', 'getMessages: provider does not support reading messages');
       throw new Error(`Provider does not support reading messages: ${input.provider}`);
     }
 
@@ -189,7 +218,9 @@ export async function createCommunicationModule(config: {
       dateTo: input.dateTo,
     });
 
-    return Promise.all(messages.map((message) => toAgentMessageView(activeFilesystem, message)));
+    return await Promise.all(
+      messages.map((message) => toAgentMessageView(activeFilesystem, message)),
+    );
   }
 
   async function sendMessage(input: {
@@ -233,9 +264,11 @@ export async function createCommunicationModule(config: {
     sendMessage,
     onReceiveMessage(handler) {
       receiveMessageHandler = handler;
+      void flushPendingMessages();
     },
     async dispose() {
       receiveMessageHandler = null;
+      pendingMessages.length = 0;
 
       for (const provider of providers.values()) {
         await provider.dispose?.();
@@ -286,7 +319,9 @@ async function getUnreadConversationContext(input: {
     unread: true,
     limit: 100,
   });
-  const unreadConversation = conversations.find((conversation) => conversation.targetKey === input.targetKey);
+  const unreadConversation = conversations.find(
+    (conversation) => conversation.targetKey === input.targetKey,
+  );
 
   if (!unreadConversation) {
     return null;
@@ -306,10 +341,7 @@ async function getUnreadConversationContext(input: {
   };
 }
 
-function resolveProvider(
-  providers: Map<string, CommunicationProvider>,
-  providerId: string,
-) {
+function resolveProvider(providers: Map<string, CommunicationProvider>, providerId: string) {
   const provider = providers.get(providerId);
 
   if (!provider) {
@@ -329,18 +361,18 @@ function buildGroupMetadata(providerId: string, message: CommunicationInboundMes
       : {}),
     ...(Array.isArray(message.metadata?.groupMembers)
       ? {
-        Participants: message.metadata.groupMembers
-          .map((member) =>
-            typeof member === 'object'
-              && member !== null
-              && 'displayName' in member
-              && typeof member.displayName === 'string'
-              ? member.displayName
-              : null,
-          )
-          .filter((value): value is string => Boolean(value))
-          .join(', '),
-      }
+          Participants: message.metadata.groupMembers
+            .map((member) =>
+              typeof member === 'object' &&
+              member !== null &&
+              'displayName' in member &&
+              typeof member.displayName === 'string'
+                ? member.displayName
+                : null,
+            )
+            .filter((value): value is string => Boolean(value))
+            .join(', '),
+        }
       : {}),
   };
 }
@@ -386,7 +418,11 @@ async function toAgentMessageView(
     authorId: message.authorId,
     targetKey: message.targetKey,
     content: message.content,
-    attachments: await materializeInboundAttachments(workspaceFilesystem, message.messageId, message.attachments),
+    attachments: await materializeInboundAttachments(
+      workspaceFilesystem,
+      message.messageId,
+      message.attachments,
+    ),
     unread: message.unread,
     createdAt: message.createdAt,
     authorDisplayName: message.authorDisplayName,
@@ -398,7 +434,7 @@ async function materializeInboundAttachments(
   messageId: string,
   attachments: CommunicationProviderMessage['attachments'],
 ): Promise<CommunicationAttachmentView[]> {
-  return Promise.all(
+  return await Promise.all(
     attachments.map(async (attachment, index) => {
       const safeName = sanitizeFileName(attachment.name);
       const targetPath = path.posix.join('tmp', `${messageId}-${index}-${safeName}`);
@@ -420,13 +456,12 @@ async function readOutboundAttachments(input: {
   workspaceRoot: string;
   attachmentPaths: string[];
 }) {
-  return Promise.all(
+  return await Promise.all(
     input.attachmentPaths.map(async (attachmentPath) => {
       const workspacePath = resolveWorkspacePath(input.workspaceRoot, attachmentPath);
       const data = await input.workspaceFilesystem.readFile(workspacePath);
-      const buffer = typeof data === 'string'
-        ? new Uint8Array(Buffer.from(data))
-        : new Uint8Array(data);
+      const buffer =
+        typeof data === 'string' ? new Uint8Array(Buffer.from(data)) : new Uint8Array(data);
 
       return {
         name: path.basename(workspacePath),
@@ -460,9 +495,7 @@ function resolveWorkspacePath(workspaceRoot: string, filePath: string) {
 }
 
 function sanitizeFileName(fileName: string) {
-  const value = fileName
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .trim();
+  const value = fileName.replace(/[/\\?%*:|"<>]/g, '-').trim();
 
   return value || 'attachment';
 }

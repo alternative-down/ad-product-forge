@@ -26,7 +26,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   private readonly backgroundProcesses = new Map<string, BackgroundProcessState>();
 
   constructor(options: LocalBashWorkspaceGatewayOptions = {}) {
-    this.root = options.root ? path.resolve(options.root) : undefined;
+    this.root = options.root != null ? path.resolve(options.root) : undefined;
     this.pathAliases = (options.pathAliases ?? []).map((alias) => path.resolve(alias));
     this.shellPath = options.shellPath ?? '/bin/bash';
     this.env = options.env ?? {};
@@ -39,17 +39,20 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       return resolved.error;
     }
 
-    return this.waitForProcess(this.spawnProcess({
-      command: request.command,
-      cwd: resolved.cwd,
-      env: resolved.env,
-      timeoutMs: request.timeoutMs,
-    }));
+    return await this.waitForProcess(
+      this.spawnProcess({
+        command: request.command,
+        cwd: resolved.cwd,
+        env: resolved.env,
+        timeoutMs: request.timeoutMs,
+      }),
+    );
   }
 
   async startBackground(
     request: WorkspaceBackgroundCommandRequest,
   ): Promise<WorkspaceBackgroundCommandResult> {
+    await Promise.resolve();
     const resolved = this.resolveRequest(request);
 
     if (resolved.error) {
@@ -70,7 +73,9 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     };
   }
 
-  async getProcessOutput(request: WorkspaceProcessOutputRequest): Promise<WorkspaceProcessOutputResult> {
+  async getProcessOutput(
+    request: WorkspaceProcessOutputRequest,
+  ): Promise<WorkspaceProcessOutputResult> {
     const processState = this.backgroundProcesses.get(request.pid);
 
     if (!processState) {
@@ -83,7 +88,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       };
     }
 
-    if (request.wait && processState.exitCode === null) {
+    if (request.wait === true && processState.exitCode === null) {
       await processState.completion;
     }
 
@@ -115,15 +120,17 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     };
   }
 
-  private resolveRequest(request: WorkspaceCommandRequest): {
-    cwd: string;
-    env: Record<string, string>;
-    error?: undefined;
-  } | {
-    cwd?: undefined;
-    env?: undefined;
-    error: WorkspaceCommandResult;
-  } {
+  private resolveRequest(request: WorkspaceCommandRequest):
+    | {
+        cwd: string;
+        env: Record<string, string>;
+        error?: undefined;
+      }
+    | {
+        cwd?: undefined;
+        env?: undefined;
+        error: WorkspaceCommandResult;
+      } {
     let cwd: string;
 
     try {
@@ -169,18 +176,18 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       exitCode: null,
       completion: Promise.resolve(),
     };
-    const timeout = input.timeoutMs
+    const timeout = input.timeoutMs != null
       ? setTimeout(() => {
-        this.killChild(child);
-      }, input.timeoutMs)
+          this.killChild(child);
+        }, input.timeoutMs)
       : undefined;
 
-      child.stdout!.on('data', (chunk: Buffer | string) => {
-        processState.stdout += chunk.toString();
-      });
-      child.stderr!.on('data', (chunk: Buffer | string) => {
-        processState.stderr += chunk.toString();
-      });
+    child.stdout!.on('data', (chunk: Buffer | string) => {
+      processState.stdout += chunk.toString();
+    });
+    child.stderr!.on('data', (chunk: Buffer | string) => {
+      processState.stderr += chunk.toString();
+    });
     processState.completion = new Promise<void>((resolve) => {
       child.on('error', (error) => {
         if (timeout) {
@@ -208,7 +215,9 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     return processState;
   }
 
-  private async waitForProcess(processState: BackgroundProcessState): Promise<WorkspaceCommandResult> {
+  private async waitForProcess(
+    processState: BackgroundProcessState,
+  ): Promise<WorkspaceCommandResult> {
     await processState.completion;
 
     return {
@@ -232,7 +241,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
   }
 
   private resolveCwd(cwd: string | undefined) {
-    if (!cwd) {
+    if (cwd == null) {
       return this.root ?? process.cwd();
     }
 
@@ -246,7 +255,7 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       }
     }
 
-    if (!this.root) {
+    if (this.root == null) {
       return resolvedCwd;
     }
 
@@ -269,7 +278,9 @@ function buildBaseProcessEnv(shellPath: string) {
       LANG: process.env.LANG,
       TMPDIR: process.env.TMPDIR,
       TERM: process.env.TERM,
-    }).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
+    }).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0,
+    ),
   );
 }
 

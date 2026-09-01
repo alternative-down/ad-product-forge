@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, reexport-check/no-unnecessary-reexports */
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -7,11 +9,13 @@ import {
   type ModelMessage,
   type ToolSet,
 } from 'ai';
-import { z } from 'zod';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
-import { createRuntimeAgentSessionIteration, resolveRuntimeAgentSessionContinuation } from './runtime-agent-session-iteration.js';
+import {
+  createRuntimeAgentSessionIteration,
+  resolveRuntimeAgentSessionContinuation,
+} from './runtime-agent-session-iteration.js';
 import {
   appendRuntimeSessionModelMessages,
   appendRuntimeSessionPromptMessages,
@@ -27,7 +31,6 @@ import type {
 } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
 import { truncateToolOutputValue } from './tool-output-truncation.js';
-import { loadWorkingMemoryContextText } from './runtime-working-memory.js';
 
 export async function runRuntimeAgentSessionGenerate(input: {
   runtime: RuntimeAgentSessionRuntime;
@@ -38,17 +41,21 @@ export async function runRuntimeAgentSessionGenerate(input: {
   text: string;
   usage?: RuntimeAgentSessionStepResult['usage'];
 }> {
-  const promptMessages = typeof input.prompt === 'string'
-    ? [{
-      role: 'user' as const,
-      content: input.prompt,
-    }]
-    : input.prompt;
-  const runHistoryWindow = input.options.memory?.options.lastMessages && input.options.memory.options.lastMessages > 0
-    ? await input.runtime.conversationMemory.captureRunHistoryWindow({
-      lastMessages: input.options.memory.options.lastMessages,
-    })
-    : undefined;
+  const promptMessages =
+    typeof input.prompt === 'string'
+      ? [
+          {
+            role: 'user' as const,
+            content: input.prompt,
+          },
+        ]
+      : input.prompt;
+  const runHistoryWindow =
+    input.options.memory?.options.lastMessages && input.options.memory.options.lastMessages > 0
+      ? await input.runtime.conversationMemory.captureRunHistoryWindow({
+          lastMessages: input.options.memory.options.lastMessages,
+        })
+      : undefined;
 
   await ensureRuntimeSessionThread({
     store: input.runtime.conversationStore,
@@ -83,12 +90,24 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepNumber: iterationNumber - 1,
     });
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
+      todosText:
+        iterationNumber === 1
+          ? input.options.loadTodosText
+            ? await input.options.loadTodosText()
+            : undefined
+          : undefined,
+      planText:
+        iterationNumber === 1
+          ? input.options.loadPlanText
+            ? await input.options.loadPlanText()
+            : undefined
+          : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
-      workingMemoryStore: input.runtime.workingMemoryStore,
     });
     const messages = await input.runtime.conversationMemory.renderModelMessages({
       historyWindow: runHistoryWindow,
@@ -164,15 +183,19 @@ export async function runRuntimeAgentSessionGenerate(input: {
     });
 
     const continuationMessages = [
-      ...((continuation.feedbackMessages ?? []).map((message) => ({
-        role: message.role,
-        content: message.content.trim(),
-      })).filter((message) => message.content)),
+      ...(continuation.feedbackMessages ?? [])
+        .map((message) => ({
+          role: message.role,
+          content: message.content.trim(),
+        }))
+        .filter((message) => message.content),
       ...(continuation.feedback?.trim()
-        ? [{
-            role: 'user' as const,
-            content: continuation.feedback.trim(),
-          }]
+        ? [
+            {
+              role: 'user' as const,
+              content: continuation.feedback.trim(),
+            },
+          ]
         : []),
     ];
 
@@ -205,26 +228,31 @@ function summarizeGenerateRequest(input: {
     baseSystem: string;
     workingMemory: string;
     agentContext: string;
+    todosText: string;
+    planText: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 }) {
-  const messageBreakdown = input.messages.reduce((total, message) => {
-    const stats = summarizeModelMessage(message);
+  const messageBreakdown = input.messages.reduce(
+    (total, message) => {
+      const stats = summarizeModelMessage(message);
 
-    total.textChars += stats.textChars;
-    total.toolCallChars += stats.toolCallChars;
-    total.toolResultChars += stats.toolResultChars;
-    total.imageCount += stats.imageCount;
-    total.roles[message.role] = (total.roles[message.role] ?? 0) + 1;
-    return total;
-  }, {
-    textChars: 0,
-    toolCallChars: 0,
-    toolResultChars: 0,
-    imageCount: 0,
-    roles: {} as Record<string, number>,
-  });
+      total.textChars += stats.textChars;
+      total.toolCallChars += stats.toolCallChars;
+      total.toolResultChars += stats.toolResultChars;
+      total.imageCount += stats.imageCount;
+      total.roles[message.role] = (total.roles[message.role] ?? 0) + 1;
+      return total;
+    },
+    {
+      textChars: 0,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+      roles: {} as Record<string, number>,
+    },
+  );
 
   return {
     systemChars: input.system?.length ?? 0,
@@ -234,7 +262,10 @@ function summarizeGenerateRequest(input: {
       agentContext: input.systemSegments.agentContext.length,
     },
     messageCount: input.messages.length,
-    messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
+    messageChars:
+      messageBreakdown.textChars +
+      messageBreakdown.toolCallChars +
+      messageBreakdown.toolResultChars,
     messageTextChars: messageBreakdown.textChars,
     messageToolCallChars: messageBreakdown.toolCallChars,
     messageToolResultChars: messageBreakdown.toolResultChars,
@@ -242,9 +273,20 @@ function summarizeGenerateRequest(input: {
     messageRoleCounts: messageBreakdown.roles,
     messageOutline: input.messages.slice(0, 12).map(summarizeReplayMessageOutline),
     toolCount: input.actions.length,
-    toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
+    toolDescriptionChars: input.actions.reduce(
+      (total, action) => total + action.description.length,
+      0,
+    ),
     toolSchemaChars: input.actions.reduce(
-      (total, action) => total + JSON.stringify(z.toJSONSchema(action.inputSchema)).length,
+      (total, action) =>
+        total +
+        JSON.stringify(
+          zodToJsonSchema(
+            action.inputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
+          ),
+          null,
+          2,
+        ).length,
       0,
     ),
   };
@@ -308,43 +350,49 @@ function summarizeModelMessage(message: ModelMessage) {
     };
   }
 
-  return message.content.reduce((total, part) => {
-    if ('text' in part && typeof part.text === 'string') {
-      total.textChars += part.text.length;
+  return message.content.reduce(
+    (total, part) => {
+      if ('text' in part && typeof part.text === 'string') {
+        total.textChars += part.text.length;
+        return total;
+      }
+
+      if ('input' in part) {
+        total.toolCallChars += JSON.stringify(part.input).length;
+        return total;
+      }
+
+      if ('output' in part) {
+        total.toolResultChars += JSON.stringify(part.output).length;
+        return total;
+      }
+
+      if ('image' in part) {
+        total.imageCount += 1;
+      }
+
       return total;
-    }
-
-    if ('input' in part) {
-      total.toolCallChars += JSON.stringify(part.input).length;
-      return total;
-    }
-
-    if ('output' in part) {
-      total.toolResultChars += JSON.stringify(part.output).length;
-      return total;
-    }
-
-    if ('image' in part) {
-      total.imageCount += 1;
-    }
-
-    return total;
-  }, {
-    textChars: 0,
-    toolCallChars: 0,
-    toolResultChars: 0,
-    imageCount: 0,
-  });
+    },
+    {
+      textChars: 0,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+    },
+  );
 }
 
-function appendGenerateDiagnostics(error: unknown, diagnostics: {
-  systemChars: number;
-  messageCount: number;
-  messageChars: number;
-  toolCount: number;
-  toolDescriptionChars: number;
-  toolSchemaChars: number;
-}) {
+function appendGenerateDiagnostics(
+  error: unknown,
+  diagnostics: {
+    systemChars: number;
+    messageCount: number;
+    messageChars: number;
+    toolCount: number;
+    toolDescriptionChars: number;
+    toolSchemaChars: number;
+  },
+) {
   const diagnosticsText = `generateDiagnostics: ${JSON.stringify(diagnostics)}`;
 
   if (error instanceof Error) {
@@ -355,33 +403,30 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
   return new Error(`${String(error)}\n${diagnosticsText}`);
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;
+  todosText?: string;
+  planText?: string;
   threadId: string;
   resourceId: string;
-  workingMemoryStore: RuntimeAgentSessionRuntime['workingMemoryStore'];
 }) {
-  const workingMemoryText = await loadWorkingMemoryContextText({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    store: input.workingMemoryStore,
-  });
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: workingMemoryText?.trim() || '',
+    workingMemory: '',
     agentContext: input.agentContext?.trim() || '',
+    todosText: input.todosText?.trim() || '',
+    planText: input.planText?.trim() || '',
   };
 
   return {
-    text: [
-      segments.baseSystem,
-      segments.workingMemory,
-      segments.agentContext,
-    ]
-      .filter((value): value is string => Boolean(value))
-      .join('\n\n')
-      .trim() || undefined,
+    text:
+      [segments.baseSystem, segments.workingMemory, segments.agentContext]
+        .filter((value): value is string => Boolean(value))
+        .join('\n\n')
+        .trim() || undefined,
+    todosText: input.todosText?.trim() || '',
     segments,
   };
 }
@@ -399,16 +444,17 @@ function buildAiSdkToolSet(input: {
     toolSet[action.name] = createAiSdkTool({
       description: action.description,
       inputSchema: action.inputSchema,
-      providerOptions: index === lastActionIndex
-        ? {
-            anthropic: {
-              cacheControl: {
-                type: 'ephemeral',
-                ttl: '1h',
+      providerOptions:
+        index === lastActionIndex
+          ? {
+              anthropic: {
+                cacheControl: {
+                  type: 'ephemeral',
+                  ttl: '1h',
+                },
               },
-            },
-          }
-        : undefined,
+            }
+          : undefined,
       execute: async (toolInput, _options) => {
         const parsedInput = action.parseInput
           ? action.parseInput(toolInput)

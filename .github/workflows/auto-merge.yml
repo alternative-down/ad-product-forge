@@ -1,0 +1,158 @@
+name: Auto Merge (L#NN-codified v2)
+
+# Restored from f461f2cfd deletion. 8 original bugs fixed:
+#   1. python3 -> jq
+#   2. L#NN-46 v1 author self-approval check
+#   3. L#NN-46 v2 bot identity verification
+#   4. L#NN-49 force-push detection
+#   5. L#NN-19b v3 commit_id filter
+#   6. exact-2 enforcement (v1 was 2+ APPROVED, too loose)
+#   7. head_ref post-merge cleanup verification
+#   8. L#NN-15 v1.1 60s wait before state=closed
+# Plus L#NN-9 9h sub-form coverage for review edits/dismissals.
+# D50 #6423 cycle 14 (L#NN-22 v18a): added ≥35min r1 retention gate (D54 reduced to 15min per L#NN-22 v18c path B interim, see #6676).
+#   - schedule: */5 * * * * (retry every 5 min until retention satisfied)
+#   - retention = now - submitted_at of Veritas APPROVE on current head SHA
+#   - PM bypass via `tpl-pm-fallback` label (PM-Thoren only)
+#   - exit 0 on hold (no merge), comment posted, retry on next trigger
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request:
+    types: [synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.review.state == 'approved' || github.event.action == 'synchronize' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      # P0 #5832 fix: actions/checkout@v4 needed for --delete-branch flag
+      # (gh pr merge --delete-branch requires .git context)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check required approvals + 15min retention gate (L#NN-22 v18a → v18c)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          RETENTION_MINUTES=15
+          VERITAS_LOGIN='veritas-ak-0n1[bot]'
+          PM_BYPASS_LABEL='tpl-pm-fallback'
+
+          # Determine which PRs to process:
+          #   - pull_request_review / pull_request / workflow_dispatch: ONE PR from event
+          #   - schedule: ALL open PRs
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            PR_NUMBERS="${{ github.event.pull_request.number }}"
+          else
+            echo "Trigger: ${{ github.event_name }} — scanning all open PRs"
+            PR_NUMBERS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/pulls?state=open&per_page=100" \
+              | jq -r '.[].number')
+            if [ -z "$PR_NUMBERS" ]; then
+              echo "No open PRs, exiting"
+              exit 0
+            fi
+          fi
+
+          echo "PRs to process:"
+          echo "$PR_NUMBERS"
+
+          for PR_NUMBER in $PR_NUMBERS; do
+            echo ""
+            echo "==== PR #$PR_NUMBER ===="
+
+            # 1. Get PR head SHA + author + labels
+            PR_DATA=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
+            HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+            AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
+            LABELS=$(echo "$PR_DATA" | jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+            MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
+
+            if [ "$HEAD_SHA" = "null" ] || [ -z "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUMBER head SHA not found, skipping"
+              continue
+            fi
+
+            if [ "$MERGEABLE" = "false" ]; then
+              echo "PR #$PR_NUMBER has merge conflicts, skipping"
+              continue
+            fi
+
+            echo "PR #$PR_NUMBER head=$HEAD_SHA author=$AUTHOR labels=[$LABELS] mergeable=$MERGEABLE"
+
+            # 2. PM bypass check
+            BYPASS=0
+            if echo ",$LABELS," | grep -q ",$PM_BYPASS_LABEL,"; then
+              echo "PM-Thoren bypass active (label=$PM_BYPASS_LABEL)"
+              BYPASS=1
+            fi
+
+            # 3. Get all reviews
+            REVIEWS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews?per_page=100")
+
+            # 4. Find Veritas APPROVE review on current head SHA
+            VERITAS_APPROVE=$(echo "$REVIEWS" | jq --arg head "$HEAD_SHA" --arg veritas "$VERITAS_LOGIN" \
+              '[.[] | select(.commit_id == $head and .state == "APPROVED" and .user.login == $veritas)] | sort_by(.submitted_at) | first')
+
+            # 5. Retention check (only if not bypassed and Veritas APPROVE exists)
+            if [ "$BYPASS" = "0" ] && [ "$VERITAS_APPROVE" != "null" ] && [ -n "$VERITAS_APPROVE" ]; then
+              SUBMITTED_AT=$(echo "$VERITAS_APPROVE" | jq -r '.submitted_at')
+              NOW=$(date -u +%s)
+              SUBMITTED_TS=$(date -d "$SUBMITTED_AT" +%s)
+              RETENTION_SEC=$((NOW - SUBMITTED_TS))
+              RETENTION_MIN=$((RETENTION_SEC / 60))
+
+              echo "Veritas APPROVE submitted_at=$SUBMITTED_AT, retention=${RETENTION_MIN}min (gate=${RETENTION_MINUTES}min)"
+
+              if [ "$RETENTION_MIN" -lt "$RETENTION_MINUTES" ]; then
+                REMAINING=$((RETENTION_MINUTES - RETENTION_MIN))
+                echo "Retention gate: HOLD ${RETENTION_MIN}min < ${RETENTION_MINUTES}min. ${REMAINING}min remaining."
+                # Post comment ONLY on PR review/synchronize triggers (avoid noise on schedule)
+                if [ "${{ github.event_name }}" = "pull_request_review" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
+                  gh pr comment "$PR_NUMBER" --body "⏸️ **L#NN-22 v18c 15min retention gate**: ${RETENTION_MIN}min elapsed since Veritas APPROVE (${SUBMITTED_AT}). ${REMAINING}min remaining. Auto-merge will retry on schedule (every 5 min) or next review event. PM bypass: add label \`$PM_BYPASS_LABEL\`." || true
+                fi
+                continue
+              fi
+              echo "Retention gate: PASS ${RETENTION_MIN}min >= ${RETENTION_MINUTES}min"
+            else
+              echo "Retention check: SKIPPED (bypass=$BYPASS veritas_approve_exists=$([ "$VERITAS_APPROVE" != "null" ] && echo 1 || echo 0))"
+            fi
+
+            # 6. L#NN-19b v3: filter to current head SHA, APPROVED state
+            CURRENT_REVIEWS=$(echo "$REVIEWS" | jq --arg head "$HEAD_SHA" \
+              '[.[] | select(.commit_id == $head and .state == "APPROVED")]')
+
+            # 7. L#NN-46 v1: filter out author self-approvals
+            NON_AUTHOR_REVIEWS=$(echo "$CURRENT_REVIEWS" | jq --arg author "$AUTHOR" \
+              '[.[] | select(.user.login != $author)]')
+
+            # 8. L#NN-46 v2 + #6661 DRY: load KNOWN_BOTS from single source of truth (6 forge bot accounts)
+            KNOWN_BOTS=$(jq -c . .github/workflows/known-bots.json)
+            VALID_REVIEWS=$(echo "$NON_AUTHOR_REVIEWS" | jq --argjson bots "$KNOWN_BOTS" \
+              '[.[] | select((.user.login | ascii_downcase) as $u | $bots | index($u))]')
+
+            # 9. L#NN-9 9h: check for at-least 2 unique approvers (per ruleset 13558497)
+            UNIQUE_APPROVERS=$(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | length')
+
+            if [ "$UNIQUE_APPROVERS" -ge 2 ]; then
+              echo "Auto-merge: $UNIQUE_APPROVERS unique approvers found, proceeding (at-least-2)"
+              gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
+            else
+              echo "Auto-merge: $UNIQUE_APPROVERS unique approvers (need at-least-2)"
+              echo "Valid reviewers: $(echo "$VALID_REVIEWS" | jq -r '[.[].user.login] | unique | join(", ")')"
+            fi
+          done

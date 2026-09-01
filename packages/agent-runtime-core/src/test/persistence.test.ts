@@ -11,9 +11,11 @@ import { FilesystemRuntimeJournal } from '../integrations/persistence/filesystem
 const createdPaths: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(createdPaths.splice(0, createdPaths.length).map((path) => (
-    rm(path, { recursive: true, force: true })
-  )));
+  await Promise.all(
+    createdPaths
+      .splice(0, createdPaths.length)
+      .map((path) => rm(path, { recursive: true, force: true })),
+  );
 });
 
 describe('filesystem persistence', () => {
@@ -87,4 +89,3 @@ async function createTempPath() {
   createdPaths.push(path);
   return path;
 }
-

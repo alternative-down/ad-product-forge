@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { ConfiguredProviderGateway } from '../integrations/gateways/configured-provider-gateway.js';
 import { FallbackProviderGateway } from '../integrations/gateways/fallback-provider-gateway.js';
-import { splitProviderModelId, type StepModelProviderConfig, type StepModelProviderGateway } from '../integrations/gateways/providers.js';
+import {
+  splitProviderModelId,
+  type StepModelProviderConfig,
+  type StepModelProviderGateway,
+} from '../integrations/gateways/providers.js';
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
 describe('provider gateway utilities', () => {

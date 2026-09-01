@@ -1,19 +1,68 @@
+import { errorMsg } from './error-formatting';
+import { bundledWorkspaceSkillsDebug } from './bundled-workspace-skills-debug';
+import 'node:process';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  BundledSkillFrontmatterMissingNameError,
+  BundledSkillFrontmatterNotClosedError,
+  BundledSkillMissingFrontmatterError,
+  BundledSkillSourceNotFoundError,
+  BundledSkillsMarkerNotFoundError,
+} from './bundled-workspace-skills.errors';
+
+// Fixed: L#NN-16 sibling bug (Refs #5686). Walk-up search replaces the
+// hardcoded `.., ..` candidate roots in resolveBundledSkillRoot. Works in
+// dev (src/agents/) and bundled (dist/agents/) layouts, as well as any
+// future layout drift. Pure runtime, no build-config coupling. Sibling of
+// P0 #5674 (PR #5676, findMigrationsFolder pattern).
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api', 'skills-creator'] as const;
+export const BUNDLED_SKILL_DIRECTORY_NAMES = [
+  'github-api',
+  'coolify-api',
+  'skills-creator',
+] as const;
+
+/**
+ * Walk up from start directory until a skills/github-api/SKILL.md marker
+ * is found. Handles both dev (src/agents/bundled-workspace-skills.ts ->
+ * src/agents/skills/github-api/SKILL.md) and bundled
+ * (dist/agents/bundled-workspace-skills.js -> dist/agents/skills/github-api/SKILL.md)
+ * layouts, as well as any future layout drift. Pure runtime, no build-config
+ * coupling. (Refs #5686)
+ */
+export function findSkillsFolder(start: string): string {
+  let dir = start;
+  for (let i = 0; i < 5; i++) {
+    const candidate = path.join(dir, 'skills', 'github-api', 'SKILL.md');
+    if (existsSync(candidate)) return path.join(dir, 'skills');
+    dir = path.dirname(dir);
+  }
+  throw new BundledSkillsMarkerNotFoundError(start);
+}
 
 function parseSkillName(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
-    throw new Error('Bundled skill is missing YAML frontmatter.');
+    bundledWorkspaceSkillsDebug(
+      'warn',
+      'parseBundledSkillMeta: missing YAML frontmatter',
+      {},
+    );
+    throw new BundledSkillMissingFrontmatterError();
   }
 
   const endIndex = skillContent.indexOf('\n---\n', 4);
 
   if (endIndex === -1) {
-    throw new Error('Bundled skill frontmatter is not closed.');
+    bundledWorkspaceSkillsDebug(
+      'warn',
+      'parseBundledSkillMeta: frontmatter not closed',
+      {},
+    );
+    throw new BundledSkillFrontmatterNotClosedError();
   }
 
   const frontmatter = skillContent.slice(4, endIndex);
@@ -26,14 +75,22 @@ function parseSkillName(skillContent: string) {
     }
 
     const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+    const value = line
+      .slice(separatorIndex + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
 
     if (key === 'name' && value) {
       return value;
     }
   }
 
-  throw new Error('Bundled skill frontmatter is missing name.');
+  bundledWorkspaceSkillsDebug(
+    'warn',
+    'parseBundledSkillMeta: frontmatter missing name',
+    {},
+  );
+  throw new BundledSkillFrontmatterMissingNameError();
 }
 
 export async function copyDirectoryContents(sourceDirectory: string, targetDirectory: string) {
@@ -70,22 +127,18 @@ export async function ensureBundledWorkspaceSkills(agentWorkspaceDirectory: stri
 }
 
 export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
-  const candidateRoots = [
-    path.resolve(MODULE_DIRECTORY, 'skills'),
-    path.resolve(MODULE_DIRECTORY, '../src/agents/skills'),
-    path.resolve(process.cwd(), 'src/agents/skills'),
-  ];
+  const skillsFolder = findSkillsFolder(MODULE_DIRECTORY);
+  const skillFilePath = path.resolve(skillsFolder, sourceDirectoryName, 'SKILL.md');
 
-  for (const candidateRoot of candidateRoots) {
-    const skillFilePath = path.resolve(candidateRoot, sourceDirectoryName, 'SKILL.md');
-
-    try {
-      await fs.access(skillFilePath);
-      return path.resolve(candidateRoot, sourceDirectoryName);
-    } catch {
-      continue;
-    }
+  try {
+    await fs.access(skillFilePath);
+    return path.resolve(skillsFolder, sourceDirectoryName);
+  } catch (error) {
+    bundledWorkspaceSkillsDebug(
+      'error',
+      'listBundledWorkspaceSkills: source not found',
+      { error: errorMsg(error), skillFilePath, sourceDirectoryName },
+    );
+    throw new BundledSkillSourceNotFoundError(sourceDirectoryName);
   }
-
-  throw new Error(`Bundled skill source not found for ${sourceDirectoryName}`);
 }

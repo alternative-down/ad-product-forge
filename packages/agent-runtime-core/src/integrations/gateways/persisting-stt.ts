@@ -1,11 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { BlobStore } from '../assets/blob-store.js';
-import type {
-  SpeechToTextGateway,
-  SpeechToTextRequest,
-  SpeechToTextResponse,
-} from './speech.js';
+import type { SpeechToTextGateway, SpeechToTextRequest, SpeechToTextResponse } from './speech.js';
 
 export type PersistingSpeechToTextGatewayOptions = {
   stt: SpeechToTextGateway;

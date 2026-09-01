@@ -1,0 +1,381 @@
+/**
+ * Internal Chat — Admin Service Module
+ *
+ * Thin wrapper providing account management functions for admin routes
+ * and external integrations that already have resolved account context.
+ * All implementations delegate to internal-chat-accounts.ts.
+ *
+ * Extracted from internal-chat-service.ts (#1930) for improved testability
+ * and clearer separation between agent-facing and admin-facing surfaces.
+ *
+ * @module
+ */
+import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
+
+import type { Database } from '../database/client';
+import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  type NewInternalChatConversationMember,
+} from '../database/schema';
+
+import {
+  InternalChatAccountNotFoundError,
+  ConversationNotFoundError,
+  ConversationMembershipError,
+} from './internal-chat-errors';
+
+export interface AdminAccountView {
+  accountId: string;
+  agentId: string | null;
+  slug: string;
+  displayName: string;
+  description: string | null;
+  isAgent: boolean;
+}
+
+export function createInternalChatAdmin(db: Database) {
+  // ── Account registration ──────────────────────────────────────────────
+
+  async function registerAgentAccount(input: {
+    agentId: string;
+    displayName: string;
+    agentName: string;
+    agentDescription?: string;
+    roleName?: string;
+    roleDescription?: string;
+  }) {
+    const now = Date.now();
+    const description = buildAgentAccountDescription({
+      agentId: input.agentId,
+      agentName: input.agentName,
+      agentDescription: input.agentDescription,
+      roleName: input.roleName,
+      roleDescription: input.roleDescription,
+    });
+    const existing = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, input.agentId),
+    });
+
+    if (existing != null) {
+      await db
+        .update(internalChatAccounts)
+        .set({ displayName: input.displayName, description, updatedAt: now })
+        .where(eq(internalChatAccounts.agentId, input.agentId));
+
+      return {
+        accountId: existing.id,
+        agentId: input.agentId,
+        slug: existing.slug,
+        displayName: input.displayName,
+        description,
+      };
+    }
+
+    const slug = createInternalChatSlug(input.displayName);
+    const accountId = `acct_${createId()}`;
+
+    await db.insert(internalChatAccounts).values({
+      id: accountId,
+      agentId: input.agentId,
+      slug,
+      displayName: input.displayName,
+      description,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const existingAgentAccounts = await db.query.internalChatAccounts.findMany({
+      where: and(
+        isNotNull(internalChatAccounts.agentId),
+        ne(internalChatAccounts.agentId, input.agentId),
+      ),
+    });
+
+    for (const existing of existingAgentAccounts) {
+      await ensureDirectConversation(accountId, existing.id);
+    }
+
+    return { accountId, agentId: input.agentId, slug, displayName: input.displayName, description };
+  }
+
+  async function registerExternalAccount(input: {
+    slug: string;
+    displayName: string;
+    description?: string;
+  }) {
+    const now = Date.now();
+    const existing = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, input.slug),
+    });
+
+    if (existing != null) {
+      await db
+        .update(internalChatAccounts)
+        .set({
+          displayName: input.displayName,
+          description: input.description ?? existing.description,
+          updatedAt: now,
+        })
+        .where(eq(internalChatAccounts.slug, input.slug));
+
+      return {
+        accountId: existing.id,
+        slug: existing.slug,
+        displayName: input.displayName,
+        description: input.description ?? existing.description,
+      };
+    }
+
+    const accountId = `acct_${createId()}`;
+
+    await db.insert(internalChatAccounts).values({
+      id: accountId,
+      agentId: null,
+      slug: input.slug,
+      displayName: input.displayName,
+      description: input.description ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      accountId,
+      slug: input.slug,
+      displayName: input.displayName,
+      description: input.description ?? null,
+    };
+  }
+
+  async function updateExternalAccount(input: {
+    accountId: string;
+    slug?: string;
+    displayName?: string;
+    description?: string;
+  }) {
+    const now = Date.now();
+    const existing = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.id, input.accountId),
+    });
+
+    if (existing === null || existing === undefined) {
+      throw new InternalChatAccountNotFoundError(input.accountId, 'Account not found');
+    }
+
+    await db
+      .update(internalChatAccounts)
+      .set({
+        slug: input.slug ?? existing.slug,
+        displayName: input.displayName ?? existing.displayName,
+        description: input.description ?? existing.description,
+        updatedAt: now,
+      })
+      .where(eq(internalChatAccounts.id, input.accountId));
+
+    return {
+      accountId: input.accountId,
+      slug: input.slug ?? existing.slug,
+      displayName: input.displayName ?? existing.displayName,
+      description: input.description ?? existing.description,
+    };
+  }
+
+  async function deleteExternalAccount(input: { accountId: string }) {
+    await db.delete(internalChatAccounts).where(eq(internalChatAccounts.id, input.accountId));
+    return { deleted: true };
+  }
+
+  async function deleteAgentAccount(input: { agentId: string }) {
+    await db.delete(internalChatAccounts).where(eq(internalChatAccounts.agentId, input.agentId));
+    return { deleted: true };
+  }
+
+  // ── Account listing ────────────────────────────────────────────────────
+
+  async function listAccounts(input: { excludeAgentId?: string } = {}) {
+    if (input.excludeAgentId !== null && input.excludeAgentId !== undefined) {
+      return await db.query.internalChatAccounts.findMany({
+        where: ne(internalChatAccounts.agentId, input.excludeAgentId),
+      });
+    }
+    return await db.query.internalChatAccounts.findMany({});
+  }
+
+  // ── Admin read-only views ──────────────────────────────────────────────
+
+  /**
+   * Returns all contacts (accounts) with computed metadata.
+   * Used by GET /admin/internal-chat/contacts.
+   */
+  async function listContacts() {
+    const accounts = await db.query.internalChatAccounts.findMany({});
+    return accounts.map((account) => ({
+      accountId: account.id,
+      agentId: account.agentId,
+      slug: account.slug,
+      displayName: account.displayName,
+      description: account.description ?? '',
+      isAgent: Boolean(account.agentId),
+    }));
+  }
+
+  /**
+   * Returns external accounts only (agentId is null).
+   * Used by GET /admin/internal-chat/accounts.
+   */
+  async function listExternalAccounts() {
+    const accounts = await db.query.internalChatAccounts.findMany({
+      where: isNull(internalChatAccounts.agentId),
+    });
+    return accounts
+      .filter((a) => a.agentId === null)
+      .map((account) => ({
+        accountId: account.id,
+        slug: account.slug,
+        displayName: account.displayName,
+        description: account.description ?? '',
+      }));
+  }
+
+  // ── Lookup helpers ─────────────────────────────────────────────────────
+
+  async function getAccountBySlug(slug: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, slug),
+    });
+    return account ?? null;
+  }
+
+  async function getAccountByAgentId(agentId: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
+    return account ?? null;
+  }
+
+  async function getConversationForAgent(agentId: string, conversationId: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
+    if (account === null || account === undefined) {
+      throw new InternalChatAccountNotFoundError(agentId, 'Account not found for agent');
+    }
+
+    const conversation = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
+    if (conversation === null || conversation === undefined) {
+      throw new ConversationNotFoundError(conversationId);
+    }
+
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.conversationId, conversationId),
+        eq(internalChatConversationMembers.accountId, account.id),
+      ),
+    });
+    if (membership === null || membership === undefined) {
+      throw new ConversationMembershipError(agentId, conversationId);
+    }
+
+    return conversation;
+  }
+
+  // ── Internal helpers ────────────────────────────────────────────────────
+
+  function buildAgentAccountDescription(input: {
+    agentId: string;
+    agentName: string;
+    agentDescription?: string;
+    roleName?: string;
+    roleDescription?: string;
+  }) {
+    let desc = input.agentName;
+    if (input.agentDescription !== null && input.agentDescription !== undefined)
+      desc += ` — ${input.agentDescription}`;
+    if (input.roleName !== null && input.roleName !== undefined) desc += ` | ${input.roleName}`;
+    if (input.roleDescription !== null && input.roleDescription !== undefined)
+      desc += ` — ${input.roleDescription}`;
+    return desc;
+  }
+
+  function createInternalChatSlug(displayName: string) {
+    return displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function createId() {
+    return Math.random().toString(36).substring(2, 10);
+  }
+
+  async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
+    // Find existing DM that has BOTH accounts as members. The original filter
+    // referenced an isNotNull column that was removed from the schema (#6036);
+    // we now use the members table as the source of truth for participation.
+    // Note: a conversation is "direct" if its type is 'direct' AND it has
+    // exactly 2 members (leftAccountId + rightAccountId). For deduplication,
+    // we just check both accounts are members — a direct conversation with
+    // >2 members is not expected (see schema constraint).
+    const leftMemberDMs = db
+      .select({ conversationId: internalChatConversationMembers.conversationId })
+      .from(internalChatConversationMembers)
+      .where(eq(internalChatConversationMembers.accountId, leftAccountId));
+    const existing = await db.query.internalChatConversations.findFirst({
+      where: and(
+        eq(internalChatConversations.type, 'direct'),
+        inArray(internalChatConversations.id, leftMemberDMs),
+      ),
+    });
+    if (existing != null) {
+      // Also verify rightAccountId is a member — a 1-sided match is not a real DM.
+      const rightIsMember = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.conversationId, existing.id),
+          eq(internalChatConversationMembers.accountId, rightAccountId),
+        ),
+      });
+      if (rightIsMember != null) {
+        return existing;
+      }
+      // Left side matched but right side didn't — fall through to create.
+    }
+
+    const now = Date.now();
+    const convId = `conv_${createId()}`;
+
+    await db.insert(internalChatConversations).values({
+      id: convId,
+      type: 'direct',
+      // metadata column removed from schema
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const newMembers: NewInternalChatConversationMember[] = [
+      { conversationId: convId, accountId: leftAccountId, role: 'member', createdAt: now, updatedAt: now },
+      { conversationId: convId, accountId: rightAccountId, role: 'member', createdAt: now, updatedAt: now },
+    ];
+    await db.insert(internalChatConversationMembers).values(newMembers);
+
+    return await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, convId),
+    });
+  }
+
+  return {
+    registerAgentAccount,
+    registerExternalAccount,
+    updateExternalAccount,
+    deleteAgentAccount,
+    deleteExternalAccount,
+    listAccounts,
+    listContacts,
+    listExternalAccounts,
+    getAccountBySlug,
+    getAccountByAgentId,
+    getConversationForAgent,
+  };
+}

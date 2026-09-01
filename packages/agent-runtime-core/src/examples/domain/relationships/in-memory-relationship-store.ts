@@ -4,6 +4,7 @@ export class InMemoryRelationshipStore implements RelationshipStore {
   private readonly records = new Map<string, RelationshipRecord>();
 
   async upsert(record: RelationshipRecord): Promise<void> {
+    await Promise.resolve();
     this.records.set(this.createKey(record), record);
   }
 
@@ -12,12 +13,13 @@ export class InMemoryRelationshipStore implements RelationshipStore {
     targetId: string;
     kind?: string;
   }): Promise<RelationshipRecord[]> {
+    await Promise.resolve();
     return Array.from(this.records.values()).filter((record) => {
       if (record.sourceId !== input.sourceId || record.targetId !== input.targetId) {
         return false;
       }
 
-      if (input.kind && record.kind !== input.kind) {
+      if (input.kind != null && record.kind !== input.kind) {
         return false;
       }
 
@@ -26,15 +28,17 @@ export class InMemoryRelationshipStore implements RelationshipStore {
   }
 
   async readForActor(actorId: string): Promise<RelationshipRecord[]> {
-    return Array.from(this.records.values()).filter((record) => (
-      record.sourceId === actorId || record.targetId === actorId
-    ));
+    await Promise.resolve();
+    return Array.from(this.records.values()).filter(
+      (record) => record.sourceId === actorId || record.targetId === actorId,
+    );
   }
 
   async list(): Promise<RelationshipRecord[]> {
-    return Array.from(this.records.values()).sort((left, right) => (
-      left.updatedAt.localeCompare(right.updatedAt)
-    ));
+    await Promise.resolve();
+    return Array.from(this.records.values()).sort((left, right) =>
+      left.updatedAt.localeCompare(right.updatedAt),
+    );
   }
 
   private createKey(record: Pick<RelationshipRecord, 'sourceId' | 'targetId' | 'kind'>) {

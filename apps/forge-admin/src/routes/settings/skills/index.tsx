@@ -3,11 +3,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteSystemSkill, getSystemSkills, uploadSystemSkills } from '@/lib/admin-api';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { deleteSystemSkill, getSystemSkills, uploadSystemSkills } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/layout/page-header';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 export const Route = createFileRoute('/settings/skills/')({
   component: SettingsSkillsIndexRoute,
 });
@@ -59,7 +69,9 @@ function SettingsSkillsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {skillsQuery.isLoading && !skillsQuery.data ? <AdminLoadingState label="Carregando skills..." /> : null}
+      {skillsQuery.isLoading && !skillsQuery.data ? (
+        <AdminLoadingState label="Carregando skills..." />
+      ) : null}
 
       <PageHeader
         title="Skills"
@@ -69,8 +81,10 @@ function SettingsSkillsIndexRoute() {
       <section className="space-y-5">
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="system-skill-archive">Arquivo zip</label>
-            <AdminInput
+            <label className="text-sm font-medium" htmlFor="system-skill-archive">
+              Arquivo zip
+            </label>
+            <Input
               id="system-skill-archive"
               type="file"
               accept=".zip,application/zip"
@@ -79,9 +93,12 @@ function SettingsSkillsIndexRoute() {
             />
           </div>
 
-          <AdminButton disabled={!skillFile || uploadSkillMutation.isPending} onClick={() => uploadSkillMutation.mutate()}>
+          <Button
+            disabled={!skillFile || uploadSkillMutation.isPending}
+            onClick={() => uploadSkillMutation.mutate()}
+          >
             {uploadSkillMutation.isPending ? 'Enviando...' : 'Incluir no catálogo'}
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -104,10 +121,12 @@ function SettingsSkillsIndexRoute() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">{skill.source === 'bundled' ? 'Bundled' : 'Catálogo'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {skill.source === 'bundled' ? 'Bundled' : 'Catálogo'}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={!skill.editable || deleteSkillMutation.isPending}
@@ -115,7 +134,7 @@ function SettingsSkillsIndexRoute() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -131,7 +150,9 @@ function SettingsSkillsIndexRoute() {
           </Table>
         </div>
 
-        {skillsQuery.error ? <div className="text-sm text-destructive">{skillsQuery.error.message}</div> : null}
+        {skillsQuery.error ? (
+          <div className="text-sm text-destructive">{skillsQuery.error.message}</div>
+        ) : null}
       </section>
     </div>
   );

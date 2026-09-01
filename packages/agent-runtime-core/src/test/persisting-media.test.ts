@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { InMemoryBlobStore } from '../integrations/assets/in-memory-blob-store.js';
-import {
-  PersistingImageGenerationGateway,
-} from '../integrations/gateways/persisting-image-generation.js';
+import { PersistingImageGenerationGateway } from '../integrations/gateways/persisting-image-generation.js';
 import {
   PersistingStreamingTextToSpeechGateway,
   PersistingTextToSpeechGateway,
@@ -64,7 +62,9 @@ describe('persisting media gateways', () => {
 
     expect(new TextDecoder().decode(collected.bytes)).toBe('hello stream audio');
     expect(records).toHaveLength(1);
-    expect(new TextDecoder().decode(records[0]?.bytes ?? new Uint8Array())).toBe('hello stream audio');
+    expect(new TextDecoder().decode(records[0]?.bytes ?? new Uint8Array())).toBe(
+      'hello stream audio',
+    );
   });
 
   it('persists generated images', async () => {

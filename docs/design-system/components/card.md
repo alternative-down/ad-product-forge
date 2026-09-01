@@ -3,6 +3,7 @@
 ## Anatomy
 
 A card consists of:
+
 - Container (border, shadow, radius)
 - Header (optional)
 - Body content
@@ -23,6 +24,7 @@ A card consists of:
 ## Card Variants
 
 ### Elevated Card
+
 ```css
 .card-elevated {
   border: none;
@@ -31,6 +33,7 @@ A card consists of:
 ```
 
 ### Outlined Card
+
 ```css
 .card-outlined {
   background: transparent;
@@ -40,6 +43,7 @@ A card consists of:
 ```
 
 ### Filled Card
+
 ```css
 .card-filled {
   background: var(--color-gray-50);
@@ -50,8 +54,8 @@ A card consists of:
 
 ## Card Sizes
 
-| Size | Padding | Gap |
-|------|---------|-----|
+| Size | Padding        | Gap            |
+| ---- | -------------- | -------------- |
 | `sm` | var(--space-3) | var(--space-2) |
 | `md` | var(--space-4) | var(--space-3) |
 | `lg` | var(--space-6) | var(--space-4) |
@@ -59,6 +63,7 @@ A card consists of:
 ## Card Sections
 
 ### Card Header
+
 ```css
 .card-header {
   padding: var(--space-4) var(--space-6);
@@ -71,6 +76,7 @@ A card consists of:
 ```
 
 ### Card Body
+
 ```css
 .card-body {
   padding: var(--space-6);
@@ -81,6 +87,7 @@ A card consists of:
 ```
 
 ### Card Footer
+
 ```css
 .card-footer {
   padding: var(--space-4) var(--space-6);
@@ -97,7 +104,9 @@ A card consists of:
 ```css
 .card-interactive {
   cursor: pointer;
-  transition: box-shadow 200ms, border-color 200ms;
+  transition:
+    box-shadow 200ms,
+    border-color 200ms;
 }
 
 .card-interactive:hover {
@@ -134,6 +143,7 @@ A card consists of:
 ## Usage Examples
 
 ### Agent Card
+
 ```jsx
 <Card variant="elevated" size="md">
   <CardHeader>
@@ -145,21 +155,23 @@ A card consists of:
     <StatusBadge status={agent.status} />
   </CardHeader>
   <CardBody>
-    <BudgetProgressCard 
-      spent={agent.spentUsd}
-      total={agent.weeklyValueUsd}
-    />
+    <BudgetProgressCard spent={agent.spentUsd} total={agent.weeklyValueUsd} />
     <Stat label="Schedules" value={agent.scheduleCount} />
     <Stat label="Tasks" value={agent.taskCount} />
   </CardBody>
   <CardFooter>
-    <Button variant="ghost" size="sm">View Details</Button>
-    <Button variant="primary" size="sm">Manage</Button>
+    <Button variant="ghost" size="sm">
+      View Details
+    </Button>
+    <Button variant="primary" size="sm">
+      Manage
+    </Button>
   </CardFooter>
 </Card>
 ```
 
 ### Budget Card
+
 ```jsx
 <Card>
   <CardHeader>
@@ -169,11 +181,7 @@ A card consists of:
     </Button>
   </CardHeader>
   <CardBody>
-    <BudgetProgress 
-      spent={100}
-      total={500}
-      format="currency"
-    />
+    <BudgetProgress spent={100} total={500} format="currency" />
     <div className="stat-grid">
       <Stat label="Spent" value="$100" />
       <Stat label="Remaining" value="$400" />
@@ -184,6 +192,7 @@ A card consists of:
 ```
 
 ### Compact Card (for lists)
+
 ```jsx
 <Card variant="outlined" size="sm">
   <CardBody className="flex-row items-center gap-3">
@@ -204,7 +213,7 @@ A card consists of:
   .card {
     border-radius: var(--radius-md);
   }
-  
+
   .card-header,
   .card-body,
   .card-footer {
@@ -223,12 +232,14 @@ A card consists of:
 ## Do's and Don'ts
 
 ### Do
+
 - Use consistent card hierarchy within a view
 - Provide meaningful card titles
 - Keep card content focused and scannable
 - Use appropriate card size for the content
 
 ### Don't
+
 - Don't nest cards within cards
 - Don't overload cards with too much information
 - Don't use cards for simple, inline content

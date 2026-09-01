@@ -1,0 +1,1199 @@
+/**
+ * Integration tests for CoolifyManager methods.
+ * Tests all async functions returned by createCoolifyManager.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createCoolifyManager, setOptional } from './manager';
+
+// ─── Mock integrations factory ───────────────────────────────────────────────
+
+function createMockIntegrations(getCoolifyConfigResult?: unknown, err?: Error) {
+  return {
+    getCoolifyConfig: vi.fn().mockImplementation(async () => {
+      if (err) throw err;
+      return getCoolifyConfigResult;
+    }),
+  };
+}
+
+const MOCK_PROVIDER_CONFIG = {
+  baseUrl: 'https://coolify.example.com',
+  adminToken: 'test-token',
+  serverId: 'server-001',
+  destinationId: 'dest-001',
+  applicationsBaseDomain: 'app.example.com',
+};
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+describe('CoolifyManager', () => {
+  let responses: Record<string, { status: number; body?: unknown }>;
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let mockForgeDebug: ReturnType<typeof vi.fn>;
+  let integrations: ReturnType<typeof createMockIntegrations>;
+
+  let manager: any;
+
+  beforeEach(() => {
+    responses = {
+      'GET /github-apps': { status: 200, body: { github_apps: [] } },
+      'POST /github-apps': {
+        status: 201,
+        body: { data: { id: 1, uuid: 'ga_001', name: 'Test App' } },
+      },
+      'GET /github-apps/1/repositories': { status: 200, body: { repositories: [] } },
+      'GET /github-apps/1/repositories/my-repo/branches': { status: 200, body: { branches: [] } },
+      'GET /github-apps/1/repositories/repo/branches': { status: 200, body: { branches: [] } },
+      'GET /applications': { status: 200, body: { applications: [] } },
+      'GET /applications/app-001': {
+        status: 200,
+        body: {
+          application: {
+            uuid: 'app-001',
+            name: 'Test App',
+            fqdn: 'https://test.example.com',
+            status: 'running',
+            repository: 'org/repo',
+            git_branch: 'main',
+          },
+        },
+      },
+      'POST /applications': {
+        status: 201,
+        body: { application: { uuid: 'app-new', name: 'New App' } },
+      },
+      'PATCH /applications/app-001': {
+        status: 200,
+        body: { application: { uuid: 'app-001', name: 'Updated App' } },
+      },
+      'GET /applications/app-001/start': { status: 200, body: {} },
+      'GET /applications/app-001/stop': { status: 200, body: {} },
+      'GET /applications/app-001/restart': { status: 200, body: {} },
+      'DELETE /applications/app-001': { status: 204, body: undefined },
+      'GET /applications/app-001/logs': { status: 200, body: { logs: 'Build log output' } },
+      'GET /applications/app-001/deployments': {
+        status: 200,
+        body: { deployments: [{ uuid: 'dep-001', deployment_uuid: 'dep-001', status: 'running' }] },
+      },
+      'GET /deployments/dep-001': {
+        status: 200,
+        body: { deployment: { uuid: 'dep-001', status: 'completed' } },
+      },
+      'GET /applications/app-001/envs': { status: 200, body: { envs: [] } },
+      'GET /servers/server-001': {
+        status: 200,
+        body: { server: { uuid: 'server-001', wildcard_domain: 'wildcard.example.com' } },
+      },
+      'GET /projects': {
+        status: 200,
+        body: { projects: [{ uuid: 'proj-001', name: 'forge-default' }] },
+      },
+      'GET /projects/proj-001/environments': {
+        status: 200,
+        body: { environments: [{ uuid: 'env-001', name: 'production' }] },
+      },
+      'POST /applications/private-github-app': {
+        status: 201,
+        body: {
+          application: {
+            uuid: 'app-new-001',
+            name: 'New Service',
+            fqdn: 'https://new.example.com',
+            status: 'running',
+            repository: 'org/repo',
+            git_branch: 'main',
+          },
+        },
+      },
+
+    };
+
+    mockFetch = vi
+      .fn()
+      .mockImplementation((url: string, options?: { method?: string; body?: string }) => {
+        const baseUrl = 'https://coolify.example.com/api/v1';
+        const path = url.startsWith(baseUrl) ? url.slice(baseUrl.length) : url;
+        const key = `${options?.method ?? 'GET'} ${path}`;
+        console.log('[DEBUG] key:', key, '| in responses:', key in responses);
+        const hasKey = key in responses;
+        const response = hasKey ? responses[key] : { status: 200, body: {} };
+        const text = response.body != null ? JSON.stringify(response.body) : '';
+        return Promise.resolve({
+          ok: response.status >= 200 && response.status < 300,
+          status: response.status,
+          text: () => Promise.resolve(text),
+        });
+      });
+
+    vi.stubGlobal('fetch', mockFetch);
+    integrations = createMockIntegrations(MOCK_PROVIDER_CONFIG);
+    manager = createCoolifyManager({ integrations } as any);
+    mockForgeDebug = vi.fn();
+    vi.stubGlobal('forgeDebug', mockForgeDebug);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  describe('getCredentials', () => {
+    it('returns credentials from provider config', async () => {
+      const creds = await manager.getCredentials();
+      expect(creds.baseUrl).toBe('https://coolify.example.com/api/v1');
+      expect(creds.apiToken).toBe('test-token');
+      expect(creds.serverId).toBe('server-001');
+      expect(creds.destinationId).toBe('dest-001');
+      expect(creds.applicationsBaseDomain).toBe('app.example.com');
+    });
+
+    it('throws when integration not configured', async () => {
+      const badIntegrations = createMockIntegrations(undefined, new Error('no integration'));
+      const badManager = createCoolifyManager({ integrations: badIntegrations } as any);
+      await expect(badManager.getCredentials()).rejects.toThrow('no integration');
+    });
+  });
+
+  describe('listGitHubApps', () => {
+    it('maps github_apps to typed output', async () => {
+      responses['GET /github-apps'] = {
+        status: 200,
+        body: {
+          github_apps: [
+            {
+              id: 1,
+              uuid: 'ga-001',
+              name: 'App One',
+              organization: 'org-a',
+              api_url: 'https://api.github.com',
+              html_url: 'https://github.com/apps/a',
+            },
+          ],
+        },
+      };
+
+      const apps = await manager.listGitHubApps();
+
+      expect(apps).toHaveLength(1);
+      expect(apps[0]).toMatchObject({
+        githubAppId: 1,
+        githubAppUuid: 'ga-001',
+        name: 'App One',
+        organization: 'org-a',
+        apiUrl: 'https://api.github.com',
+        htmlUrl: 'https://github.com/apps/a',
+      });
+    });
+
+    it('returns empty array when no github_apps key', async () => {
+      responses['GET /github-apps'] = { status: 200, body: {} };
+      const apps = await manager.listGitHubApps();
+      expect(apps).toEqual([]);
+    });
+
+    it('treats missing optional fields as null', async () => {
+      responses['GET /github-apps'] = {
+        status: 200,
+        body: { github_apps: [{ id: 5, uuid: 'ga-005' }] },
+      };
+      const apps = await manager.listGitHubApps();
+      expect(apps[0]).toMatchObject({
+        name: null,
+        organization: null,
+        apiUrl: null,
+        htmlUrl: null,
+      });
+    });
+  });
+
+  describe('createGitHubApp', () => {
+    it('posts correct payload to API', async () => {
+      await manager.createGitHubApp({
+        name: 'Test',
+        organization: 'org',
+        appId: '1',
+        installationId: '2',
+        webhookSecret: 'w',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/github-apps'),
+        expect.objectContaining({ method: 'POST', body: expect.any(String) }),
+      );
+      const [, opts] = mockFetch.mock.calls[0];
+      const body = JSON.parse(opts.body as string);
+      expect(body.name).toBe('Test');
+      expect(body.organization).toBe('org');
+      expect(body.app_id).toBe('1');
+      expect(body.installation_id).toBe('2');
+      expect(body.webhook_secret).toBe('w');
+    });
+
+    it('returns mapped result with githubAppUuid', async () => {
+      responses['POST /github-apps'] = { status: 201, body: { uuid: 'ga_001' } };
+      const result = await manager.createGitHubApp({
+        name: 'Test',
+        organization: 'org',
+        appId: '1',
+        installationId: '2',
+        webhookSecret: 'w',
+      });
+      expect(result).toHaveProperty('githubAppUuid');
+    });
+  });
+
+  describe('listGitHubAppRepositories', () => {
+    it('maps repositories to typed output', async () => {
+      responses['GET /github-apps/1/repositories'] = {
+        status: 200,
+        body: {
+          repositories: [
+            {
+              id: 101,
+              uuid: 'repo-001',
+              name: 'frontend',
+              full_name: 'org/frontend',
+              private: true,
+            },
+            {
+              id: 102,
+              uuid: 'repo-002',
+              name: 'backend',
+              full_name: 'org/backend',
+              private: false,
+            },
+          ],
+        },
+      };
+
+      const repos = await manager.listGitHubAppRepositories({ githubAppId: 1 });
+
+      expect(repos).toHaveLength(2);
+      expect(repos[0]).toMatchObject({ name: 'frontend' });
+      expect(repos[1]).toMatchObject({ name: 'backend' });
+    });
+
+    it('accepts string githubAppId', async () => {
+      responses['GET /github-apps/ga-001/repositories'] = {
+        status: 200,
+        body: { repositories: [] },
+      };
+
+      await manager.listGitHubAppRepositories({ githubAppId: 'ga-001' });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/github-apps/ga-001/'),
+        expect.any(Object),
+      );
+    });
+
+    it('returns empty array when no repositories', async () => {
+      responses['GET /github-apps/1/repositories'] = { status: 200, body: {} };
+      const repos = await manager.listGitHubAppRepositories({ githubAppId: 1 });
+      expect(repos).toEqual([]);
+    });
+  });
+
+  describe('listGitHubAppRepositoryBranches', () => {
+    it('maps branches to typed output', async () => {
+      responses['GET /github-apps/1/repositories/repo/branches'] = {
+        status: 200,
+        body: {
+          branches: [
+            { name: 'main', commit_sha: 'abc123', protected: true },
+            { name: 'develop', commit_sha: 'def456', protected: false },
+          ],
+        },
+      };
+
+      const branches = await manager.listGitHubAppRepositoryBranches({
+        githubAppId: 1,
+        repository: 'repo',
+      });
+
+      expect(branches).toHaveLength(2);
+      expect(branches[0]).toMatchObject({ name: 'main' });
+      expect(branches[1]).toMatchObject({ name: 'develop' });
+    });
+
+    it('returns empty array when no branches', async () => {
+      responses['GET /github-apps/1/repositories/repo/branches'] = { status: 200, body: {} };
+      const branches = await manager.listGitHubAppRepositoryBranches({
+        githubAppId: 1,
+        repository: 'repo',
+      });
+      expect(branches).toEqual([]);
+    });
+  });
+
+  describe('listApplications', () => {
+    it('returns applications array', async () => {
+      responses['GET /applications'] = {
+        status: 200,
+        body: {
+          applications: [
+            {
+              uuid: 'a1',
+              name: 'App One',
+              fqdn: 'https://one.com',
+              status: 'running',
+              repository: 'o/r',
+              git_branch: 'main',
+            },
+            {
+              uuid: 'a2',
+              name: 'App Two',
+              fqdn: 'https://two.com',
+              status: 'idle',
+              repository: 'o/r2',
+              git_branch: 'develop',
+            },
+          ],
+        },
+      };
+
+      const apps = await manager.listApplications();
+
+      expect(apps).toHaveLength(2);
+      expect(apps[0]).toMatchObject({
+        applicationUuid: 'a1',
+        name: 'App One',
+        status: 'running',
+        repository: 'o/r',
+        branch: 'main',
+      });
+      expect(apps[1]).toMatchObject({
+        applicationUuid: 'a2',
+        name: 'App Two',
+        fqdn: 'https://two.com',
+        repository: 'o/r2',
+        branch: 'develop',
+      });
+    });
+  });
+
+  describe('getApplication', () => {
+    it('returns single application', async () => {
+      const result = await manager.getApplication('app-001');
+      expect(result).toMatchObject({
+        applicationUuid: 'app-001',
+        name: 'Test App',
+        fqdn: 'https://test.example.com',
+        status: 'running',
+      });
+    });
+
+    it('throws on API error', async () => {
+      responses['GET /applications/nonexistent'] = { status: 404, body: { message: 'Not found' } };
+      await expect(manager.getApplication('nonexistent')).rejects.toThrow('404');
+    });
+  });
+
+  describe('updateApplication', () => {
+    it('patches application with body fields', async () => {
+      await manager.updateApplication({
+        applicationUuid: 'app-001',
+        name: 'Renamed',
+        buildCommand: 'npm run build',
+        port: 3000,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001'),
+        expect.objectContaining({ method: 'PATCH', body: expect.any(String) }),
+      );
+      const [, opts] = mockFetch.mock.calls[0];
+      const body = JSON.parse(opts.body as string);
+      expect(body.name).toBe('Renamed');
+      expect(body.build_command).toBe('npm run build');
+      expect(body.port).toBe(3000);
+    });
+  });
+
+  describe('startApplication', () => {
+    it('calls the start endpoint', async () => {
+      await manager.startApplication('app-001');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/start'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('stopApplication', () => {
+    it('calls the stop endpoint', async () => {
+      await manager.stopApplication('app-001');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/stop'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('restartApplication', () => {
+    it('calls the restart endpoint', async () => {
+      await manager.restartApplication('app-001');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/restart'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('deleteApplication', () => {
+    it('deletes and returns success', async () => {
+      const result = await manager.deleteApplication('app-001');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001'),
+        expect.objectContaining({ method: 'DELETE', body: undefined }),
+      );
+      expect(result).toEqual({ success: true });
+    });
+
+    it('throws on API error', async () => {
+      responses['DELETE /applications/app-001'] = { status: 403, body: 'Forbidden' };
+      await expect(manager.deleteApplication('app-001')).rejects.toThrow('403');
+    });
+  });
+
+  describe('getApplicationLogs', () => {
+    it('returns applicationUuid and logs from response', async () => {
+      const result = await manager.getApplicationLogs({ applicationUuid: 'app-001' });
+      expect(result).toMatchObject({ applicationUuid: 'app-001', logs: 'Build log output' });
+    });
+
+    it('encodes uuid in URL', async () => {
+      responses['GET /applications/app-test/logs'] = { status: 200, body: { logs: 'x' } };
+      await manager.getApplicationLogs({ applicationUuid: 'app-test' });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('applications/app-test/logs'),
+        expect.any(Object),
+      );
+    });
+
+    it('passes lines param to API', async () => {
+      responses['GET /applications/app-001/logs?lines=100'] = { status: 200, body: { logs: 'x' } };
+      await manager.getApplicationLogs({ applicationUuid: 'app-001', lines: 100 });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('lines=100'),
+        expect.any(Object),
+      );
+    });
+
+    it('passes since param to API', async () => {
+      responses['GET /applications/app-001/logs?since=1234567890'] = {
+        status: 200,
+        body: { logs: 'x' },
+      };
+      await manager.getApplicationLogs({ applicationUuid: 'app-001', since: 1234567890 });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('since=1234567890'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('listApplicationDeployments', () => {
+    it('returns deployments array', async () => {
+      responses['GET /deployments?application_uuid=app-001'] = {
+        status: 200,
+        body: {
+          deployments: [{ uuid: 'd1', deployment_uuid: 'd1', status: 'running', commit: 'abc123' }],
+        },
+      };
+
+      const deployments = await manager.listApplicationDeployments({ applicationUuid: 'app-001' });
+
+      expect(deployments).toHaveLength(1);
+      expect(deployments[0]).toMatchObject({ deploymentUuid: 'd1', status: 'running' });
+    });
+
+    it('passes limit to API', async () => {
+      responses['GET /deployments?application_uuid=app-001&per_page=5'] = {
+        status: 200,
+        body: { deployments: [] },
+      };
+      await manager.listApplicationDeployments({ applicationUuid: 'app-001', limit: 5 });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('per_page=5'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getDeploymentLogs', () => {
+    it('returns deployment with logs', async () => {
+      responses['GET /deployments?application_uuid=app-001'] = {
+        status: 200,
+        body: {
+          deployments: [
+            {
+              uuid: 'dep-001',
+              deployment_uuid: 'dep-001',
+              status: 'running',
+              created_at: '2024-01-01T00:00:00Z',
+            },
+          ],
+        },
+      };
+      responses['GET /deployments/dep-001'] = {
+        status: 200,
+        body: { deployment: { uuid: 'dep-001', status: 'completed', logs: 'Done' } },
+      };
+
+      // Add debug: log all fetch calls made
+      const result = await manager.getDeploymentLogs({
+        applicationUuid: 'app-001',
+        deploymentUuid: 'dep-001',
+      });
+      expect(result).toMatchObject({ deploymentUuid: 'dep-001', status: 'completed' });
+    });
+  });
+
+  describe('listApplicationEnvs', () => {
+    it('returns env vars array', async () => {
+      responses['GET /applications/app-001/envs'] = {
+        status: 200,
+        body: {
+          envs: [
+            {
+              key: 'FOO',
+              value: 'bar',
+              uuid: 'e1',
+              is_preview: false,
+              is_build_time: false,
+              is_literal: false,
+              is_multiline: false,
+              is_shown_once: false,
+            },
+          ],
+        },
+      };
+
+      const envs = await manager.listApplicationEnvs('app-001');
+
+      expect(envs).toHaveLength(1);
+      expect(envs[0]).toMatchObject({ key: 'FOO', value: 'bar' });
+    });
+
+    it('maps preview and literal flags', async () => {
+      responses['GET /applications/app-001/envs'] = {
+        status: 200,
+        body: {
+          envs: [
+            {
+              key: 'PREVIEW_URL',
+              value: 'https://preview.io',
+              uuid: 'e2',
+              is_preview: true,
+              is_build_time: true,
+              is_literal: true,
+              is_multiline: true,
+              is_shown_once: true,
+            },
+          ],
+        },
+      };
+
+      const envs = await manager.listApplicationEnvs('app-001');
+
+      expect(envs[0]).toMatchObject({
+        isPreview: true,
+        isBuildTime: true,
+        isLiteral: true,
+        isMultiline: true,
+        isShownOnce: true,
+      });
+    });
+  });
+
+  describe('setApplicationEnv', () => {
+    it('creates new env when not found', async () => {
+      responses['GET /applications/app-001/envs'] = { status: 200, body: { envs: [] } };
+      responses['POST /applications/app-001/envs'] = {
+        status: 201,
+        body: {
+          env: {
+            key: 'NEW',
+            value: 'val',
+            uuid: 'env-new',
+            is_preview: false,
+            is_build_time: false,
+            is_literal: false,
+            is_multiline: false,
+            is_shown_once: false,
+          },
+        },
+      };
+
+      const result = await manager.setApplicationEnv({
+        applicationUuid: 'app-001',
+        key: 'NEW',
+        value: 'val',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/envs'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(result).toMatchObject({ key: 'NEW', value: 'val', envId: 'env-new' });
+    });
+
+    it('patches existing env via bulk endpoint', async () => {
+      responses['GET /applications/app-001/envs'] = {
+        status: 200,
+        body: {
+          envs: [
+            {
+              key: 'FOO',
+              value: 'old',
+              uuid: 'env-001',
+              is_preview: false,
+              is_build_time: false,
+              is_literal: false,
+              is_multiline: false,
+              is_shown_once: false,
+            },
+          ],
+        },
+      };
+      responses['PATCH /applications/app-001/envs/bulk'] = {
+        status: 200,
+        body: {
+          data: [
+            {
+              key: 'FOO',
+              value: 'updated',
+              uuid: 'env-001',
+              is_preview: true,
+              is_build_time: false,
+              is_literal: false,
+              is_multiline: false,
+              is_shown_once: false,
+            },
+          ],
+        },
+      };
+
+      const result = await manager.setApplicationEnv({
+        applicationUuid: 'app-001',
+        key: 'FOO',
+        value: 'updated',
+        isPreview: true,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/envs/bulk'),
+        expect.objectContaining({ method: 'PATCH' }),
+      );
+      expect(result).toMatchObject({ key: 'FOO', value: 'updated', isPreview: true });
+    });
+
+    it('throws when bulk update does not return the env', async () => {
+      responses['GET /applications/app-001/envs'] = {
+        status: 200,
+        body: {
+          envs: [
+            {
+              key: 'FOO',
+              value: 'old',
+              uuid: 'env-001',
+              is_preview: false,
+              is_build_time: false,
+              is_literal: false,
+              is_multiline: false,
+              is_shown_once: false,
+            },
+          ],
+        },
+      };
+      responses['PATCH /applications/app-001/envs/bulk'] = { status: 200, body: { data: [] } };
+
+      await expect(
+        manager.setApplicationEnv({ applicationUuid: 'app-001', key: 'FOO', value: 'updated' }),
+      ).rejects.toThrow('did not return env FOO');
+    });
+  });
+
+  describe('deleteApplicationEnv', () => {
+    it('calls POST /envs/delete and returns deleted flag', async () => {
+      responses['POST /applications/app-001/envs/delete'] = {
+        status: 200,
+        body: {
+          envs: [
+            {
+              key: 'FOO',
+              value: 'bar',
+              uuid: 'env-001',
+              is_preview: false,
+              is_build_time: false,
+              is_literal: false,
+              is_multiline: false,
+              is_shown_once: false,
+            },
+          ],
+        },
+      };
+
+      const result = await manager.deleteApplicationEnv({ applicationUuid: 'app-001', key: 'FOO' });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/envs/delete'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(result).toMatchObject({ deleted: false });
+    });
+
+    it('returns deleted true when env not in response', async () => {
+      responses['POST /applications/app-001/envs/delete'] = {
+        status: 200,
+        body: { envs: [] },
+      };
+
+      const result = await manager.deleteApplicationEnv({
+        applicationUuid: 'app-001',
+        key: 'NONEXISTENT',
+      });
+
+      expect(result).toMatchObject({ deleted: true });
+    });
+  });
+
+  describe('listGitHubAppRepositoryBranches', () => {
+    it('returns branch names', async () => {
+      responses['GET /github-apps/1/repositories/repo/branches'] = {
+        status: 200,
+        body: { branches: [{ name: 'main', commit: { sha: 'abc123', created_at: '2025-01-01' } }] },
+      };
+
+      const result = await manager.listGitHubAppRepositoryBranches({
+        githubAppId: 1,
+        repository: 'repo',
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('main');
+    });
+  });
+
+  describe('restartApplication', () => {
+    it('calls the restart endpoint', async () => {
+      const result = await manager.restartApplication('app-001');
+      expect(result).toEqual({ success: true });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/restart'),
+        expect.any(Object),
+      );
+    });
+  });
+describe('createApplication', () => {
+    it('posts to /applications/private-github-app with name and default context only', async () => {
+      await manager.createApplication({ name: 'my-service' });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/private-github-app'),
+        expect.objectContaining({ method: 'POST', body: expect.any(String) }),
+      );
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      // Required field
+      expect(body.name).toBe('my-service');
+
+      // Default context fields
+      expect(body.projectUuid).toBe('proj-001');
+      expect(body.environmentUuid).toBe('env-001');
+      expect(body.serverUuid).toBe('server-001');
+      expect(body.destinationId).toBe('dest-001');
+
+      // Optional fields NOT sent
+      expect(body.github_app_uuid).toBeUndefined();
+      expect(body.build_command).toBeUndefined();
+      expect(body.publish_directory).toBeUndefined();
+      expect(body.branch).toBeUndefined();
+      expect(body.port).toBeUndefined();
+      expect(body.domain).toBeUndefined();
+    });
+
+    it('includes all optional fields with snake_case keys when provided', async () => {
+      await manager.createApplication({
+        name: 'full-service',
+        githubAppUuid: 'ga-001',
+        buildCommand: 'npm run build',
+        publishDirectory: 'dist',
+        branch: 'main',
+        port: 3000,
+        domain: 'custom.example.com',
+        environmentUuid: 'env-override',
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.name).toBe('full-service');
+      expect(body.github_app_uuid).toBe('ga-001');
+      expect(body.build_command).toBe('npm run build');
+      expect(body.publish_directory).toBe('dist');
+      expect(body.branch).toBe('main');
+      expect(body.port).toBe(3000);
+      expect(body.domain).toBe('custom.example.com');
+      // environment_uuid (override) wins over default context
+      expect(body.environment_uuid).toBe('env-override');
+      // environmentUuid from defaultContext is also present (camelCase)
+      expect(body.environmentUuid).toBe('env-001');
+    });
+
+    it('overrides default environmentUuid when input.environmentUuid is provided', async () => {
+      await manager.createApplication({
+        name: 'override-env',
+        environmentUuid: 'env-custom',
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.environment_uuid).toBe('env-custom');
+      // Other default context fields still present
+      expect(body.projectUuid).toBe('proj-001');
+      expect(body.serverUuid).toBe('server-001');
+    });
+
+    it('includes a subset of optional fields when only some are provided', async () => {
+      await manager.createApplication({
+        name: 'partial-service',
+        githubAppUuid: 'ga-002',
+        port: 8080,
+      });
+
+      const postCall = mockFetch.mock.calls.find((call) => {
+        const url = call[0] as string;
+        return url.includes('/applications/private-github-app') && call[1]?.method === 'POST';
+      });
+      const body = JSON.parse(postCall![1].body as string);
+
+      expect(body.name).toBe('partial-service');
+      expect(body.github_app_uuid).toBe('ga-002');
+      expect(body.port).toBe(8080);
+      // Other optional fields NOT included
+      expect(body.build_command).toBeUndefined();
+      expect(body.publish_directory).toBeUndefined();
+      expect(body.branch).toBeUndefined();
+      expect(body.domain).toBeUndefined();
+    });
+
+    it('returns application details from the created application', async () => {
+      const result = await manager.createApplication({ name: 'returned-app' });
+
+      expect(result).toEqual({
+        applicationUuid: 'app-new-001',
+        name: 'New Service',
+        fqdn: 'https://new.example.com',
+        status: 'running',
+        repository: 'org/repo',
+        branch: 'main',
+        port: null,
+      });
+    });
+  });
+
+  describe('buildApplicationDomain', () => {
+    it('uses provider config applicationsBaseDomain when set', async () => {
+      const result = await manager.buildApplicationDomain('my-slug');
+
+      expect(result).toBe('my-slug.app.example.com');
+      // No /servers/* call expected (config provided base domain directly)
+      const serverCalls = mockFetch.mock.calls.filter((call) => {
+        const url = call[0] as string;
+        return url.includes('/servers/');
+      });
+      expect(serverCalls).toHaveLength(0);
+    });
+
+    it('falls back to default server wildcard_domain when applicationsBaseDomain is null', async () => {
+      // Override integrations with null applicationsBaseDomain to force fallback
+      const fallbackIntegrations = createMockIntegrations({
+        ...MOCK_PROVIDER_CONFIG,
+        applicationsBaseDomain: null,
+      });
+      const fallbackManager = createCoolifyManager({ integrations: fallbackIntegrations } as any);
+
+      const result = await fallbackManager.buildApplicationDomain('fallback-slug');
+
+      expect(result).toBe('fallback-slug.wildcard.example.com');
+      // Should have called the default server endpoint
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/servers/server-001'),
+        expect.any(Object),
+      );
+    });
+
+    it('uses the provided serverUuid to resolve wildcard_domain when fallback triggers', async () => {
+      // Add a mock for /servers/server-002
+      responses['GET /servers/server-002'] = {
+        status: 200,
+        body: { server: { uuid: 'server-002', wildcard_domain: 'override.example.com' } },
+      };
+
+      const fallbackIntegrations = createMockIntegrations({
+        ...MOCK_PROVIDER_CONFIG,
+        applicationsBaseDomain: null,
+      });
+      const fallbackManager = createCoolifyManager({ integrations: fallbackIntegrations } as any);
+
+      const result = await fallbackManager.buildApplicationDomain('explicit-server', 'server-002');
+
+      expect(result).toBe('explicit-server.override.example.com');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/servers/server-002'),
+        expect.any(Object),
+      );
+    });
+
+    it('returns formatted slug.baseDomain for slug with hyphens', async () => {
+      const result = await manager.buildApplicationDomain('my-cool-app-v2');
+
+      expect(result).toBe('my-cool-app-v2.app.example.com');
+    });
+  });
+
+  describe('verifyApplicationHealth', () => {
+    // Helper: URL-based dispatch for verifyApplicationHealth fetch overrides
+    function setupVerifyMock(options: {
+      app?: { status?: string | null; fqdn?: string | null; httpStatus?: number; bodyOverride?: unknown };
+      health?: { ok: boolean; status: number };
+      version?: { ok: boolean; status: number; forgeVersionHeader?: string | null };
+    }) {
+      mockFetch.mockImplementation(async (url: string) => {
+        if (url.startsWith('https://coolify.example.com/api/v1/applications/app-001')) {
+          const appOpts = options.app ?? { status: 'running', fqdn: 'https://test.example.com' };
+          const httpStatus = appOpts.httpStatus ?? 200;
+          const body =
+            appOpts.bodyOverride !== undefined
+              ? appOpts.bodyOverride
+              : {
+                  application: {
+                    uuid: 'app-001',
+                    name: 'Test App',
+                    fqdn: appOpts.fqdn,
+                    status: appOpts.status,
+                    repository: 'org/repo',
+                    git_branch: 'main',
+                  },
+                };
+          return {
+            ok: httpStatus >= 200 && httpStatus < 300,
+            status: httpStatus,
+            text: () => Promise.resolve(JSON.stringify(body)),
+          } as unknown as Response;
+        }
+        if (url === 'https://test.example.com/health') {
+          const h = options.health ?? { ok: true, status: 200 };
+          return {
+            ok: h.ok,
+            status: h.status,
+            text: () => Promise.resolve(''),
+          } as unknown as Response;
+        }
+        if (url === 'https://test.example.com/version') {
+          const v = options.version ?? { ok: true, status: 200, forgeVersionHeader: null };
+          return {
+            ok: v.ok,
+            status: v.status,
+            headers: {
+              get: (name: string) => (name === 'x-forge-version' ? v.forgeVersionHeader : null),
+            },
+            text: () => Promise.resolve(''),
+          } as unknown as Response;
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('{}'),
+        } as unknown as Response;
+      });
+    }
+
+    it('returns verified-success when all 3 phases pass with expectedSha', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: 'abc123' },
+      });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'abc123',
+      });
+
+      expect(result).toMatchObject({ status: 'verified-success', sha: 'abc123' });
+      expect(result).toHaveProperty('verifiedAt');
+    });
+
+    it('returns verified-success with sha=null when no expectedSha is provided', async () => {
+      setupVerifyMock({ health: { ok: true, status: 200 } });
+
+      const result = await manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+      });
+
+      expect(result).toMatchObject({ status: 'verified-success', sha: null });
+    });
+
+    it('returns verified-failure status when app status is not running', async () => {
+      setupVerifyMock({ app: { status: 'stopped', fqdn: 'https://test.example.com' } });
+
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      await vi.runAllTimersAsync();
+      const result = await promise;
+      vi.useRealTimers();
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'status',
+        error: expect.stringContaining('stopped'),
+      });
+    });
+
+    it('returns verified-failure status when getApplication throws (HTTP 500)', async () => {
+      setupVerifyMock({ app: { httpStatus: 500, bodyOverride: { error: 'fail' } } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toMatchObject({
+        status: 'verified-failure',
+        phase: 'status',
+        error: expect.stringContaining('getApplication failed'),
+      });
+    });
+
+    it('returns verified-failure health when /health returns 503', async () => {
+      setupVerifyMock({ health: { ok: false, status: 503 } });
+
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'health',
+        error: 'Health probe returned HTTP 503',
+      });
+    });
+
+    it('returns verified-failure health when fqdn is null', async () => {
+      setupVerifyMock({ app: { status: 'running', fqdn: null } });
+
+      const result = await manager.verifyApplicationHealth({ applicationUuid: 'app-001' });
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'health',
+        error: 'Application has no fqdn configured',
+      });
+    });
+
+    it('returns verified-failure version when x-forge-version header does not match', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: 'actual-sha' },
+      });
+
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'x-forge-version header "actual-sha" does not match expected sha "expected-sha"',
+      });
+    });
+
+    it('returns verified-failure version when x-forge-version header is missing', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: true, status: 200, forgeVersionHeader: null },
+      });
+
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'x-forge-version header "null" does not match expected sha "expected-sha"',
+      });
+    });
+
+    it('returns verified-failure version when /version returns 500', async () => {
+      setupVerifyMock({
+        health: { ok: true, status: 200 },
+        version: { ok: false, status: 500 },
+      });
+
+      vi.useFakeTimers();
+      const promise = manager.verifyApplicationHealth({
+        applicationUuid: 'app-001',
+        expectedSha: 'expected-sha',
+      });
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      vi.useRealTimers();
+
+      expect(result).toEqual({
+        status: 'verified-failure',
+        phase: 'version',
+        error: 'Version probe returned HTTP 500',
+      });
+    });
+  });
+});
+
+
+describe('setOptional', () => {
+  it('sets the key when value is a non-null, defined primitive', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', 'alice');
+    expect(target).toEqual({ name: 'alice' });
+  });
+
+  it('skips the key when value is undefined (default rejectNull true)', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', undefined);
+    expect(target).toEqual({});
+  });
+
+  it('skips the key when value is null (default rejectNull true)', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', null);
+    expect(target).toEqual({});
+  });
+
+  it('sets the key when value is null with rejectNull false', () => {
+    const target: Record<string, unknown> = {};
+    setOptional(target, 'name', null, { rejectNull: false });
+    expect(target).toEqual({ name: null });
+  });
+});
