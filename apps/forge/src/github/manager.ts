@@ -135,6 +135,10 @@ export function createGitHubAppManager(config: {
       Promise.reject(new Error('getActiveCredentials not initialized')),
     saveCredentials: (_agentId: string, _credentials: GitHubAppCredentials) =>
       Promise.reject(new Error('saveCredentials not initialized')),
+    deleteCredentials: (_agentId: string) =>
+      Promise.reject(new Error('deleteCredentials not initialized')),
+    insertCredentialsIfAbsent: (_agentId: string, _credentials: GitHubAppCredentials) =>
+      Promise.reject(new Error('insertCredentialsIfAbsent not initialized')),
     parseCredentials: (_encryptedCredentials: string) => {
       throw new ParseCredentialsNotInitializedError();
     },
@@ -199,6 +203,8 @@ export function createGitHubAppManager(config: {
   opsCtx.getCredentials = credentials.getCredentials;
   opsCtx.getActiveCredentials = credentials.getActiveCredentials;
   opsCtx.saveCredentials = credentials.saveCredentials;
+  opsCtx.deleteCredentials = credentials.deleteCredentials;
+  opsCtx.insertCredentialsIfAbsent = credentials.insertCredentialsIfAbsent;
   opsCtx.parseCredentials = credentials.parseCredentials;
   opsCtx.createInstallationOctokit = async (credentialsArg) =>
     await githubApp.createInstallationOctokit(credentialsArg);

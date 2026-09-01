@@ -32,6 +32,8 @@ function makeCtx(): OpsContext {
     getCredentials: vi.fn() as unknown as OpsContext['getCredentials'],
     getActiveCredentials: vi.fn() as unknown as OpsContext['getActiveCredentials'],
     saveCredentials: vi.fn() as unknown as OpsContext['saveCredentials'],
+    deleteCredentials: vi.fn() as unknown as OpsContext['deleteCredentials'],
+    insertCredentialsIfAbsent: vi.fn() as unknown as OpsContext['insertCredentialsIfAbsent'],
     parseCredentials: vi.fn() as unknown as OpsContext['parseCredentials'],
     createInstallationOctokit: vi.fn() as unknown as OpsContext['createInstallationOctokit'],
     getHeader: vi.fn(),

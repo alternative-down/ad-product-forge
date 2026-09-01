@@ -103,12 +103,6 @@ export function createAppLifecycleOps(
 
   async function createAgentApp(input: { agentId: string; agentName: string }) {
     await getGlobalConfig();
-    const existing = await credentials.getCredentials(input.agentId);
-
-    if (existing !== null && existing !== undefined) {
-      appLifecycleOpsDebug('warn', 'GitHub App already exists for agent', { agentId: input?.agentId });
-      throw new GithubAppAlreadyExistsError(input.agentId);
-    }
 
     const pendingCredentials = {
       status: 'pending' as const,
@@ -118,7 +112,17 @@ export function createAppLifecycleOps(
       createdAt: Date.now(),
     };
 
-    await ctx.saveCredentials(input.agentId, pendingCredentials);
+    // Atomic insert: uses INSERT ... ON CONFLICT DO NOTHING with RETURNING
+    // to avoid the check-then-write race that could create two pending rows
+    // for the same agentId. If the insert returns empty (conflict), we
+    // know a row already exists and throw the appropriate error.
+    const inserted = await ctx.insertCredentialsIfAbsent(input.agentId, pendingCredentials);
+
+    if (!inserted) {
+      appLifecycleOpsDebug('warn', 'GitHub App already exists for agent', { agentId: input.agentId });
+      throw new GithubAppAlreadyExistsError(input.agentId);
+    }
+
     ctx.opsRouting!.registerAgentRoutes(input.agentId);
     return ctx.opsRouting!.buildProvisioning(input.agentId, pendingCredentials);
   }

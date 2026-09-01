@@ -58,6 +58,9 @@ describe('app-lifecycle — Pattern L typed Errors (D51 #6502 batch 20)', () => 
         buildProvisioning: () => undefined,
       },
       saveCredentials: () => Promise.resolve(undefined),
+      insertCredentialsIfAbsent: () => Promise.resolve(true),
+      createId: () => 'test-id',
+      forgeDebug: () => undefined,
       DEFAULT_GITHUB_APP_MANIFEST_CONFIG: validManifestConfig,
     }) as never;
 
@@ -84,15 +87,12 @@ describe('app-lifecycle — Pattern L typed Errors (D51 #6502 batch 20)', () => 
   });
 
   it('throws GithubAppAlreadyExistsError with code discriminator and agentId when credentials exist', async () => {
-    const activeCredentials = {
-      status: 'active',
-      state: 'active-id',
-      appName: 'forge-test-agent',
-      manifestConfig: validManifestConfig,
-    };
     const ctx = makeCtx();
+    // ctx.insertCredentialsIfAbsent returns false to simulate UNIQUE conflict
+    (ctx as unknown as { insertCredentialsIfAbsent: () => Promise<boolean> }).insertCredentialsIfAbsent = () => Promise.resolve(false);
     const credentialsMock = {
-      getCredentials: () => Promise.resolve(activeCredentials),
+      getCredentials: () => Promise.resolve(null),
+      insertCredentialsIfAbsent: () => Promise.resolve(false),
     } as never;
     const ops = createAppLifecycleOps(ctx, {
       githubApp: mockGithubApp,
