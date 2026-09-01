@@ -96,20 +96,26 @@ export interface AgentListItem {
 }
 
 export interface AgentDetail {
-  id: string;
-  name: string | null;
+  agentId: string;
+  name: string;
   description: string | null;
-  executionState?: 'idle' | 'running' | 'absent' | null;
-  role: string | null;
-  roleName: string | null;
-  modelProfile: string | null;
-  omModelProfile: string | null;
-  workspaceFilesystem: string | null;
+  instructions: string;
+  executionState: 'idle' | 'running' | 'absent';
+  role: { roleId: string; name: string; description: string | null } | null;
+  modelProfile: { profileId: string; name: string; modelKey: string } | null;
+  omModelProfile: { profileId: string; name: string; modelKey: string } | null;
+  workspace: {
+    autoSync: boolean;
+    bm25: boolean;
+    embedder: string | null;
+    filesystem: string | null;
+    sandbox: string | null;
+  };
   lastExecutionError: string | null;
   lastExecutionErrorAt: number | null;
   loaded: boolean;
   runner: unknown | null;
-  mcpConfigIds: string[];
+  providers: [];
   mcpServers: Array<{
     configId: string | null;
     serverId: string;
@@ -181,8 +187,8 @@ type RuntimeMemoryOutput = {
   ltm: { running: boolean; queued: boolean } | null;
 } | null;
 
-  // Workspace skills parallel map — populated in listAgents
-  const skillsByAgentId = new Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>();
+// Workspace skills parallel map — populated in listAgents
+const skillsByAgentId = new Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>();
 
 export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentListReadModel {
   const { db, registry, workspaceBasePath } = deps;
@@ -200,12 +206,16 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     // eslint-disable-next-line no-dynamic-imports/no-dynamic-imports
     const { createClient } = await import('@libsql/client');
-    let client: Awaited<ReturnType<typeof import("@libsql/client").createClient>> | null = null;
+    let client: Awaited<ReturnType<typeof import('@libsql/client').createClient>> | null = null;
     try {
       client = createClient({ url: `file:${agentDatabasePath}` });
       client.execute('PRAGMA foreign_keys = ON');
     } catch (err) {
-      forgeDebug({ scope: 'agents-list', level: 'debug', message: 'createClient failed: ' + errorMsg(err) });
+      forgeDebug({
+        scope: 'agents-list',
+        level: 'debug',
+        message: 'createClient failed: ' + errorMsg(err),
+      });
       return null;
     }
 
@@ -253,9 +263,13 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         reflectionBudget: Math.max(0, totalTokens - recentRawLimit),
         checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
       },
-      ltm: _runtimeLtmSnapshot !== null
-        ? { running: (_runtimeLtmSnapshot as { running?: boolean }).running ?? false, queued: (_runtimeLtmSnapshot as { queued?: boolean }).queued ?? false }
-        : null,
+      ltm:
+        _runtimeLtmSnapshot !== null
+          ? {
+              running: (_runtimeLtmSnapshot as { running?: boolean }).running ?? false,
+              queued: (_runtimeLtmSnapshot as { queued?: boolean }).queued ?? false,
+            }
+          : null,
     };
   }
 
@@ -273,7 +287,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     return await db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] });
   }
 
-  async function loadUnreadNotificationCounts(): Promise<Array<{ agentId: string; count: number }>> {
+  async function loadUnreadNotificationCounts(): Promise<
+    Array<{ agentId: string; count: number }>
+  > {
     return await db
       .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
       .from(agentNotifications)
@@ -286,7 +302,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     return await db.query.agentRoles.findMany();
   }
 
-  async function loadAllProfiles(): Promise<Awaited<ReturnType<typeof db.query.llmProfiles.findMany>>> {
+  async function loadAllProfiles(): Promise<
+    Awaited<ReturnType<typeof db.query.llmProfiles.findMany>>
+  > {
     return await db.query.llmProfiles.findMany();
   }
 
@@ -415,10 +433,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
-          result.set(
-            row.agentId,
-            parsed.success ? parsed.data : createEmptyLongTermMemoryState(),
-          );
+          result.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
         } catch (err) {
           forgeDebug({
             scope: 'agents-list',
@@ -450,7 +465,10 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         Awaited<ReturnType<typeof getRuntimeMemoryForAgent>> | null
       >;
       longTermMemoryStateByAgentId: Map<string, LongTermMemoryState | null>;
-      latestThreadDetailsByAgentId: Map<string, { preview: string | null; toolBadge: string | null }>;
+      latestThreadDetailsByAgentId: Map<
+        string,
+        { preview: string | null; toolBadge: string | null }
+      >;
     },
   ): AgentListItem {
     const agentTyped = agent as Agent;
@@ -546,11 +564,11 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         ltm: {
           running:
             executionState === 'idle' && runtimeMemory !== null
-              ? runtimeMemory.ltm?.running ?? false
+              ? (runtimeMemory.ltm?.running ?? false)
               : false,
           queued:
             executionState === 'idle' && runtimeMemory !== null
-              ? runtimeMemory.ltm?.queued ?? false
+              ? (runtimeMemory.ltm?.queued ?? false)
               : false,
           packageCount: longTermMemoryState?.packages.length ?? 0,
         },
@@ -587,11 +605,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       latestThreadDetailsByAgentId,
     };
 
-    return await Promise.all(
-      agentRows.map((agent) =>
-        buildAgentListItem(agent, ctx),
-      ),
-    );
+    return await Promise.all(agentRows.map((agent) => buildAgentListItem(agent, ctx)));
   }
 
   async function loadAgentAndDetailData(agentId: string): Promise<{
@@ -630,7 +644,15 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       db.query.agentRoles.findMany({ columns: { id: true, name: true, description: true } }),
       db.query.llmProfiles.findMany({ columns: { id: true, name: true, modelKey: true } }),
     ]);
-    return { agentMcpRows, agentScheduleRows, recentSteps, recentNotifications, activeContractRows, allRoles, allProfiles };
+    return {
+      agentMcpRows,
+      agentScheduleRows,
+      recentSteps,
+      recentNotifications,
+      activeContractRows,
+      allRoles,
+      allProfiles,
+    };
   }
 
   async function loadMcpServerRowsForAgent(
@@ -705,7 +727,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     runnerSnapshot: unknown;
     agentMcpRows: Awaited<ReturnType<typeof db.query.agentMcpConfigs.findMany>>;
     mcpServers: ReturnType<typeof buildMcpServerSummaries>;
-    activeContractRow: Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>[number] | null;
+    activeContractRow:
+      | Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>[number]
+      | null;
     spentUsd: number;
     recentSteps_: Array<Omit<AgentExecutionStep, 'id'> & { stepId: string }>;
     recentNotifications_: Array<{
@@ -716,8 +740,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     }>;
     agentScheduleRows: Awaited<ReturnType<typeof db.query.agentSchedules.findMany>>;
     heartbeat: Awaited<ReturnType<typeof db.query.agentSchedules.findMany>>[number] | undefined;
-    roleMap: Map<string, { name: string }>;
-    profileMap: Map<string, { name: string }>;
+    roleMap: Map<string, { name: string; description: string | null }>;
+    profileMap: Map<string, { name: string; modelKey: string }>;
     githubProvisioning: null;
     skillsByAgentId: Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>;
   }
@@ -732,25 +756,47 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const agentModelProfileId = ctx.agentTyped.modelProfileId;
     const agentOmModelProfileId = ctx.agentTyped.omModelProfileId;
     return {
-      id: ctx.agent.id,
-      name: ctx.agent.name ?? null,
+      agentId: ctx.agent.id,
+      name: ctx.agent.name ?? '',
       description: ctx.agent.description ?? null,
-      role: agentRoleId ?? null,
-      roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId ?? '')?.name ?? null) : null,
+      instructions: ctx.agent.instructions,
+      executionState: ctx.agent.executionState ?? 'absent',
+      role:
+        agentRoleId !== null
+          ? {
+              roleId: agentRoleId,
+              name: roleMap.get(agentRoleId)?.name ?? '',
+              description: roleMap.get(agentRoleId)?.description ?? null,
+            }
+          : null,
       modelProfile:
-        (agentModelProfileId ?? '') !== ''
-          ? (profileMap.get(agentModelProfileId ?? '')?.name ?? null)
+        agentModelProfileId !== null
+          ? {
+              profileId: agentModelProfileId,
+              name: profileMap.get(agentModelProfileId)?.name ?? '',
+              modelKey: profileMap.get(agentModelProfileId)?.modelKey ?? '',
+            }
           : null,
       omModelProfile:
-        (agentOmModelProfileId ?? '') !== ''
-          ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null)
+        agentOmModelProfileId !== null
+          ? {
+              profileId: agentOmModelProfileId,
+              name: profileMap.get(agentOmModelProfileId)?.name ?? '',
+              modelKey: profileMap.get(agentOmModelProfileId)?.modelKey ?? '',
+            }
           : null,
-      workspaceFilesystem: ctx.agent.workspaceFilesystem ?? null,
+      workspace: {
+        autoSync: ctx.agent.workspaceAutoSync === 1,
+        bm25: ctx.agent.workspaceBm25 === 1,
+        embedder: ctx.agent.workspaceEmbedder ?? null,
+        filesystem: ctx.agent.workspaceFilesystem ?? null,
+        sandbox: ctx.agent.workspaceSandbox ?? null,
+      },
       lastExecutionError: ctx.agent.lastExecutionError ?? null,
       lastExecutionErrorAt: ctx.agent.lastExecutionErrorAt ?? null,
       loaded: Boolean(ctx.agentTyped),
       runner: ctx.runnerSnapshot,
-      mcpConfigIds: ctx.agentMcpRows.map((r) => r.id),
+      providers: [],
       mcpServers: ctx.mcpServers,
       recentExecutionSteps: ctx.recentSteps_,
       recentNotifications: ctx.recentNotifications_,
@@ -780,7 +826,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     } as AgentDetail;
   }
 
-    async function getAgent(agentId: string): Promise<AgentDetail | null> {
+  async function getAgent(agentId: string): Promise<AgentDetail | null> {
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
@@ -840,8 +886,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       skillsByAgentId,
     });
   }
-
-
 
   return { listAgents, getAgent };
 }
