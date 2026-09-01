@@ -38,15 +38,12 @@ import { join } from 'node:path';
 
 import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '../admin/routes/debug';
-import { findMigrationsFolder } from "./find-migrations-folder";
+import { findMigrationsFolder } from './find-migrations-folder';
 
 const WRONG_HASH = '66ab776775372a9034465edf2720f560ebfb8343';
 const TARGET_TABLE = 'system_settings';
 const TARGET_COLUMN = 'created_at';
 const MIGRATION_0031_TAG = '0031_add_created_at_to_system_settings';
-
-
-
 
 /**
  * Compute the Drizzle hash for a migration tag. Mirrors the algorithm in
@@ -159,9 +156,7 @@ export async function fixupSystemSettingsCreatedAt(
   // Step 1: DELETE wrong hash if present (idempotent)
   if (wrongHashInJournal) {
     try {
-      await db.run(
-        sql`DELETE FROM __drizzle_migrations WHERE hash = ${WRONG_HASH}`,
-      );
+      await db.run(sql`DELETE FROM __drizzle_migrations WHERE hash = ${WRONG_HASH}`);
       deletedWrongHash = true;
     } catch (err) {
       forgeDebug({
@@ -178,7 +173,7 @@ export async function fixupSystemSettingsCreatedAt(
   if (!columnExists) {
     try {
       await db.run(
-        sql`ALTER TABLE ${sql.raw(TARGET_TABLE)} ADD COLUMN ${sql.raw(TARGET_COLUMN)} integer NOT NULL DEFAULT (unixepoch())`,
+        sql`ALTER TABLE ${sql.raw(TARGET_TABLE)} ADD COLUMN ${sql.raw(TARGET_COLUMN)} integer NOT NULL DEFAULT 0`,
       );
       addedColumn = true;
     } catch (err) {
@@ -190,6 +185,12 @@ export async function fixupSystemSettingsCreatedAt(
       });
       throw err;
     }
+  }
+
+  if (!realHashInJournal) {
+    await db.run(
+      sql`UPDATE ${sql.raw(TARGET_TABLE)} SET ${sql.raw(TARGET_COLUMN)} = ${timestamp} WHERE ${sql.raw(TARGET_COLUMN)} = 0`,
+    );
   }
 
   // Step 3: INSERT real hash if not present

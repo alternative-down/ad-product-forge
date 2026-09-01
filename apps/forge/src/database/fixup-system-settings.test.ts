@@ -20,7 +20,9 @@ import { fixupSystemSettingsCreatedAt } from './fixup-system-settings';
 
 const MIGRATIONS_DIR = `${process.cwd()}/migrations`;
 const MIGRATION_0031_FILE = `${MIGRATIONS_DIR}/0031_add_created_at_to_system_settings.sql`;
-const REAL_HASH_0031 = createHash('sha256').update(readFileSync(MIGRATION_0031_FILE, 'utf-8')).digest('hex');
+const REAL_HASH_0031 = createHash('sha256')
+  .update(readFileSync(MIGRATION_0031_FILE, 'utf-8'))
+  .digest('hex');
 
 // ─── test helpers ────────────────────────────────────────────────────────────
 
@@ -34,7 +36,8 @@ function chunkValueToString(chunk: unknown): string {
   if (chunk && typeof chunk === 'object' && 'value' in chunk) {
     const v = (chunk as { value: unknown }).value;
     if (typeof v === 'string') return v;
-    if (Array.isArray(v)) return v.map((p) => typeof p === 'string' ? p : sqlFragmentToString(p)).join('');
+    if (Array.isArray(v))
+      return v.map((p) => (typeof p === 'string' ? p : sqlFragmentToString(p))).join('');
   }
   if (chunk && typeof chunk === 'object' && 'queryChunks' in chunk) {
     return sqlFragmentToString(chunk);
@@ -44,10 +47,7 @@ function chunkValueToString(chunk: unknown): string {
 
 function sqlFragmentToString(sqlFragment: unknown): string {
   if (typeof sqlFragment === 'string') return sqlFragment.trim();
-  const obj = sqlFragment as
-    | { queryChunks?: Array<unknown> }
-    | null
-    | undefined;
+  const obj = sqlFragment as { queryChunks?: Array<unknown> } | null | undefined;
   if (!obj || !Array.isArray(obj.queryChunks)) return String(sqlFragment);
   let out = '';
   for (const chunk of obj.queryChunks) {
@@ -63,9 +63,7 @@ function createMockDb(state: MockDbState) {
     : [{ name: 'id' }];
   const journalRows = [
     ...(state.realHashInJournal ? [{ hash: REAL_HASH_0031 }] : []),
-    ...(state.wrongHashInJournal
-      ? [{ hash: '66ab776775372a9034465edf2720f560ebfb8343' }]
-      : []),
+    ...(state.wrongHashInJournal ? [{ hash: '66ab776775372a9034465edf2720f560ebfb8343' }] : []),
   ];
   return {
     all: vi.fn(async (sqlFragment: unknown) => {
@@ -165,6 +163,13 @@ describe('fixupSystemSettingsCreatedAt', () => {
     expect(result.deletedWrongHash).toBe(false);
     expect(result.addedColumn).toBe(true);
     expect(result.insertedJournalEntry).toBe(true);
+
+    const statements = mockDb._runs.map((run) => run.sql);
+    const addColumn = statements.find((statement) => statement.startsWith('ALTER TABLE'));
+    const backfill = statements.find((statement) => statement.startsWith('UPDATE'));
+    expect(addColumn).toContain('DEFAULT 0');
+    expect(addColumn).not.toContain('unixepoch');
+    expect(backfill).toContain('SET created_at =');
   });
 
   test('idempotency: re-running after state 5 returns already_clean', async () => {
