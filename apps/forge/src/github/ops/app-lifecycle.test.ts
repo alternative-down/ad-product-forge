@@ -115,6 +115,7 @@ const mockCredentials = {
   getCredentials: vi.fn(),
   getActiveCredentials: vi.fn(),
   deleteCredentials: vi.fn().mockResolvedValue(undefined),
+  insertCredentialsIfAbsent: vi.fn().mockResolvedValue(true),
 };
 
 const mockDb = {
@@ -164,6 +165,8 @@ function makeCtx(overrides: Partial<OpsContext> = {}): OpsContext {
     getCredentials: mockCredentials.getCredentials as unknown as OpsContext['getCredentials'],
     getActiveCredentials: mockCredentials.getActiveCredentials as unknown as OpsContext['getActiveCredentials'],
     saveCredentials: vi.fn().mockResolvedValue(undefined),
+    deleteCredentials: mockCredentials.deleteCredentials as unknown as OpsContext['deleteCredentials'],
+    insertCredentialsIfAbsent: mockCredentials.insertCredentialsIfAbsent as unknown as OpsContext['insertCredentialsIfAbsent'],
     parseCredentials: vi.fn() as unknown as OpsContext['parseCredentials'],
     createInstallationOctokit: vi.fn() as unknown as OpsContext['createInstallationOctokit'],
     createGitHubApp: vi.fn() as unknown as OpsContext['createGitHubApp'],
@@ -272,15 +275,15 @@ describe('createAgentApp', () => {
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
     const result = await ops.createAgentApp({ agentId: 'a-1', agentName: 'Agent One' });
     expect(result).toBe(provisioningShape);
-    expect(ctx.saveCredentials).toHaveBeenCalledWith(
+    expect(mockCredentials.insertCredentialsIfAbsent).toHaveBeenCalledWith(
       'a-1',
       expect.objectContaining({ status: 'pending', state: 'test-id' }),
     );
     expect(mockOpsRouting.registerAgentRoutes).toHaveBeenCalledWith('a-1');
   });
 
-  it('throws "already exists" when credentials exist for agent', async () => {
-    mockCredentials.getCredentials.mockResolvedValue(activeCredentials);
+  it('throws "already exists" when insertCredentialsIfAbsent returns false (atomic conflict)', async () => {
+    mockCredentials.insertCredentialsIfAbsent.mockResolvedValue(false);
     const ctx = makeCtx();
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
     await expect(ops.createAgentApp({ agentId: 'a-1', agentName: 'Agent One' })).rejects.toThrow(
@@ -298,6 +301,41 @@ describe('createAgentApp', () => {
     await expect(ops.createAgentApp({ agentId: 'a-1', agentName: 'Agent One' })).rejects.toThrow(
       /not configured/,
     );
+  });
+
+  it('uses atomic insertCredentialsIfAbsent (NOT check-then-write) to avoid race', async () => {
+    // Regression test for #6799: the old createAgentApp had a TOCTOU race
+    // (findFirst then save). Two concurrent calls could both pass the null check
+    // and both insert. The new code uses insertCredentialsIfAbsent (atomic
+    // INSERT ... ON CONFLICT DO NOTHING) so the second call returns false
+    // instead of inserting a duplicate.
+    mockCredentials.getCredentials.mockResolvedValue(null);
+    mockCredentials.insertCredentialsIfAbsent.mockResolvedValue(true);
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.createAgentApp({ agentId: 'race-1', agentName: 'Race One' });
+    // getCredentials is the OLD check-then-write path. With the fix, it should
+    // NOT be called because insertCredentialsIfAbsent is atomic.
+    expect(mockCredentials.getCredentials).not.toHaveBeenCalled();
+    expect(mockCredentials.insertCredentialsIfAbsent).toHaveBeenCalledWith(
+      'race-1',
+      expect.objectContaining({ status: 'pending' }),
+    );
+  });
+
+  it('does NOT call saveCredentials (the old upsert path) in createAgentApp', async () => {
+    // Regression test for #6799: createAgentApp should use insertCredentialsIfAbsent,
+    // NOT saveCredentials. saveCredentials is the upsert path used by handleManifestCallback
+    // and handleSetupCallback. Calling it from createAgentApp re-introduces the
+    // check-then-write race because saveCredentials does findFirst+update.
+    mockCredentials.getCredentials.mockResolvedValue(null);
+    mockCredentials.insertCredentialsIfAbsent.mockResolvedValue(true);
+    (mockCredentials as unknown as { saveCredentials: ReturnType<typeof vi.fn> }).saveCredentials = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.createAgentApp({ agentId: 'race-2', agentName: 'Race Two' });
+    expect((mockCredentials as unknown as { saveCredentials: ReturnType<typeof vi.fn> }).saveCredentials).not.toHaveBeenCalled();
+    expect(mockCredentials.insertCredentialsIfAbsent).toHaveBeenCalled();
   });
 });
 
@@ -331,12 +369,13 @@ describe('getAgentProvisioning', () => {
 
   it('creates new provisioning when agent exists but has no credentials', async () => {
     mockCredentials.getCredentials.mockResolvedValue(null);
+    mockCredentials.insertCredentialsIfAbsent.mockResolvedValue(true);
     mockDb.query.agents.findFirst.mockResolvedValue({ id: 'a-1', name: 'Agent One' });
     const ctx = makeCtx();
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
     const result = await ops.getAgentProvisioning('a-1');
     expect(result).toBe(provisioningShape);
-    expect(ctx.saveCredentials).toHaveBeenCalled();
+    expect(mockCredentials.insertCredentialsIfAbsent).toHaveBeenCalled();
   });
 });
 

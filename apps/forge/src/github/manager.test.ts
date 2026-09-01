@@ -41,6 +41,7 @@ function createMockDb(overrides?: {
   agentProvidersFindFirst?: unknown;
   agentProvidersFindMany?: unknown[];
   agentsFindFirst?: unknown;
+  insertReturning?: unknown[];
 }) {
   const db = {
     query: {
@@ -54,9 +55,12 @@ function createMockDb(overrides?: {
     },
   };
 
-  (db as unknown as Record<string, unknown>).insert = vi.fn(() => ({
-    values: vi.fn().mockResolvedValue({ rowid: 1 }),
-  }));
+  // insertCredentialsIfAbsent uses raw INSERT OR IGNORE via db.run(sql...).
+  // The mock returns rowsAffected: 1 (inserted) by default, 0 (conflict)
+  // when insertReturning=[] is passed.
+  (db as unknown as Record<string, unknown>).run = vi.fn().mockResolvedValue({
+    rowsAffected: (overrides?.insertReturning === undefined || overrides.insertReturning.length > 0) ? 1 : 0,
+  });
 
   (db as unknown as Record<string, unknown>).update = vi.fn(() => ({
     set: vi.fn().mockReturnValue({
@@ -233,6 +237,8 @@ describe('createGitHubAppManager', () => {
           providerType: 'github-app',
           encryptedCredentials: 'e30=',
         },
+        // Simulate UNIQUE constraint violation: insert returns empty (conflict)
+        insertReturning: [],
       });
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
