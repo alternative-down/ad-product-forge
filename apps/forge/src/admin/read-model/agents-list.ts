@@ -24,7 +24,7 @@ import {
   createEmptyLongTermMemoryState,
   type LongTermMemoryState,
 } from '../../agents/ltm/store';
-import { listThreadMessages } from './conversation-helpers';
+import { closeLibsqlClient, listThreadMessages } from './conversation-helpers';
 import {
   toScheduleSummary as toScheduleSummaryHelper,
   extractLatestMessagePreview,
@@ -219,58 +219,62 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       return null;
     }
 
-    const conversationStore = new LibsqlConversationStore({
-      client: client,
-      tablePrefix: mastraAgentId,
-    });
-    const settings = await systemSettings.getSettings();
+    try {
+      const conversationStore = new LibsqlConversationStore({
+        client: client,
+        tablePrefix: mastraAgentId,
+      });
+      const settings = await systemSettings.getSettings();
 
-    const operationalMemoryState = await readOperationalMemoryState({
-      threadId: mastraAgentId,
-      store: conversationStore,
-      recentTokenLimit: settings.checkpointedOmRecentRawTokens,
-    });
-    const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
-    const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
+      const operationalMemoryState = await readOperationalMemoryState({
+        threadId: mastraAgentId,
+        store: conversationStore,
+        recentTokenLimit: settings.checkpointedOmRecentRawTokens,
+      });
+      const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
+      const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
 
-    const _runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
-      ? await withTimeoutAndLog({
-          scope: 'admin-read-model-agents-list',
-          op: 'runtimeLtmSnapshot',
-          promise: loadedAgent.runtime.longTermMemory.readSnapshot(),
-          timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-          timeoutMessage: `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-          fallback: null,
-        })
-      : null;
+      const runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
+        ? await withTimeoutAndLog({
+            scope: 'admin-read-model-agents-list',
+            op: 'runtimeLtmSnapshot',
+            promise: loadedAgent.runtime.longTermMemory.readSnapshot(),
+            timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            timeoutMessage: `Agent runtime memory LTM snapshot timed out for ${agentId}`,
+            fallback: null,
+          })
+        : null;
 
-    const rawMetrics = operationalMemoryState.metrics;
-    const recentRawLimit = settings.checkpointedOmRecentRawTokens ?? 0;
-    const observationTriggerLimit = settings.checkpointedOmRawObservationBatchTokens ?? 0;
-    const reflectionTriggerLimit = settings.checkpointedOmObservationReflectionBatchTokens ?? 0;
-    const totalTokens = settings.checkpointedOmTotalContextTokens ?? 0;
-    return {
-      generationCount,
-      checkpointGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? 0,
-      metrics: {
-        recentRawTokenCount: rawMetrics?.recentRawTokenCount ?? 0,
-        recentRawTokenLimit: recentRawLimit,
-        overflowTokenCount: rawMetrics?.overflowTokenCount ?? 0,
-        observationTriggerTokenLimit: observationTriggerLimit,
-        observationTokenCount: rawMetrics?.observationTokenCount ?? 0,
-        reflectionTriggerTokenLimit: reflectionTriggerLimit,
-        reflectionTokenCount: rawMetrics?.reflectionTokenCount ?? 0,
-        reflectionBudget: Math.max(0, totalTokens - recentRawLimit),
-        checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
-      },
-      ltm:
-        _runtimeLtmSnapshot !== null
-          ? {
-              running: (_runtimeLtmSnapshot as { running?: boolean }).running ?? false,
-              queued: (_runtimeLtmSnapshot as { queued?: boolean }).queued ?? false,
-            }
-          : null,
-    };
+      const rawMetrics = operationalMemoryState.metrics;
+      const recentRawLimit = settings.checkpointedOmRecentRawTokens ?? 0;
+      const observationTriggerLimit = settings.checkpointedOmRawObservationBatchTokens ?? 0;
+      const reflectionTriggerLimit = settings.checkpointedOmObservationReflectionBatchTokens ?? 0;
+      const totalTokens = settings.checkpointedOmTotalContextTokens ?? 0;
+      return {
+        generationCount,
+        checkpointGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? 0,
+        metrics: {
+          recentRawTokenCount: rawMetrics?.recentRawTokenCount ?? 0,
+          recentRawTokenLimit: recentRawLimit,
+          overflowTokenCount: rawMetrics?.overflowTokenCount ?? 0,
+          observationTriggerTokenLimit: observationTriggerLimit,
+          observationTokenCount: rawMetrics?.observationTokenCount ?? 0,
+          reflectionTriggerTokenLimit: reflectionTriggerLimit,
+          reflectionTokenCount: rawMetrics?.reflectionTokenCount ?? 0,
+          reflectionBudget: Math.max(0, totalTokens - recentRawLimit),
+          checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
+        },
+        ltm:
+          runtimeLtmSnapshot !== null
+            ? {
+                running: (runtimeLtmSnapshot as { running?: boolean }).running ?? false,
+                queued: (runtimeLtmSnapshot as { queued?: boolean }).queued ?? false,
+              }
+            : null,
+      };
+    } finally {
+      await closeLibsqlClient(client);
+    }
   }
 
   // ── Codification: L#NN-XXX sub-concern decomposition ────────────────────────
