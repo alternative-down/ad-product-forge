@@ -30,7 +30,6 @@ function bootstrapDebug(
   forgeDebug({ scope: 'forge-bootstrap', level, message, context });
 }
 
-
 /**
  * Always-emit startup log. Unlike forgeDebug, this writes to console.log
  * regardless of FORGE_DEBUG environment variable. This is a FAILSAFE for
@@ -46,7 +45,6 @@ function consoleStartupLog(message: string, context?: Record<string, unknown>): 
     console.log(`[forge-startup] ${message}`);
   }
 }
-
 
 /**
  * Decode a Base64-encoded admin API key.
@@ -108,12 +106,12 @@ export async function createForgeBootstrap() {
     allowInsecureLocal: env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL,
   });
   bootstrapDebug('info', 'bootstrap: env parsed', {
-      port: env.FORGE_HTTP_PORT,
-      dataPath: env.FORGE_DATA_PATH,
-      workspaceBasePath: env.WORKSPACE_BASE_PATH,
-      adminApiKeyConfigured: env.FORGE_ADMIN_API_KEY !== undefined,
-      allowInsecureLocal: env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL,
-    });
+    port: env.FORGE_HTTP_PORT,
+    dataPath: env.FORGE_DATA_PATH,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    adminApiKeyConfigured: env.FORGE_ADMIN_API_KEY !== undefined,
+    allowInsecureLocal: env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL,
+  });
 
   const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
   const allowInsecureLocal =
@@ -143,16 +141,18 @@ export async function createForgeBootstrap() {
     throw err;
   }
   bootstrapDebug('info', 'bootstrap: migrations complete');
-  // D56 Sprint 0: cleanupFixupJournalEntry runs INSIDE runMigrations.
-  // No automatic fixup script. Manual fixup at POST /admin/system/fixup-columns.
-  // See #6722, #6725.
+  // runMigrations repairs system_settings.created_at drift before deciding
+  // which journal entries can be skipped. The manual admin endpoint remains
+  // available for operator verification and remediation.
   try {
     await prepareAgentEmbeddersForStartup({
       db,
       workspaceBasePath: env.WORKSPACE_BASE_PATH,
     });
   } catch (err) {
-    bootstrapDebug('warn', 'bootstrap: prepareAgentEmbeddersForStartup FAILED (continuing)', { error: errorMsg(err) });
+    bootstrapDebug('warn', 'bootstrap: prepareAgentEmbeddersForStartup FAILED (continuing)', {
+      error: errorMsg(err),
+    });
   }
   bootstrapDebug('info', 'bootstrap: agent embedders ready');
 
