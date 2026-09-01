@@ -145,6 +145,8 @@ export interface ExecuteStepDeps {
   usage: AgentRunnerUsage;
   notifications: AgentNotificationStore;
   homeMetricSnapshots: AgentHomeMetricSnapshotStore;
+  workspaceBasePath?: string;
+  getRunnerSnapshot: () => unknown;
   runLastMessages: number;
   currentGenerateAbortController: AbortController | null;
   setCurrentGenerateAbortController: (c: AbortController | null) => void;

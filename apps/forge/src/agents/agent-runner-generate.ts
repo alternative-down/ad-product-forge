@@ -34,8 +34,7 @@ import {
   buildStepSystemPrompt,
 
 } from './agent-runner-control-directives';
-import { createId } from '../utils/id';
-import { isStaleRun, resetBackoff, calculateDelayMs } from './agent-runner-state';
+import { isStaleRun, resetBackoff } from './agent-runner-state';
 import {
   startGenerateAttempt,
   finishGenerateAttempt,
@@ -45,6 +44,8 @@ import {
   buildIterationFeedback,
 } from './agent-runner-feedback';
 import { buildIterationLoopSignature } from './agent-runner-iteration-helpers';
+import { didIterationUpdateWorkingMemory } from './agent-runner-iteration-helpers';
+import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { agentRunnerDebug } from './agent-runner-debug';
 import { errorMsg } from './error-formatting';
 import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
@@ -151,6 +152,8 @@ export interface GenerateDeps {
   usage: AgentRunnerUsage;
   notifications: AgentNotificationStore;
   homeMetricSnapshots: AgentHomeMetricSnapshotStore;
+  workspaceBasePath?: string;
+  getRunnerSnapshot: () => unknown;
 
   // Messaging
   messageManager: MessageManager;
@@ -244,11 +247,7 @@ export async function generateWithTimeoutRetries(
       : null,
   ].filter((value): value is { role: 'assistant' | 'user'; content: string } => Boolean(value));
 
-  const _runDelayMs = calculateDelayMs(deps.backoffState, {
-    hasPendingMessages: false,
-    stopRequested: false,
-    hasNewEvents: false,
-  });
+  const runDelayMs = Math.max(await deps.scheduler.planNextStepDelay(), 0);
   let suppressNoToolCallReminderForRun = false;
   for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
@@ -289,11 +288,90 @@ export async function generateWithTimeoutRetries(
           abortSignal: controller.signal,
           maxSteps: GENERATE_MAX_STEPS_PER_RUN,
           runId: deps.activeRunId !== null ? deps.activeRunId : `${deps.runtime.id}:${runEpoch}`,
+          savePerStep: true,
+          memory: {
+            thread: deps.currentRuntime.mastraId,
+            resource: deps.currentRuntime.mastraId,
+            options: {
+              lastMessages: deps.runLastMessages,
+            },
+          },
+          providerOptions: {
+            anthropic: {
+              thinking: { type: 'enabled', budgetTokens: 2_000 },
+            },
+          },
+          prepareStep: async ({ stepNumber }) => {
+            deps.markGenerateProgress(timeout, controller, {
+              stage: 'prepare-step',
+              detail: { stepNumber },
+            });
+
+            if (stepNumber > 0 && runDelayMs > 0) {
+              await delay(runDelayMs);
+            }
+          },
+          onStepFinish: async (stepResult) => {
+            deps.markGenerateProgress(timeout, controller, {
+              stage: 'step-finished',
+              detail: { usage: stepResult.usage ?? null },
+            });
+            deps.progressState.lastStepStage = 'recording-agent-usage';
+            const { inputTokens, cachedInputTokens, outputTokens } =
+              deps.usage.getUsageFromResult(stepResult);
+            const recordedStep = await withTimeout(
+              deps.usage.recordAgentStep(
+                contractId,
+                inputTokens,
+                cachedInputTokens,
+                outputTokens,
+              ),
+              RUNNER_AWAIT_TIMEOUT_MS,
+              `Agent usage recording timed out for ${deps.runtime.id}`,
+            );
+
+            if (!deps.workspaceBasePath || !recordedStep) {
+              return;
+            }
+
+            const snapshot = await readAgentHomeMetricSnapshot({
+              db: deps.db,
+              workspaceBasePath: deps.workspaceBasePath,
+              agentId: deps.currentRuntime.id,
+              runtime: deps.currentRuntime,
+              runnerSnapshot: deps.getRunnerSnapshot() as never,
+            });
+
+            if (snapshot) {
+              await deps.homeMetricSnapshots.recordSnapshot({
+                agentId: deps.currentRuntime.id,
+                stepId: recordedStep.stepId,
+                stepCreatedAt: recordedStep.createdAt,
+                snapshot: {
+                  ...snapshot,
+                  omTrace: stepResult.omTrace ?? [],
+                },
+              });
+            }
+          },
           onIterationComplete: async (iteration) => {
             iterationState.current = iteration;
             const signature = buildIterationLoopSignature(iteration);
             deps.setLoopSignature(signature);
             deps.loopDetector.register(signature);
+            if (didIterationUpdateWorkingMemory(iteration)) {
+              deps.messageManager.appendPendingRunMessages([
+                {
+                  type: 'runner-working-memory-update',
+                  groupKey: `runner-working-memory-update:${deps.runtime.id}`,
+                  groupMetadata: { Source: 'runner' },
+                  idempotencyKey: `runner-working-memory-update:${deps.runtime.id}:${Date.now()}`,
+                  itemMetadata: { Kind: 'working-memory-update' },
+                  text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
+                  timestamp: Date.now(),
+                },
+              ]);
+            }
             deps.markGenerateProgress(timeout, controller, {
               stage: 'iteration-completed',
               detail: {
@@ -344,30 +422,6 @@ export async function generateWithTimeoutRetries(
       finishGenerateAttempt(generateToken, controller, deps);
 
       const { usage: { inputTokens = 0, outputTokens = 0 } = {} } = result ?? {};
-
-      // Record usage
-      void withTimeout(
-        deps.usage.recordAgentStep(
-          contractId,
-          inputTokens,
-          inputTokens, // cachedInputTokens — use inputTokens as approximation
-          outputTokens,
-        ),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent usage recording timed out for ${deps.runtime.id}`,
-      );
-
-      // Record home metric snapshot
-      void withTimeout(
-        deps.homeMetricSnapshots.recordSnapshot({
-          agentId: deps.runtime.id,
-          stepId: createId(),
-          stepCreatedAt: Date.now(),
-          snapshot: deps.currentRuntime,
-        }),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent home metric snapshot timed out for ${deps.runtime.id}`,
-      );
 
       if (isStaleRun(deps.epochState, runEpoch)) {
         return undefined;

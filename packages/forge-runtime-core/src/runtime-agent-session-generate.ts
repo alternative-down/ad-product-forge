@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions, reexport-check/no-unnecessary-reexports */
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -297,15 +297,7 @@ function summarizeGenerateRequest(input: {
       0,
     ),
     toolSchemaChars: input.actions.reduce(
-      (total, action) =>
-        total +
-        JSON.stringify(
-          zodToJsonSchema(
-            action.inputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
-          ),
-          null,
-          2,
-        ).length,
+      (total, action) => total + JSON.stringify(z.toJSONSchema(action.inputSchema)).length,
       0,
     ),
   };

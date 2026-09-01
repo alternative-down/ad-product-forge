@@ -493,14 +493,57 @@ describe('LibsqlConversationStore', () => {
         replacedByMessageId: 'checkpoint-b',
       });
 
-      // Latest null-terminal checkpoint-summary is checkpoint-b (rowid=10)
-      // SQL seed: rowid < 10 includes raw-a through ref-b
-      // Chain walks: raw-a→obs-a→ref-a→checkpoint-a→ref-b→checkpoint-b (null terminal)
+      // The active window begins at the latest checkpoint and excludes its source history.
       await expect(
         store.listOperationalMemoryMessages({
           threadId: 'thread-2',
         }),
       ).resolves.toMatchObject([{ id: 'checkpoint-b' }]);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('returns the latest checkpoint and messages created after it', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({ url: 'file:' + databasePath });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_checkpoint_boundary',
+    });
+
+    try {
+      await store.appendMessage({
+        id: 'old-message',
+        threadId: 'thread-boundary',
+        role: 'user',
+        parts: [{ type: 'text', text: 'old' }],
+        createdAt: '2026-04-21T00:00:01.000Z',
+      });
+      await store.appendMessage({
+        id: 'checkpoint',
+        threadId: 'thread-boundary',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'summary' }],
+        operationalMemoryType: 'checkpoint-summary',
+        operationalMemoryGeneration: 1,
+        createdAt: '2026-04-21T00:00:02.000Z',
+      });
+      await store.appendMessage({
+        id: 'new-message',
+        threadId: 'thread-boundary',
+        role: 'user',
+        parts: [{ type: 'text', text: 'new' }],
+        createdAt: '2026-04-21T00:00:03.000Z',
+      });
+
+      const messages = await store.listOperationalMemoryMessages({
+        threadId: 'thread-boundary',
+      });
+
+      expect(messages.map((message) => message.id)).toEqual(['checkpoint', 'new-message']);
     } finally {
       await client.close();
     }
