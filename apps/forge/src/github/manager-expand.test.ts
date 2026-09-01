@@ -109,6 +109,7 @@ function buildConfig(
       },
       insert: vi.fn(() => ({ values: vi.fn(), returning: vi.fn().mockResolvedValue({}) })),
       update: vi.fn(() => ({ set: vi.fn(), where: vi.fn().mockResolvedValue({}) })),
+      delete: vi.fn(() => ({ where: vi.fn().mockResolvedValue({}) })),
     },
     httpServer: {
       registerRoute: vi.fn(),
