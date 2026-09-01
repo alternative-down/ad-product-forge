@@ -10,17 +10,28 @@ vi.mock('@forge-runtime/core', () => ({
     debugCalls.push({ scope, level, message, context });
   }),
 
-    errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
-    withToolErrorLogging: vi.fn(async (params) => {
-      try {
-        return { valid: true, data: await params.fn() };
-      } catch (error) {
-        // Mirror the real impl: use errorMsg-style formatting
-        const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
-        return { valid: false, error: msg, hint: params.hint || '' };
-      }
-    }),
-  }));
+  errorMsg: vi.fn((err) =>
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err).replace(/^Error: /, ''),
+  ),
+  withToolErrorLogging: vi.fn(async (params) => {
+    try {
+      return { valid: true, data: await params.fn() };
+    } catch (error) {
+      // Mirror the real impl: use errorMsg-style formatting
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : String(error).replace(/^Error: /, '');
+      return { valid: false, error: msg, hint: params.hint || '' };
+    }
+  }),
+}));
 
 vi.mock('drizzle-orm/migrator', () => ({
   readMigrationFiles: readMigrationFilesMock,
@@ -52,7 +63,6 @@ function extractSqlText(sqlOrString: unknown): string {
   return out.trim();
 }
 
-
 describe('runMigrations', () => {
   beforeEach(() => {
     debugCalls.length = 0;
@@ -73,9 +83,28 @@ describe('runMigrations', () => {
 
     const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
     const createdTable = runCalls.some((stmt) =>
-      extractSqlText(stmt).toUpperCase().includes('CREATE TABLE IF NOT EXISTS __DRIZZLE_MIGRATIONS')
+      extractSqlText(stmt)
+        .toUpperCase()
+        .includes('CREATE TABLE IF NOT EXISTS __DRIZZLE_MIGRATIONS'),
     );
     expect(createdTable).toBe(true);
+  });
+
+  test('repairs system_settings.created_at before recording migration 0031', async () => {
+    await runMigrations(mockDb);
+
+    const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((call) =>
+      extractSqlText(call[0]).toUpperCase(),
+    );
+    const addColumnIndex = runCalls.findIndex((statement) =>
+      statement.includes('ALTER TABLE') && statement.includes('ADD COLUMN'),
+    );
+    const journalInsertIndex = runCalls.findIndex((statement) =>
+      statement.includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
+    );
+
+    expect(addColumnIndex).toBeGreaterThan(-1);
+    expect(journalInsertIndex).toBeGreaterThan(addColumnIndex);
   });
 
   test('logs info messages through forgeDebug', async () => {
@@ -132,7 +161,7 @@ describe('runMigrations', () => {
     await runMigrations(mockDb);
 
     const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
-      extractSqlText(c[0])
+      extractSqlText(c[0]),
     );
     expect(runCalls).toContain('CREATE TABLE foo (id text);');
     expect(runCalls).toContain('CREATE INDEX foo_idx ON foo (id);');
@@ -141,7 +170,7 @@ describe('runMigrations', () => {
     //   - 1 from cleanupFixupJournalEntry (real hash for migration 0031)
     //   - 2 from the migration loop (one per applied migration)
     const insertedMigrations = runCalls.filter((stmt) =>
-      stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS')
+      stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
     );
     expect(insertedMigrations.length).toBe(3);
   });
@@ -158,7 +187,7 @@ describe('runMigrations', () => {
     await runMigrations(mockDb);
 
     const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
-      extractSqlText(c[0])
+      extractSqlText(c[0]),
     );
     expect(runCalls).not.toContain('CREATE TABLE foo (id text);');
     expect(runCalls).toContain('CREATE TABLE bar (id text);');
@@ -177,14 +206,14 @@ describe('runMigrations', () => {
     await runMigrations(mockDb);
 
     const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
-      extractSqlText(c[0])
+      extractSqlText(c[0]),
     );
     expect(runCalls).toContain('CREATE TABLE baz (id text);');
-    // The bookkeeping INSERT should still happen once.
+    // One INSERT records the system_settings fixup and one records this migration.
     const insertedMigrations = runCalls.filter((stmt) =>
-      stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS')
+      stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
     );
-    expect(insertedMigrations.length).toBe(1);
+    expect(insertedMigrations.length).toBe(2);
   });
 
   test('logs error with context when migrate throws', async () => {

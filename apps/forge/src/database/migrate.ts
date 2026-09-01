@@ -2,11 +2,11 @@ import { errorMsg } from '../agents/error-formatting';
 import { migrationsDebug } from './migrations-debug';
 import 'node:process';
 
-
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
+import { fixupSystemSettingsCreatedAt } from './fixup-system-settings';
 
 // ─── queryAppliedMigrations ─────────────────────────────────────────────────
 /**
@@ -43,71 +43,23 @@ async function queryAppliedMigrations(
 import { findMigrationsFolder } from './find-migrations-folder';
 export { findMigrationsFolder };
 
-// ─── cleanupFixupJournalEntry (D56 Sprint 0, #6722 retry) ────────────────────────
-/**
- * Idempotent fixup for a stale journal entry left over from PR #6723's
- * startup fixup-missing-columns.ts script.
- *
- * Background (L#NN-Drizzle-Hash-Includes-Comments v1, postmortem #6725):
- * PR #6723 inserted a wrong Drizzle hash into __drizzle_migrations
- * (truncated SHA-256 of cleaned SQL, value 66ab7767753...). Drizzle's
- * readMigrationFiles actually uses SHA-256 of the FULL SQL file with
- * comments, producing 0eaf0e90... for migration 0031. The wrong-hash
- * entry had created_at 1775481600000, well before 0031's folderMillis
- * 1781902527000. Without this fixup, the migrator below would re-apply
- * 0031 (ALTER TABLE ADD COLUMN created_at), fail with 'duplicate column',
- * and crash startup with HTTP 503.
- *
- * This runs BEFORE the main loop, so by the time 0031 is reached,
- * lastDbMigration.created_at is >= 0031.folderMillis and 0031 is skipped.
- *
- * Idempotent: re-runs are no-ops if state is already correct.
- * Safe: runs on every startup, only acts if needed.
- */
-async function cleanupFixupJournalEntry(
-  db: LibSQLDatabase<Record<string, unknown>>,
-): Promise<void> {
-  const WRONG_HASH = '66ab776775372a9034465edf2720f560ebfb8343';
-  const REAL_HASH_0031 = '0eaf0e90f17d12a64a579dd9e6edfb7338f3cc4ec78c6462da8fe3d9c4c262b6';
-  const FOLDER_MILLIS_0031 = 1781902527000;
-
-  const wrong = await db.all<{ id: number }>(
-    sql`SELECT id FROM __drizzle_migrations WHERE hash = ${WRONG_HASH}`,
-  );
-  if (wrong.length > 0) {
-    await db.run(
-      sql`DELETE FROM __drizzle_migrations WHERE hash = ${WRONG_HASH}`,
-    );
-    migrationsDebug('info', 'cleanupFixupJournalEntry: removed wrong hash', { wrongHash: WRONG_HASH });
-  }
-
-  const correct = await db.all<{ id: number }>(
-    sql`SELECT id FROM __drizzle_migrations WHERE hash = ${REAL_HASH_0031}`,
-  );
-  if (correct.length === 0) {
-    await db.run(
-      sql`INSERT INTO __drizzle_migrations ("hash", "created_at") VALUES(${REAL_HASH_0031}, ${FOLDER_MILLIS_0031})`,
-    );
-    migrationsDebug('info', 'cleanupFixupJournalEntry: inserted correct 0031 hash', {
-      hash: REAL_HASH_0031,
-      folderMillis: FOLDER_MILLIS_0031,
-    });
-  }
-}
-
 export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>): Promise<void> {
   // Use import.meta.dirname (Node 20+, ESM) instead of process.cwd() so the
-// path resolves correctly regardless of the cwd from which the app is launched.
+  // path resolves correctly regardless of the cwd from which the app is launched.
   // Use findMigrationsFolder(import.meta.dirname) to walk up from this file to
   // the migrations folder. Works in dev (src/database/ -> apps/forge/migrations/
   // in 2 levels) and bundled (dist/database/ -> dist/migrations/ in 1 level).
   // Replaces the previous hardcoded .., .. which only worked in dev and was
   // exposed as a production bug by tsup bundling (see #5674 P0).
-const migrationsFolder = findMigrationsFolder(import.meta.dirname);
+  const migrationsFolder = findMigrationsFolder(import.meta.dirname);
   const databasePath = getAppDatabasePath();
 
   try {
-    migrationsDebug('info', 'Starting migration run', { databasePath, cwd: process.cwd(), migrationsFolder });
+    migrationsDebug('info', 'Starting migration run', {
+      databasePath,
+      cwd: process.cwd(),
+      migrationsFolder,
+    });
 
     // Ensure the __drizzle_migrations bookkeeping table exists. We use the
     // same shape as drizzle's migrator so existing deployments continue to
@@ -120,13 +72,16 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
       )
     `);
 
+    await fixupSystemSettingsCreatedAt(db, { migrationsFolder });
+
     const dbMigrations = await queryAppliedMigrations(db, 1);
 
     const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
     const allMigrations = readMigrationFiles({ migrationsFolder });
 
-    await cleanupFixupJournalEntry(db);  // D56 Sprint 0 (#6722): idempotent journal cleanup before main loop
-    migrationsDebug('info', 'Applied rows before migrate', { appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' } });
+    migrationsDebug('info', 'Applied rows before migrate', {
+      appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' },
+    });
 
     // Apply each pending migration one statement at a time.
     //
@@ -156,30 +111,30 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
         await db.run(sql.raw(trimmed));
       }
       await db.run(
-        sql`INSERT INTO __drizzle_migrations ("hash", "created_at") VALUES(${migration.hash}, ${migration.folderMillis})`
+        sql`INSERT INTO __drizzle_migrations ("hash", "created_at") VALUES(${migration.hash}, ${migration.folderMillis})`,
       );
       appliedHashes.push(migration.hash.slice(0, 8));
       appliedCount += 1;
     }
 
     migrationsDebug('info', 'Migrations completed', {
-        appliedCount,
-        appliedHashes,
-        totalMigrations: allMigrations.length,
-      });
+      appliedCount,
+      appliedHashes,
+      totalMigrations: allMigrations.length,
+    });
 
     const dbMigrationsAfter = await queryAppliedMigrations(db, 10);
 
     migrationsDebug('info', 'Applied rows after migrate', {
-        appliedRows: Array.isArray(dbMigrationsAfter) ? dbMigrationsAfter : { error: 'query failed' },
-        newlyApplied: appliedCount,
-      });
+      appliedRows: Array.isArray(dbMigrationsAfter) ? dbMigrationsAfter : { error: 'query failed' },
+      newlyApplied: appliedCount,
+    });
     migrationsDebug('info', 'Migrations completed successfully');
   } catch (error) {
     migrationsDebug('error', 'Failed to run migrations', { error: errorMsg(error) });
     let appliedRowsAtFailure: unknown = { error: 'pre-init' };
     try {
-      appliedRowsAtFailure = (await db.all<{ id: number; hash: string; createdAt: number }>(sql`
+      appliedRowsAtFailure = await db.all<{ id: number; hash: string; createdAt: number }>(sql`
         select
           id,
           hash,
@@ -187,7 +142,7 @@ const migrationsFolder = findMigrationsFolder(import.meta.dirname);
         from __drizzle_migrations
         order by created_at desc
         limit 10
-      `));
+      `);
     } catch (innerError) {
       appliedRowsAtFailure = { error: errorMsg(innerError) };
     }
