@@ -58,6 +58,7 @@ const baseCtx = (): any => ({
   getCredentials: vi.fn() as unknown as OpsContext['getCredentials'],
   getActiveCredentials: vi.fn() as unknown as OpsContext['getActiveCredentials'],
   saveCredentials: vi.fn() as unknown as OpsContext['saveCredentials'],
+  deleteCredentials: vi.fn() as unknown as OpsContext['deleteCredentials'],
   parseCredentials: vi.fn() as unknown as OpsContext['parseCredentials'],
   createInstallationOctokit: vi.fn() as unknown as OpsContext['createInstallationOctokit'],
   createGitHubApp: vi.fn() as unknown as OpsContext['createGitHubApp'],

@@ -51,6 +51,7 @@ export interface GithubOpsAuth {
     agentId: string,
   ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
+  deleteCredentials: (agentId: string) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
   createInstallationOctokit: (
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
@@ -137,6 +138,7 @@ export interface OpsContext {
     agentId: string,
   ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
+  deleteCredentials: (agentId: string) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
   createInstallationOctokit: (
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,

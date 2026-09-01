@@ -26,12 +26,13 @@ export interface CredentialsOps {
     agentId: string,
   ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
+  deleteCredentials: (agentId: string) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
 }
 
 export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
   const credentialsOpsDebug = (
-    level: 'warn' | 'error',
+    level: 'info' | 'warn' | 'error',
     message: string,
     context?: Record<string, unknown>,
   ): void => {
@@ -93,6 +94,26 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
     await ctx.config.db.insert(agentProviders).values(providerRecord);
   }
 
+  async function deleteCredentials(agentId: string) {
+    const existing = await ctx.config.db.query.agentProviders.findFirst({
+      where: and(
+        eq(agentProviders.agentId, agentId),
+        eq(agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE),
+      ),
+    });
+
+    if (existing === null || existing === undefined) {
+      credentialsOpsDebug('warn', 'deleteCredentials: no credentials found', { agentId });
+      return;
+    }
+
+    await ctx.config.db
+      .delete(agentProviders)
+      .where(eq(agentProviders.id, existing.id));
+
+    credentialsOpsDebug('info', 'deleteCredentials: removed credentials for agent', { agentId });
+  }
+
   function parseCredentials(encryptedCredentials: string) {
     try {
       const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
@@ -108,5 +129,6 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
     getActiveCredentials,
     saveCredentials,
     parseCredentials,
+    deleteCredentials,
   };
 }
