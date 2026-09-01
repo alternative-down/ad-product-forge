@@ -136,11 +136,14 @@ export async function loadAgentContextContent(
     return null;
   }
 
-  const text = typeof content === 'string' ? content : content.toString('utf-8');
+  const text = (typeof content === 'string' ? content : content.toString('utf-8')).trim();
+  if (text.length === 0) {
+    return null;
+  }
   if (text.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
     return (
-      text.slice(0, AGENT_CONTEXT_WARNING_CHAR_LIMIT) +
-      `\n\n[... truncated ${text.length - AGENT_CONTEXT_WARNING_CHAR_LIMIT} chars, full context in workspace file]`
+      `Context pressure warning: \`AGENT_CONTEXT.md\` is getting large (${text.length} chars, limit ${AGENT_CONTEXT_WARNING_CHAR_LIMIT}). Trim or summarize to stay under the limit.\n\n` +
+      text
     );
   }
   return text;
