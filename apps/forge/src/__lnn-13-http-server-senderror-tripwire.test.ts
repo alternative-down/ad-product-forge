@@ -15,17 +15,18 @@
  *   1. HAS the `sendError` helper at file scope
  *   2. Does NOT contain any `res.writeHead(<4xx|5xx>)` outside `sendError`
  *   3. Does NOT contain any chained `.writeHead(<4xx|5xx>)` outside `sendError`
- *   4. Has exactly 8 `sendError(...)` call sites (one per error site)
+ *   4. Has exactly 7 `sendError(...)` call sites (consolidated, D63)
  *
- * The 8 sites (per L#NN-27c + Thoren dispatch DM 09:00Z):
- *   1. 400 'Missing request data' (chained .writeHead, line 158)
- *   2. 404 'Not found' (chained .writeHead, line 177)
- *   3. 503 'Admin auth not configured' (line 190)
- *   4. 401 'Invalid admin API key' (line 207)
- *   5. 429 'Too many requests' (line 223)
- *   6. 413 'Request body too large' (line 238)
- *   7. 400 ZodError 'Invalid request' (line 286)
- *   8. 500 errorMsg (line 309)
+ * The 7 sites (D63 consolidation: 401/503/429 unified via verifyAdminApiKey denied.body):
+ *   1. 400 'Missing request data' (line 209, multi-line)
+ *   2. 404 'Not found' (line 270)
+ *   3. 401/503/429 'denied' (line 282, unified via denied.status/body)
+ *   4. 413 'Request body too large' (line 309, multi-line)
+ *   5. 400 ZodError 'Invalid request' (line 361, multi-line)
+ *   6. 500 errorMsg (line 380)
+ *
+ * (Previous count was 8: separate 401/503/429 sites were consolidated in D58-D63 refactor.
+ *  This tripwire tracks current state, not historical.)
  *
  * Mutation protocol (L#26 v1+v2+v3):
  *   - Revert one site to raw `res.writeHead(400, ...)`, tripwire fails
@@ -110,7 +111,7 @@ const SAFE_CALL_NOGLOBAL = /sendError\s*\(\s*res\s*,/;
 // EXPECTED: 8 call sites per the issue inventory
 // =============================================================================
 
-const EXPECTED_CALL_SITES = 8;
+const EXPECTED_CALL_SITES = 7;
 
 // =============================================================================
 // TESTS
