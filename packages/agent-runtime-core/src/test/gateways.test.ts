@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LocalBashWorkspaceGateway } from '../integrations/gateways/local-bash-workspace.js';
 
@@ -88,7 +88,13 @@ describe('LocalBashWorkspaceGateway', () => {
     const started = await gateway.startBackground!({
       command: 'printf "hello\\n"; sleep 5; printf "done\\n"',
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await vi.waitFor(async () => {
+      const output = await gateway.getProcessOutput!({
+        pid: started.pid,
+        tail: 10,
+      });
+      expect(output.stdout).toContain('hello');
+    });
     const output = await gateway.getProcessOutput!({
       pid: started.pid,
       tail: 10,
