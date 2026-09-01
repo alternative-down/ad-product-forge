@@ -112,6 +112,9 @@ export function createAgentRunner(
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(notifyExternalEvent);
     options.onRuntimeReloaded?.(nextRuntime);
+    agentRunnerDebug('info', 'disposing previous runtime after reload', {
+      runtimeId: runtime.id,
+    });
     await rt(
       previousRuntime.dispose(),
       `Previous agent runtime disposal timed out for ${runtime.id}`,
