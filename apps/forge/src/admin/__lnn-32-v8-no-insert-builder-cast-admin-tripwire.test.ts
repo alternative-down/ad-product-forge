@@ -17,6 +17,7 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readSource, relativeToHere } from '../tripwire-helpers';  // D63 tripwire-helpers adoption (L#NN-32 v8)
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
