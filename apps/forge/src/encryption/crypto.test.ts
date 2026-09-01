@@ -19,13 +19,17 @@ describe('crypto', () => {
   // ── missing key ─────────────────────────────────────────────────────────
   describe('when ENCRYPTION_KEY is absent', () => {
     it('encryptSecret throws with required message', async () => {
-      process.env.ENCRYPTION_KEY = '';
+      // Unset env → ENCRYPTION_KEY becomes null via `?? null` → throws required.
+      delete process.env.ENCRYPTION_KEY;
+      vi.resetModules();
       const { encryptSecret: fn } = await import('./crypto');
       expect(() => fn('hello')).toThrow('ENCRYPTION_KEY environment variable is required');
     });
 
     it('decryptSecret throws with required message', async () => {
-      process.env.ENCRYPTION_KEY = '';
+      // Unset env → ENCRYPTION_KEY becomes null via `?? null` → throws required.
+      delete process.env.ENCRYPTION_KEY;
+      vi.resetModules();
       const { decryptSecret: fn } = await import('./crypto');
       expect(() => fn('abc')).toThrow('ENCRYPTION_KEY environment variable is required');
     });
