@@ -35,11 +35,7 @@ interface AgentsReadModelDeps {
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
-  const {
-    db,
-    finance,
-    internalChat,
-    workspaceBasePath,  } = deps;
+  const { db, finance, internalChat, workspaceBasePath } = deps;
 
   const registry = getInternalAgentRegistry();
 
@@ -140,13 +136,14 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     const rows = await db.query.agentExecutionSteps.findMany({
       where: eq(agentExecutionSteps.agentId, input.agentId),
       orderBy: desc(agentExecutionSteps.createdAt),
-      limit: input.limit,
+      limit: input.limit + 1,
       offset: input.offset,
     });
-    return rows.map((row) => {
+    const items = rows.slice(0, input.limit).map((row) => {
       const { id, ...rest } = row;
       return { ...rest, stepId: id };
     });
+    return { items, hasMore: rows.length > input.limit };
   }
 
   const debugRM = createAgentDebugReadModel({

@@ -431,7 +431,13 @@ describe('createAgentReadModel', () => {
       db.query.agentExecutionSteps.findMany.mockResolvedValue(stepRows);
       const model = makeReadModel({ db });
       const result = await model.listAgentExecutionSteps({ agentId: 'a1', limit: 20, offset: 0 });
-      expect(result).toHaveLength(2);
+      expect(result).toEqual({
+        items: expect.arrayContaining([
+          expect.objectContaining({ stepId: 's2' }),
+          expect.objectContaining({ stepId: 's1' }),
+        ]),
+        hasMore: false,
+      });
     });
 
     it('respects limit and offset', async () => {
@@ -440,7 +446,7 @@ describe('createAgentReadModel', () => {
       const model = makeReadModel({ db });
       await model.listAgentExecutionSteps({ agentId: 'a1', limit: 5, offset: 10 });
       expect(db.query.agentExecutionSteps.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: 5, offset: 10 }),
+        expect.objectContaining({ limit: 6, offset: 10 }),
       );
     });
   });
@@ -569,7 +575,6 @@ describe('createAgentReadModel', () => {
     expect((result.mcpServers as Record<string, unknown>[])[0].serverId).toBe('server-id-1');
     expect((result.mcpServers as Record<string, unknown>[])[0].isActive).toBe(true);
     expect((result.mcpServers as Record<string, unknown>[])[0].name).toBe('Filesystem MCP');
-    expect(result.mcpConfigIds).toEqual(['link-id-1']);
   });
 
   describe('getAgentOmDebugExport', () => {

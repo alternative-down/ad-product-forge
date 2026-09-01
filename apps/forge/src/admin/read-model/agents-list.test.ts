@@ -47,7 +47,6 @@ vi.mock('../../agents/workspace-skills', () => ({
   listAgentWorkspaceSkills: vi.fn().mockResolvedValue([]),
 }));
 
-
 function makeMockDb() {
   // Declare query as 'any' so vi.fn() is typed as Mock<unknown> → mockResolvedValueOnce available
   const _query: any = {
@@ -285,8 +284,22 @@ describe('createAgentListReadModel', () => {
       db.query.agentRoles.findMany.mockResolvedValueOnce([]);
       db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([
-        { agentId: 'a4', createdAt: 1000, inputTokens: 10, cachedInputTokens: 0, outputTokens: 5, costUsd: null },
-        { agentId: 'a4', createdAt: 600, inputTokens: 10, cachedInputTokens: 0, outputTokens: 5, costUsd: null },
+        {
+          agentId: 'a4',
+          createdAt: 1000,
+          inputTokens: 10,
+          cachedInputTokens: 0,
+          outputTokens: 5,
+          costUsd: null,
+        },
+        {
+          agentId: 'a4',
+          createdAt: 600,
+          inputTokens: 10,
+          cachedInputTokens: 0,
+          outputTokens: 5,
+          costUsd: null,
+        },
       ]);
       db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
       db.select.mockReturnValueOnce(emptyDbResult());
@@ -319,7 +332,14 @@ describe('createAgentListReadModel', () => {
       db.query.agentRoles.findMany.mockResolvedValueOnce([]);
       db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([
-        { agentId: 'a5', createdAt: 1000, inputTokens: 10, cachedInputTokens: 0, outputTokens: 5, costUsd: null },
+        {
+          agentId: 'a5',
+          createdAt: 1000,
+          inputTokens: 10,
+          cachedInputTokens: 0,
+          outputTokens: 5,
+          costUsd: null,
+        },
       ]);
       db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
       db.select.mockReturnValueOnce(emptyDbResult());
@@ -506,7 +526,7 @@ describe('createAgentListReadModel', () => {
       });
       const result = await model.getAgent('agent-1');
       expect(result).not.toBeNull();
-      expect(result?.id).toBe('agent-1');
+      expect(result?.agentId).toBe('agent-1');
       expect(result?.name).toBe('Detail Agent');
     });
 
@@ -623,7 +643,15 @@ describe('createAgentListReadModel', () => {
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
       db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
       db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
-        { id: 'cfg-1', agentId: 'agent-4', serverId: 'mcp-1', name: 'Filesystem', transport: 'stdio', configEncrypted: '{}', enabled: true },
+        {
+          id: 'cfg-1',
+          agentId: 'agent-4',
+          serverId: 'mcp-1',
+          name: 'Filesystem',
+          transport: 'stdio',
+          configEncrypted: '{}',
+          enabled: true,
+        },
       ]);
       db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
         { id: 'mcp-1', name: 'Filesystem Server', transport: 'stdio' },
@@ -670,7 +698,14 @@ describe('createAgentListReadModel', () => {
       db.query.llmProfiles.findMany.mockResolvedValueOnce([]);
 
       mockListThreadMessages.mockResolvedValueOnce({
-        items: [{ id: 'msg-1', role: 'assistant', content: 'Hello from preview', createdAt: '2026-01-01T00:00:00Z' }],
+        items: [
+          {
+            id: 'msg-1',
+            role: 'assistant',
+            content: 'Hello from preview',
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        ],
         hasMore: false,
       });
 
@@ -729,7 +764,6 @@ describe('createAgentListReadModel', () => {
       expect(result?.recentExecutionSteps).toBeDefined();
     });
 
-
     it('buildMcpServerSummaries: maps active MCP link with isActive=1 (buildMcpServerSummaries edge case)', async () => {
       const db = makeMockDb();
       db.query.agents.findFirst.mockResolvedValueOnce({
@@ -748,10 +782,31 @@ describe('createAgentListReadModel', () => {
       });
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
       db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
-      db.query.agentMcpConfigs.findMany
-        .mockResolvedValueOnce([{ id: 'cfg-1', serverId: 'srv-1', agentId: 'agent-mcp-active', isActive: 1, createdAt: 0, updatedAt: 0 }]);
-      db.query.mcpServerConfigs.findMany
-        .mockResolvedValueOnce([{ id: 'srv-1', name: 'StdIO Server', description: null, transport: 'stdio', command: 'node', args: '', envVars: '', url: '', headers: '', createdAt: 0, updatedAt: 0 }]);
+      db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
+        {
+          id: 'cfg-1',
+          serverId: 'srv-1',
+          agentId: 'agent-mcp-active',
+          isActive: 1,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ]);
+      db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
+        {
+          id: 'srv-1',
+          name: 'StdIO Server',
+          description: null,
+          transport: 'stdio',
+          command: 'node',
+          args: '',
+          envVars: '',
+          url: '',
+          headers: '',
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ]);
       db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
       db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);
       db.query.agentRoles.findMany.mockResolvedValueOnce([]);
@@ -793,10 +848,29 @@ describe('createAgentListReadModel', () => {
       db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
       // agentMcpConfigs has row for srv-A, but mcpServerConfigs returns srv-orphan (no matching config)
       db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
-        { id: 'cfg-A', serverId: 'srv-A', agentId: 'agent-mcp-orphan', isActive: 1, createdAt: 0, updatedAt: 0 },
+        {
+          id: 'cfg-A',
+          serverId: 'srv-A',
+          agentId: 'agent-mcp-orphan',
+          isActive: 1,
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ]);
       db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
-        { id: 'srv-orphan', name: 'Orphan Server', description: 'no link', transport: 'http_streamable', command: '', args: '', envVars: '', url: 'https://example.com', headers: '', createdAt: 0, updatedAt: 0 },
+        {
+          id: 'srv-orphan',
+          name: 'Orphan Server',
+          description: 'no link',
+          transport: 'http_streamable',
+          command: '',
+          args: '',
+          envVars: '',
+          url: 'https://example.com',
+          headers: '',
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ]);
       db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
       db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);
@@ -833,10 +907,29 @@ describe('createAgentListReadModel', () => {
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([]);
       db.query.agentSchedules.findMany.mockResolvedValueOnce([]);
       db.query.agentMcpConfigs.findMany.mockResolvedValueOnce([
-        { id: 'cfg-2', serverId: 'srv-2', agentId: 'agent-mcp-inactive', isActive: 0, createdAt: 0, updatedAt: 0 },
+        {
+          id: 'cfg-2',
+          serverId: 'srv-2',
+          agentId: 'agent-mcp-inactive',
+          isActive: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ]);
       db.query.mcpServerConfigs.findMany.mockResolvedValueOnce([
-        { id: 'srv-2', name: 'Disabled Server', description: null, transport: 'stdio', command: '', args: '', envVars: '', url: '', headers: '', createdAt: 0, updatedAt: 0 },
+        {
+          id: 'srv-2',
+          name: 'Disabled Server',
+          description: null,
+          transport: 'stdio',
+          command: '',
+          args: '',
+          envVars: '',
+          url: '',
+          headers: '',
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ]);
       db.query.agentNotifications.findMany.mockResolvedValueOnce([]);
       db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([]);

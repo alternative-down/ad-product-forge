@@ -1,11 +1,4 @@
-import {
-  blob,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-  index,
-} from 'drizzle-orm/sqlite-core';
+import { blob, integer, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { InferModel } from 'drizzle-orm';
 import { agents } from './schema-agents.js';
 
@@ -72,7 +65,7 @@ export const internalChatConversationMembers = sqliteTable(
       .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('normal'),
     createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    updatedAt: integer('updated_at').notNull().default(0),
   },
   (table) => ({
     internalChatConversationMembersUniqueIdx: uniqueIndex(
@@ -103,7 +96,7 @@ export const internalChatMessages = sqliteTable(
     content: text('content').notNull(),
     replyToMessageId: text('reply_to_message_id'),
     createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    updatedAt: integer('updated_at').notNull().default(0),
   },
   (table) => ({
     internalChatMessagesConversationIdx: index('forge_internal_chat_messages_conversation_idx').on(
@@ -134,8 +127,8 @@ export const internalChatMessageReads = sqliteTable(
       .notNull()
       .references(() => agents.id, { onDelete: 'cascade' }),
     readAt: integer('read_at'),
-    createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    createdAt: integer('created_at').notNull().default(0),
+    updatedAt: integer('updated_at').notNull().default(0),
   },
   (table) => ({
     internalChatMessageReadsUniqueIdx: uniqueIndex(
@@ -166,7 +159,7 @@ export const internalChatMessageAttachments = sqliteTable(
     sizeBytes: integer('size_bytes').notNull(),
     data: blob('data', { mode: 'buffer' }).notNull(),
     createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    updatedAt: integer('updated_at').notNull().default(0),
   },
   (table) => ({
     internalChatMessageAttachmentsMessageIdx: index(

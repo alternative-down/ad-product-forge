@@ -1,11 +1,4 @@
-import {
-  integer,
-  real,
-  sqliteTable,
-  text,
-  uniqueIndex,
-  index,
-} from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { InferModel } from 'drizzle-orm';
 import { agentRoles } from './schema-roles.js';
 import { llmProfiles } from './schema-llm.js';
@@ -152,7 +145,7 @@ export const agentHomeMetricSnapshots = sqliteTable(
     stepCreatedAt: integer('step_created_at').notNull(),
     snapshot: text('snapshot').notNull(),
     createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    updatedAt: integer('updated_at').notNull().default(0),
   },
   (table) => ({
     agentHomeMetricSnapshotsAgentIdIdx: index('agent_home_metric_snapshots_agent_id_idx').on(
