@@ -41,22 +41,15 @@
  * @module
  */
 
-
 import type { Database } from '../database/client';
-import {
-  type InternalChatGroupParticipant
-} from './internal-chat-helpers';
+import { type InternalChatGroupParticipant } from './internal-chat-helpers';
 import {
   createInternalChatConnection,
-  type InternalChatConnection
+  type InternalChatConnection,
 } from './internal-chat-connection';
 import { createInternalChatGroups } from './internal-chat-groups';
 import { createInternalChatAccountOps } from './internal-chat-account-ops';
-import {
-  ReadsNotInitializedError,
-  AccountNotFoundError,
-  AttachmentNotFoundError,
-} from './internal-chat-service.errors';
+import { AccountNotFoundError, AttachmentNotFoundError } from './internal-chat-service.errors';
 import { createInternalChatListing } from './internal-chat-listing';
 import { createInternalChatParticipants } from './internal-chat-participants';
 import { createInternalChatUnread } from './internal-chat-unread';
@@ -73,30 +66,6 @@ export function createInternalChatService(db: Database) {
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
   const admin = createInternalChatAdmin(db);
-
-  // Deferred: reads needs listConversations from listing module (created later).
-  // All three deps (unread, participants, listConversations) are required at
-  // construction time. We provide throwing stubs for the two that aren't used
-  // before actualReads is wired up below, plus a partial participants stub
-  // that only implements listGroupMembersOrDmPeersByAccount.
-  const reads = createInternalChatReads({
-    unread: {
-      getUnreadSummary: () => {
-        throw new ReadsNotInitializedError();
-      },
-    },
-    participants: {
-      listGroupMembersOrDmPeersByAccount: (_a: string, _b: string) => {
-        throw new ReadsNotInitializedError();
-      },
-      listGroupMembersOrDmPeers: (_a: string, _b: string) => {
-        throw new ReadsNotInitializedError();
-      },
-    } as ReturnType<typeof createInternalChatParticipants>,
-    listConversations: () => {
-      throw new ReadsNotInitializedError();
-    },
-  });
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
@@ -153,9 +122,6 @@ export function createInternalChatService(db: Database) {
   const listGroupMembersByAccount = groups.listGroupMembersByAccount;
 
   // === Message Listing ───────────────────────────────────────────────────
-
-  const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
-  const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
 
   const participants = createInternalChatParticipants(db);
 
@@ -252,6 +218,8 @@ export function createInternalChatService(db: Database) {
   });
   const getUnreadSummary = actualReads.getUnreadSummary;
   const listRecentConversations = actualReads.listRecentConversations;
+  const listGroupMembersOrDmPeers = actualReads.listGroupMembersOrDmPeers;
+  const listGroupMembersOrDmPeersByAccount = actualReads.listGroupMembersOrDmPeersByAccount;
   // === Internal Helpers ────────────────────────────────────────────────────
 
   const _guards = createInternalChatGuards(db, {
@@ -324,7 +292,9 @@ export function createInternalChatService(db: Database) {
       deliverToParticipants: ((
         params: Parameters<InternalChatConnection['deliverToParticipants']>[0],
       ) =>
-        connection.deliverToParticipants(params)) as SendingDeps['connection']['deliverToParticipants'],
+        connection.deliverToParticipants(
+          params,
+        )) as SendingDeps['connection']['deliverToParticipants'],
     },
     reads: {
       listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as (

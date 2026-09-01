@@ -315,7 +315,7 @@ function detectDegenerateRepetition(text: string) {
   return text.split('\n').some((line) => line.length > 50_000);
 }
 
-function _buildReflectorSystemPrompt() {
+export function buildReflectorSystemPrompt() {
   return [
     'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -325,7 +325,7 @@ function _buildReflectorSystemPrompt() {
   ].join('\n');
 }
 
-function _buildReflectorPrompt(observations: string) {
+export function buildReflectorPrompt(observations: string) {
   return [
     'Consolidate the observations below into a clear, detailed reflection.',
     'Preserve all facts, decisions, and operational details — do not remove content.',
@@ -345,7 +345,7 @@ function _buildReflectorTaskUserMessage() {
   ].join('\n');
 }
 
-function _parseReflectorOutput(output: string) {
+export function parseReflectorOutput(output: string) {
   const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
 
   return {

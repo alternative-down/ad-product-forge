@@ -194,9 +194,7 @@ export class FilesystemConversationStore implements ConversationStore {
     const threadMessages = storeFile.messages
       .filter((message) => message.threadId === input.threadId)
       .map(deserializeMessage);
-    const checkpointIndex = findOperationalMemoryCheckpointIndex(threadMessages);
-    const seedMessages =
-      checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
+    const seedMessages = threadMessages;
     const messageMap = new Map(threadMessages.map((message) => [message.id, message]));
     const visibleMessages: ConversationMessage[] = [];
     const seenTerminalIds = new Set<string>();
@@ -212,7 +210,7 @@ export class FilesystemConversationStore implements ConversationStore {
       visibleMessages.push(terminalMessage);
     }
 
-    return visibleMessages;
+    return selectMessagesFromLatestCheckpoint(visibleMessages);
   }
 
   private async readStoreFile(): Promise<ConversationStoreFile> {
@@ -234,16 +232,21 @@ export class FilesystemConversationStore implements ConversationStore {
   }
 }
 
-function findOperationalMemoryCheckpointIndex(messages: ConversationMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
+function selectMessagesFromLatestCheckpoint(messages: ConversationMessage[]) {
+  const checkpoint = [...messages]
+    .reverse()
+    .find((message) => message.operationalMemoryType === 'checkpoint-summary');
 
-    if (message.operationalMemoryType === 'checkpoint-summary' && message.replacedByMessageId == null) {
-      return index;
-    }
-  }
+  if (!checkpoint) return messages;
 
-  return -1;
+  const checkpointIndex = messages.findIndex((message) => message.id === checkpoint.id);
+
+  return messages.filter(
+    (message, index) =>
+      message.id === checkpoint.id ||
+      index > checkpointIndex ||
+      message.createdAt > checkpoint.createdAt,
+  );
 }
 
 function resolveTerminalOperationalMemoryMessage(
