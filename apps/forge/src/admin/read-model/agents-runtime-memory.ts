@@ -156,9 +156,12 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         agentContext =
           (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
       } catch (err) {
-        adminReadModelDebug('error', '[safe-catch]', {
-          err: errorMsg(err),
-        });
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          adminReadModelDebug('error', 'Failed to read agent context', {
+            error: errorMsg(err),
+            agentId,
+          });
+        }
         agentContext = null;
       }
 

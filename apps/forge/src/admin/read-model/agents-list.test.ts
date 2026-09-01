@@ -54,6 +54,10 @@ vi.mock('../../agents/workspace-skills', () => ({
   listAgentWorkspaceSkills: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../../encryption/crypto', () => ({
+  decryptSecret: vi.fn((value: string) => value),
+}));
+
 function makeMockDb() {
   // Declare query as 'any' so vi.fn() is typed as Mock<unknown> → mockResolvedValueOnce available
   const _query: any = {
@@ -66,6 +70,7 @@ function makeMockDb() {
     agentMcpConfigs: { findMany: vi.fn().mockResolvedValue([]) },
     agentLongTermMemoryStates: { findMany: vi.fn().mockResolvedValue([]) },
     agentExecutionContracts: { findMany: vi.fn().mockResolvedValue([]) },
+    agentProviders: { findMany: vi.fn().mockResolvedValue([]) },
     mcpServerConfigs: { findMany: vi.fn().mockResolvedValue([]) },
   };
   return {
@@ -567,6 +572,56 @@ describe('createAgentListReadModel', () => {
       expect(result).not.toBeNull();
       expect(result?.agentId).toBe('agent-1');
       expect(result?.name).toBe('Detail Agent');
+    });
+
+    it('returns editable Discord provider credentials', async () => {
+      const db = makeMockDb();
+      db.query.agents.findFirst.mockResolvedValueOnce({
+        id: 'agent-1',
+        name: 'Discord Agent',
+        description: null,
+        instructions: '',
+        executionState: 'idle',
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        workspaceAutoSync: 0,
+        workspaceBm25: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      db.query.agentProviders.findMany.mockResolvedValueOnce([{
+        id: 'provider-1',
+        agentId: 'agent-1',
+        providerType: 'discord',
+        encryptedCredentials: JSON.stringify({
+          token: 'discord-token',
+          channels: [{ channelId: 'channel-1', respondToMentionsOnly: false }],
+        }),
+        createdAt: 1,
+        updatedAt: 1,
+      }]);
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      const result = await model.getAgent('agent-1');
+
+      expect(result?.providers).toEqual([{
+        providerType: 'discord',
+        createdAt: 1,
+        editable: true,
+        credentials: {
+          token: 'discord-token',
+          channels: [{
+            channelId: 'channel-1',
+            channelName: undefined,
+            respondToMentionsOnly: false,
+          }],
+        },
+      }]);
     });
 
     it('includes runtime memory in agent detail (getRuntimeMemoryForAgent coverage)', async () => {
