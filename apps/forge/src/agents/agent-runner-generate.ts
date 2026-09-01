@@ -255,7 +255,13 @@ export async function generateWithTimeoutRetries(
         agentContextInstructions,
       });
       agentRunnerDebug('debug', 'runtime context ready before generate', { runtimeId: deps.runtime.id });
-      agentRunnerDebug('info', `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, { runtimeId: deps.runtime.id });
+      const memoryUsage = process.memoryUsage();
+      agentRunnerDebug('info', `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, {
+        runtimeId: deps.runtime.id,
+        rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
+        heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+        externalMb: Math.round(memoryUsage.external / 1024 / 1024),
+      });
 
       const result = await Promise.race<RuntimeGenerateResult | null>([
         deps.currentRuntime.agent.generate(effectivePromptText, {

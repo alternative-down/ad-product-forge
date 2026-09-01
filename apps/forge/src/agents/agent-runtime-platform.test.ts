@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -80,7 +80,7 @@ vi.mock('@forge-runtime/core', () => {
 });
 
 vi.mock('@libsql/client', () => ({
-  createClient: vi.fn().mockReturnValue({ close: vi.fn() }),
+  createClient: vi.fn().mockReturnValue({ close: vi.fn(), execute: vi.fn() }),
 
   errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
   withToolErrorLogging: vi.fn(async (params) => {
@@ -122,6 +122,8 @@ describe('createAgentRuntimePlatform', () => {
       expect(platform.workspaceActions).not.toHaveLength(0);
       expect(platform.agentWorkspaceDir).toContain(path.join('agent-1', 'workspace'));
       expect(platform.agentMemoryPath).toContain(path.join('agent-1', 'workspace', 'memory'));
+      const memoryDirectory = await stat(platform.agentMemoryPath);
+      expect(memoryDirectory.isDirectory()).toBe(true);
 
       const writeResult = await platform.workspaceGateway.execute({
         command: 'mkdir -p notes && printf test-workspace > notes/hello.txt',
