@@ -499,7 +499,18 @@ describe('mapStepsToFeedback', () => {
 describe('generateWithTimeoutRetries runtime integration', () => {
   it('processes runtime iterations and returns the final control directive', async () => {
     const register = vi.fn().mockReturnValue(1);
+    const recordAgentStep = vi.fn().mockResolvedValue({ stepId: 'step-1', createdAt: 1 });
+    const getUsageFromResult = vi.fn().mockReturnValue({
+      inputTokens: 10,
+      cachedInputTokens: 4,
+      outputTokens: 2,
+    });
     const generate = vi.fn(async (_prompt, options) => {
+      expect(options.memory?.options.lastMessages).toBe(20);
+      await options.prepareStep?.({ stepNumber: 0 });
+      await options.onStepFinish?.({
+        usage: { inputTokens: 10, cachedInputTokens: 4, outputTokens: 2 },
+      });
       const feedback = await options.onIterationComplete?.({
         iteration: 1,
         text: 'STOP_AND_IDLE',
@@ -538,13 +549,14 @@ describe('generateWithTimeoutRetries runtime integration', () => {
           longTermMemoryRecall: null,
         } as never,
         store: {} as never,
-        usage: { recordAgentStep: vi.fn().mockResolvedValue(undefined) } as never,
+        usage: { recordAgentStep, getUsageFromResult } as never,
         notifications: { createNotification: vi.fn().mockResolvedValue(undefined) } as never,
         homeMetricSnapshots: { recordSnapshot: vi.fn().mockResolvedValue(undefined) } as never,
-        messageManager: {} as never,
+        getRunnerSnapshot: vi.fn().mockReturnValue(null),
+        messageManager: { appendPendingRunMessages: vi.fn() } as never,
         runLastMessages: 20,
         flushPendingRunMessages: vi.fn().mockReturnValue(null),
-        scheduler: {} as never,
+        scheduler: { planNextStepDelay: vi.fn().mockResolvedValue(0) } as never,
         epochState,
         backoffState: { backoffMs: 60_000, instant: false, nextStepAt: null },
         progressState: {
@@ -578,6 +590,7 @@ describe('generateWithTimeoutRetries runtime integration', () => {
       expect.objectContaining({ maxSteps: 30, runId: 'run-1' }),
     );
     expect(register).toHaveBeenCalledOnce();
+    expect(recordAgentStep).toHaveBeenCalledWith('contract-1', 10, 4, 2);
     expect(result).toEqual(expect.objectContaining({
       text: 'STOP_AND_IDLE',
       finishReason: 'stop',

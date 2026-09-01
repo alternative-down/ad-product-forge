@@ -435,6 +435,8 @@ function stop() {
       usage,
       notifications,
       homeMetricSnapshots,
+      workspaceBasePath: options.workspaceBasePath,
+      getRunnerSnapshot: getSnapshot,
       runLastMessages: lifecycleState.runLastMessages,
       currentGenerateAbortController: lifecycleState.currentGenerateAbortController,
       setCurrentGenerateAbortController: (c) => { lifecycleState.currentGenerateAbortController = c; },

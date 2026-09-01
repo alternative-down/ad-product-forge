@@ -5,7 +5,8 @@ export enum LogLevel {
   ERROR = 3,
 }
 
-const LOG_LEVEL = (process.env.FORGE_LOG_LEVEL as keyof typeof LogLevel | undefined) ?? 'INFO';
+const LOG_LEVEL =
+  (process.env.FORGE_LOG_LEVEL?.toUpperCase() as keyof typeof LogLevel | undefined) ?? 'INFO';
 const currentLevel = LogLevel[LOG_LEVEL] ?? LogLevel.INFO;
 
 export type LogContext = Record<string, unknown>;
