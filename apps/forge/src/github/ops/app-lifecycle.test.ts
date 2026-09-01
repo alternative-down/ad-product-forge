@@ -28,7 +28,8 @@ import type {
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockForgeDebug = vi.hoisted(() => vi.fn());
-vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug }));
+const mockErrorMsg = vi.hoisted(() => vi.fn((e: unknown) => e instanceof Error ? e.message : String(e)));
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug, errorMsg: mockErrorMsg }));
 
 vi.mock('../helpers', () => ({
   createAppName: vi.fn((name: string, id: string) => `${name}-${id}`),
@@ -495,6 +496,42 @@ describe('deleteAgentApp', () => {
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
     await ops.deleteAgentApp('a-1');
     expect(mockOctokit.request).not.toHaveBeenCalled();
+  });
+
+  it('cleans up DB row (deleteCredentials) after successful GitHub DELETE', async () => {
+    mockCredentials.getCredentials.mockResolvedValue(activeCredentials);
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.deleteAgentApp('a-1');
+    expect(mockCredentials.deleteCredentials).toHaveBeenCalledWith('a-1');
+  });
+
+  it('cleans up DB row (deleteCredentials) for pending credentials without GitHub DELETE', async () => {
+    mockCredentials.getCredentials.mockResolvedValue(pendingCredentials);
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.deleteAgentApp('a-1');
+    expect(mockOctokit.request).not.toHaveBeenCalled();
+    expect(mockCredentials.deleteCredentials).toHaveBeenCalledWith('a-1');
+  });
+
+  it('cleans up DB row (deleteCredentials) even when GitHub DELETE throws', async () => {
+    mockCredentials.getCredentials.mockResolvedValue(activeCredentials);
+    mockOctokit.request.mockRejectedValueOnce(new Error('Bad credentials'));
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.deleteAgentApp('a-1');
+    expect(mockOctokit.request).toHaveBeenCalledTimes(1);
+    expect(mockCredentials.deleteCredentials).toHaveBeenCalledWith('a-1');
+  });
+
+  it('does not call GitHub DELETE or deleteCredentials when no credentials exist', async () => {
+    mockCredentials.getCredentials.mockResolvedValue(null);
+    const ctx = makeCtx();
+    const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
+    await ops.deleteAgentApp('a-1');
+    expect(mockOctokit.request).not.toHaveBeenCalled();
+    expect(mockCredentials.deleteCredentials).not.toHaveBeenCalled();
   });
 });
 

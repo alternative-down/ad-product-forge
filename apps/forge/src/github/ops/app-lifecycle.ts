@@ -29,6 +29,7 @@ import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';
 import type { GitHubAppOps } from './github-app';
 import { LogLevel } from '../../types/log-level';
+import { errorMsg } from '../../agents/error-formatting';
 
 export interface AppLifecycleOpsDeps {
   githubApp: GitHubAppOps;
@@ -37,6 +38,7 @@ export interface AppLifecycleOpsDeps {
     getActiveCredentials: (
       agentId: string,
     ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
+    deleteCredentials: (agentId: string) => Promise<void>;
   };
 }
 
@@ -207,14 +209,25 @@ export function createAppLifecycleOps(
 
     unloadAgent(agentId);
 
-    if (!existingCredentials || existingCredentials.status !== 'active') {
+    if (!existingCredentials) {
       return;
     }
 
-    const app = githubApp.createGitHubApp(existingCredentials);
-    await app.octokit.request('DELETE /app/installations/{installation_id}', {
-      installation_id: existingCredentials.installationId,
-    });
+    if (existingCredentials.status === 'active') {
+      try {
+        const app = githubApp.createGitHubApp(existingCredentials);
+        await app.octokit.request('DELETE /app/installations/{installation_id}', {
+          installation_id: existingCredentials.installationId,
+        });
+      } catch (error) {
+        appLifecycleOpsDebug('error', 'deleteAgentApp: GitHub installation DELETE failed; proceeding with DB cleanup to avoid orphan', {
+          agentId,
+          error: errorMsg(error),
+        });
+      }
+    }
+
+    await credentials.deleteCredentials(agentId);
   }
 
   async function getGitCredentials(input: { agentId: string; repositoryName?: string }) {

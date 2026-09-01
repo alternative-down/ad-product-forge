@@ -220,6 +220,7 @@ export function createGitHubAppManager(config: {
     credentials: {
       getCredentials: credentials.getCredentials,
       getActiveCredentials: credentials.getActiveCredentials,
+      deleteCredentials: credentials.deleteCredentials,
     },
   });
 
