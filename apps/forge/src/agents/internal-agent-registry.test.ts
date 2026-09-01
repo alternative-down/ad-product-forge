@@ -74,7 +74,7 @@ describe('internal-agent-registry', () => {
 
   describe('get', () => {
     it('returns null for unknown agent id', () => {
-      expect(registry().get('nonexistent')).toBeNull();
+      expect(registry().get('nonexistent')).toBeUndefined();
     });
   });
 
@@ -127,7 +127,7 @@ describe('internal-agent-registry', () => {
       const runtime = makeRuntime('remove-agent');
       await registry().add(makeDb(), runtime);
       registry().remove('remove-agent');
-      expect(registry().get('remove-agent')).toBeNull();
+      expect(registry().get('remove-agent')).toBeUndefined();
     });
 
     it('lists all registered agents', async () => {
