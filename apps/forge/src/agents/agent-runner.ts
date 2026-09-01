@@ -148,20 +148,15 @@ export function createAgentRunner(
       return;
     }
 
-    if (executionState === 'absent') {
-      await beginRun({
-        reloadRuntime: false,
-        wakeStartedAt: Date.now(),
-        markRunning: true,
-      });
-      return;
-    }
-
-    await beginRun({
-      reloadRuntime: false,
-      wakeStartedAt: Date.now(),
-      markRunning: false,
+    agentRunnerDebug('warn', 'recovering persisted execution state as idle', {
+      runtimeId: runtime.id,
+      executionState,
     });
+    await rt(
+      store.setExecutionState(runtime.id, 'idle'),
+      `Agent startup execution state recovery timed out for ${runtime.id}`,
+    );
+    await currentRuntime.longTermMemory?.onAgentIdle();
   }
 
   async function execute(events: AgentWakeEvent[]) {

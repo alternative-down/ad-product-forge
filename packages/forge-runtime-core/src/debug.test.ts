@@ -77,7 +77,24 @@ describe('forgeDebug', () => {
         agentId: 'agent-123',
         message: 'loading agent',
       });
-      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:agent-loader:info]', 'loading agent');
+      expect(consoleLogSpy).toHaveBeenCalledWith('[forge:agent-loader:info]', 'loading agent', {
+        agentId: 'agent-123',
+      });
+    });
+
+    it('preserves top-level fields together with context', () => {
+      forgeDebug({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'provider failed',
+        error: 'invalid token',
+        context: { provider: 'discord' },
+      });
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[forge:provider-loader:warn]',
+        'provider failed',
+        { error: 'invalid token', provider: 'discord' },
+      );
     });
   });
 
