@@ -15,10 +15,13 @@ import {
   agentLongTermMemoryStates,
   agentNotifications,
   agentMcpConfigs,
+  agentProviders,
   agentSchedules,
   agents,
   mcpServerConfigs,
 } from '../../database/schema';
+import { decryptSecret } from '../../encryption/crypto';
+import { parseProviderCredentials } from '../../communication/provider-loader';
 import {
   longTermMemoryStateSchema,
   createEmptyLongTermMemoryState,
@@ -115,7 +118,12 @@ export interface AgentDetail {
   lastExecutionErrorAt: number | null;
   loaded: boolean;
   runner: unknown | null;
-  providers: [];
+  providers: Array<{
+    providerType: 'discord' | 'email';
+    createdAt: number;
+    editable: boolean;
+    credentials: unknown;
+  }>;
   mcpServers: Array<{
     configId: string | null;
     serverId: string;
@@ -748,6 +756,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     profileMap: Map<string, { name: string; modelKey: string }>;
     githubProvisioning: null;
     skillsByAgentId: Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>;
+    providers: AgentDetail['providers'];
   }
 
   // L#NN-50 #18 v6 BLOCK detection: `as unknown as AgentDetail` cast KEEP (Phase 1 decision,
@@ -800,7 +809,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       lastExecutionErrorAt: ctx.agent.lastExecutionErrorAt ?? null,
       loaded: Boolean(ctx.agentTyped),
       runner: ctx.runnerSnapshot,
-      providers: [],
+      providers: ctx.providers,
       mcpServers: ctx.mcpServers,
       recentExecutionSteps: ctx.recentSteps_,
       recentNotifications: ctx.recentNotifications_,
@@ -854,6 +863,26 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const agentMcpServerRows = await loadMcpServerRowsForAgent(agentMcpRows);
     const mcpServers = buildMcpServerSummaries(agentMcpRows, agentMcpServerRows);
     const spentUsd = await calculateSpentUsd(activeContractRows, agentId);
+    const providerRows = await db.query.agentProviders.findMany({
+      where: eq(agentProviders.agentId, agentId),
+    });
+    const providers: AgentDetail['providers'] = providerRows.flatMap((provider) => {
+      if (provider.providerType !== 'discord' && provider.providerType !== 'email') {
+        return [];
+      }
+
+      const providerType = provider.providerType;
+      const credentials = parseProviderCredentials(
+        providerType,
+        JSON.parse(decryptSecret(provider.encryptedCredentials)),
+      );
+      return [{
+        providerType,
+        createdAt: provider.createdAt,
+        editable: true,
+        credentials,
+      }];
+    });
 
     const recentSteps_ = recentSteps.map((step) => {
       const { id, ...rest } = step;
@@ -888,6 +917,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       profileMap,
       githubProvisioning: null,
       skillsByAgentId,
+      providers,
     });
   }
 

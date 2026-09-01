@@ -14,10 +14,10 @@ describe('agent-runner-generate-timeout', () => {
   });
 
   describe('createGenerateTimeoutGuard', () => {
-    it('returns a handle with null timeoutId initially', () => {
+    it('starts the timeout when the guard is created', () => {
       const controller = new AbortController();
       const handle = createGenerateTimeoutGuard(controller);
-      expect(handle.timeoutId).toBeNull();
+      expect(handle.timeoutId).not.toBeNull();
     });
 
     it('has a rejectTimeout function', () => {
@@ -26,15 +26,14 @@ describe('agent-runner-generate-timeout', () => {
       expect(typeof handle.rejectTimeout).toBe('function');
     });
 
-    it('has a promise that never resolves on its own', async () => {
+    it('does not settle before the timeout', async () => {
       const controller = new AbortController();
       const handle = createGenerateTimeoutGuard(controller);
       let resolved = false;
       handle.promise.then(() => {
         resolved = true;
       });
-      vi.advanceTimersByTime(1);
-      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersByTimeAsync(1);
       expect(resolved).toBe(false);
     });
 

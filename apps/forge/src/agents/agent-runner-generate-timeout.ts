@@ -20,14 +20,14 @@ export interface GenerateTimeoutHandle {
  * progress is made within GENERATE_TIMEOUT_MS (15 minutes).
  * Returns a handle with the timeout promise and a settable timeoutId.
  */
-export function createGenerateTimeoutGuard(_controller: AbortController): GenerateTimeoutHandle {
+export function createGenerateTimeoutGuard(controller: AbortController): GenerateTimeoutHandle {
   let timeoutId: NodeJS.Timeout | null = null;
   let rejectTimeout: ((error: Error) => void) | null = null;
   const promise = new Promise<never>((_, reject) => {
     rejectTimeout = reject;
   });
 
-  return {
+  const handle: GenerateTimeoutHandle = {
     promise,
     get timeoutId() {
       return timeoutId;
@@ -37,6 +37,8 @@ export function createGenerateTimeoutGuard(_controller: AbortController): Genera
     },
     rejectTimeout,
   };
+  touchGenerateTimeout(handle, controller, null, null);
+  return handle;
 }
 
 export interface ProgressState {

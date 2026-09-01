@@ -31,6 +31,7 @@ import type { ConversationMessage, ConversationMessagePart } from 'agent-runtime
 import type { LtmSnapshot } from '../../agents/ltm/generate-helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { withTimeout } from '../../utils/async';
+import { AGENT_CONTEXT_FILE_PATH } from '../../utils/constants';
 import { closeLibsqlClient } from './conversation-helpers';
 import { adminReadModelDebug } from './agents-detail-debug';
 import type { Database } from '../../database/index';
@@ -154,11 +155,14 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       let agentContext: string | null = null;
       try {
         agentContext =
-          (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
+          (await readFile(resolve(agentWorkspaceDir, AGENT_CONTEXT_FILE_PATH), 'utf8')).trim() || null;
       } catch (err) {
-        adminReadModelDebug('error', '[safe-catch]', {
-          err: errorMsg(err),
-        });
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          adminReadModelDebug('error', 'Failed to read agent context', {
+            error: errorMsg(err),
+            agentId,
+          });
+        }
         agentContext = null;
       }
 
