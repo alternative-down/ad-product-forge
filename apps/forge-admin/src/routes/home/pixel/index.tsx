@@ -8,19 +8,21 @@ import { AdminLoadingState } from '@/components/admin';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 import type { AgentListItem } from '@/lib/admin-api/index/types';
 import { buildSceneAgents } from './agents/build-scene-agents';
+import {
+  TILE_SIZE,
+  WORLD_OFFSET_X,
+  WORLD_OFFSET_Y,
+} from '@/components/home/pixel/scene-constants';
 
 export const Route = createFileRoute('/home/pixel/')({
   component: HomePixelRoute,
 });
 
-const TILE_SIZE = 16;
 const SCALE = 3;
 const VIEWPORT_COLS = 21;
 const VIEWPORT_ROWS = 14;
 const WORLD_COLS = 27;
 const WORLD_ROWS = 18;
-const WORLD_OFFSET_X = 3 * TILE_SIZE;
-const WORLD_OFFSET_Y = 2 * TILE_SIZE;
 const CANVAS_WIDTH = VIEWPORT_COLS * TILE_SIZE * SCALE;
 const CANVAS_HEIGHT = VIEWPORT_ROWS * TILE_SIZE * SCALE;
 
