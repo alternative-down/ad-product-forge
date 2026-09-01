@@ -267,6 +267,13 @@
       "when": 1786121624169,
       "tag": "0036_create_payment_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1788288785010,
+      "tag": "0038_volatile_mulholland_black",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,10 @@ import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
-import { fixupSystemSettingsCreatedAt } from './fixup-system-settings';
+import {
+  fixupSystemSettingsCreatedAt,
+  SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP,
+} from './fixup-system-settings';
 
 // ─── queryAppliedMigrations ─────────────────────────────────────────────────
 /**
@@ -34,6 +37,15 @@ async function queryAppliedMigrations(
     order by created_at desc
     limit ${limit}
   `);
+}
+
+async function systemSettingsTableExists(db: LibSQLDatabase<Record<string, unknown>>) {
+  const rows = await db.all<{ name: string }>(sql`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table' AND name = 'system_settings'
+  `);
+  return rows.length > 0;
 }
 
 // ─── findMigrationsFolder ───────────────────────────────────────────────────
@@ -72,7 +84,9 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
       )
     `);
 
-    await fixupSystemSettingsCreatedAt(db, { migrationsFolder });
+    if (await systemSettingsTableExists(db)) {
+      await fixupSystemSettingsCreatedAt(db, { migrationsFolder });
+    }
 
     const dbMigrations = await queryAppliedMigrations(db, 1);
 
@@ -103,6 +117,12 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     const appliedHashes: string[] = [];
     for (const migration of allMigrations) {
       if (lastDbMigration && Number(lastDbMigration.createdAt) >= migration.folderMillis) {
+        continue;
+      }
+      if (migration.folderMillis === SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP) {
+        await fixupSystemSettingsCreatedAt(db, { migrationsFolder });
+        appliedHashes.push(migration.hash.slice(0, 8));
+        appliedCount += 1;
         continue;
       }
       for (const stmt of migration.sql) {

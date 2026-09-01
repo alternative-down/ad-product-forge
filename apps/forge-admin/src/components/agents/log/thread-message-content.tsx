@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { type AgentThreadMessage } from '@/lib/admin-api/index';
@@ -20,6 +21,63 @@ export function ThreadMessageArticle(input: { message: AgentThreadMessage; index
       </div>
     </article>
   );
+}
+
+function ThreadMessageContent(input: { message: AgentThreadMessage }) {
+  const { content } = input.message;
+  const textParts = (content.parts ?? []).flatMap((part) =>
+    part.type === 'text' && typeof part.text === 'string' ? [part.text] : [],
+  );
+  const texts = textParts.length > 0 ? textParts : content.content ? [content.content] : [];
+
+  if (texts.length === 0 && !content.reasoning && (content.toolInvocations?.length ?? 0) === 0) {
+    return <p className="text-sm text-muted-foreground">Sem conteúdo textual.</p>;
+  }
+
+  return (
+    <div className="min-w-0 space-y-3 overflow-hidden">
+      {texts.map((text, index) => (
+        <p
+          className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground"
+          key={`${input.message.id}:text:${index}`}
+        >
+          {text}
+        </p>
+      ))}
+
+      {content.reasoning ? (
+        <ThreadDisclosure summary="Reasoning / Thinking" value={content.reasoning} />
+      ) : null}
+
+      {content.toolInvocations?.map((invocation, index) => (
+        <ThreadDisclosure
+          key={`${input.message.id}:tool:${index}`}
+          summary={getToolSummary(invocation)}
+          value={JSON.stringify(invocation, null, 2)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ThreadDisclosure(input: { summary: string; value: string }) {
+  return (
+    <details className="group rounded-md border border-border/70 bg-muted/25 px-3 py-2">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+        {input.summary}
+      </summary>
+      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
+        {input.value}
+      </pre>
+    </details>
+  );
+}
+
+function getToolSummary(invocation: Record<string, unknown>) {
+  const toolName = typeof invocation.toolName === 'string' ? invocation.toolName : 'tool';
+  const state = typeof invocation.state === 'string' ? invocation.state : null;
+  return state === 'result' ? `Tool result: ${toolName}` : `Tool call: ${toolName}`;
 }
 
 function humanizeRole(role: string) {
