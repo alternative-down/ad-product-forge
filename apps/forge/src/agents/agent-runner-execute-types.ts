@@ -96,7 +96,7 @@ export interface ExecuteStepDeps {
   modelProfileId: string;
 
   // ── Runner state guards ───────────────────────────────────────────────────
-  stopped: boolean;
+  isStopped: () => boolean;
   executingRef: { value: boolean };
   isStaleRun: (runEpoch: number) => boolean;
 

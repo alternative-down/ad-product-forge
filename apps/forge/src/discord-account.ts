@@ -46,6 +46,7 @@ export function discordAccountDebug(
 
 
 export function createDiscordProvider(config: {
+  agentId?: string;
   token: string;
   channels?: Array<{
     channelId: string;
@@ -62,43 +63,85 @@ export function createDiscordProvider(config: {
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
   let disposed = false;
+  let reconnecting = false;
+  let consecutiveUnreadyChecks = 0;
   const pendingTypingTimers = new Set<NodeJS.Timeout>();
 
+  function logContext(context: Record<string, unknown> = {}) {
+    return { agentId: config.agentId ?? null, ...context };
+  }
+
   client.on(Events.Error, (error) => {
-    discordAccountDebug('error', 'Discord client error', { error: errorMsg(error) });
+    discordAccountDebug('error', 'Discord client error', logContext({ error: errorMsg(error) }));
   });
   client.on(Events.Warn, (warning) => {
-    discordAccountDebug('warn', 'Discord client warning', { warning });
+    discordAccountDebug('warn', 'Discord client warning', logContext({ warning }));
   });
   client.on(Events.Invalidated, () => {
-    discordAccountDebug('error', 'Discord session invalidated');
+    discordAccountDebug('error', 'Discord session invalidated', logContext());
   });
   client.on(Events.ShardDisconnect, (event, shardId) => {
-    discordAccountDebug('warn', 'Discord shard disconnected', {
+    discordAccountDebug('warn', 'Discord shard disconnected', logContext({
       shardId,
       code: event.code,
       reason: event.reason,
       clean: event.wasClean,
-    });
+    }));
   });
   client.on(Events.ShardError, (error, shardId) => {
-    discordAccountDebug('error', 'Discord shard error', {
+    discordAccountDebug('error', 'Discord shard error', logContext({
       shardId,
       error: errorMsg(error),
-    });
+    }));
   });
   client.on(Events.ShardReconnecting, (shardId) => {
-    discordAccountDebug('warn', 'Discord shard reconnecting', { shardId });
+    discordAccountDebug('warn', 'Discord shard reconnecting', logContext({ shardId }));
   });
   client.on(Events.ShardReady, (shardId, unavailableGuilds) => {
-    discordAccountDebug('info', 'Discord shard ready', {
+    consecutiveUnreadyChecks = 0;
+    discordAccountDebug('info', 'Discord shard ready', logContext({
       shardId,
       unavailableGuildCount: unavailableGuilds?.size ?? 0,
-    });
+    }));
   });
   client.on(Events.ShardResume, (shardId, replayedEvents) => {
-    discordAccountDebug('info', 'Discord shard resumed', { shardId, replayedEvents });
+    consecutiveUnreadyChecks = 0;
+    discordAccountDebug('info', 'Discord shard resumed', logContext({ shardId, replayedEvents }));
   });
+
+  const healthcheck = setInterval(() => {
+    if (disposed || client.isReady()) {
+      consecutiveUnreadyChecks = 0;
+      return;
+    }
+
+    consecutiveUnreadyChecks += 1;
+    discordAccountDebug('warn', 'Discord client is not ready', logContext({
+      consecutiveUnreadyChecks,
+      readyStatus: client.ws.status,
+    }));
+
+    if (consecutiveUnreadyChecks < 2 || reconnecting) {
+      return;
+    }
+
+    reconnecting = true;
+    client.destroy();
+    void client.login(config.token)
+      .then(() => {
+        consecutiveUnreadyChecks = 0;
+        discordAccountDebug('info', 'Discord client relogin succeeded', logContext());
+      })
+      .catch((error: unknown) => {
+        discordAccountDebug('error', 'Discord client relogin failed', logContext({
+          error: errorMsg(error),
+        }));
+      })
+      .finally(() => {
+        reconnecting = false;
+      });
+    }, 30_000);
+  healthcheck.unref();
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
@@ -223,10 +266,10 @@ export function createDiscordProvider(config: {
     }
   }
 
-  discordAccountDebug('info', 'Starting login');
+  discordAccountDebug('info', 'Starting login', logContext());
 
   const ready = client.login(config.token).then(() => {
-    discordAccountDebug('info', 'Login succeeded');
+    discordAccountDebug('info', 'Login succeeded', logContext());
     if (!client.user) {
       throw new DiscordClientNotReadyError();
     }
@@ -258,7 +301,7 @@ export function createDiscordProvider(config: {
       }
     });
 
-    discordAccountDebug('info', 'logged in', { tag: client.user.tag });
+    discordAccountDebug('info', 'logged in', logContext({ tag: client.user.tag }));
 
     return client.user;
   });
@@ -321,11 +364,12 @@ export function createDiscordProvider(config: {
       void flushPendingMessages();
     },
     dispose() {
-      discordAccountDebug('warn', 'Disposing Discord provider', {
+      discordAccountDebug('warn', 'Disposing Discord provider', logContext({
         tag: client.user?.tag ?? null,
         readyStatus: client.ws.status,
-      });
+      }));
       disposed = true;
+      clearInterval(healthcheck);
       clearTypingTimers(pendingTypingTimers);
       onInboundMessage = null;
       pendingMessages.length = 0;

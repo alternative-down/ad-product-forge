@@ -88,13 +88,13 @@ function createInternalAgentRegistry() {
     }
 
     for (const agentId of existingAgentIds) {
-      remove(agentId);
+      await remove(agentId);
     }
 
     return list();
   }
 
-  function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
+  async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents: AgentWakeEvent[] = existingAgent
       ? [
@@ -102,7 +102,10 @@ function createInternalAgentRegistry() {
           ...((existingAgent.runner?.getSnapshot()?.pendingRunEvents ?? []) as AgentWakeEvent[]),
         ]
       : [];
-    existingAgent?.runner?.stop();
+    if (existingAgent) {
+      existingAgent.runner?.stop();
+      await existingAgent.runtime.dispose();
+    }
 
     // Each running agent gets its own fresh managers — lifetime matched to this agent.
     const _emailMailboxes = createPerAgentEmailManager(db);
@@ -174,11 +177,16 @@ function createInternalAgentRegistry() {
     });
   }
 
-  function remove(agentId: string) {
+  async function remove(agentId: string) {
     const entry = agents.get(agentId);
     if (!entry) return;
     entry.runner?.stop();
     agents.delete(agentId);
+    await entry.runtime.dispose();
+  }
+
+  async function disposeAll() {
+    await Promise.all(Array.from(agents.keys(), (agentId) => remove(agentId)));
   }
 
   function get(agentId: string): InternalAgentEntry | undefined {
@@ -196,6 +204,7 @@ function createInternalAgentRegistry() {
     loadAll,
     add,
     remove,
+    disposeAll,
     get,
     list,
 

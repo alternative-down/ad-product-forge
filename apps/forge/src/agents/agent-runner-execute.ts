@@ -57,7 +57,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
   const {
     contractId,
     runEpoch,
-    stopped,
+    isStopped,
     executingRef,
     isStaleRun,
     epochState,
@@ -89,7 +89,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     pendingLongTermMemoryRecallSystemText,
   } = deps;
 
-  if (stopped || executingRef.value || isStaleRun(runEpoch)) {
+  if (isStopped() || executingRef.value || isStaleRun(runEpoch)) {
     return;
   }
 
@@ -200,9 +200,9 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         },
         setLoopSignature,
         loopSignature,
-        activeRunId: null,
+        activeRunId: epochState.activeRunId,
         loadAgentContextInstructions,
-        isStopped: () => stopped,
+        isStopped,
       },
     );
 
@@ -213,7 +213,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     // ── Phase 4: interpret result ────────────────────────────────────────────
     progressState.lastStepStage = 'finalizing-run';
     const controlDirective = result ? extractRunnerControlDirective(result) : null;
-    const stopRequested = controlDirective === 'stop';
+    const stopRequested = controlDirective === 'stop' || controlDirective === 'ignore';
 
     if (stopRequested) {
       // Signal the finally block to drain the wake queue.
@@ -232,7 +232,13 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
 
     scheduler.resetBackoff();
-    continueRunning = messageManager.getPendingCount() > 0;
+    if (messageManager.getPendingCount() > 0) {
+      continueRunning = true;
+      return;
+    }
+
+    await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
+    drainWakeQueueAfterStep = true;
   } catch (error) {
     if (isStaleRun(runEpoch)) {
       return;
@@ -266,8 +272,9 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         stateError,
       });
     });
-    scheduler.scheduleNextStep(nextExponentialBackoffMs(backoffState.backoffMs).current, () =>
-      executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
+    scheduler.scheduleNextStep(
+      nextExponentialBackoffMs(backoffState.backoffMs).current,
+      () => void queueNextStep(runEpoch),
     );
   } finally {
     progressState.lastStepStartedAt = null;

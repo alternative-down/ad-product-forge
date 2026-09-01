@@ -27,7 +27,7 @@ import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-
 import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
-import type { RuntimeGenerateResult } from './runtime/types';
+import type { RuntimeGenerateResult, RuntimeIteration } from './runtime/types';
 
 import { delay, withTimeout } from '../utils/async';
 import {
@@ -44,6 +44,7 @@ import {
 import {
   buildIterationFeedback,
 } from './agent-runner-feedback';
+import { buildIterationLoopSignature } from './agent-runner-iteration-helpers';
 import { agentRunnerDebug } from './agent-runner-debug';
 import { errorMsg } from './error-formatting';
 import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
@@ -117,7 +118,7 @@ function startGenerateEventLoopProbe(runtimeId: string) {
 
   return () => clearInterval(interval);
 }
-const GENERATE_MAX_STEPS_PER_RUN = 10_000;
+const GENERATE_MAX_STEPS_PER_RUN = 30;
 export const RUNNER_AWAIT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 export const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 
@@ -165,7 +166,7 @@ export interface GenerateDeps {
   progressState: ProgressState;
   loopState: LoopState;
   loopDetector: {
-    recordIteration?(iteration: number): boolean;
+    register(signature: string): number;
     reset(): void;
     isStuck(): boolean;
     getSignatureCount(): number;
@@ -281,12 +282,60 @@ export async function generateWithTimeoutRetries(
       });
       const stopEventLoopProbe = startGenerateEventLoopProbe(deps.runtime.id);
 
+      const iterationState: { current: RuntimeIteration | null } = { current: null };
       const result = await Promise.race<RuntimeGenerateResult | null>([
         deps.currentRuntime.agent.generate(effectivePromptText, {
           system: systemPrompt ?? undefined,
           abortSignal: controller.signal,
           maxSteps: GENERATE_MAX_STEPS_PER_RUN,
           runId: deps.activeRunId !== null ? deps.activeRunId : `${deps.runtime.id}:${runEpoch}`,
+          onIterationComplete: async (iteration) => {
+            iterationState.current = iteration;
+            const signature = buildIterationLoopSignature(iteration);
+            deps.setLoopSignature(signature);
+            deps.loopDetector.register(signature);
+            deps.markGenerateProgress(timeout, controller, {
+              stage: 'iteration-completed',
+              detail: {
+                iteration: iteration.iteration,
+                finishReason: iteration.finishReason,
+                toolCallCount: iteration.toolCalls.length,
+              },
+            });
+
+            return await buildIterationFeedback(
+              {
+                iteration: {
+                  iteration: iteration.iteration,
+                  finishReason: iteration.finishReason,
+                },
+                finishReason: iteration.finishReason,
+                text: iteration.text,
+                toolCalls: iteration.toolCalls.map(({ name, args }) => ({ name, args })),
+                toolResults: iteration.toolResults.map(({ name, error }) => ({ name, error })),
+                messages: iteration.messages,
+              },
+              {
+                suppressNoToolCallReminderForRun,
+                setSuppressNoToolCallReminder: (value) => {
+                  suppressNoToolCallReminderForRun = value;
+                },
+                setNextStepAt: deps.setNextStepAt,
+                loopDetector: deps.loopDetector,
+                loopSignature: signature,
+                runtime: deps.runtime,
+                notifications: deps.notifications,
+                currentRuntime: {
+                  mastraId: deps.currentRuntime.mastraId,
+                  longTermMemoryRecall: deps.currentRuntime.longTermMemoryRecall,
+                },
+                flushPendingRunMessages: deps.flushPendingRunMessages,
+                markGenerateProgress: deps.markGenerateProgress,
+                controller,
+                isStopped: deps.isStopped,
+              },
+            );
+          },
         }),
         timeout.promise,
       ]).finally(stopEventLoopProbe);
@@ -294,7 +343,7 @@ export async function generateWithTimeoutRetries(
       clearGenerateTimeout(timeout);
       finishGenerateAttempt(generateToken, controller, deps);
 
-      const { usage: { inputTokens = 0, outputTokens = 0 } = {}, steps = [] } = result ?? {};
+      const { usage: { inputTokens = 0, outputTokens = 0 } = {} } = result ?? {};
 
       // Record usage
       void withTimeout(
@@ -324,47 +373,13 @@ export async function generateWithTimeoutRetries(
         return undefined;
       }
 
-      // Build feedback
-      const iterationFeedback = await buildIterationFeedback(
-        {
-          iteration: { iteration: steps.length, finishReason: result?.finishReason ?? 'unknown' },
-          finishReason: result?.finishReason ?? 'unknown',
-          text: result?.text ?? '',
-          ...mapStepsToFeedback(steps),
-        },
-        {
-          suppressNoToolCallReminderForRun,
-          setSuppressNoToolCallReminder: (v) => {
-            suppressNoToolCallReminderForRun = v;
-          },
-          setNextStepAt: (v) => {
-            deps.setNextStepAt(v);
-          },
-          loopDetector: deps.loopDetector,
-          loopSignature: deps.loopSignature,
-          runtime: deps.runtime,
-          notifications: deps.notifications,
-          currentRuntime: {
-            mastraId: deps.currentRuntime.mastraId,
-            longTermMemoryRecall: deps.currentRuntime.longTermMemoryRecall,
-          },
-          flushPendingRunMessages: deps.flushPendingRunMessages,
-          markGenerateProgress: deps.markGenerateProgress,
-          controller,
-          isStopped: deps.isStopped,
-        },
-      );
-
-      if (iterationFeedback?.continue !== true) {
-        return undefined;
-      }
-
       agentRunnerDebug('info', `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, { runtimeId: deps.runtime.id });
 
       return {
-        text: result?.text ?? '',
-        ...mapStepsToFeedback(steps),
-        finishReason: result?.finishReason ?? 'unknown',
+        text: iterationState.current?.text ?? result?.text ?? '',
+        toolCalls: iterationState.current?.toolCalls.map(({ name, args }) => ({ name, args })) ?? [],
+        toolResults: iterationState.current?.toolResults.map(({ name, error }) => ({ name, error })) ?? [],
+        finishReason: iterationState.current?.finishReason ?? result?.finishReason ?? 'unknown',
         inputTokens,
         outputTokens,
       };

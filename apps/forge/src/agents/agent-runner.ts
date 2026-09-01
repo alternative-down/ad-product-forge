@@ -28,6 +28,7 @@ import {
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { generateWithTimeoutRetries } from './agent-runner-generate';
+import { touchGenerateTimeout } from './agent-runner-generate-timeout';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { executeStep as executeStepExtracted, type ExecuteStepDeps } from './agent-runner-execute';
@@ -147,7 +148,6 @@ export function createAgentRunner(
     );
 
     if (executionState === 'idle') {
-      await currentRuntime.longTermMemory?.onAgentIdle();
       return;
     }
 
@@ -159,7 +159,6 @@ export function createAgentRunner(
       store.setExecutionState(runtime.id, 'idle'),
       `Agent startup execution state recovery timed out for ${runtime.id}`,
     );
-    await currentRuntime.longTermMemory?.onAgentIdle();
   }
 
   async function execute(events: AgentWakeEvent[]) {
@@ -374,21 +373,28 @@ function stop() {
       pricingModelKey: currentRuntime.pricingModelKey ?? '',
       modelProfileId: currentRuntime.modelProfileId ?? '',
       // Runner state guards
-      stopped: lifecycleState.stopped,
+      isStopped: () => lifecycleState.stopped,
       executingRef: { get value() { return lifecycleState.executing; }, set value(v: boolean) { lifecycleState.executing = v; } },
       isStaleRun,
       // State containers
       epochState: {
-        activeRunEpoch: 0,
-        activeStepEpoch: scheduler.getActiveStepEpoch(),
-        activeGenerateToken: 0,
-        activeRunId: lifecycleState.activeRunId,
+        get activeRunEpoch() { return schedulerState.activeRunEpoch; },
+        set activeRunEpoch(value) { schedulerState.activeRunEpoch = value; },
+        get activeStepEpoch() { return schedulerState.activeStepEpoch; },
+        set activeStepEpoch(value) { schedulerState.activeStepEpoch = value; },
+        get activeGenerateToken() { return schedulerState.activeGenerateToken; },
+        set activeGenerateToken(value) { schedulerState.activeGenerateToken = value; },
+        get activeRunId() { return lifecycleState.activeRunId; },
+        set activeRunId(value) { lifecycleState.activeRunId = value; },
       },
-      backoffState: scheduler.getState(),
+      backoffState: schedulerState,
       progressState: {
-        lastStepStartedAt: lifecycleState.lastStepStartedAt,
-        lastStepStage: lifecycleState.lastStepStage,
-        lastGenerateProgress: null,
+        get lastStepStartedAt() { return lifecycleState.lastStepStartedAt; },
+        set lastStepStartedAt(value) { lifecycleState.lastStepStartedAt = value; },
+        get lastStepStage() { return lifecycleState.lastStepStage; },
+        set lastStepStage(value) { lifecycleState.lastStepStage = value; },
+        get lastGenerateProgress() { return lifecycleState.lastGenerateProgress; },
+        set lastGenerateProgress(value) { lifecycleState.lastGenerateProgress = value; },
       },
       loopState: loopManager.getState(),
       // Stores & managers
@@ -404,7 +410,19 @@ function stop() {
       transitionToIdle,
       queueNextStep,
       generateWithTimeoutRetries,
-      markGenerateProgress: () => {},
+      markGenerateProgress: (timeout, controller, info) => {
+        lifecycleState.lastGenerateProgress = {
+          stage: info.stage,
+          at: Date.now(),
+          detail: info.detail,
+        };
+        touchGenerateTimeout(
+          timeout,
+          controller,
+          lifecycleState.lastStepStage,
+          lifecycleState.lastGenerateProgress,
+        );
+      },
       setLoopSignature: (sig) => { loopManager.getState().lastLoopSignature = sig; },
       loopSignature: loopManager.getState().lastLoopSignature ?? '',
       loadAgentContextInstructions,

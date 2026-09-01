@@ -58,10 +58,10 @@ function registry() {
 }
 
 describe('internal-agent-registry', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear registry state between tests
     for (const entry of registry().list()) {
-      registry().remove(entry.id);
+      await registry().remove(entry.id);
     }
     mockRunnerInstances.clear();
     vi.clearAllMocks();
@@ -125,18 +125,20 @@ describe('internal-agent-registry', () => {
       await registry().add(makeDb(), runtime2);
 
       expect(stopSpy).toHaveBeenCalled();
+      expect(runtime1.dispose).toHaveBeenCalledOnce();
       expect((registry().get('dup-id') as any).runtime.name).toBe('Second');
     });
 
-    it('does nothing when removing unknown agent', () => {
-      expect(() => registry().remove('unknown-agent')).not.toThrow();
+    it('does nothing when removing unknown agent', async () => {
+      await expect(registry().remove('unknown-agent')).resolves.toBeUndefined();
     });
 
     it('can remove a registered agent', async () => {
       const runtime = makeRuntime('remove-agent');
       await registry().add(makeDb(), runtime);
-      registry().remove('remove-agent');
+      await registry().remove('remove-agent');
       expect(registry().get('remove-agent')).toBeUndefined();
+      expect(runtime.dispose).toHaveBeenCalledOnce();
     });
 
     it('lists all registered agents', async () => {
