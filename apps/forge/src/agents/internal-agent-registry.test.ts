@@ -7,11 +7,12 @@ vi.mock('@forge-runtime/core', () => ({
 
 // Track runner instances so we can spy on them
 const mockRunnerInstances = new Map<string, ReturnType<typeof vi.fn>>();
+const mockRunnerStart = vi.hoisted(() => vi.fn());
 
 vi.mock('./agent-runner', () => ({
   createAgentRunner: vi.fn((_db, runtime) => {
     const runner: any = {
-      start: vi.fn().mockResolvedValue(undefined),
+      start: mockRunnerStart,
       stop: vi.fn(),
       notifyExternalEvent: vi.fn(),
       getSnapshot: vi.fn().mockReturnValue({ wake: { events: [] }, pendingRunEvents: [] }),
@@ -64,6 +65,7 @@ describe('internal-agent-registry', () => {
     }
     mockRunnerInstances.clear();
     vi.clearAllMocks();
+    mockRunnerStart.mockResolvedValue(undefined);
   });
 
   describe('list', () => {
@@ -95,6 +97,13 @@ describe('internal-agent-registry', () => {
 
       const runner = mockRunnerInstances.get('start-agent') as any;
       expect(runner!.start).toHaveBeenCalled();
+    });
+
+    it('does not block registration while the runner is executing', async () => {
+      mockRunnerStart.mockReturnValue(new Promise(() => undefined));
+
+      expect(() => registry().add(makeDb(), makeRuntime('busy-agent'))).not.toThrow();
+      expect(registry().get('busy-agent')).toBeDefined();
     });
 
     it('get returns the registered entry', async () => {
