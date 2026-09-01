@@ -21,11 +21,9 @@ function makeMockHttpServer() {
 
 function makeMockReadModel() {
   return {
-    companyCash: {
-      getOverview: vi.fn<() => Promise<unknown>>(),
-      listContractSummaries: vi.fn<() => Promise<unknown>>(),
-    },
-  } as any;
+    getFinance: vi.fn<() => Promise<unknown>>(),
+    getFinanceContracts: vi.fn<() => Promise<unknown>>(),
+  };
 }
 
 describe('registerFinanceReadRoutes', () => {
@@ -60,11 +58,11 @@ describe('registerFinanceReadRoutes', () => {
 
   it('GET /admin/finance calls getFinance and returns its result', async () => {
     registerFinanceReadRoutes(mockServer, {} as any, mockReadModel);
-    mockReadModel.companyCash.getOverview.mockResolvedValue({ totalCash: 50000, totalPayables: 12000 });
+    mockReadModel.getFinance.mockResolvedValue({ totalCash: 50000, totalPayables: 12000 });
     const handler = mockServer.routes.find((r) => r.path === '/admin/finance')!
       .handler as () => Promise<unknown>;
     const response = await handler();
-    expect(mockReadModel.companyCash.getOverview).toHaveBeenCalled();
+    expect(mockReadModel.getFinance).toHaveBeenCalled();
     const { jsonResponse } = await import('../index');
     expect(jsonResponse).toHaveBeenCalledWith({ totalCash: 50000, totalPayables: 12000 });
     expect(response).toMatchObject({ status: 200 });
@@ -72,11 +70,11 @@ describe('registerFinanceReadRoutes', () => {
 
   it('GET /admin/finance/contracts calls getFinanceContracts and returns its result', async () => {
     registerFinanceReadRoutes(mockServer, {} as any, mockReadModel);
-    mockReadModel.companyCash.listContractSummaries.mockResolvedValue([{ id: 'contract-1', amount: 1000 }]);
+    mockReadModel.getFinanceContracts.mockResolvedValue([{ id: 'contract-1', amount: 1000 }]);
     const handler = mockServer.routes.find((r) => r.path === '/admin/finance/contracts')!
       .handler as () => Promise<unknown>;
     const response = await handler();
-    expect(mockReadModel.companyCash.listContractSummaries).toHaveBeenCalled();
+    expect(mockReadModel.getFinanceContracts).toHaveBeenCalled();
     const { jsonResponse } = await import('../index');
     expect(jsonResponse).toHaveBeenCalledWith([{ id: 'contract-1', amount: 1000 }]);
     expect(response).toMatchObject({ status: 200 });
@@ -84,7 +82,7 @@ describe('registerFinanceReadRoutes', () => {
 
   it('handlers are async functions', async () => {
     registerFinanceReadRoutes(mockServer, {} as any, mockReadModel);
-    mockReadModel.companyCash.getOverview.mockResolvedValue(null);
+    mockReadModel.getFinance.mockResolvedValue(null);
     const handler = mockServer.routes.find((r) => r.path === '/admin/finance')!.handler;
     const result = (handler as Function)();
     expect(result).toBeInstanceOf(Promise);

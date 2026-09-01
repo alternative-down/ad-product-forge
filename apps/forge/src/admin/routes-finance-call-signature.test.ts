@@ -41,14 +41,10 @@ function readCompanyCashTs(): string {
 }
 
 describe('L#NN-17 C5 tripwire: finance routes call signature (#5681)', () => {
-  it('registerFinanceReadRoutes called with companyCash in 3rd arg object literal', () => {
-    // The bug was: registerFinanceReadRoutes(input.httpServer, input.db)
-    // The fix:  registerFinanceReadRoutes(input.httpServer, input.db, { companyCash })
-    // This regex matches the 3-arg form with `companyCash` inside the object literal.
+  it('registerFinanceReadRoutes receives the admin finance read model', () => {
     const src = readRoutesTs();
-    expect(src).toMatch(
-      /registerFinanceReadRoutes\(\s*input\.httpServer\s*,\s*input\.db\s*,\s*\{[^}]*companyCash[^}]*\}\s*\)/,
-    );
+    expect(src).toContain('getFinance: readModel.getFinance');
+    expect(src).toContain('getFinanceContracts: readModel.getFinanceContracts');
   });
 
   it('CompanyCash has getOverview method (company-cash-operations.ts)', () => {

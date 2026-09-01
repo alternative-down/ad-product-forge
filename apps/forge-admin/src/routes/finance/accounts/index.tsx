@@ -112,8 +112,8 @@ function FinanceAccountsIndexRoute() {
     },
   });
   const plannedMovements = useMemo(
-    () => (financeQuery.data?.movements.items ?? []).filter((item) => item.status === 'planned'),
-    [financeQuery.data?.movements.items],
+    () => (financeQuery.data?.movements?.items ?? []).filter((item) => item.status === 'planned'),
+    [financeQuery.data?.movements?.items],
   );
   const recurringPayables = useMemo(
     () => financeQuery.data?.recurringPayables ?? [],
@@ -124,8 +124,8 @@ function FinanceAccountsIndexRoute() {
     [contractsQuery.data?.items],
   );
   const movements = useMemo(
-    () => financeQuery.data?.movements.items ?? [],
-    [financeQuery.data?.movements.items],
+    () => financeQuery.data?.movements?.items ?? [],
+    [financeQuery.data?.movements?.items],
   );
   const agendaRows = useMemo(
     () => [
