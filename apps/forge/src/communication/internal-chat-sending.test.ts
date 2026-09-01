@@ -644,7 +644,7 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
     });
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error('expected invalid');
-    expect(result.error).toContain('Reply target message not found');
+    expect(result.error).toContain('Message not found: msg-nonexistent');
   });
 
   it('throws when replyToMessageId belongs to a different conversation', async () => {
