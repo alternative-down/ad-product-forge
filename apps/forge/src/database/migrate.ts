@@ -1,9 +1,7 @@
 import { errorMsg } from '../agents/error-formatting';
 import { migrationsDebug } from './migrations-debug';
 import 'node:process';
-import { dirname, join } from 'node:path';
-import { existsSync } from 'node:fs';
-import { MigrationsJournalNotFoundError } from './migrate.errors';
+
 
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
@@ -39,21 +37,11 @@ async function queryAppliedMigrations(
 }
 
 // ─── findMigrationsFolder ───────────────────────────────────────────────────
-/**
- * Walk up from start directory until a migrations/meta/_journal.json is found.
- * Handles both dev (src/database/ -> apps/forge/migrations/) and bundled
- * (dist/database/ -> dist/migrations/) layouts, as well as any future layout
- * drift. Pure runtime, no build-config coupling. (Refs #5674)
- */
-export function findMigrationsFolder(start: string): string {
-  let dir = start;
-  for (let i = 0; i < 5; i++) {
-    const candidate = join(dir, 'migrations', 'meta', '_journal.json');
-    if (existsSync(candidate)) return join(dir, 'migrations');
-    dir = dirname(dir);
-  }
-  throw new MigrationsJournalNotFoundError(start);
-}
+// Re-exported from shared module ./find-migrations-folder per issue #6761 (DRY).
+// Original implementation moved there to consolidate with fixup-system-settings.ts
+// duplicate. Tests at ./find-migrations-folder.test.ts (L#19 tripwire for #5674).
+import { findMigrationsFolder } from './find-migrations-folder';
+export { findMigrationsFolder };
 
 // ─── cleanupFixupJournalEntry (D56 Sprint 0, #6722 retry) ────────────────────────
 /**
