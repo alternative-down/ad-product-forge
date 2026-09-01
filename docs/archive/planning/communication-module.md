@@ -36,6 +36,7 @@ createAgent
 Located in: `packages/mastra-engine/src/create-forge-agent.ts`
 
 **Responsibilities:**
+
 - Create the Mastra `Agent` instance
 - Initialize the communication module
 - Register configured providers
@@ -50,6 +51,7 @@ The runtime is the owner; all subcomponents are created and managed by it.
 Located in: `packages/mastra-engine/src/agent/communication/module.ts`
 
 **Owns:**
+
 - Provider registration and lifecycle
 - Communication store (5 LibSQL tables)
 - Inbound message reception, validation, and persistence
@@ -59,6 +61,7 @@ Located in: `packages/mastra-engine/src/agent/communication/module.ts`
 - Wake event emission to the wake queue
 
 **Does not own:**
+
 - Provider SDK clients or credentials
 - Provider transport implementation
 - Agent flow or wake logic
@@ -71,7 +74,7 @@ A provider is a transport-only adapter.
 
 ```typescript
 type CommunicationProvider = {
-  id: string;  // Unique provider identifier (e.g., "discord", "internal-chat")
+  id: string; // Unique provider identifier (e.g., "discord", "internal-chat")
 
   getAccount(): Promise<{
     externalAccountId: string;
@@ -81,12 +84,14 @@ type CommunicationProvider = {
 
   onMessage?(callback: (message: CommunicationInboundMessage) => Promise<void>): void;
 
-  syncContacts?(): Promise<Array<{
-    slug: string;
-    displayName: string;
-    externalUserId?: string;
-    username?: string;
-  }>>;
+  syncContacts?(): Promise<
+    Array<{
+      slug: string;
+      displayName: string;
+      externalUserId?: string;
+      username?: string;
+    }>
+  >;
 
   sendMessage(input: {
     providerConversationKey?: string;
@@ -102,12 +107,14 @@ type CommunicationProvider = {
 ```
 
 **Provider responsibilities:**
+
 - Know how to identify its external account
 - Subscribe to inbound events and call the callback
 - Send outbound messages via its transport
 - Expose provider-specific conversation and message IDs
 
 **Provider does not:**
+
 - Own the communication flow
 - Manage contacts or conversations in the store
 - Trigger wake events
@@ -118,12 +125,14 @@ type CommunicationProvider = {
 A contact represents a person or agent that the agent can communicate with.
 
 **Contact entity:**
+
 - `slug` — unique identifier (auto-generated or user-defined)
 - `displayName` — human-readable name
 - `description` — optional notes
 - `accounts` — list of provider identities (externalUserId, username per provider)
 
 **Lifecycle:**
+
 - Contacts are created automatically when inbound messages arrive with new author identities
 - Can be manually created via `communication.upsertContact()`
 - The communication module manages all contact creation; the agent does not directly create contacts
@@ -133,6 +142,7 @@ A contact represents a person or agent that the agent can communicate with.
 A conversation is a place where messages happen (DM, group chat, channel, etc.).
 
 **Conversation entity:**
+
 - `conversationId` — internal UUID
 - `provider` — which provider owns this conversation
 - `providerConversationKey` — external conversation identifier
@@ -141,6 +151,7 @@ A conversation is a place where messages happen (DM, group chat, channel, etc.).
 - `createdAt`, `updatedAt` — timestamps
 
 **Lifecycle:**
+
 - Created automatically when inbound messages arrive for a new conversation
 - Persisted explicitly in the store (not computed)
 - Identified by `(provider, providerConversationKey)` combination
@@ -150,6 +161,7 @@ A conversation is a place where messages happen (DM, group chat, channel, etc.).
 A message is a single unit of communication.
 
 **Message entity:**
+
 - `messageId` — internal UUID
 - `conversationId` — which conversation it belongs to
 - `provider` — which provider
@@ -163,7 +175,6 @@ A message is a single unit of communication.
 
 **Key principle:** Agents only use internal IDs (`messageId`, `conversationId`). The communication module translates them to provider IDs when communicating with providers.
 
-
 ## Communication Store
 
 Located in: `packages/mastra-engine/src/agent/communication/store.ts`
@@ -172,13 +183,13 @@ Located in: `packages/mastra-engine/src/agent/communication/store.ts`
 
 **Storage schema** (5 tables):
 
-| Table | Purpose | Key Fields |
-| --- | --- | --- |
-| `forge_communication_accounts` | Provider accounts | account_id, provider, external_account_id |
-| `forge_communication_contacts` | Contacts | slug, display_name, description |
-| `forge_communication_contact_accounts` | Contact → Provider mapping | slug, provider, external_user_id, username |
-| `forge_communication_conversations` | Conversations | conversation_id, provider, provider_conversation_key |
-| `forge_communication_messages` | Messages | message_id, conversation_id, provider, content, unread |
+| Table                                  | Purpose                    | Key Fields                                             |
+| -------------------------------------- | -------------------------- | ------------------------------------------------------ |
+| `forge_communication_accounts`         | Provider accounts          | account_id, provider, external_account_id              |
+| `forge_communication_contacts`         | Contacts                   | slug, display_name, description                        |
+| `forge_communication_contact_accounts` | Contact → Provider mapping | slug, provider, external_user_id, username             |
+| `forge_communication_conversations`    | Conversations              | conversation_id, provider, provider_conversation_key   |
+| `forge_communication_messages`         | Messages                   | message_id, conversation_id, provider, content, unread |
 
 **ID strategy:**
 
@@ -191,7 +202,6 @@ Located in: `packages/mastra-engine/src/agent/communication/store.ts`
   - `providerMessageId` — Provider-specific message ID
 
 This design keeps the store system-owned and provider-agnostic.
-
 
 ## Message Flow
 
@@ -261,7 +271,6 @@ sendMessage({
 }): Promise<{ messageId, conversationId }>
 ```
 
-
 ## Agent-Facing API
 
 Located in: `packages/mastra-engine/src/agent/communication/tools.ts`
@@ -329,7 +338,6 @@ sendMessage(input: {
 
 **Key principle:** All agent-facing tools use internal IDs only (conversationId, messageId, contactSlug). The communication module handles all translations to provider IDs internally.
 
-
 ## Implementation Notes
 
 ### Wake Queue Integration
@@ -337,7 +345,7 @@ sendMessage(input: {
 When inbound messages arrive, the communication module calls the registered handler:
 
 ```typescript
-communication.onReceiveMessage(wakeQueue.notifyExternalEvent)
+communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
 ```
 
 Located in: `packages/mastra-engine/src/agent/wake-queue.ts`
@@ -361,6 +369,7 @@ The communication module handles everything else: persistence, orchestration, co
 ### Store Consistency
 
 All provider operations are immediately persisted:
+
 - Inbound messages → stored unread, wakes the agent
 - Outbound messages → stored after successful send
 - Contacts → created or updated on sync

@@ -10,20 +10,24 @@ export class InMemoryConversationStore implements ConversationStore {
   private readonly messagesByThread = new Map<string, ConversationMessage[]>();
 
   async upsertThread(thread: ConversationThread): Promise<void> {
+    await Promise.resolve();
     this.threads.set(thread.id, thread);
   }
 
   async getThread(threadId: string): Promise<ConversationThread | null> {
+    await Promise.resolve();
     return this.threads.get(threadId) ?? null;
   }
 
   async listThreads(): Promise<ConversationThread[]> {
+    await Promise.resolve();
     return Array.from(this.threads.values()).sort((left, right) => {
       return right.updatedAt.localeCompare(left.updatedAt);
     });
   }
 
   async appendMessage(message: ConversationMessage): Promise<void> {
+    await Promise.resolve();
     const currentMessages = this.messagesByThread.get(message.threadId) ?? [];
 
     currentMessages.push(message);
@@ -39,6 +43,7 @@ export class InMemoryConversationStore implements ConversationStore {
     operationalMemoryType?: ConversationMessage['operationalMemoryType'];
     operationalMemoryGeneration?: number | null | undefined;
   }): Promise<void> {
+    await Promise.resolve();
     const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
     const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
 
@@ -68,6 +73,7 @@ export class InMemoryConversationStore implements ConversationStore {
     messageId: string;
     metadata: Record<string, unknown> | undefined;
   }): Promise<void> {
+    await Promise.resolve();
     const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
     const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
 
@@ -89,6 +95,7 @@ export class InMemoryConversationStore implements ConversationStore {
     messageId: string;
     replacedByMessageId: string | null;
   }): Promise<void> {
+    await Promise.resolve();
     const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
     const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
 
@@ -106,17 +113,18 @@ export class InMemoryConversationStore implements ConversationStore {
   }
 
   async listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]> {
+    await Promise.resolve();
     const currentMessages = this.messagesByThread.get(query.threadId) ?? [];
-    const startIndex = query.afterMessageId
+    const startIndex = query.afterMessageId != null
       ? currentMessages.findIndex((message) => message.id === query.afterMessageId) + 1
       : 0;
-    const beforeIndex = query.beforeMessageId
+    const beforeIndex = query.beforeMessageId != null
       ? currentMessages.findIndex((message) => message.id === query.beforeMessageId)
       : -1;
     const endIndex = beforeIndex >= 0 ? beforeIndex : currentMessages.length;
     const selectedMessages = currentMessages.slice(Math.max(0, startIndex), endIndex);
 
-    if (!query.limit || query.limit <= 0) {
+    if (query.limit == null || query.limit <= 0) {
       return query.order === 'desc' ? [...selectedMessages].reverse() : [...selectedMessages];
     }
 
@@ -127,12 +135,12 @@ export class InMemoryConversationStore implements ConversationStore {
     return selectedMessages.slice(-query.limit);
   }
 
-  async listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]> {
+  async listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]> {
+  await Promise.resolve();
     const threadMessages = this.messagesByThread.get(input.threadId) ?? [];
     const checkpointIndex = findOperationalMemoryCheckpointIndex(threadMessages);
-    const seedMessages = checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
+    const seedMessages =
+      checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
     const messageMap = new Map(threadMessages.map((message) => [message.id, message]));
     const visibleMessages: ConversationMessage[] = [];
     const seenTerminalIds = new Set<string>();
@@ -156,7 +164,7 @@ function findOperationalMemoryCheckpointIndex(messages: ConversationMessage[]) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
 
-    if (message.operationalMemoryType === 'checkpoint-summary' && !message.replacedByMessageId) {
+    if (message.operationalMemoryType === 'checkpoint-summary' && message.replacedByMessageId == null) {
       return index;
     }
   }
@@ -171,7 +179,7 @@ function resolveTerminalOperationalMemoryMessage(
   let currentMessage: ConversationMessage | undefined = message;
   const visitedIds = new Set<string>();
 
-  while (currentMessage?.replacedByMessageId) {
+  while (currentMessage?.replacedByMessageId != null) {
     if (visitedIds.has(currentMessage.id)) {
       return currentMessage;
     }

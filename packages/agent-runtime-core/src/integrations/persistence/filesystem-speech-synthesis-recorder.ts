@@ -2,7 +2,10 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 
-import type { SpeechSynthesisEvent, SpeechSynthesisRecorder } from '../gateways/speech-recording.js';
+import type {
+  SpeechSynthesisEvent,
+  SpeechSynthesisRecorder,
+} from '../gateways/speech-recording.js';
 
 export type FilesystemSpeechSynthesisRecorderOptions = {
   basePath: string;

@@ -12,15 +12,19 @@ import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
 describe('multimodal input integration', () => {
   it('detects multimodal runtime payloads', () => {
-    expect(isMultimodalRuntimeInputPayload({
-      parts: [
-        { type: 'text', text: 'hello' },
-        { type: 'image', mimeType: 'image/png', bytes: new Uint8Array([1]) },
-      ],
-    })).toBe(true);
-    expect(isMultimodalRuntimeInputPayload({
-      text: 'hello',
-    })).toBe(false);
+    expect(
+      isMultimodalRuntimeInputPayload({
+        parts: [
+          { type: 'text', text: 'hello' },
+          { type: 'image', mimeType: 'image/png', bytes: new Uint8Array([1]) },
+        ],
+      }),
+    ).toBe(true);
+    expect(
+      isMultimodalRuntimeInputPayload({
+        text: 'hello',
+      }),
+    ).toBe(false);
   });
 
   it('formats multimodal input payloads into step context parts', async () => {
@@ -49,10 +53,12 @@ describe('multimodal input integration', () => {
     });
     await runtime.step();
 
-    expect(seenParts).toEqual([[
-      { type: 'text', text: 'screen frame' },
-      { type: 'image', mimeType: 'image/jpeg', bytes: new Uint8Array([1, 2, 3]) },
-    ]]);
+    expect(seenParts).toEqual([
+      [
+        { type: 'text', text: 'screen frame' },
+        { type: 'image', mimeType: 'image/jpeg', bytes: new Uint8Array([1, 2, 3]) },
+      ],
+    ]);
   });
 
   it('falls back to the default formatter for plain payloads', async () => {

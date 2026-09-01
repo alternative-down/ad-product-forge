@@ -1,7 +1,40 @@
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
+import { forgeDebug } from '@forge-runtime/core';
+import { AgentRunnerMissingPrimaryModelProfileError } from './agent-runner-usage.errors';
 
 const RECENT_STEP_LIMIT = 10;
+
+export type AgentRunnerUsage = {
+  recordAgentStep: (
+    contractId: string,
+    inputTokens: number,
+    cachedInputTokens: number,
+    outputTokens: number,
+  ) => Promise<{ stepId: string; createdAt: number }>;
+  recordRefund: (input: { contractId: string; refundedUsd: number }) => Promise<void>;
+  estimateStepCostUsd: () => Promise<number | null>;
+  recordObservationalMemorySteps: (
+    contractId: string,
+    steps: Array<{
+      response?: {
+        uiMessages?: Array<{
+          parts?: Array<unknown>;
+        }>;
+      };
+    }>,
+  ) => void;
+  getUsageFromResult: (result: { usage?: unknown }) => {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  };
+  getPeriodUsage: (input: {
+    agentId: string;
+    periodStartMs: number;
+    periodEndMs: number;
+  }) => { totalCostUsd: number; stepCount: number };
+};
 
 type AgentUsage = {
   inputTokens?: number;
@@ -20,8 +53,13 @@ export function createAgentRunnerUsage(input: {
   runtime: InternalAgentRuntime;
 }) {
   async function estimateStepCostUsd() {
-    if (!input.runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+    if (input.runtime.modelProfileId === null || input.runtime.modelProfileId === undefined) {
+      forgeDebug({
+        scope: 'agent-runner-usage',
+        level: 'error',
+        message: 'agent-runner-usage: validation/requirement failed',
+      });
+      throw new AgentRunnerMissingPrimaryModelProfileError(input.runtime.id);
     }
 
     const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
@@ -35,23 +73,69 @@ export function createAgentRunnerUsage(input: {
       profileId: input.runtime.modelProfileId,
     });
 
-    if (!pricing.modelPrice) {
-      return recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+    if (pricing.modelPrice === null || pricing.modelPrice === undefined) {
+      return (
+        recentSteps.reduce(
+          (
+            total: number,
+            step: {
+              inputTokens: number;
+              cachedInputTokens: number;
+              outputTokens: number;
+              costUsd: number;
+            },
+          ) => total + step.costUsd,
+          0,
+        ) / recentSteps.length
+      );
     }
 
     const averageInputTokens =
-      recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: {
+            inputTokens: number;
+            cachedInputTokens: number;
+            outputTokens: number;
+            costUsd: number;
+          },
+        ) => total + step.inputTokens,
+        0,
+      ) / recentSteps.length;
     const averageCachedInputTokens =
-      recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: {
+            inputTokens: number;
+            cachedInputTokens: number;
+            outputTokens: number;
+            costUsd: number;
+          },
+        ) => total + step.cachedInputTokens,
+        0,
+      ) / recentSteps.length;
     const averageOutputTokens =
-      recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: {
+            inputTokens: number;
+            cachedInputTokens: number;
+            outputTokens: number;
+            costUsd: number;
+          },
+        ) => total + step.outputTokens,
+        0,
+      ) / recentSteps.length;
     const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
 
     return (
-      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-        + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-        + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-      * pricing.contractCostMultiplier
+      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+        (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+        (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+      pricing.contractCostMultiplier
     );
   }
 
@@ -61,8 +145,13 @@ export function createAgentRunnerUsage(input: {
     cachedInputTokens: number,
     outputTokens: number,
   ) {
-    if (!input.runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+    if (input.runtime.modelProfileId === null || input.runtime.modelProfileId === undefined) {
+      forgeDebug({
+        scope: 'agent-runner-usage',
+        level: 'error',
+        message: 'agent-runner-usage: validation/requirement failed',
+      });
+      throw new AgentRunnerMissingPrimaryModelProfileError(input.runtime.id);
     }
 
     const pricing = await input.store.getUsagePricing({
@@ -71,7 +160,7 @@ export function createAgentRunnerUsage(input: {
     });
     let costUsd = 0;
 
-    if (pricing.modelPrice) {
+    if (pricing.modelPrice !== null && pricing.modelPrice !== undefined) {
       const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
       costUsd =
         ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
@@ -80,7 +169,7 @@ export function createAgentRunnerUsage(input: {
         pricing.contractCostMultiplier;
     }
 
-    return input.store.recordAgentStep({
+    return await input.store.recordAgentStep({
       agentId: input.runtime.id,
       contractId,
       llmProfileId: input.runtime.modelProfileId,
@@ -97,7 +186,7 @@ export function createAgentRunnerUsage(input: {
     });
   }
 
-  async function recordObservationalMemorySteps(
+  function recordObservationalMemorySteps(
     _contractId: string,
     steps: Array<{
       response?: {
@@ -119,8 +208,8 @@ export function createAgentRunnerUsage(input: {
 
     return {
       inputTokens: promptTokens,
-      cachedInputTokens,
       outputTokens,
+      cachedInputTokens,
     };
   }
 
@@ -129,5 +218,12 @@ export function createAgentRunnerUsage(input: {
     recordAgentStep,
     recordObservationalMemorySteps,
     getUsageFromResult,
+    recordRefund: async (_input: { contractId: string; refundedUsd: number }) => {
+      // stub
+    },
+    getPeriodUsage: (_input: { agentId: string; periodStartMs: number; periodEndMs: number }) => {
+      // stub
+      return { totalCostUsd: 0, stepCount: 0 };
+    },
   };
 }

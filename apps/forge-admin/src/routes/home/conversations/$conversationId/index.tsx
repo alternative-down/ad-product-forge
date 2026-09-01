@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   addHomeInternalChatGroupMember,
   archiveHomeInternalChatConversation,
+  createInternalChatEventSource,
   getHomeInternalChatGroupMembers,
   getHomeInternalChatMessages,
   removeHomeInternalChatGroupMember,
@@ -11,13 +12,17 @@ import {
   updateHomeInternalChatConversation,
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
-} from '@/lib/admin-api';
-import { formatRecentMessageTime, useHomeConversations } from '../-context';
-import { ConversationComposer } from './-conversation-composer';
-import { ConversationHeader } from './-conversation-header';
-import { ConversationMessagesPane } from './-conversation-messages-pane';
-import { ParticipantsDialog } from './-participants-dialog';
-import { RenameConversationDialog } from './-rename-conversation-dialog';
+  type InternalChatParticipantRole,
+} from '@/lib/admin-api/index';
+import {
+  formatRecentMessageTime,
+  useHomeConversations,
+} from '@/components/home/conversations/context';
+import { ConversationComposer } from '@/components/home/conversations/conversation-composer';
+import { ConversationHeader } from '@/components/home/conversations/conversation-header';
+import { ConversationMessagesPane } from '@/components/home/conversations/conversation-messages-pane';
+import { ParticipantsDialog } from '@/components/home/conversations/participants-dialog';
+import { RenameConversationDialog } from '@/components/home/conversations/rename-conversation-dialog';
 
 export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,
@@ -47,12 +52,16 @@ function HomeConversationDetailIndexRoute() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
-  const [availableParticipantRole, setAvailableParticipantRole] = useState<'admin' | 'normal'>('normal');
+  const [availableParticipantRole, setAvailableParticipantRole] = useState<InternalChatParticipantRole>(
+    'normal',
+  );
   const [messageDraft, setMessageDraft] = useState('');
   const [attachmentDrafts, setAttachmentDrafts] = useState<File[]>([]);
   const [messages, setMessages] = useState<HomeInternalChatConversationMessage[]>([]);
   const [members, setMembers] = useState<HomeInternalChatGroupMember[]>([]);
-  const selectedConversation = conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ?? null;
+  const selectedConversation =
+    conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ??
+    null;
   const selectedAccountId = selectedAccount?.accountId ?? '';
   const selectedConversationId = selectedConversation?.id ?? '';
   const selectedConversationType = selectedConversation?.type ?? 'dm';
@@ -68,9 +77,10 @@ function HomeConversationDetailIndexRoute() {
   }, [contacts, members]);
 
   useEffect(() => {
-    activeConversationKeyRef.current = selectedAccountId && selectedConversationId
-      ? `${selectedAccountId}:${selectedConversationId}`
-      : '';
+    activeConversationKeyRef.current =
+      selectedAccountId && selectedConversationId
+        ? `${selectedAccountId}:${selectedConversationId}`
+        : '';
   }, [selectedAccountId, selectedConversationId]);
 
   useEffect(() => {
@@ -113,15 +123,17 @@ function HomeConversationDetailIndexRoute() {
     initialScrollDoneRef.current = false;
   }, [selectedConversationId]);
 
+  // Real-time message delivery via SSE — replaces 2s polling.
   useEffect(() => {
     if (!selectedAccountId || !selectedConversationId) {
       return;
     }
 
-    let cancelled = false;
     const conversationKey = `${selectedAccountId}:${selectedConversationId}`;
 
-    const interval = window.setInterval(() => {
+    // Fallback polling safety-net: if SSE fails or is not yet connected,
+    // a slow poll catches any messages that may have been missed.
+    const pollingFallback = window.setInterval(() => {
       void (async () => {
         const messageResult = await getHomeInternalChatMessages(
           selectedAccountId,
@@ -130,27 +142,60 @@ function HomeConversationDetailIndexRoute() {
           0,
         );
 
-        if (cancelled || activeConversationKeyRef.current !== conversationKey) {
+        if (activeConversationKeyRef.current !== conversationKey) {
           return;
         }
 
         setMessages(messageResult.items);
+      })();
+    }, 10_000);
+
+    const es = createInternalChatEventSource(
+      selectedAccountId,
+      selectedConversationId,
+      (sseMessage) => {
+        if (activeConversationKeyRef.current !== conversationKey) {
+          return;
+        }
+
+        setMessages((prev) => {
+          // Deduplicate in case reconnect caused a replay.
+          if (prev.some((m) => m.messageId === sseMessage.messageId)) {
+            return prev;
+          }
+          return [
+            {
+              messageId: sseMessage.messageId,
+              authorAccountId: sseMessage.authorId,
+              authorDisplayName: sseMessage.authorDisplayName,
+              content: sseMessage.content,
+              createdAt: new Date(sseMessage.createdAt).getTime(),
+              attachments: sseMessage.attachments.map((a) => ({
+                name: a.name,
+                contentType: a.contentType,
+                sizeBytes: a.sizeBytes,
+              })),
+            },
+            ...prev,
+          ];
+        });
 
         if (autoScrollEnabled) {
           requestAnimationFrame(() => {
-            const nextViewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
-
-            if (nextViewport instanceof HTMLDivElement) {
-              nextViewport.scrollTop = nextViewport.scrollHeight;
+            const viewport = scrollAreaRef.current?.querySelector(
+              '[data-slot=scroll-area-viewport]',
+            );
+            if (viewport instanceof HTMLDivElement) {
+              viewport.scrollTop = 0; // Newest message at top → scroll to 0.
             }
           });
         }
-      })();
-    }, 2_000);
+      },
+    );
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      window.clearInterval(pollingFallback);
+      es.close();
     };
   }, [autoScrollEnabled, selectedAccountId, selectedConversationId]);
 
@@ -177,7 +222,11 @@ function HomeConversationDetailIndexRoute() {
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
-    if (!(viewport instanceof HTMLDivElement) || initialScrollDoneRef.current || messages.length === 0) {
+    if (
+      !(viewport instanceof HTMLDivElement) ||
+      initialScrollDoneRef.current ||
+      messages.length === 0
+    ) {
       return;
     }
 
@@ -225,7 +274,9 @@ function HomeConversationDetailIndexRoute() {
           formatRecentMessageTime={formatRecentMessageTime}
           autoScrollEnabled={autoScrollEnabled}
           onScrollToBottom={() => {
-            const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+            const viewport = scrollAreaRef.current?.querySelector(
+              '[data-slot=scroll-area-viewport]',
+            );
 
             if (!(viewport instanceof HTMLDivElement)) {
               return;
@@ -275,7 +326,9 @@ function HomeConversationDetailIndexRoute() {
               setAttachmentDrafts([]);
               setAutoScrollEnabled(true);
               requestAnimationFrame(() => {
-                const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+                const viewport = scrollAreaRef.current?.querySelector(
+                  '[data-slot=scroll-area-viewport]',
+                );
 
                 if (viewport instanceof HTMLDivElement) {
                   viewport.scrollTop = viewport.scrollHeight;

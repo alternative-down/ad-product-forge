@@ -29,6 +29,7 @@
 ## Ideia
 
 Usar **sub-agente** com LLM mais barato:
+
 - Sub-agente executa tarefa interna
 - Agente primário é orquestrador/supervisor
 - Comunicação via chat interno
@@ -58,4 +59,5 @@ Usar **sub-agente** com LLM mais barato:
 ---
 
 **Histórico do Documento:**
+
 - v1.0 (2026-03-15): Investigação de sub-agentes com LLM mais barato

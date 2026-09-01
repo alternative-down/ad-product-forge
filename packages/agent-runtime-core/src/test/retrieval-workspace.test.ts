@@ -12,9 +12,11 @@ import { RefreshableRetrievalWorkspace } from '../integrations/retrieval/refresh
 const tempPaths: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempPaths.splice(0).map((tempPath) => {
-    return rm(tempPath, { recursive: true, force: true });
-  }));
+  await Promise.all(
+    tempPaths.splice(0).map((tempPath) => {
+      return rm(tempPath, { recursive: true, force: true });
+    }),
+  );
 });
 
 describe('RefreshableRetrievalWorkspace', () => {

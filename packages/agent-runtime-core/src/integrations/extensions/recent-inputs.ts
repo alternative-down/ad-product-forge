@@ -10,9 +10,7 @@ type RecentInputsState = {
   inputs: RuntimeInput[];
 };
 
-export function createRecentInputsPlugin(
-  options: RecentInputsPluginOptions = {},
-): RuntimePlugin {
+export function createRecentInputsPlugin(options: RecentInputsPluginOptions = {}): RuntimePlugin {
   const maxInputs = options.maxInputs ?? 5;
   const stateByRuntime = new Map<string, RecentInputsState>();
 

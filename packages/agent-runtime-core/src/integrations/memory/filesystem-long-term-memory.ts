@@ -47,7 +47,7 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
   }
 
   async list(): Promise<LongTermMemoryDocument[]> {
-    return this.store.list();
+    return await this.store.list();
   }
 
   async recall(request: LongTermMemoryRecallRequest) {
@@ -104,9 +104,7 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
       return;
     }
 
-    await this.keywordIndex.index([
-      ...await this.store.list(),
-    ]);
+    await this.keywordIndex.index(documents);
     await this.vectorIndex.index(await this.embedDocuments(documents));
   }
 
@@ -122,16 +120,18 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
     return documents.flatMap((document, index) => {
       const vector = response.vectors[index];
 
-      if (!vector) {
+      if (vector == null) {
         return [];
       }
 
-      return [{
-        id: document.id,
-        text: document.text,
-        metadata: document.metadata,
-        vector,
-      }];
+      return [
+        {
+          id: document.id,
+          text: document.text,
+          metadata: document.metadata,
+          vector,
+        },
+      ];
     });
   }
 }

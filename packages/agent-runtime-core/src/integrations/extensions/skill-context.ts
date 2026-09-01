@@ -6,26 +6,21 @@ import type { SkillDefinition, SkillRegistry } from '../skills/contracts.js';
 export type SkillContextPluginOptions = {
   registry: SkillRegistry;
   topK?: number;
-  buildQuery?(context: {
-    pendingInputs: RuntimeInput[];
-    steps: StepRecord[];
-  }): string | null;
+  buildQuery?(context: { pendingInputs: RuntimeInput[]; steps: StepRecord[] }): string | null;
 };
 
-export function createSkillContextPlugin(
-  options: SkillContextPluginOptions,
-): RuntimePlugin {
+export function createSkillContextPlugin(options: SkillContextPluginOptions): RuntimePlugin {
   return {
     name: 'skill-context',
     async provideContext(context) {
       const query = options.buildQuery
         ? options.buildQuery({
-          pendingInputs: context.pendingInputs,
-          steps: context.steps,
-        })
+            pendingInputs: context.pendingInputs,
+            steps: context.steps,
+          })
         : buildDefaultSkillQuery(context.pendingInputs);
 
-      if (!query) {
+      if (query == null) {
         return [];
       }
 
@@ -39,12 +34,15 @@ export function createSkillContextPlugin(
         .sort((left, right) => right.score - left.score)
         .slice(0, options.topK ?? 3);
 
-      return matches.map(({ skill }, index): StepContextEntry => createTextStepContextEntry({
-        id: `skill:${skill.id}`,
-        kind: 'skill',
-        title: `Skill ${index + 1}: ${skill.name}`,
-        text: `${skill.description}\n\n${skill.instructions}`,
-      }));
+      return matches.map(
+        ({ skill }, index): StepContextEntry =>
+          createTextStepContextEntry({
+            id: `skill:${skill.id}`,
+            kind: 'skill',
+            title: `Skill ${index + 1}: ${skill.name}`,
+            text: `${skill.description}\n\n${skill.instructions}`,
+          }),
+      );
     },
   };
 }
@@ -55,7 +53,7 @@ function buildDefaultSkillQuery(pendingInputs: RuntimeInput[]) {
     .filter((value) => typeof value === 'string')
     .join(' ');
 
-  return payloads.trim() || null;
+  return payloads.trim() ?? null;
 }
 
 function scoreSkill(skill: SkillDefinition, query: string) {
@@ -66,7 +64,5 @@ function scoreSkill(skill: SkillDefinition, query: string) {
     .map((term) => term.trim())
     .filter(Boolean);
 
-  return queryTerms.reduce((score, term) => (
-    haystack.includes(term) ? score + 1 : score
-  ), 0);
+  return queryTerms.reduce((score, term) => (haystack.includes(term) ? score + 1 : score), 0);
 }

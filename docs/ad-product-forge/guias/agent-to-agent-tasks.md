@@ -49,10 +49,10 @@ O sistema de tarefas entre agentes permite que um agente-coordenador delegue tra
 
 ## Roles e Permissões
 
-| Role | Permissões |
-|------|-------------|
+| Role            | Permissões                                                    |
+| --------------- | ------------------------------------------------------------- |
 | **COORDINATOR** | Criar, listar, cancelar e atualizar tarefas de outros agentes |
-| **AGENT** | Listar e executar apenas as próprias tarefas |
+| **AGENT**       | Listar e executar apenas as próprias tarefas                  |
 
 ### Pré-requisitos
 
@@ -68,26 +68,20 @@ POST /admin/agent/task/create
 
 ```typescript
 interface CreateTaskInput {
-  targetAgentId: string;      // ID do agente que executará
-  taskDescription: string;     // Descrição da tarefa
-  taskType: TaskType;          // Tipo da tarefa
-  schedule?: TaskSchedule;     // Agendamento opcional
+  targetAgentId: string; // ID do agente que executará
+  taskDescription: string; // Descrição da tarefa
+  taskType: TaskType; // Tipo da tarefa
+  schedule?: TaskSchedule; // Agendamento opcional
   priority?: 'low' | 'medium' | 'high' | 'urgent';
-  context?: Record<string, unknown>;  // Dados extras
+  context?: Record<string, unknown>; // Dados extras
 }
 
-type TaskType = 
-  | 'code_review'
-  | 'documentation'
-  | 'testing'
-  | 'deployment'
-  | 'research'
-  | 'general';
+type TaskType = 'code_review' | 'documentation' | 'testing' | 'deployment' | 'research' | 'general';
 
-type TaskSchedule = 
-  | { type: 'once'; executeAt: number }           // Uma vez
-  | { type: 'recurring'; intervalMs: number }     // Recorrente
-  | { type: 'cron'; expression: string };        // Cron
+type TaskSchedule =
+  | { type: 'once'; executeAt: number } // Uma vez
+  | { type: 'recurring'; intervalMs: number } // Recorrente
+  | { type: 'cron'; expression: string }; // Cron
 ```
 
 ### Listar Tarefas
@@ -157,11 +151,11 @@ Lista crons criados para outros agentes.
 
 ```typescript
 const crons = await list_crons({
-  targetAgentId: 'agent-id'
+  targetAgentId: 'agent-id',
 });
 
 // Response
-[{ cronId: 'cron_abc123', targetAgentId: 'agent-id' }]
+[{ cronId: 'cron_abc123', targetAgentId: 'agent-id' }];
 ```
 
 ### manage_self_crons
@@ -172,7 +166,7 @@ Cria, atualiza ou deleta um cron próprio.
 await manage_self_crons({
   action: 'update',
   cronId: 'cron_abc123',
-  isActive: false
+  isActive: false,
 });
 ```
 
@@ -189,38 +183,38 @@ const crons = await list_self_crons({});
 ```typescript
 interface ScheduledTask {
   id: string;
-  coordinatorId: string;       // Quem criou
-  targetAgentId: string;        // Quem executa
+  coordinatorId: string; // Quem criou
+  targetAgentId: string; // Quem executa
   description: string;
   taskType: TaskType;
   status: TaskStatus;
   priority: Priority;
-  
+
   // Agendamento
   scheduleType?: 'once' | 'recurring' | 'cron';
-  scheduledTime?: number;       // para 'once'
-  recurringInterval?: number;   // para 'recurring' (ms)
-  cronExpression?: string;      // para 'cron'
-  
+  scheduledTime?: number; // para 'once'
+  recurringInterval?: number; // para 'recurring' (ms)
+  cronExpression?: string; // para 'cron'
+
   // Execução
   createdAt: number;
   startedAt?: number;
   completedAt?: number;
   result?: string;
   error?: string;
-  
+
   // Meta
   context?: Record<string, unknown>;
   cancelReason?: string;
 }
 
-type TaskStatus = 
-  | 'pending'      // Aguardando execução
-  | 'scheduled'    // Agendada para futuro
-  | 'in_progress'  // Em execução
-  | 'completed'    // Finalizada com sucesso
-  | 'cancelled'    // Cancelada
-  | 'failed';      // Falhou
+type TaskStatus =
+  | 'pending' // Aguardando execução
+  | 'scheduled' // Agendada para futuro
+  | 'in_progress' // Em execução
+  | 'completed' // Finalizada com sucesso
+  | 'cancelled' // Cancelada
+  | 'failed'; // Falhou
 
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
 ```
@@ -232,6 +226,7 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent';
 > Como **coordenador**, quero **criar uma tarefa para um agente** para **delegar trabalho de forma rastreável**.
 
 **Critérios:**
+
 - [ ] Coordenador pode especificar agente-alvo
 - [ ] Coordenador pode definir descrição e tipo
 - [ ] Coordenador pode agendar para execução única, recorrente ou cron
@@ -242,6 +237,7 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent';
 > Como **agente**, quero **visualizar e executar tarefas atribuídas** para **cumprir minhas responsabilidades**.
 
 **Critérios:**
+
 - [ ] Agente pode listar tarefas pendentes
 - [ ] Agente pode ver detalhes completos da tarefa
 - [ ] Agente pode atualizar status durante execução
@@ -252,6 +248,7 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent';
 > Como **coordenador**, quero **cancelar ou modificar tarefas** para **adaptar o planejamento conforme necessário**.
 
 **Critérios:**
+
 - [ ] Coordenador pode cancelar tarefas pendentes
 - [ ] Coordenador pode atualizar prioridade
 - [ ] Coordenador pode reagendar tarefas
@@ -262,6 +259,7 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent';
 > Como **stakeholder**, quero **ver o status das tarefas** para **acompanhar o progresso**.
 
 **Critérios:**
+
 - [ ] UI mostra todas as tarefas com status
 - [ ] Filtros por status, agente, data
 - [ ] Histórico de execuções mantido
@@ -287,11 +285,11 @@ type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
 ## Rate Limiting
 
-| Ação | Limite | Janela |
-|------|--------|--------|
-| Criar tarefa | 100 | por minuto |
-| Listar tarefas | 300 | por minuto |
-| Atualizar tarefa | 200 | por minuto |
+| Ação             | Limite | Janela     |
+| ---------------- | ------ | ---------- |
+| Criar tarefa     | 100    | por minuto |
+| Listar tarefas   | 300    | por minuto |
+| Atualizar tarefa | 200    | por minuto |
 
 ---
 

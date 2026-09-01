@@ -1,20 +1,50 @@
+import { forgeDebug } from '@forge-runtime/core';
+
+import { parseEnv } from '../config/env';
+
 import crypto from 'node:crypto';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+import {
+  InvalidEncryptedInputError,
+  InvalidEncryptionKeyLengthError,
+  MissingEncryptionKeyError,
+} from './crypto.errors';
 
 /**
- * Encrypt a plaintext string using AES-256-GCM
- * Returns base64-encoded result containing: IV + ciphertext + authTag
+ * Environment-level cache — set once on module load.
  */
-export function encryptSecret(plaintext: string): string {
-  if (!ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY environment variable is required');
+const ENCRYPTION_KEY = parseEnv().ENCRYPTION_KEY ?? null;
+
+/**
+ * Throws if ENCRYPTION_KEY is absent or not 32 bytes base64.
+ * Called by both encryptSecret and decryptSecret so error handling is
+ * guaranteed to be identical from both paths.
+ */
+function requireEncryptionKey(): Buffer {
+  if (ENCRYPTION_KEY === null) {
+    forgeDebug({
+      scope: 'encryption-crypto',
+      level: 'error',
+      message: 'encryption-crypto: validation/requirement failed',
+    });
+    throw new MissingEncryptionKeyError();
   }
 
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
+
   if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be 256-bit (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"');
+    throw new InvalidEncryptionKeyLengthError(key.length);
   }
+
+  return key;
+}
+
+/**
+ * Encrypt a plaintext string using AES-256-GCM.
+ * Returns base64-encoded result containing: IV + ciphertext + authTag.
+ */
+export function encryptSecret(plaintext: string): string {
+  const key = requireEncryptionKey();
 
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
@@ -29,20 +59,26 @@ export function encryptSecret(plaintext: string): string {
 }
 
 /**
- * Decrypt a base64-encoded secret encrypted with encryptSecret
- * Extracts: IV (16 bytes) + ciphertext + authTag (16 bytes)
+ * Decrypt a base64-encoded secret encrypted with encryptSecret.
+ * Extracts: IV (16 bytes) + ciphertext + authTag (16 bytes).
  */
 export function decryptSecret(encrypted: string): string {
-  if (!ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY environment variable is required');
-  }
+  // Defensive (Closes #6701): empty encrypted input returns empty string.
+  // Factory reset re-seeds llm_profiles with encrypted_api_key='', which
+  // crashed decrypt and broke /admin/system/llm. Non-empty invalid input
+  // still throws InvalidEncryptedInputError below.
+  if (encrypted === '') return '';
 
-  const key = Buffer.from(ENCRYPTION_KEY, 'base64');
-  if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be 256-bit (32 bytes)');
-  }
+  const key = requireEncryptionKey();
 
   const combined = Buffer.from(encrypted, 'base64');
+
+  // Validate input structure: minimum 32 bytes (16 IV + 0 ciphertext + 16 authTag).
+  // Without this check, malformed input would throw a confusing IV/authTag size
+  // error at decipher.final() instead of a clear "invalid encrypted input" error.
+  if (combined.length < 32) {
+    throw new InvalidEncryptedInputError(combined.length);
+  }
 
   // Extract components: IV (16) + ciphertext + authTag (16)
   const iv = combined.slice(0, 16);

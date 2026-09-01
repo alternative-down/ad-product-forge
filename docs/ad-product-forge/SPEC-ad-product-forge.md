@@ -54,6 +54,7 @@
 
 **Actor:** Administrador  
 **Fluxo:**
+
 1. Selecionar tipo de agente
 2. Configurar capacidades e permissions
 3. Definir orçamento e período do contrato
@@ -64,6 +65,7 @@
 
 **Actor:** Administrador, Financeiro  
 **Fluxo:**
+
 1. Acessar dashboard de agentes
 2. Verificar status de execução
 3. Monitorar gastos vs orçamento
@@ -73,6 +75,7 @@
 
 **Actor:** Financeiro  
 **Fluxo:**
+
 1. Selecionar agente
 2. Definir novo limite
 3. Sistema valida (cash disponível)
@@ -83,6 +86,7 @@
 
 **Actor:** Administrador  
 **Fluxo:**
+
 1. Selecionar agente
 2. Confirmar encerramento
 3. Sistema para execução
@@ -93,29 +97,29 @@
 
 ### 1. Forge Core
 
-| Componente | Responsabilidade |
-|------------|------------------|
-| `forge/src/agents/` | Lógica de agentes |
-| `forge/src/capabilities/` | Sistema de permissões |
-| `forge/src/workflows/` | Workflows de negócio |
-| `forge/src/tools/` | Ferramentas disponíveis |
+| Componente                | Responsabilidade        |
+| ------------------------- | ----------------------- |
+| `forge/src/agents/`       | Lógica de agentes       |
+| `forge/src/capabilities/` | Sistema de permissões   |
+| `forge/src/workflows/`    | Workflows de negócio    |
+| `forge/src/tools/`        | Ferramentas disponíveis |
 
 ### 2. Admin UI
 
-| Componente | Responsabilidade |
-|------------|------------------|
-| `forge-admin/` | Interface Next.js |
-| `features/agents/` | Páginas de agentes |
+| Componente            | Responsabilidade    |
+| --------------------- | ------------------- |
+| `forge-admin/`        | Interface Next.js   |
+| `features/agents/`    | Páginas de agentes  |
 | `features/contracts/` | Gestão de contratos |
-| `features/roles/` | Permissões e roles |
+| `features/roles/`     | Permissões e roles  |
 
 ### 3. Integrações
 
-| Integração | Capabilities |
-|------------|--------------|
-| GitHub | Repos, PRs, Issues, Labels, Milestones |
-| Coolify | Deploys, Applications, Logs |
-| Internal Chat | Mensagens, Grupos, Notificações |
+| Integração    | Capabilities                           |
+| ------------- | -------------------------------------- |
+| GitHub        | Repos, PRs, Issues, Labels, Milestones |
+| Coolify       | Deploys, Applications, Logs            |
+| Internal Chat | Mensagens, Grupos, Notificações        |
 
 ## Fluxos de Usuário
 
@@ -149,12 +153,12 @@ Coordinator → manage_crons(action=create)
 
 ## Requisitos Não-Funcionais
 
-| Requisito | Target |
-|-----------|--------|
-| Disponibilidade | 99.5% |
-| Tempo de resposta API | < 500ms |
-| Concorrência | 50+ agentes simultâneos |
-| Retenção de dados | 90 dias histórico |
+| Requisito             | Target                  |
+| --------------------- | ----------------------- |
+| Disponibilidade       | 99.5%                   |
+| Tempo de resposta API | < 500ms                 |
+| Concorrência          | 50+ agentes simultâneos |
+| Retenção de dados     | 90 dias histórico       |
 
 ## Pré-requisitos
 
@@ -165,14 +169,14 @@ Coordinator → manage_crons(action=create)
 
 ## Roadmap
 
-| Fase | Funcionalidade | Status |
-|------|---------------|--------|
-| 1 | Core agent system | ✅ Done |
-| 2 | Hiring workflow | ✅ Done |
-| 3 | Budget management | ✅ Done |
-| 4 | Permissions system | ✅ Done |
-| 5 | Agent-to-agent tasks | 🔄 In Progress |
-| 6 | Advanced scheduling | 📋 Planned |
+| Fase | Funcionalidade       | Status         |
+| ---- | -------------------- | -------------- |
+| 1    | Core agent system    | ✅ Done        |
+| 2    | Hiring workflow      | ✅ Done        |
+| 3    | Budget management    | ✅ Done        |
+| 4    | Permissions system   | ✅ Done        |
+| 5    | Agent-to-agent tasks | 🔄 In Progress |
+| 6    | Advanced scheduling  | 📋 Planned     |
 
 ---
 

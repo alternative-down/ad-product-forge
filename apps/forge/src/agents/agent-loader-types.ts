@@ -1,10 +1,11 @@
 import type { CoolifyManager } from '../coolify/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
-import type { Database } from '../database/index';
+
+import type { Database } from '../database/client';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { GitHubAppManager } from '../github/manager';
 import type { MiniMaxManager } from '../minimax/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
+import type { AgentScheduleManager } from '../schedules/manager/index';
 
 export interface AgentLoaderConfig {
   workspaceBasePath: string;
@@ -12,7 +13,7 @@ export interface AgentLoaderConfig {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   minimax?: MiniMaxManager;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
+  schedules: AgentScheduleManager;
   internalChat: InternalChatService;
 }
 

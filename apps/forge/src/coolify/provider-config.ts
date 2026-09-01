@@ -1,0 +1,89 @@
+/**
+ * Coolify provider configuration and base domain resolution.
+ * Extracted from coolify/manager.ts to isolate config concerns.
+ */
+
+import { z } from 'zod';
+import { forgeDebug } from '@forge-runtime/core';
+
+import { normalizeDomainHost } from './helpers';
+import { ServerSchema } from './schemas';
+import type { createSystemIntegrationStore } from '../system-integrations/store';
+import {
+  CoolifyProviderConfigMissingIntegrationError,
+  CoolifyProviderConfigMissingWildcardDomainError,
+  CoolifyProviderConfigResolutionError,
+} from './errors';
+
+export interface ProviderConfig {
+  baseUrl: string;
+  adminToken: string;
+  serverId: string;
+  destinationId: string;
+  applicationsBaseDomain: string | null;
+}
+import { errorMsg } from '../agents/error-formatting';
+
+export async function getProviderConfig(
+  integrations: ReturnType<typeof createSystemIntegrationStore>,
+): Promise<ProviderConfig> {
+  const integration = await integrations.getCoolifyConfig();
+
+  if (!integration) {
+    forgeDebug({
+      scope: 'coolify-provider-config',
+      level: 'error',
+      message: 'coolify-provider-config: configuration check failed',
+    });
+    throw new CoolifyProviderConfigMissingIntegrationError();
+  }
+
+  return {
+    baseUrl: `${integration.baseUrl.replace(/\/$/, '')}/api/v1`,
+    adminToken: integration.adminToken,
+    serverId: integration.serverId,
+    destinationId: integration.destinationId,
+    applicationsBaseDomain: normalizeDomainHost(integration.applicationsBaseDomain) ?? null,
+  };
+}
+
+/**
+ * Resolve the base domain for Coolify application hostnames.
+ * Uses the server's wildcard_domain if no override is provided.
+ */
+export async function getApplicationsBaseDomain(
+  requestJson: (method: string, path: string) => Promise<unknown>,
+  getDefaultServer: () => Promise<z.infer<typeof ServerSchema>>,
+  serverUuid?: string,
+): Promise<string> {
+  try {
+    const server =
+      serverUuid !== null && serverUuid !== undefined
+        ? extractServer(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`))
+        : await getDefaultServer();
+    const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
+
+    if (wildcardDomain === null || wildcardDomain === undefined) {
+      throw new CoolifyProviderConfigMissingWildcardDomainError();
+    }
+
+    return wildcardDomain;
+  } catch (error) {
+    forgeDebug({
+      scope: 'coolify-provider-config',
+      level: 'error',
+      message: 'Coolify provider config failed',
+      context: { error: errorMsg(error) },
+    });
+    throw new CoolifyProviderConfigResolutionError(errorMsg(error));
+  }
+}
+
+function extractServer(data: unknown): z.infer<typeof ServerSchema> {
+  if (data !== null && data !== undefined && typeof data === 'object') {
+    const record = data as Record<string, unknown>;
+    const server = (record.data ?? record.server ?? record) as Record<string, unknown>;
+    return ServerSchema.parse(server);
+  }
+  return ServerSchema.parse(data);
+}

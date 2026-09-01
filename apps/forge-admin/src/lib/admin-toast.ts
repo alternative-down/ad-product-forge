@@ -10,10 +10,7 @@ export function startAdminAction(message: string): AdminActionToastContext {
   };
 }
 
-export function succeedAdminAction(
-  context: AdminActionToastContext | undefined,
-  message: string,
-) {
+export function succeedAdminAction(context: AdminActionToastContext | undefined, message: string) {
   toast.success(message, {
     id: context?.toastId,
   });

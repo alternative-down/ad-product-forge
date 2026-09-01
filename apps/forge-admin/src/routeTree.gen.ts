@@ -18,6 +18,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as FinanceIndexRouteImport } from './routes/finance/index'
 import { Route as AgentsIndexRouteImport } from './routes/agents/index'
+import { Route as SettingsSystemRouteRouteImport } from './routes/settings/system/route'
 import { Route as SettingsSkillsRouteRouteImport } from './routes/settings/skills/route'
 import { Route as SettingsPricesRouteRouteImport } from './routes/settings/prices/route'
 import { Route as SettingsMinimaxRouteRouteImport } from './routes/settings/minimax/route'
@@ -31,6 +32,7 @@ import { Route as FinanceContractsRouteRouteImport } from './routes/finance/cont
 import { Route as FinanceAccountsRouteRouteImport } from './routes/finance/accounts/route'
 import { Route as AgentsRolesRouteRouteImport } from './routes/agents/roles/route'
 import { Route as AgentsAgentIdRouteRouteImport } from './routes/agents/$agentId/route'
+import { Route as SettingsSystemIndexRouteImport } from './routes/settings/system/index'
 import { Route as SettingsSkillsIndexRouteImport } from './routes/settings/skills/index'
 import { Route as SettingsPricesIndexRouteImport } from './routes/settings/prices/index'
 import { Route as SettingsMinimaxIndexRouteImport } from './routes/settings/minimax/index'
@@ -114,6 +116,11 @@ const AgentsIndexRoute = AgentsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgentsRouteRoute,
 } as any)
+const SettingsSystemRouteRoute = SettingsSystemRouteRouteImport.update({
+  id: '/system',
+  path: '/system',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsSkillsRouteRoute = SettingsSkillsRouteRouteImport.update({
   id: '/skills',
   path: '/skills',
@@ -178,6 +185,11 @@ const AgentsAgentIdRouteRoute = AgentsAgentIdRouteRouteImport.update({
   id: '/$agentId',
   path: '/$agentId',
   getParentRoute: () => AgentsRouteRoute,
+} as any)
+const SettingsSystemIndexRoute = SettingsSystemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsSystemRouteRoute,
 } as any)
 const SettingsSkillsIndexRoute = SettingsSkillsIndexRouteImport.update({
   id: '/',
@@ -403,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
   '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
   '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
+  '/settings/system': typeof SettingsSystemRouteRouteWithChildren
   '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
@@ -430,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/settings/minimax/': typeof SettingsMinimaxIndexRoute
   '/settings/prices/': typeof SettingsPricesIndexRoute
   '/settings/skills/': typeof SettingsSkillsIndexRoute
+  '/settings/system/': typeof SettingsSystemIndexRoute
   '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
@@ -465,6 +479,7 @@ export interface FileRoutesByTo {
   '/settings/minimax': typeof SettingsMinimaxIndexRoute
   '/settings/prices': typeof SettingsPricesIndexRoute
   '/settings/skills': typeof SettingsSkillsIndexRoute
+  '/settings/system': typeof SettingsSystemIndexRoute
   '/agents/$agentId/contract': typeof AgentsAgentIdContractIndexRoute
   '/agents/$agentId/conversations': typeof AgentsAgentIdConversationsIndexRoute
   '/agents/$agentId/github': typeof AgentsAgentIdGithubIndexRoute
@@ -498,6 +513,7 @@ export interface FileRoutesById {
   '/settings/minimax': typeof SettingsMinimaxRouteRouteWithChildren
   '/settings/prices': typeof SettingsPricesRouteRouteWithChildren
   '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
+  '/settings/system': typeof SettingsSystemRouteRouteWithChildren
   '/agents/': typeof AgentsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/home/': typeof HomeIndexRoute
@@ -525,6 +541,7 @@ export interface FileRoutesById {
   '/settings/minimax/': typeof SettingsMinimaxIndexRoute
   '/settings/prices/': typeof SettingsPricesIndexRoute
   '/settings/skills/': typeof SettingsSkillsIndexRoute
+  '/settings/system/': typeof SettingsSystemIndexRoute
   '/agents/$agentId/conversations/$conversationId': typeof AgentsAgentIdConversationsConversationIdRouteRouteWithChildren
   '/agents/$agentId/providers/$providerType': typeof AgentsAgentIdProvidersProviderTypeRouteRouteWithChildren
   '/agents/$agentId/contract/': typeof AgentsAgentIdContractIndexRoute
@@ -561,6 +578,7 @@ export interface FileRouteTypes {
     | '/settings/minimax'
     | '/settings/prices'
     | '/settings/skills'
+    | '/settings/system'
     | '/agents/'
     | '/finance/'
     | '/home/'
@@ -588,6 +606,7 @@ export interface FileRouteTypes {
     | '/settings/minimax/'
     | '/settings/prices/'
     | '/settings/skills/'
+    | '/settings/system/'
     | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
@@ -623,6 +642,7 @@ export interface FileRouteTypes {
     | '/settings/minimax'
     | '/settings/prices'
     | '/settings/skills'
+    | '/settings/system'
     | '/agents/$agentId/contract'
     | '/agents/$agentId/conversations'
     | '/agents/$agentId/github'
@@ -655,6 +675,7 @@ export interface FileRouteTypes {
     | '/settings/minimax'
     | '/settings/prices'
     | '/settings/skills'
+    | '/settings/system'
     | '/agents/'
     | '/finance/'
     | '/home/'
@@ -682,6 +703,7 @@ export interface FileRouteTypes {
     | '/settings/minimax/'
     | '/settings/prices/'
     | '/settings/skills/'
+    | '/settings/system/'
     | '/agents/$agentId/conversations/$conversationId'
     | '/agents/$agentId/providers/$providerType'
     | '/agents/$agentId/contract/'
@@ -770,6 +792,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/'
       preLoaderRoute: typeof AgentsIndexRouteImport
       parentRoute: typeof AgentsRouteRoute
+    }
+    '/settings/system': {
+      id: '/settings/system'
+      path: '/system'
+      fullPath: '/settings/system'
+      preLoaderRoute: typeof SettingsSystemRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/skills': {
       id: '/settings/skills'
@@ -861,6 +890,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$agentId'
       preLoaderRoute: typeof AgentsAgentIdRouteRouteImport
       parentRoute: typeof AgentsRouteRoute
+    }
+    '/settings/system/': {
+      id: '/settings/system/'
+      path: '/'
+      fullPath: '/settings/system/'
+      preLoaderRoute: typeof SettingsSystemIndexRouteImport
+      parentRoute: typeof SettingsSystemRouteRoute
     }
     '/settings/skills/': {
       id: '/settings/skills/'
@@ -1504,6 +1540,17 @@ const SettingsSkillsRouteRouteChildren: SettingsSkillsRouteRouteChildren = {
 const SettingsSkillsRouteRouteWithChildren =
   SettingsSkillsRouteRoute._addFileChildren(SettingsSkillsRouteRouteChildren)
 
+interface SettingsSystemRouteRouteChildren {
+  SettingsSystemIndexRoute: typeof SettingsSystemIndexRoute
+}
+
+const SettingsSystemRouteRouteChildren: SettingsSystemRouteRouteChildren = {
+  SettingsSystemIndexRoute: SettingsSystemIndexRoute,
+}
+
+const SettingsSystemRouteRouteWithChildren =
+  SettingsSystemRouteRoute._addFileChildren(SettingsSystemRouteRouteChildren)
+
 interface SettingsRouteRouteChildren {
   SettingsCoolifyRouteRoute: typeof SettingsCoolifyRouteRouteWithChildren
   SettingsGithubRouteRoute: typeof SettingsGithubRouteRouteWithChildren
@@ -1513,6 +1560,7 @@ interface SettingsRouteRouteChildren {
   SettingsMinimaxRouteRoute: typeof SettingsMinimaxRouteRouteWithChildren
   SettingsPricesRouteRoute: typeof SettingsPricesRouteRouteWithChildren
   SettingsSkillsRouteRoute: typeof SettingsSkillsRouteRouteWithChildren
+  SettingsSystemRouteRoute: typeof SettingsSystemRouteRouteWithChildren
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -1525,6 +1573,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsMinimaxRouteRoute: SettingsMinimaxRouteRouteWithChildren,
   SettingsPricesRouteRoute: SettingsPricesRouteRouteWithChildren,
   SettingsSkillsRouteRoute: SettingsSkillsRouteRouteWithChildren,
+  SettingsSystemRouteRoute: SettingsSystemRouteRouteWithChildren,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

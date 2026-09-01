@@ -1,0 +1,594 @@
+import { createTool, type Tool } from '@forge-runtime/core';
+import { z } from 'zod';
+
+import { withToolErrorLogging } from '../../capabilities/tools/error-wrapper';
+import { hasToolPermission } from '../../capabilities/catalog';
+import type { createAgentScheduleManager } from '../manager/manager';
+
+type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
+
+import { toolsScheduleDebug } from './tools-debug';
+
+export function validationError(error: string, hint: string): {
+  valid: false;
+  error: string;
+  hint: string;
+} {
+  return { valid: false as const, error, hint };
+}
+
+const manageSelfCronsInputSchema = z.object({
+  action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
+  create: z
+    .object({
+      name: z.string().describe('Cron name.'),
+      description: z
+        .string()
+        .optional()
+        .describe('Optional note explaining what this cron is for.'),
+      scheduleType: z
+        .enum(['cron', 'date'])
+        .describe(
+          'Use the literal string cron for recurring execution or date for one-time execution.',
+        ),
+      cronExpression: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+      scheduledDate: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is date. Use an ISO string.'),
+      timezone: z.string().optional().describe('Optional timezone. If omitted, UTC is used.'),
+      content: z
+        .string()
+        .describe('The message or task content that should be delivered when the cron runs.'),
+      wakeWhenRunning: z
+        .boolean()
+        .optional()
+        .describe(
+          'Only for recurring crons. If false, this cron behaves like heartbeat and only wakes you when you are idle.',
+        ),
+    })
+    .optional()
+    .describe('Provide this object only when action is create.'),
+  update: z
+    .object({
+      cronId: z.string().describe('Required cron id to update.'),
+      name: z.string().optional().describe('New cron name.'),
+      description: z.string().optional().describe('Optional new note.'),
+      scheduleType: z.enum(['cron', 'date']).optional().describe('Optional new schedule type.'),
+      cronExpression: z.string().optional().describe('Optional new cron expression.'),
+      scheduledDate: z.string().optional().describe('Optional new one-time execution date.'),
+      timezone: z.string().optional().describe('Optional new timezone.'),
+      content: z.string().optional().describe('Optional new content.'),
+      wakeWhenRunning: z
+        .boolean()
+        .optional()
+        .describe(
+          'Only for recurring crons. If false, this cron only wakes you when you are idle.',
+        ),
+      isActive: z.boolean().optional().describe('Optional active flag.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is update.'),
+  delete: z
+    .object({
+      cronId: z.string().describe('Required cron id to delete.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is delete.'),
+});
+
+const manageCronsInputSchema = z.object({
+  action: z
+    .enum(['create', 'update', 'delete'])
+    .describe('The delegated cron operation to perform.'),
+  create: z
+    .object({
+      targetAgentId: z.string().describe('Required target agent id for delegated cron creation.'),
+      name: z.string().describe('Cron name.'),
+      description: z
+        .string()
+        .optional()
+        .describe('Optional note explaining what this cron is for.'),
+      scheduleType: z
+        .enum(['cron', 'date'])
+        .describe(
+          'Use the literal string cron for recurring execution or date for one-time execution.',
+        ),
+      cronExpression: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+      scheduledDate: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is date. Use an ISO string.'),
+      timezone: z.string().optional().describe('Optional timezone. If omitted, UTC is used.'),
+      content: z
+        .string()
+        .describe('The message or task content that should be delivered when the cron runs.'),
+      wakeWhenRunning: z
+        .boolean()
+        .optional()
+        .describe(
+          'Only for recurring crons. If false, this delegated cron only wakes the target when the target is idle.',
+        ),
+    })
+    .optional()
+    .describe('Provide this object only when action is create.'),
+  update: z
+    .object({
+      cronId: z.string().describe('Required delegated cron id to update.'),
+      name: z.string().optional().describe('New cron name.'),
+      description: z.string().optional().describe('Optional new note.'),
+      scheduleType: z.enum(['cron', 'date']).optional().describe('Optional new schedule type.'),
+      cronExpression: z.string().optional().describe('Optional new cron expression.'),
+      scheduledDate: z.string().optional().describe('Optional new one-time execution date.'),
+      timezone: z.string().optional().describe('Optional new timezone.'),
+      content: z.string().optional().describe('Optional new content.'),
+      wakeWhenRunning: z
+        .boolean()
+        .optional()
+        .describe(
+          'Only for recurring crons. If false, this delegated cron only wakes the target when the target is idle.',
+        ),
+      isActive: z.boolean().optional().describe('Optional active flag.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is update.'),
+  delete: z
+    .object({
+      cronId: z.string().describe('Required delegated cron id to delete.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is delete.'),
+});
+
+function validateCreateTiming(input: {
+  name?: string | null;
+  scheduleType: 'cron' | 'date' | null | undefined;
+  cronExpression?: string | null;
+  scheduledDate?: string | null;
+  content?: string | null;
+}) {
+  if ((input.name ?? '') === '') {
+    return validationError(
+        'name is required when action is create',
+        'Create calls must send a real name, not null. Example: { action: "create", name: "Burn Rate Report", scheduleType: "cron", cronExpression: "0 * * * *", content: "..." }',
+      );
+  }
+
+  if (!input.scheduleType) {
+    return validationError(
+        'scheduleType is required when action is create',
+        'Create calls must send scheduleType as the literal string "cron" or "date", not null.',
+      );
+  }
+
+  if (input.scheduleType === 'cron' && (input.cronExpression ?? '') === '') {
+    return validationError(
+        'cronExpression is required when scheduleType is cron',
+        'For recurring crons, send cronExpression with a real value such as "0 * * * *".',
+      );
+  }
+
+  if (input.scheduleType === 'date' && (input.scheduledDate ?? 0) === 0) {
+    return validationError(
+        'scheduledDate is required when scheduleType is date',
+        'Provide an ISO date string for one-time crons.',
+      );
+  }
+
+  if ((input.content ?? '') === '') {
+    return validationError(
+        'content is required when action is create',
+        'Create calls must send the cron content with a real string, not null.',
+      );
+  }
+
+  return null;
+}
+
+function normalizeCronId(input: { cronId?: string }) {
+  return input.cronId ?? null;
+}
+
+async function resolveSelfCronId(
+  input: {
+    cronId?: string;
+  },
+  agentId: string,
+  schedules: AgentScheduleManager,
+) {
+  const cronId = normalizeCronId(input);
+
+  if (cronId !== undefined && cronId !== null && cronId !== '') {
+    return cronId;
+  }
+
+  const ownCrons = await schedules.listSchedules(agentId);
+
+  if (ownCrons.length === 1) {
+    return ownCrons[0].scheduleId;
+  }
+
+  return null;
+}
+
+async function resolveDelegatedCronId(
+  input: {
+    cronId?: string;
+    targetAgentId?: string;
+  },
+  creatorAgentId: string,
+  schedules: AgentScheduleManager,
+) {
+  const cronId = normalizeCronId(input);
+
+  if (cronId !== undefined && cronId !== null && cronId !== '') {
+    return cronId;
+  }
+
+  const delegatedCrons = await schedules.listTasks(
+    creatorAgentId,
+    input.targetAgentId ?? undefined,
+  );
+
+  if (delegatedCrons.length === 1) {
+    return delegatedCrons[0].scheduleId;
+  }
+
+  return null;
+}
+
+function validateDelegatedCronCreateTarget(input: { targetAgentId?: string }) {
+  if (input.targetAgentId !== undefined && input.targetAgentId !== '') {
+    return null;
+  }
+
+  return validationError(
+        'targetAgentId is required when action is create',
+        'Provide the agentId that should receive the delegated cron.',
+      );
+}
+
+function normalizeOptionalText(value?: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
+  const cronId = value.scheduleId ?? value.taskId;
+  const { scheduleId: _scheduleId, taskId: _taskId, ...base } = value;
+
+  return {
+    ...base,
+    cronId,
+  };
+}
+
+export function createAgentScheduleTools(
+  agentId: string,
+  schedules: AgentScheduleManager,
+  allowedToolIds?: Set<string> | null,
+) {
+  const tools: Record<string, ReturnType<typeof createTool>> = {};
+
+  tools.list_self_crons = createTool({
+    id: 'list_self_crons',
+    description:
+      'List all crons that belong to you. This includes crons you created yourself and crons created for you by other agents. Use this to understand your scheduled work and get the cronId for any cron you are allowed to inspect.',
+    inputSchema: z.object({}),
+    execute: async () => {
+      toolsScheduleDebug('info', 'list_self_crons called', { agentId });
+      return await withToolErrorLogging({
+        scope: 'tools:schedules',
+        op: 'list_self_crons',
+        hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
+        fn: async () => {
+          const result = await schedules.listSchedules(agentId);
+          toolsScheduleDebug('info', 'list_self_crons result', { count: result.length });
+          return result.map(toCronOutput);
+        },
+      });
+    },
+  });
+
+  if (hasToolPermission(allowedToolIds, 'manage_self_crons')) {
+    tools.manage_self_crons = createTool({
+      id: 'manage_self_crons',
+      description:
+        'Use this to create, update, or delete automatic tasks for yourself. Do not rely on your own memory to remember future work. Use crons proactively to trigger your future and recurring work dynamically, and prefer simple, directed tasks.',
+      inputSchema: manageSelfCronsInputSchema,
+      execute: async (input) => {
+        toolsScheduleDebug('info', 'manage_self_crons called', { agentId, action: input.action, input });
+
+        if (input.action === 'create') {
+          const createInput = input.create ?? null;
+
+          if (createInput == null) {
+            return validationError(
+        'create is required when action is create',
+        'Send the create object with name, scheduleType, and content.',
+      );
+          }
+
+          const validation = validateCreateTiming(createInput);
+
+          if (validation) {
+            return validation;
+          }
+
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_self_crons action=create',
+            hint: 'Review the cron fields and try again. Use cron for recurring execution or date for one-time execution.',
+            fn: async () =>
+              createInput.scheduleType === 'cron'
+                ? toCronOutput(
+                    await schedules.createSchedule(agentId, {
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'cron',
+                      cronExpression: createInput.cronExpression ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                      wakeWhenRunning: createInput.wakeWhenRunning ?? true,
+                    }),
+                  )
+                : toCronOutput(
+                    await schedules.createSchedule(agentId, {
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'date',
+                      scheduledDate: createInput.scheduledDate ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                    }),
+                  ),
+          });
+        }
+
+        if (input.action === 'update') {
+          const updateInput = input.update ?? null;
+
+          if (updateInput == null) {
+            return validationError(
+        'update is required when action is update',
+        'Send the update object with cronId and the fields you want to change.',
+      );
+          }
+
+          const cronId = await resolveSelfCronId(updateInput, agentId, schedules);
+
+          if (cronId === null || cronId === undefined) {
+            return validationError(
+        'cronId is required for update and delete',
+        'Use list_self_crons to get the cronId. If you only have one cron, the tool can resolve it automatically.',
+      );
+          }
+
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_self_crons action=update',
+            hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
+            fn: async () =>
+              toCronOutput(
+                await schedules.updateSchedule(agentId, cronId, {
+                  name: normalizeOptionalText(updateInput.name ?? undefined),
+                  description: normalizeOptionalText(updateInput.description ?? undefined),
+                  scheduleType: updateInput.scheduleType ?? undefined,
+                  cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+                  scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+                  timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+                  content: normalizeOptionalText(updateInput.content ?? undefined),
+                  wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
+                  isActive: updateInput.isActive ?? undefined,
+                }),
+              ),
+          });
+        }
+
+        const deleteInput = input.delete ?? null;
+
+        if (deleteInput == null) {
+          return validationError(
+        'delete is required when action is delete',
+        'Send the delete object with cronId.',
+      );
+        }
+
+        const cronId = await resolveSelfCronId(deleteInput, agentId, schedules);
+
+        if (cronId === null || cronId === undefined) {
+          return validationError(
+        'cronId is required for update and delete',
+        'Use list_self_crons to get the cronId. If you only have one cron, the tool can resolve it automatically.',
+      );
+        }
+
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'manage_self_crons action=delete',
+          hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
+          fn: async () => {
+            const result = await schedules.deleteSchedule(agentId, cronId);
+            return { cronId, ...result };
+          },
+        });
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'list_crons')) {
+    tools.list_crons = createTool({
+      id: 'list_crons',
+      description:
+        'List the crons you created for other agents. Use this to review delegated scheduled executions and get the cronId needed for later changes.',
+      inputSchema: z.object({
+        targetAgentId: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            'Optional target agent id if you want to see only crons aimed at one specific agent.',
+          ),
+      }),
+      execute: async (input) => {
+        toolsScheduleDebug('info', 'list_crons called', { agentId, targetAgentId: input.targetAgentId });
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'list_crons',
+          hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
+          fn: async () => {
+            const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
+            toolsScheduleDebug('info', 'list_crons result', { count: result.length });
+            return result.map(toCronOutput);
+          },
+        });
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'manage_crons')) {
+    tools.manage_crons = createTool({
+      id: 'manage_crons',
+      description:
+        'Use this to create, update, or delete automatic tasks for other agents. Use delegated crons proactively when another agent should receive future or recurring work without relying on someone to remember manually. Prefer simple, directed tasks.',
+      inputSchema: manageCronsInputSchema,
+      execute: async (input) => {
+        toolsScheduleDebug('info', 'manage_crons called', { agentId, action: input.action, input });
+
+        if (input.action === 'create') {
+          const createInput = input.create ?? null;
+
+          if (createInput == null) {
+            return validationError(
+        'create is required when action is create',
+        'Send the create object with targetAgentId, name, scheduleType, and content.',
+      );
+          }
+
+          const createTargetValidation = validateDelegatedCronCreateTarget(createInput);
+
+          if (createTargetValidation) {
+            return createTargetValidation;
+          }
+
+          const validation = validateCreateTiming(createInput);
+
+          if (validation) {
+            return validation;
+          }
+
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_crons action=create',
+            hint: 'Verify the targetAgentId exists and that you have permission to create delegated crons.',
+            fn: async () =>
+              createInput.scheduleType === 'cron'
+                ? toCronOutput(
+                    await schedules.createScheduleForAgent(agentId, {
+                      targetAgentId: createInput.targetAgentId,
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'cron',
+                      cronExpression: createInput.cronExpression ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                      wakeWhenRunning: createInput.wakeWhenRunning ?? true,
+                    }),
+                  )
+                : toCronOutput(
+                    await schedules.createScheduleForAgent(agentId, {
+                      targetAgentId: createInput.targetAgentId,
+                      name: createInput.name,
+                      description: normalizeOptionalText(createInput.description ?? undefined),
+                      scheduleType: 'date',
+                      scheduledDate: createInput.scheduledDate ?? '',
+                      timezone: createInput.timezone ?? 'UTC',
+                      content: createInput.content,
+                    }),
+                  ),
+          });
+        }
+
+        if (input.action === 'update') {
+          const updateInput = input.update ?? null;
+
+          if (updateInput == null) {
+            return validationError(
+        'update is required when action is update',
+        'Send the update object with cronId and the fields you want to change.',
+      );
+          }
+
+          const cronId = await resolveDelegatedCronId(updateInput, agentId, schedules);
+
+          if (cronId === null || cronId === undefined) {
+            return validationError(
+        'cronId is required for update and delete',
+        'Use list_crons to get the cronId. If there is only one matching delegated cron, the tool can resolve it automatically.',
+      );
+          }
+
+          return await withToolErrorLogging({
+            scope: 'tools:schedules',
+            op: 'manage_crons action=update',
+            hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
+            fn: async () =>
+              toCronOutput(
+                await schedules.editCron(agentId, cronId, {
+                  name: normalizeOptionalText(updateInput.name ?? undefined),
+                  description: normalizeOptionalText(updateInput.description ?? undefined),
+                  scheduleType: updateInput.scheduleType ?? undefined,
+                  cronExpression: normalizeOptionalText(updateInput.cronExpression ?? undefined),
+                  scheduledDate: normalizeOptionalText(updateInput.scheduledDate ?? undefined),
+                  timezone: normalizeOptionalText(updateInput.timezone ?? undefined),
+                  content: normalizeOptionalText(updateInput.content ?? undefined),
+                  wakeWhenRunning: updateInput.wakeWhenRunning ?? undefined,
+                  isActive: updateInput.isActive ?? undefined,
+                }),
+              ),
+          });
+        }
+
+        const deleteInput = input.delete ?? null;
+
+        if (deleteInput == null) {
+          return validationError(
+        'delete is required when action is delete',
+        'Send the delete object with cronId.',
+      );
+        }
+
+        const cronId = await resolveDelegatedCronId(deleteInput, agentId, schedules);
+
+        if (cronId === null || cronId === undefined) {
+          return validationError(
+        'cronId is required for update and delete',
+        'Use list_crons to get the cronId. If there is only one matching delegated cron, the tool can resolve it automatically.',
+      );
+        }
+
+        return await withToolErrorLogging({
+          scope: 'tools:schedules',
+          op: 'manage_crons action=delete',
+          hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
+          fn: async () => {
+            const result = await schedules.deleteCron(agentId, cronId);
+            return { cronId, ...result };
+          },
+        });
+      },
+    });
+  }
+
+  return tools as Record<string, Tool<unknown, unknown>>;
+}

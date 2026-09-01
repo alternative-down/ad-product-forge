@@ -1,0 +1,91 @@
+import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
+import { errorMsg } from '../../error-formatting';
+import { ltmDebug } from '../../ltm-debug-helpers';
+import type { LtmSearchResult } from '../helpers';
+
+export type WorkspaceSearchOptions = {
+  topK: number;
+  resultCount: number;
+  scoreThreshold: number;
+  mode: 'hybrid' | 'vector' | 'bm25';
+};
+
+export type WorkspaceSearchResult = {
+  formatted: string;
+  results: LtmSearchResult[];
+};
+
+export type WorkspaceSearchDeps = {
+  retrievalWorkspace: SqliteWorkspaceRetrieval;
+  agentId: string;
+  recallTimeoutMs: number;
+  runTrackedRecallOperation: <T>(
+    label: string,
+    operation: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ) => Promise<T>;
+};
+
+export async function runWorkspaceSearch(
+  queryText: string,
+  options: WorkspaceSearchOptions,
+  deps: WorkspaceSearchDeps,
+): Promise<WorkspaceSearchResult> {
+  const stageStartedAt = Date.now();
+
+  try {
+    ltmDebug('info', 'ltm recall workspace search start', {
+      agentId: deps.agentId,
+      queryLength: queryText.length,
+      topK: options.topK,
+      mode: options.mode,
+    });
+    const results = await deps.runTrackedRecallOperation<
+      Array<{
+        id: string;
+        text: string;
+        score: number;
+        metadata?: Record<string, unknown>;
+      }>
+    >(
+      'retrieval.search',
+      deps.retrievalWorkspace.search(queryText, {
+        topK: options.topK,
+        resultLimit: options.resultCount,
+        scoreThreshold: options.scoreThreshold,
+        mode: options.mode,
+      }),
+      deps.recallTimeoutMs,
+      'ltm recall retrieval search timed out',
+    );
+
+    if (results.length === 0) {
+      return { formatted: '', results: [] };
+    }
+
+    const searchResults: LtmSearchResult[] = results.map((result) => ({
+      id: result.id,
+      content: result.text.trim(),
+      score: result.score,
+    }));
+    ltmDebug('info', 'ltm recall workspace search complete', {
+      agentId: deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      resultCount: searchResults.length,
+    });
+    return { formatted: '', results: searchResults };
+  } catch (error) {
+    const errMsg = errorMsg(error);
+    if (errMsg.includes("SQLITE_ERROR: no such table") === true || errMsg.includes("no such table:") === true) {
+      return { formatted: '', results: [] };
+    }
+
+    ltmDebug('info', 'ltm recall workspace search failed', {
+      agentId: deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+      error: errorMsg(error),
+    });
+    throw error;
+  }
+}

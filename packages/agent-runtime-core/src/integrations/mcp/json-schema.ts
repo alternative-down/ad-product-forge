@@ -6,7 +6,6 @@ const defaultStringSchema = z.string();
 const defaultNumberSchema = z.number();
 const defaultBooleanSchema = z.boolean();
 const defaultObjectSchema = z.object({}).catchall(z.unknown());
-const defaultArraySchema = z.array(z.unknown());
 
 export function mcpJsonSchemaToZod(schema: McpJsonSchema | undefined): z.ZodTypeAny {
   if (schema === undefined || schema === true) {
@@ -21,25 +20,23 @@ export function mcpJsonSchemaToZod(schema: McpJsonSchema | undefined): z.ZodType
     return z.unknown().refine((value) => value === schema.const);
   }
 
-  if (schema.enum?.length) {
+  if ((schema.enum?.length ?? 0) > 0) {
     return z.unknown().refine((value) => {
       return schema.enum!.some((candidate) => candidate === value);
     });
   }
 
-  const typeValues = Array.isArray(schema.type)
-    ? schema.type
-    : schema.type
-      ? [schema.type]
-      : [];
+  const typeValues = Array.isArray(schema.type) ? schema.type : schema.type != null ? [schema.type] : [];
 
   if (typeValues.length > 1) {
-    return z.union(typeValues.map((typeValue) => {
-      return mcpJsonSchemaToZod({
-        ...schema,
-        type: typeValue,
-      });
-    }) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+    return z.union(
+      typeValues.map((typeValue) => {
+        return mcpJsonSchemaToZod({
+          ...schema,
+          type: typeValue,
+        });
+      }) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
+    );
   }
 
   const typeValue = typeValues[0];
@@ -72,9 +69,11 @@ function buildObjectSchema(schema: Exclude<McpJsonSchema, boolean>) {
     return [key, mcpJsonSchemaToZod(value)] as const;
   });
   const required = new Set(schema.required ?? []);
-  const shape = Object.fromEntries(propertyEntries.map(([key, value]) => {
-    return [key, required.has(key) ? value : value.optional()];
-  }));
+  const shape = Object.fromEntries(
+    propertyEntries.map(([key, value]) => {
+      return [key, required.has(key) ? value : value.optional()];
+    }),
+  );
   let objectSchema = z.object(shape);
 
   if (schema.additionalProperties === true || schema.additionalProperties === undefined) {

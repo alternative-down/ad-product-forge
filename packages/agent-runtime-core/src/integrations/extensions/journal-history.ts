@@ -9,9 +9,7 @@ export type JournalHistoryPluginOptions = {
   includeKinds?: StepContentSegment['kind'][];
 };
 
-export function createJournalHistoryPlugin(
-  options: JournalHistoryPluginOptions,
-): RuntimePlugin {
+export function createJournalHistoryPlugin(options: JournalHistoryPluginOptions): RuntimePlugin {
   const maxSteps = options.maxSteps ?? 3;
   const includeKinds = options.includeKinds ?? ['message', 'reasoning'];
 
@@ -24,25 +22,30 @@ export function createJournalHistoryPlugin(
         .slice(-maxSteps);
 
       return historicalSteps.flatMap((step) => {
-        const visibleSegments = step.modelResponse.segments
-          .filter((segment) => includeKinds.includes(segment.kind));
+        const visibleSegments = step.modelResponse.segments.filter((segment) =>
+          includeKinds.includes(segment.kind),
+        );
 
         if (visibleSegments.length === 0) {
           return [];
         }
 
-        return [{
-          id: `journal-step:${step.id}`,
-          kind: 'journal-history',
-          title: `Historical step ${step.stepNumber}`,
-          text: visibleSegments.map((segment) => {
-            if (segment.kind === 'message') {
-              return segment.text;
-            }
+        return [
+          {
+            id: `journal-step:${step.id}`,
+            kind: 'journal-history',
+            title: `Historical step ${step.stepNumber}`,
+            text: visibleSegments
+              .map((segment) => {
+                if (segment.kind === 'message') {
+                  return segment.text;
+                }
 
-            return `[${segment.kind}] ${segment.text}`;
-          }).join('\n'),
-        }];
+                return `[${segment.kind}] ${segment.text}`;
+              })
+              .join('\n'),
+          },
+        ];
       });
     },
   };

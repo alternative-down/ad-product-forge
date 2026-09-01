@@ -87,18 +87,24 @@ import {
   createRecentStepsPlugin,
 } from 'agent-runtime-core/integrations';
 
-runtime.use(createStaticContextPlugin({
-  entries: [{
-    id: 'global',
-    kind: 'instruction',
-    title: 'Global Instruction',
-    text: 'Stay concise and explicit.',
-  }],
-}));
+runtime.use(
+  createStaticContextPlugin({
+    entries: [
+      {
+        id: 'global',
+        kind: 'instruction',
+        title: 'Global Instruction',
+        text: 'Stay concise and explicit.',
+      },
+    ],
+  }),
+);
 
-runtime.use(createRecentStepsPlugin({
-  maxSteps: 2,
-}));
+runtime.use(
+  createRecentStepsPlugin({
+    maxSteps: 2,
+  }),
+);
 ```
 
 ## Adding Mutable Notes
@@ -117,9 +123,11 @@ await notes.set('assistant-1', {
   text: 'Help the player run the shop well.',
 });
 
-runtime.use(createContextNotesPlugin({
-  store: notes,
-}));
+runtime.use(
+  createContextNotesPlugin({
+    store: notes,
+  }),
+);
 ```
 
 ## Adding Journaling
@@ -133,14 +141,18 @@ import {
 
 const journal = new InMemoryRuntimeJournal();
 
-runtime.use(createRuntimeJournalPlugin({
-  journal,
-}));
+runtime.use(
+  createRuntimeJournalPlugin({
+    journal,
+  }),
+);
 
-runtime.use(createJournalHistoryPlugin({
-  journal,
-  maxSteps: 3,
-}));
+runtime.use(
+  createJournalHistoryPlugin({
+    journal,
+    maxSteps: 3,
+  }),
+);
 ```
 
 This gives you:
@@ -188,16 +200,15 @@ This is the current concrete "just bash" workspace implementation.
 ## Adding Usage Metering
 
 ```ts
-import {
-  InMemoryUsageMeter,
-  createUsageMeterPlugin,
-} from 'agent-runtime-core/integrations';
+import { InMemoryUsageMeter, createUsageMeterPlugin } from 'agent-runtime-core/integrations';
 
 const meter = new InMemoryUsageMeter();
 
-runtime.use(createUsageMeterPlugin({
-  meter,
-}));
+runtime.use(
+  createUsageMeterPlugin({
+    meter,
+  }),
+);
 ```
 
 If the model adapter provides usage metadata, the meter will receive per-step usage records.

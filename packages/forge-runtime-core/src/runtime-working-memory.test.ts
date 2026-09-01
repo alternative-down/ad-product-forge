@@ -18,11 +18,7 @@ function createWorkingMemoryStore() {
       async read() {
         return record;
       },
-      async write(input: {
-        threadId: string;
-        resourceId: string;
-        workingMemory: string;
-      }) {
+      async write(input: { threadId: string; resourceId: string; workingMemory: string }) {
         record = {
           ...input,
           updatedAt: new Date().toISOString(),
@@ -61,11 +57,13 @@ describe('runtime working memory', () => {
     );
 
     expect(result).toEqual({ updated: true });
-    expect(memory.getRecord()?.workingMemory).toBe(JSON.stringify({
-      direction: {
-        currentMission: 'Keep the release notes concise.',
-      },
-    }));
+    expect(memory.getRecord()?.workingMemory).toBe(
+      JSON.stringify({
+        direction: {
+          currentMission: 'Keep the release notes concise.',
+        },
+      }),
+    );
   });
 
   it('merges only the provided working memory fields', async () => {
@@ -104,15 +102,17 @@ describe('runtime working memory', () => {
       },
     );
 
-    expect(memory.getRecord()?.workingMemory).toBe(JSON.stringify({
-      identity: {
-        roleCore: 'Own frontend delivery',
-      },
-      direction: {
-        currentMission: 'Ship the redesign',
-        successDefinition: 'Users can navigate the new IA without friction.',
-      },
-    }));
+    expect(memory.getRecord()?.workingMemory).toBe(
+      JSON.stringify({
+        identity: {
+          roleCore: 'Own frontend delivery',
+        },
+        direction: {
+          currentMission: 'Ship the redesign',
+          successDefinition: 'Users can navigate the new IA without friction.',
+        },
+      }),
+    );
   });
 
   it('provides working memory as runtime context', async () => {

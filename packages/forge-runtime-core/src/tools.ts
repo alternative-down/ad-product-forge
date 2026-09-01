@@ -13,27 +13,18 @@ type SchemaLike<TInput> = {
   parse(input: unknown): TInput;
 };
 
-export type Tool<
-  TInput = unknown,
-  TOutput = unknown,
-> = {
+export type Tool<TInput = unknown, TOutput = unknown> = {
   id: string;
   description: string;
   inputSchema: unknown;
   outputSchema?: unknown;
-  execute(
-    input: TInput,
-    context: ToolExecutionContext,
-  ): Promise<TOutput> | TOutput;
+  execute(input: TInput, context: ToolExecutionContext): Promise<TOutput> | TOutput;
 };
 
 export type ToolsInput = Record<string, Tool>;
 export function createTool<
   TInput,
-  TExecute extends (
-    input: TInput,
-    context: ToolExecutionContext,
-  ) => unknown,
+  TExecute extends (input: TInput, context: ToolExecutionContext) => unknown,
 >(tool: {
   id: string;
   description: string;
@@ -109,9 +100,9 @@ function hasParseFunction(inputSchema: unknown): inputSchema is {
   parse(input: unknown): unknown;
 } {
   return (
-    typeof inputSchema === 'object'
-    && inputSchema !== null
-    && 'parse' in inputSchema
-    && typeof inputSchema.parse === 'function'
+    typeof inputSchema === 'object' &&
+    inputSchema !== null &&
+    'parse' in inputSchema &&
+    typeof inputSchema.parse === 'function'
   );
 }

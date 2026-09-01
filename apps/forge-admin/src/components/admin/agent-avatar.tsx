@@ -1,9 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AVATAR_DICEBEAR_URL, AVATAR_FALLBACK_INITIAL } from '@/constants/avatar';
+import type { AvatarSize } from '@/types';
 
 type AgentAvatarProps = {
   agentId: string;
   name: string;
-  size?: 'sm' | 'default' | 'lg';
+  size?: AvatarSize;
   className?: string;
   fallbackClassName?: string;
 };
@@ -11,10 +13,7 @@ type AgentAvatarProps = {
 export function AgentAvatar(input: AgentAvatarProps) {
   return (
     <Avatar size={input.size} className={input.className}>
-      <AvatarImage
-        src={buildAgentAvatarUrl(input.agentId, input.name)}
-        alt={input.name}
-      />
+      <AvatarImage src={buildAgentAvatarUrl(input.agentId, input.name)} alt={input.name} />
       <AvatarFallback className={input.fallbackClassName}>
         {getAgentInitials(input.name)}
       </AvatarFallback>
@@ -24,14 +23,14 @@ export function AgentAvatar(input: AgentAvatarProps) {
 
 function buildAgentAvatarUrl(agentId: string, name: string) {
   const seed = encodeURIComponent(`${agentId}:${name}`);
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}`;
+  return `${AVATAR_DICEBEAR_URL}?seed=${seed}`;
 }
 
 function getAgentInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
-    return 'AG';
+    return AVATAR_FALLBACK_INITIAL;
   }
 
   return parts

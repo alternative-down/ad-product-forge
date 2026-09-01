@@ -25,18 +25,23 @@ export class FilesystemContextNoteStore implements ContextNoteStore {
 
   async remove(runtimeId: string, noteId: string): Promise<void> {
     const notes = await this.readNotes(runtimeId);
-    await this.writeNotes(runtimeId, notes.filter((note) => note.id !== noteId));
+    await this.writeNotes(
+      runtimeId,
+      notes.filter((note) => note.id !== noteId),
+    );
   }
 
   async list(runtimeId: string): Promise<StepContextEntry[]> {
     const notes = await this.readNotes(runtimeId);
 
-    return notes.map((note) => createTextStepContextEntry({
-      id: note.id,
-      kind: note.kind ?? 'context-note',
-      title: note.title,
-      text: note.text,
-    }));
+    return notes.map((note) =>
+      createTextStepContextEntry({
+        id: note.id,
+        kind: note.kind ?? 'context-note',
+        title: note.title,
+        text: note.text,
+      }),
+    );
   }
 
   private async readNotes(runtimeId: string) {

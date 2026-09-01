@@ -1,0 +1,103 @@
+import { and, eq } from 'drizzle-orm';
+import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
+
+import type { Database } from '../database/client';
+import { ConversationNotFoundError, ChatGroupNotFoundError } from './internal-chat-errors';
+import { internalChatGuardsDebug } from './internal-chat-guards-debug';
+
+export interface InternalChatGuardsDeps {
+  getRequiredAgentAccount(agentId: string): Promise<{
+    id: string;
+    agentId: string;
+    slug: string;
+    displayName: string;
+  }>;
+}
+
+export function createInternalChatGuards(db: Database, deps: InternalChatGuardsDeps) {
+  async function requireConversationMembership(agentId: string, conversationId: string) {
+    const account = await deps.getRequiredAgentAccount(agentId);
+    return await requireConversationMembershipByAccount(account.id, conversationId);
+  }
+
+  async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.accountId, accountId),
+        eq(internalChatConversationMembers.conversationId, conversationId),
+      ),
+    });
+
+    if (membership === null || membership === undefined) {
+      internalChatGuardsDebug(
+        'warn',
+        'requireConversation: not found',
+        { conversationId },
+      );
+      throw new ConversationNotFoundError(conversationId);
+    }
+  }
+
+  async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
+    const account = await deps.getRequiredAgentAccount(agentId);
+    return await getRequiredConversationForAccount(account.id, conversationId);
+  }
+
+  async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
+    await requireConversationMembershipByAccount(accountId, conversationId);
+
+    const conversation = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
+
+    if (conversation === null || conversation === undefined) {
+      internalChatGuardsDebug(
+        'warn',
+        'requireConversation: not found',
+        { conversationId },
+      );
+      throw new ConversationNotFoundError(conversationId);
+    }
+
+    return conversation;
+  }
+
+  async function getRequiredGroupForAgent(agentId: string, groupId: string) {
+    const group = await getRequiredConversationForAgent(agentId, groupId);
+
+    if (group.type !== 'group') {
+      internalChatGuardsDebug(
+        'warn',
+        'requireGroup: not found',
+        { groupId },
+      );
+      throw new ChatGroupNotFoundError(groupId);
+    }
+
+    return group;
+  }
+
+  async function getRequiredGroupForAccount(accountId: string, groupId: string) {
+    const group = await getRequiredConversationForAccount(accountId, groupId);
+
+    if (group.type !== 'group') {
+      internalChatGuardsDebug(
+        'warn',
+        'requireGroup: not found',
+        { groupId },
+      );
+      throw new ChatGroupNotFoundError(groupId);
+    }
+
+    return group;
+  }
+
+  return {
+    requireConversationMembership,
+    requireConversationMembershipByAccount,
+    getRequiredConversationForAgent,
+    getRequiredConversationForAccount,
+    getRequiredGroupForAgent,
+    getRequiredGroupForAccount,
+  };
+}

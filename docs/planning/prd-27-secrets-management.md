@@ -23,12 +23,14 @@ Implementar um sistema simples de gerenciamento de segredos para armazenar com s
 ## Declaração do Problema
 
 Atualmente, segredos são:
+
 - Armazenados como variáveis de ambiente (não escalável)
 - Hardcoded em arquivos de config (risco de segurança)
 - Não criptografados
 - Não auditáveis
 
 **Cenários Alvo:**
+
 1. Agente recupera com segurança chave de API Stripe
 2. Agente obtém credenciais de banco de dados sem expô-los
 3. Admin consegue rotacionar segredos sem reiniciar
@@ -38,11 +40,13 @@ Atualmente, segredos são:
 ## Características Principais
 
 ### 1. Armazenamento Seguro
+
 - Criptografar todos segredos usando AES-256-GCM
 - Armazenar chave de criptografia em ambiente
 - Prevenir segredos de aparecerem em logs
 
 ### 2. API de Agente
+
 ```typescript
 // Obter um segredo
 await agent.secrets.get('stripe_api_key'): Promise<string>;
@@ -52,6 +56,7 @@ await agent.secrets.list(): Promise<Array<{ name: string; }>>;
 ```
 
 ### 3. Operações de Admin
+
 ```typescript
 // Criar/atualizar segredo
 createSecret(input: {
@@ -71,6 +76,7 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; }>>;
 ## Schema do Banco de Dados
 
 **secrets**
+
 ```
 - secretId (TEXT, PRIMARY KEY)
 - name (TEXT, NOT NULL, UNIQUE)
@@ -95,4 +101,3 @@ listSecrets(): Promise<Array<{ secretId: string; name: string; }>>;
 - [ ] Segredos são criptografados em repouso
 - [ ] Agentes conseguem recuperar segredos via API
 - [ ] Segredos nunca aparecem em logs
-

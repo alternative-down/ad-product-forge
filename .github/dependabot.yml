@@ -4,16 +4,29 @@ updates:
     directory: '/'
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 15
+    target-branch: develop
     labels:
       - dependencies
       - automations
+    groups:
+      mastra-minor:
+        applies-to: version-updates
+        patterns:
+          - "@mastra/*"
+        update-strategy: "incremental"
+      tanstack-minor:
+        applies-to: version-updates
+        patterns:
+          - "@tanstack/*"
+        update-strategy: "incremental"
 
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 15
+    target-branch: develop
     labels:
       - dependencies
       - github-actions

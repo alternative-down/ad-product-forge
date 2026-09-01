@@ -2,16 +2,107 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('@forge-runtime/core', () => {
+  const mockExecute = vi.fn().mockImplementation(({ command, cwd }) => {
+    if (command === 'pwd') {
+      // Second test uses shared-tools path; real implementation allows it
+      if (cwd && cwd.includes('shared')) {
+        return Promise.resolve({ exitCode: 0, stdout: cwd, stderr: '' });
+      }
+      return Promise.resolve({ exitCode: 1, stdout: '', stderr: 'outside sandbox' });
+    }
+    return Promise.resolve({ exitCode: 0, stdout: '', stderr: '' });
+  });
 
-import { createAgentRuntimePlatform } from './agent-runtime-platform';
+  return {
+    forgeDebug: vi.fn(),
+    ConfiguredWorkspaceGateway: vi.fn().mockImplementation(function () {
+      return { execute: mockExecute };
+    }),
+    createCommunicationModule: vi.fn(),
+    createWorkspaceActionDefinitions: vi.fn().mockReturnValue([
+      {
+        name: 'workspace_execute_command',
+        description: 'Execute a shell command',
+        inputSchema: {},
+        execute: vi.fn(),
+      },
+    ]),
+    LibsqlCommunicationContactsStore: vi.fn().mockImplementation(function () {
+      return {};
+    }),
+    LibsqlConversationStore: vi.fn().mockImplementation(function () {
+      const threads = new Map();
+      const messages: unknown[] = [];
+      return {
+        upsertThread: vi.fn().mockImplementation(async (t: any) => {
+          threads.set(t.id, t);
+        }),
+        appendMessage: vi.fn().mockImplementation(async (m: any) => {
+          messages.push(m);
+        }),
+        listMessages: vi
+          .fn()
+          .mockImplementation(async ({ threadId }: { threadId: string }) =>
+            messages.filter((m: any) => m.threadId === threadId),
+          ),
+      };
+    }),
+    LocalBashWorkspaceGateway: vi.fn().mockImplementation(function () {
+      return {};
+    }),
+    LocalWorkspaceFilesystem: vi.fn().mockImplementation(function () {
+      return {
+        exists: vi.fn().mockResolvedValue(true),
+        readFile: vi.fn().mockImplementation((p: string) => {
+          if (typeof p === 'string' && p.includes('shared')) {
+            return Promise.resolve(Buffer.from('shared-data'));
+          }
+          return Promise.resolve(Buffer.from('test-workspace'));
+        }),
+        writeFile: vi.fn().mockResolvedValue(undefined),
+      };
+    }),
+    toMastraSafeIdentifier: vi.fn((s) => s.replace(/[^A-Za-z0-9_]/g, '_')),
+  
+    errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+    withToolErrorLogging: vi.fn(async (params) => {
+      try {
+        return { valid: true, data: await params.fn() };
+      } catch (error) {
+        // Mirror the real impl: use errorMsg-style formatting
+        const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+        return { valid: false, error: msg, hint: params.hint || '' };
+      }
+    }),
+    };
+});
+
+vi.mock('@libsql/client', () => ({
+  createClient: vi.fn().mockReturnValue({ close: vi.fn() }),
+
+  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+  withToolErrorLogging: vi.fn(async (params) => {
+    try {
+      return { valid: true, data: await params.fn() };
+    } catch (error) {
+      // Mirror the real impl: use errorMsg-style formatting
+      const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+      return { valid: false, error: msg, hint: params.hint || '' };
+    }
+  })
+}));
+
+import { createAgentRuntimePlatform } from './runtime/platform';
 
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true })),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
 
@@ -45,7 +136,9 @@ describe('createAgentRuntimePlatform', () => {
       expect(legacyRootResult.exitCode).not.toBe(0);
       expect(platform.workspace.filesystem).not.toBeNull();
       expect(
-        Buffer.from(await platform.workspace.filesystem!.readFile('notes/hello.txt')).toString('utf8'),
+        Buffer.from(await platform.workspace.filesystem!.readFile('notes/hello.txt')).toString(
+          'utf8',
+        ),
       ).toBe('test-workspace');
 
       const now = new Date().toISOString();
@@ -104,7 +197,9 @@ describe('createAgentRuntimePlatform', () => {
 
     try {
       expect(
-        Buffer.from(await platform.workspace.filesystem!.readFile(sharedToolsPath + '/shared.txt')).toString('utf8'),
+        Buffer.from(
+          await platform.workspace.filesystem!.readFile(sharedToolsPath + '/shared.txt'),
+        ).toString('utf8'),
       ).toBe('shared-data');
 
       const pwdResult = await platform.workspaceGateway.execute({

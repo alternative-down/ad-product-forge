@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { AdminLoadingState } from '@/components/admin';
-import { getAgent } from '@/lib/admin-api';
+import { getAgent } from '@/lib/admin-api/index';
 
-import { DiscordProviderForm } from './-discord-provider-form';
-import { EmailProviderForm } from './-email-provider-form';
+import { DiscordProviderForm } from '@/components/agents/providers/discord-provider-form';
+import { EmailProviderForm } from '@/components/agents/providers/email-provider-form';
 
 export const Route = createFileRoute('/agents/$agentId/providers/$providerType/')({
   component: AgentProviderIndexRoute,
@@ -32,11 +32,23 @@ function AgentProviderIndexRoute() {
   }
 
   if (providerType === 'discord') {
-    return <DiscordProviderForm agentId={agentId} credentials={provider?.credentials} configured={Boolean(provider)} />;
+    return (
+      <DiscordProviderForm
+        agentId={agentId}
+        credentials={provider?.credentials}
+        configured={Boolean(provider)}
+      />
+    );
   }
 
   if (providerType === 'email') {
-    return <EmailProviderForm agentId={agentId} credentials={provider?.credentials} configured={Boolean(provider)} />;
+    return (
+      <EmailProviderForm
+        agentId={agentId}
+        credentials={provider?.credentials}
+        configured={Boolean(provider)}
+      />
+    );
   }
 
   return <div className="text-sm text-muted-foreground">Provider não suportado nesta área.</div>;

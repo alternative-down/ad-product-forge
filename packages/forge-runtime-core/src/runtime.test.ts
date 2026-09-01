@@ -2,11 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  FakeStepModelAdapter,
-  InMemoryCheckpointedConversationStateStore,
-  InMemoryConversationStore,
-} from 'agent-runtime-core/integrations';
+import { FakeStepModelAdapter, InMemoryConversationStore } from 'agent-runtime-core/integrations';
 import { z } from 'zod';
 
 import { createForgeAgentRuntime } from './runtime.js';
@@ -14,7 +10,6 @@ import { createForgeAgentRuntime } from './runtime.js';
 describe('createForgeAgentRuntime', () => {
   it('persists conversation messages through the runtime bridge and observer flow', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const stateStore = new InMemoryCheckpointedConversationStateStore();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -32,9 +27,7 @@ describe('createForgeAgentRuntime', () => {
         continuation: 'stop',
       })),
       conversationStore,
-      memory: {
-        stateStore,
-      },
+      memory: {},
     });
 
     try {
@@ -77,12 +70,9 @@ describe('createForgeAgentRuntime', () => {
         },
       ]);
 
-      const checkpointedState = await stateStore.load('thread-1');
+      const checkpointedState = await runtime.memory.getState();
 
-      expect(checkpointedState?.recentMessageIds).toEqual([
-        messages[0]?.id,
-        messages[1]?.id,
-      ]);
+      expect(checkpointedState?.recentMessageIds).toEqual([messages[0]?.id, messages[1]?.id]);
       expect(checkpointedState?.metrics.recentMessageCount).toBe(2);
     } finally {
       await runtime.dispose();
@@ -91,7 +81,6 @@ describe('createForgeAgentRuntime', () => {
 
   it('persists tool-only assistant steps in the conversation log', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const stateStore = new InMemoryCheckpointedConversationStateStore();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -102,41 +91,45 @@ describe('createForgeAgentRuntime', () => {
         if (request.stepNumber === 1) {
           return {
             segments: [],
-            actionRequests: [{
-              name: 'sum',
-              input: {
-                left: 2,
-                right: 3,
+            actionRequests: [
+              {
+                name: 'sum',
+                input: {
+                  left: 2,
+                  right: 3,
+                },
               },
-            }],
+            ],
             continuation: 'continue',
           };
         }
 
         return {
-          segments: [{
-            kind: 'message',
-            text: 'Done.',
-          }],
+          segments: [
+            {
+              kind: 'message',
+              text: 'Done.',
+            },
+          ],
           actionRequests: [],
           continuation: 'stop',
         };
       }),
       conversationStore,
-      memory: {
-        stateStore,
-      },
-      runtimeActions: [{
-        name: 'sum',
-        description: 'Add two integers',
-        inputSchema: z.object({
-          left: z.number(),
-          right: z.number(),
-        }),
-        execute(input: { left: number; right: number }) {
-          return input.left + input.right;
+      memory: {},
+      runtimeActions: [
+        {
+          name: 'sum',
+          description: 'Add two integers',
+          inputSchema: z.object({
+            left: z.number(),
+            right: z.number(),
+          }),
+          execute(input: { left: number; right: number }) {
+            return input.left + input.right;
+          },
         },
-      }],
+      ],
     });
 
     try {
@@ -168,18 +161,86 @@ describe('createForgeAgentRuntime', () => {
       expect(messages[1]?.role).toBe('assistant');
       expect(messages[1]?.parts).toEqual([]);
       expect(messages[1]?.metadata).toMatchObject({
-        toolInvocations: [{
-          toolName: 'sum',
-          args: {
-            left: 2,
-            right: 3,
+        toolInvocations: [
+          {
+            toolName: 'sum',
+            args: {
+              left: 2,
+              right: 3,
+            },
           },
-        }],
-        toolResults: [{
-          toolName: 'sum',
-          result: 5,
-        }],
+        ],
+        toolResults: [
+          {
+            toolName: 'sum',
+            result: 5,
+          },
+        ],
       });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('resolves dispose without error when mcpToolset is null (Finding 2 partial)', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const runtime = await createForgeAgentRuntime({
+      config: {
+        agentId: 'agent-1',
+        threadId: 'thread-1',
+        consolidateConversationOverflow: true,
+      },
+      model: new FakeStepModelAdapter(() => ({
+        segments: [],
+        actionRequests: [],
+        continuation: 'stop',
+      })),
+      conversationStore,
+      memory: {},
+    });
+
+    expect(runtime.mcpToolset).toBeNull();
+    await expect(runtime.dispose()).resolves.toBeUndefined();
+  });
+
+  it('handles multi-step dispatch via toRuntimeInputTarget adapter (Finding 1)', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const runtime = await createForgeAgentRuntime({
+      config: {
+        agentId: 'agent-1',
+        threadId: 'thread-1',
+        consolidateConversationOverflow: true,
+      },
+      model: new FakeStepModelAdapter(() => ({
+        segments: [{ kind: 'message', text: 'Reply after cast removal.' }],
+        actionRequests: [],
+        continuation: 'stop',
+      })),
+      conversationStore,
+      memory: {},
+    });
+
+    try {
+      const now = new Date().toISOString();
+      await runtime.bridge.dispatchMessage({
+        thread: {
+          id: 'thread-1',
+          participantIds: ['agent-1'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        message: {
+          id: randomUUID(),
+          threadId: 'thread-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Hello after cast removal.' }],
+          createdAt: now,
+        },
+      });
+      const result = await runtime.host.runtime.step();
+      expect(result?.record.modelResponse.segments).toEqual([
+        { kind: 'message', text: 'Reply after cast removal.' },
+      ]);
     } finally {
       await runtime.dispose();
     }

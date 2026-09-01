@@ -1,4 +1,5 @@
 import { request } from './core';
+import { COMPANY_CASH_STATUSES } from '../finance-enums';
 import type {
   AdminFinance,
   CreateInvestmentInput,
@@ -32,22 +33,28 @@ export function createPayable(input: CreatePayableInput) {
 }
 
 export function postPlannedLedgerEntry(entryId: string, effectiveAt?: string) {
-  return request<{ entryId: string; status: 'posted'; effectiveAt: number }>('/admin/finance/ledger/post', {
-    method: 'POST',
-    body: JSON.stringify({ entryId, effectiveAt }),
-  });
+  return request<{ entryId: string; status: typeof COMPANY_CASH_STATUSES[1]; effectiveAt: number }>(
+    '/admin/finance/ledger/post',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId, effectiveAt }),
+    },
+  );
 }
 
 export function cancelPlannedLedgerEntry(entryId: string) {
-  return request<{ entryId: string; status: 'canceled' }>('/admin/finance/ledger/cancel', {
+  return request<{ entryId: string; status: typeof COMPANY_CASH_STATUSES[2] }>('/admin/finance/ledger/cancel', {
     method: 'POST',
     body: JSON.stringify({ entryId }),
   });
 }
 
 export function setRecurringPayableActive(payableId: string, isActive: boolean) {
-  return request<{ payableId: string; isActive: boolean }>('/admin/finance/recurring-payable/set-active', {
-    method: 'POST',
-    body: JSON.stringify({ payableId, isActive }),
-  });
+  return request<{ payableId: string; isActive: boolean }>(
+    '/admin/finance/recurring-payable/set-active',
+    {
+      method: 'POST',
+      body: JSON.stringify({ payableId, isActive }),
+    },
+  );
 }

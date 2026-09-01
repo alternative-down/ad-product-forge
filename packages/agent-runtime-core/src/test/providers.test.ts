@@ -7,14 +7,20 @@ describe('provider gateway', () => {
   it('creates step models from registered provider factories', async () => {
     const gateway = new InMemoryProviderGateway();
 
-    gateway.register('fake', (config) => new FakeStepModelAdapter(() => ({
-      segments: [{
-        kind: 'message',
-        text: `provider ${config.modelId}`,
-      }],
-      actionRequests: [],
-      continuation: 'stop',
-    })));
+    gateway.register(
+      'fake',
+      (config) =>
+        new FakeStepModelAdapter(() => ({
+          segments: [
+            {
+              kind: 'message',
+              text: `provider ${config.modelId}`,
+            },
+          ],
+          actionRequests: [],
+          continuation: 'stop',
+        })),
+    );
 
     const model = await gateway.createStepModel({
       modelId: 'fake:demo-model',
@@ -31,4 +37,3 @@ describe('provider gateway', () => {
     expect(response.segments[0]?.text).toBe('provider fake:demo-model');
   });
 });
-

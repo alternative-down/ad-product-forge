@@ -1,13 +1,31 @@
+import { errorMsg } from './error-formatting';
+import {
+  AgentNotFoundError,
+  InvalidSkillNameError,
+} from './skills-tools.errors';
+import { findAgentById } from './agent-lookup';
+import { skillsToolsDebug } from './skills-tools-debug';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+import type { Database } from '../database/client';
 import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
 import { resolveAgentSkillRoot } from './workspace-skill-paths';
+
+function ensureAgentFound<T>(
+  agent: T | null | undefined,
+  agentId: string,
+  functionName: string,
+): asserts agent is T {
+  if (agent == null) {
+    skillsToolsDebug('error', `${functionName} agent not found`, { agentId });
+    throw new AgentNotFoundError(agentId);
+  }
+}
 
 async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]> {
   const entries = await fs.readdir(skillRoot, { withFileTypes: true });
@@ -18,7 +36,7 @@ async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]>
     const entryPath = path.resolve(skillRoot, entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await listSkillFiles(entryPath, relativePath));
+      files.push(...(await listSkillFiles(entryPath, relativePath)));
       continue;
     }
 
@@ -33,7 +51,8 @@ async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]>
 async function readTextFileIfPossible(filePath: string) {
   try {
     return await fs.readFile(filePath, 'utf8');
-  } catch {
+  } catch (error) {
+    skillsToolsDebug('warn', 'Failed to read file', { error: errorMsg(error), filePath });
     return null;
   }
 }
@@ -46,11 +65,7 @@ export function createAgentSkillTools(input: {
 }) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
   const loadSkillSchema = z.object({
-    skillName: z
-      .string()
-      .trim()
-      .min(1)
-      .describe('Skill directory name inside `skills/`.'),
+    skillName: z.string().trim().min(1).describe('Skill directory name inside `skills/`.'),
   });
 
   tools.load_workspace_skill = createTool({
@@ -58,17 +73,9 @@ export function createAgentSkillTools(input: {
     description: 'Load one local workspace skill from `skills/`.',
     inputSchema: loadSkillSchema,
     execute: async (inputData) => {
-      const agent = await input.db.query.agents.findFirst({
-        where: (fields, operators) => operators.eq(fields.id, input.agentId),
-        columns: {
-          id: true,
-          workspaceFilesystem: true,
-        },
-      });
+      const agent = await findAgentById(input.db, input.agentId);
 
-      if (!agent) {
-        throw new Error(`Agent not found: ${input.agentId}`);
-      }
+      ensureAgentFound(agent, input.agentId, 'load_workspace_skill');
 
       const { skillsRoot, skillRoot } = resolveAgentSkillRoot({
         workspaceBasePath: input.workspaceBasePath,
@@ -78,7 +85,8 @@ export function createAgentSkillTools(input: {
       const relativePath = path.relative(skillsRoot, skillRoot);
 
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        throw new Error(`Invalid skill name: ${inputData.skillName}`);
+        skillsToolsDebug('error', 'load_workspace_skill invalid skill name', { skillName: inputData.skillName });
+        throw new InvalidSkillNameError(inputData.skillName);
       }
 
       const skillMarkdownPath = path.resolve(skillRoot, 'SKILL.md');
@@ -119,17 +127,9 @@ export function createAgentSkillTools(input: {
           .describe('Skill directory name inside `skills/` to publish.'),
       }),
       execute: async (inputData) => {
-        const agent = await input.db.query.agents.findFirst({
-          where: (fields, operators) => operators.eq(fields.id, input.agentId),
-          columns: {
-            id: true,
-            workspaceFilesystem: true,
-          },
-        });
+        const agent = await findAgentById(input.db, input.agentId);
 
-        if (!agent) {
-          throw new Error(`Agent not found: ${input.agentId}`);
-        }
+        ensureAgentFound(agent, input.agentId, 'publish_workspace_skill_to_global_catalog');
 
         await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath: input.workspaceBasePath,

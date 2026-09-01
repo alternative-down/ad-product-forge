@@ -1,42 +1,127 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { GitHubIntegrationNotConfiguredError } from './tools.errors';
+import { githubToolsDebug } from './tools-debug';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { hasToolPermission } from '../capabilities/catalog';
+import {
+  withToolErrorLogging,
+  type ToolResult,
+} from '../capabilities/tools/error-wrapper';
+import type { GitHubAppProvisioning } from './types';
 import type { GitHubAppManager } from './manager';
 
-export function createGitHubTools(agentId: string, githubApps: GitHubAppManager, allowedToolIds?: Set<string> | null) {
+export function createGitHubTools(
+  agentId: string,
+  githubApps: GitHubAppManager,
+  allowedToolIds?: Set<string> | null,
+) {
   const tools: Record<string, Tool<unknown, unknown>> = {};
 
   if (hasToolPermission(allowedToolIds, 'get_github_git_credentials')) {
     tools.get_github_git_credentials = createTool({
       id: 'get_github_git_credentials',
       description:
-        'Get temporary Git credentials for cloning, pulling, or pushing GitHub repositories that this agent can access. These credentials expire within 1 hour, so fetch fresh credentials when needed. You can request credentials for one repository or for all accessible repositories.',
+        'Get temporary Git credentials for cloning, pulling, or pushing GitHub repositories that this agent can access. These credentials expire within 1 hour, so fetch fresh credentials when needed. You can request credentials for one repository or for all available credentials.',
       inputSchema: z.object({
         repositoryName: z
           .string()
           .optional()
-          .describe('Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.'),
+          .describe(
+            'Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.',
+          ),
       }),
-      execute: async (input) => {
-        forgeDebug('tools:github', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
+      execute: async (input): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:github',
+          op: 'get_github_git_credentials',
+          hint: 'Verify GitHub App is installed and has repository access.',
+          fn: async () => {
+            githubToolsDebug('info', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
+            const result = await githubApps.getGitCredentials({
+              agentId,
+              repositoryName: input.repositoryName,
+            });
+            githubToolsDebug('info', 'get_github_git_credentials result', { hasCredentials: result !== null && result !== undefined });
+            return result;
+          },
+        });
+      },
+    });
+  }
 
-        try {
-          const result = await githubApps.getGitCredentials({
-            agentId,
-            repositoryName: input.repositoryName,
-          });
-          forgeDebug('tools:github', 'get_github_git_credentials result', { hasCredentials: !!result });
-          return result;
-        } catch (error) {
-          forgeDebug('tools:github', 'get_github_git_credentials error', { error: String(error) });
-          return {
-            valid: false,
-            error: String(error),
-            hint: 'Verify GitHub App is installed and has repository access.',
-          };
-        }
+  if (hasToolPermission(allowedToolIds, 'get_github_provisioning_status')) {
+    tools.get_github_provisioning_status = createTool({
+      id: 'get_github_provisioning_status',
+      description:
+        "Check the current provisioning status of this agent's GitHub App. Shows whether the GitHub App has been created and/or installed in the organization. Returns registration/install URLs when needed so the agent can continue the flow.",
+      inputSchema: z.object({}),
+      execute: async (): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:github',
+          op: 'get_github_provisioning_status',
+          hint: 'Verify the GitHub integration is provisioned at the platform level.',
+          fn: async () => {
+            const provisioning = await githubApps.getAgentProvisioning(agentId);
+            if (!provisioning) {
+              return {
+                status: 'not_configured',
+                message: 'GitHub integration is not configured at the platform level.',
+              };
+            }
+            const prov = provisioning as GitHubAppProvisioning;
+            return {
+              status: prov.status,
+              registrationUrl: provisioning.registrationUrl,
+              installUrl: prov.installUrl ?? null,
+              message:
+                prov.status === 'active'
+                  ? 'GitHub App is fully provisioned and installed.'
+                  : prov.status === 'created'
+                    ? 'GitHub App created but not yet installed. Use installUrl to complete installation.'
+                    : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
+            };
+          },
+        });
+      },
+    });
+  }
+
+  if (hasToolPermission(allowedToolIds, 'start_github_app_provisioning')) {
+    tools.start_github_app_provisioning = createTool({
+      id: 'start_github_app_provisioning',
+      description:
+        "Start or restart the GitHub App provisioning flow for this agent. Creates a new pending GitHub App manifest record if one doesn't already exist. Returns the registration URL to follow in the browser.",
+      inputSchema: z.object({}),
+      execute: async (): Promise<ToolResult<unknown>> => {
+        return await withToolErrorLogging({
+          scope: 'tools:github',
+          op: 'start_github_app_provisioning',
+          hint: 'Verify the GitHub integration is configured at the platform level and try again.',
+          fn: async () => {
+            const provisioning = await githubApps.getAgentProvisioning(agentId);
+
+            if (provisioning && (provisioning as GitHubAppProvisioning).status === 'active') {
+              return {
+                status: 'active',
+                message: 'GitHub App is already fully provisioned.',
+              };
+            }
+
+            if (!provisioning) {
+              throw new GitHubIntegrationNotConfiguredError();
+            }
+
+            return {
+              status: provisioning.status,
+              registrationUrl: provisioning.registrationUrl,
+              message:
+                provisioning.status === 'pending'
+                  ? 'GitHub App manifest submitted. Await GitHub callback to complete creation.'
+                  : 'Provisioning initiated. Follow registrationUrl to complete GitHub App creation.',
+            };
+          },
+        });
       },
     });
   }

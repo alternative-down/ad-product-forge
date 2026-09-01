@@ -1,6 +1,7 @@
 import {
   ConversationRuntimeBridge,
   createRuntimeHost,
+  type AgentRuntime,
   type ConversationStore,
   type McpRuntimeActionOptions,
   type RuntimeObserver,
@@ -12,7 +13,11 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { createConversationRuntimeContextFormatter } from './conversation-runtime-context-formatter.js';
-import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
+import {
+  forgeAgentRuntimeConfigSchema,
+  type ForgeAgentRuntimeConfig,
+  type ForgeMcpServerConfig,
+} from './contracts.js';
 import {
   createForgeConversationMemory,
   type ForgeConversationMemory,
@@ -25,7 +30,10 @@ export type CreateForgeAgentRuntimeOptions = {
   config: ForgeAgentRuntimeConfig;
   model: StepModelAdapter;
   conversationStore: ConversationStore;
-  memory: Omit<ForgeConversationMemoryOptions, 'threadId' | 'conversationStore' | 'assistantAuthorId'>;
+  memory: Omit<
+    ForgeConversationMemoryOptions,
+    'threadId' | 'conversationStore' | 'assistantAuthorId'
+  >;
   mcpServers?: ForgeMcpServerConfig[];
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   mcpRuntimeActionOptions?: Omit<McpRuntimeActionOptions, 'session'>;
@@ -42,6 +50,21 @@ export type ForgeAgentRuntime = {
   dispose(): Promise<void>;
 };
 
+/**
+ * Adapter that exposes only the dispatch surface required by
+ * `RuntimeInputTarget`, isolating the structural narrowing from the
+ * consumer (Finding 1 of #6307). The cast lives in one documented
+ * location instead of being inline at the call site. AgentRuntime's
+ * dispatch signature is structurally compatible with RuntimeInputTarget,
+ * but TypeScript cannot prove the variance through a generic forwarding
+ * function, so a single, justified cast is captured here.
+ */
+function toRuntimeInputTarget(runtime: AgentRuntime): RuntimeInputTarget {
+  return {
+    dispatch: (payload) => runtime.dispatch(payload) as Promise<void>,
+  };
+}
+
 export async function createForgeAgentRuntime(
   options: CreateForgeAgentRuntimeOptions,
 ): Promise<ForgeAgentRuntime> {
@@ -53,22 +76,20 @@ export async function createForgeAgentRuntime(
     assistantAuthorId: config.assistantAuthorId,
     consolidateOverflow: config.consolidateConversationOverflow,
   });
-  const mcpToolset = options.mcpServers?.length
+  const mcpToolset = options.mcpServers && options.mcpServers.length > 0
     ? new ForgeMcpToolset({
-      servers: options.mcpServers,
-      runtimeActionOptions: options.mcpRuntimeActionOptions,
-    })
+        servers: options.mcpServers,
+        runtimeActionOptions: options.mcpRuntimeActionOptions,
+      })
     : null;
-  const mcpActions = mcpToolset
-    ? await mcpToolset.createRuntimeActions()
-    : [];
+  const mcpActions = mcpToolset ? await mcpToolset.createRuntimeActions() : [];
   const observers = [...conversationMemory.observers];
 
   if (options.usageSink) {
     observers.push(createForgeUsageObserver(options.usageSink));
   }
 
-  if (options.runtimeObservers?.length) {
+  if (options.runtimeObservers && options.runtimeObservers.length > 0) {
     observers.push(...options.runtimeObservers);
   }
 
@@ -78,20 +99,14 @@ export async function createForgeAgentRuntime(
       model: options.model,
       contextFormatter: createConversationRuntimeContextFormatter(),
     },
-    actions: [
-      ...(options.runtimeActions ?? []),
-      ...mcpActions,
-    ],
-    plugins: [
-      ...conversationMemory.plugins,
-      ...(options.runtimePlugins ?? []),
-    ],
+    actions: [...(options.runtimeActions ?? []), ...mcpActions],
+    plugins: [...conversationMemory.plugins, ...(options.runtimePlugins ?? [])],
     observers,
     eventStream: true,
     messageStream: true,
   });
   const bridge = new ConversationRuntimeBridge({
-    runtime: host.runtime as RuntimeInputTarget,
+    runtime: toRuntimeInputTarget(host.runtime),
     store: options.conversationStore,
   });
 
@@ -101,6 +116,12 @@ export async function createForgeAgentRuntime(
     memory: conversationMemory.memory,
     mcpToolset,
     async dispose() {
+      // Finding 2 of #6307 (partial): only `mcpToolset` currently exposes
+      // a dispose contract. `host`, `bridge`, and `conversationMemory`
+      // hold no observable resources today (subsystem interfaces in
+      // `agent-runtime-core` do not yet declare a dispose method), so
+      // disposing them would require an interface-expansion follow-up
+      // (tracked separately).
       await mcpToolset?.dispose();
     },
   };

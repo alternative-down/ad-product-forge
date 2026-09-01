@@ -69,7 +69,12 @@ describe('application scaffolds', () => {
   it('creates a vtuber app and performs latest step output', async () => {
     const avatarAnimations: string[] = [];
     let transcriptionHandler:
-      | ((event: { id: string; text: string; isFinal: boolean; language?: string }) => Promise<void> | void)
+      | ((event: {
+          id: string;
+          text: string;
+          isFinal: boolean;
+          language?: string;
+        }) => Promise<void> | void)
       | undefined;
     const app = createVtuberApplication({
       runtime: {
@@ -242,11 +247,7 @@ describe('application scaffolds', () => {
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       join(skillDir, 'SKILL.md'),
-      [
-        '# Review',
-        '',
-        'Review changes carefully before merging.',
-      ].join('\n'),
+      ['# Review', '', 'Review changes carefully before merging.'].join('\n'),
       'utf8',
     );
     const app = createWorkspaceAgentApplication({

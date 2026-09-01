@@ -11,10 +11,12 @@
 ## Problema Atual
 
 ### Nielsen #1 - Visibility of System Status (Score: 5/10)
+
 - **Problema:** Stats "Used percent" é apenas texto (e.g., "75.3%") sem representação visual
 - **Impacto:** Usuário não consegue estimar rapidamente se está perto do limite
 
 ### Nielsen #5 - Error Prevention (Score: 5/10)
+
 - **Problema:** Sem warnings quando orçamento está acabando
 - **Impacto:** Admin pode não perceber que agent está prestes a ficar sem budget
 
@@ -38,13 +40,13 @@
 
 **Estados:**
 
-| Estado | Cor Barra | Badge | Mensagem |
-|--------|-----------|-------|----------|
-| < 50% | bg-green-500 | — | X days left |
-| 50-75% | bg-yellow-500 | — | X days left |
-| 75-90% | bg-orange-500 | ⚠️ Warning | Running low |
-| 90-100% | bg-red-500 | 🚨 Critical | Almost out |
-| 100%+ | bg-red-700 + striped | 🚨 Over | Over budget |
+| Estado  | Cor Barra            | Badge       | Mensagem    |
+| ------- | -------------------- | ----------- | ----------- |
+| < 50%   | bg-green-500         | —           | X days left |
+| 50-75%  | bg-yellow-500        | —           | X days left |
+| 75-90%  | bg-orange-500        | ⚠️ Warning  | Running low |
+| 90-100% | bg-red-500           | 🚨 Critical | Almost out  |
+| 100%+   | bg-red-700 + striped | 🚨 Over     | Over budget |
 
 ### Card 2: QuickTopUpCard (Melhoria do ContractTopUpCard)
 
@@ -70,6 +72,7 @@
 ```
 
 **Funcionalidades:**
+
 - Quick amount buttons: $10, $25, $50, Custom
 - Preview do novo valor após top-up
 - Checkbox de confirmação para valores > $100 (Nielsen #5 - Error Prevention)
@@ -99,6 +102,7 @@
 ```
 
 **Funcionalidades:**
+
 - Preview visual da mudança (↑↓ + %)
 - Cálculo de impacto mensal
 - Warning quando decrease não é possível (agent running)
@@ -149,7 +153,7 @@ components/
 ```tsx
 function useBudgetStatus(contract: ActiveContract | null) {
   const percent = contract?.spentPercent ?? 0;
-  
+
   const status = useMemo(() => {
     if (percent >= 100) return 'over';
     if (percent >= 90) return 'critical';
@@ -157,7 +161,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
     if (percent >= 50) return 'caution';
     return 'healthy';
   }, [percent]);
-  
+
   const color = {
     healthy: 'bg-green-500',
     caution: 'bg-green-500',
@@ -165,7 +169,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
     critical: 'bg-red-500',
     over: 'bg-red-700',
   }[status];
-  
+
   const message = {
     healthy: `${daysLeft} days remaining`,
     caution: `${daysLeft} days remaining`,
@@ -173,7 +177,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
     critical: 'Almost out',
     over: 'Over budget',
   }[status];
-  
+
   return { status, color, message, percent };
 }
 ```
@@ -232,6 +236,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
 ## Estados a Considerar
 
 ### Empty State (Sem contrato)
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  💰 Budget                                                      │
@@ -246,6 +251,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
 ```
 
 ### Loading State
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  💰 Budget                                    ████████████░░░  │
@@ -254,6 +260,7 @@ function useBudgetStatus(contract: ActiveContract | null) {
 ```
 
 ### Error State
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  💰 Budget                                    ⚠️ Failed to load │
@@ -295,5 +302,5 @@ function useBudgetStatus(contract: ActiveContract | null) {
 
 ---
 
-*Wireframes by Pixelia — WireFrame Wizard for Alternative Down*
-*Generated: 2026-03-27*
+_Wireframes by Pixelia — WireFrame Wizard for Alternative Down_
+_Generated: 2026-03-27_

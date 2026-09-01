@@ -46,6 +46,7 @@ Implementar ticketing como **provider de comunicação** (como Discord, email):
 ## Integração entre App Template e Plataforma
 
 **Fluxo:**
+
 1. Usuário abre ticket em app criada pelo agente
 2. Ticket é enviado para platform (via API)
 3. Platform recebe e armazena
@@ -58,6 +59,7 @@ Implementar ticketing como **provider de comunicação** (como Discord, email):
 ## Schema do Banco de Dados
 
 **Tabela: `tickets`**
+
 ```
 - ticket_id (UUID, primary key)
 - app_id (UUID) - qual aplicação gerou o ticket
@@ -73,6 +75,7 @@ Implementar ticketing como **provider de comunicação** (como Discord, email):
 ```
 
 **Tabela: `ticket_messages`**
+
 ```
 - message_id (UUID)
 - ticket_id (UUID)
@@ -114,4 +117,5 @@ Tickets funcionam como provider integrado ao PRD-18 (comunicação interna):
 ---
 
 **Histórico do Documento:**
+
 - v1.0 (2026-03-15): Ticketing como provider de comunicação integrado ao PRD-18

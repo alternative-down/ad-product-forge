@@ -44,9 +44,11 @@ describe('InMemoryUsageMeter', () => {
       })),
     });
 
-    runtime.use(createUsageMeterPlugin({
-      meter,
-    }));
+    runtime.use(
+      createUsageMeterPlugin({
+        meter,
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',

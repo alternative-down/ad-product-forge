@@ -11,7 +11,7 @@ export function createStaticContextPlugin(options: StaticContextPluginOptions): 
     name: options.name ?? 'static-context',
     async provideContext() {
       if (typeof options.entries === 'function') {
-        return options.entries();
+        return await options.entries();
       }
 
       return options.entries;

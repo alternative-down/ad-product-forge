@@ -48,9 +48,13 @@ describe('AgentRuntime', () => {
           };
         }
 
-        const previousActionResults = request.context.find((entry) => entry.kind === 'action-results');
+        const previousActionResults = request.context.find(
+          (entry) => entry.kind === 'action-results',
+        );
 
-        expect(previousActionResults ? getStepContextText(previousActionResults) : null).toContain('"output": 5');
+        expect(previousActionResults ? getStepContextText(previousActionResults) : null).toContain(
+          '"output": 5',
+        );
 
         return {
           segments: [{ kind: 'message', text: 'done' }],
@@ -109,14 +113,16 @@ describe('AgentRuntime', () => {
     runtime.use({
       name: 'extra-context',
       provideContext() {
-        return [{
-          ...createTextStepContextEntry({
-            id: 'plugin-entry',
-            kind: 'plugin',
-            title: 'Plugin Context',
-            text: 'extra',
-          }),
-        }];
+        return [
+          {
+            ...createTextStepContextEntry({
+              id: 'plugin-entry',
+              kind: 'plugin',
+              title: 'Plugin Context',
+              text: 'extra',
+            }),
+          },
+        ];
       },
       onAfterStep(context: { record: { id: string } }) {
         afterStepIds.push(context.record.id);

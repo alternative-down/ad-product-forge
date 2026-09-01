@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from '../database/index';
+import { getDatabase } from '../database/client';
+import { runMigrations } from '../database/migrate';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 
 const cliInputSchema = z.object({
@@ -21,12 +23,27 @@ async function main() {
 
   const result = await topUpActiveAgentContract(db, input);
 
-  console.log(`[Contract] Top-up applied to ${result.agentId}`);
-  console.log(`[Contract] Active contract: ${result.contractId}`);
-  console.log(`[Contract] New budget: USD ${result.budgetUsd.toFixed(2)}`);
+  forgeDebug({
+    scope: 'top-up-contract',
+    level: 'info',
+    message: 'Top-up applied',
+    context: {
+      agentId: result.agentId,
+      contractId: result.contractId,
+      budgetUsd: result.budgetUsd,
+    },
+  });
+  // Contract info logged above via forgeDebug
+  // Budget info logged above via forgeDebug
 }
+import { errorMsg } from '../agents/error-formatting';
 
 main().catch((error) => {
-  console.error('[Contract] Failed to top up active contract:', error);
+  forgeDebug({
+    scope: 'top-up-contract',
+    level: 'error',
+    message: 'Failed to top up active contract',
+    context: { error: errorMsg(error) },
+  });
   process.exit(1);
 });

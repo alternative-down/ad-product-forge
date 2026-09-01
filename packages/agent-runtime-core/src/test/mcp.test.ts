@@ -31,17 +31,19 @@ describe('createMcpActionDefinitions', () => {
     const calls: Array<{ name: string; input: Record<string, unknown> }> = [];
     const session = {
       async listTools() {
-        return [{
-          name: 'search_docs',
-          description: 'Search docs.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: { type: 'string' },
+        return [
+          {
+            name: 'search_docs',
+            description: 'Search docs.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: { type: 'string' },
+              },
+              required: ['query'],
             },
-            required: ['query'],
           },
-        }];
+        ];
       },
       async callTool(name: string, input: Record<string, unknown>) {
         calls.push({ name, input });
@@ -55,21 +57,26 @@ describe('createMcpActionDefinitions', () => {
     };
 
     const definitions = await createMcpActionDefinitions(session);
-    const output = await definitions[0]!.execute({
-      query: 'runtime',
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
-
-    expect(definitions[0]!.name).toBe('search_docs');
-    expect(calls).toEqual([{
-      name: 'search_docs',
-      input: {
+    const output = await definitions[0]!.execute(
+      {
         query: 'runtime',
       },
-    }]);
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+
+    expect(definitions[0]!.name).toBe('search_docs');
+    expect(calls).toEqual([
+      {
+        name: 'search_docs',
+        input: {
+          query: 'runtime',
+        },
+      },
+    ]);
     expect(output).toEqual({
       ok: true,
     });

@@ -2,7 +2,10 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 
-import type { WorkspaceCommandEvent, WorkspaceCommandRecorder } from '../gateways/workspace-recording.js';
+import type {
+  WorkspaceCommandEvent,
+  WorkspaceCommandRecorder,
+} from '../gateways/workspace-recording.js';
 
 export type FilesystemWorkspaceCommandRecorderOptions = {
   basePath: string;

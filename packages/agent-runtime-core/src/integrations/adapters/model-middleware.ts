@@ -11,7 +11,7 @@ export function applyStepModelMiddlewares(
   for (let index = middlewares.length - 1; index >= 0; index -= 1) {
     const middleware = middlewares[index];
 
-    if (!middleware) {
+    if (middleware == null) {
       continue;
     }
 
@@ -21,8 +21,6 @@ export function applyStepModelMiddlewares(
   return currentModel;
 }
 
-export function defineStepModelMiddleware(
-  middleware: StepModelMiddleware,
-): StepModelMiddleware {
+export function defineStepModelMiddleware(middleware: StepModelMiddleware): StepModelMiddleware {
   return middleware;
 }

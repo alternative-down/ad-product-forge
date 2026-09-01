@@ -1,0 +1,126 @@
+/**
+ * Agent Skills Operations — extracted from write-ops.ts
+ */
+
+import { z } from 'zod';
+import { sql } from 'drizzle-orm';
+import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
+import {
+  installGlobalSkillsFromZip,
+  deleteGlobalSkill,
+  installGlobalSkillToAgentWorkspace,
+  publishAgentWorkspaceSkillToGlobalCatalog,
+} from '../../../../agents/global-skills';
+import type { HttpHandler } from '../../../../http/server';
+import type { Database } from '../../../../database/client';
+
+import { safeRoute } from '../admin-route-error-helper';
+
+const publishAgentSkillToGlobalSchema = z
+  .object({
+    agentId: z.string(),
+    skillName: z.string(),
+  })
+  .strict();
+
+const installGlobalSkillForAgentSchema = z
+  .object({
+    agentId: z.string(),
+    skillName: z.string(),
+  })
+  .strict();
+
+const uploadAgentSkillsSchema = z
+  .object({
+    skillsZipBase64: z.string(),
+  })
+  .strict();
+
+const deleteAgentSkillSchema = z
+  .object({
+    agentId: z.string(),
+    skillName: z.string(),
+  })
+  .strict();
+
+export function registerSkillOps(
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
+  db: Database,
+  input: {
+    workspaceBasePath: string;
+  },
+) {
+  const workspaceBasePath = input.workspaceBasePath;
+
+  // POST /admin/agent/skills/publish-to-global
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/skills/publish-to-global',
+    handler: safeRoute('/admin/agent/skills/publish-to-global', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+        const agent = await db.query.agents.findFirst({
+          where: sql`id = ${body.agentId}`,
+          columns: { id: true, workspaceFilesystem: true },
+        });
+        if (!agent)
+          return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+        await publishAgentWorkspaceSkillToGlobalCatalog({
+          workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+        return jsonResponse({
+          success: true,
+          skillName: body.skillName,
+        });
+    }),
+  });
+
+  // POST /admin/agent/skills/install-global
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/skills/install-global',
+    handler: safeRoute('/admin/agent/skills/install-global', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+        const agent = await db.query.agents.findFirst({
+          where: sql`id = ${body.agentId}`,
+          columns: { id: true, workspaceFilesystem: true },
+        });
+        if (!agent)
+          return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+        await installGlobalSkillToAgentWorkspace({
+          workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+        return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
+    }),
+  });
+
+  // POST /admin/agent/skills/upload
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/skills/upload',
+    handler: safeRoute('/admin/agent/skills/upload', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+        const installedSkillNames = await installGlobalSkillsFromZip({
+          workspaceBasePath,
+          zipBase64: body.skillsZipBase64,
+        });
+        return jsonResponse({ success: true, skillNames: installedSkillNames });
+    }),
+  });
+
+  // POST /admin/agent/skills/delete
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/skills/delete',
+    handler: safeRoute('/admin/agent/skills/delete', async (request) => {
+        const body = adminRoutesParseJsonBody(request.bodyText, deleteAgentSkillSchema);
+        await deleteGlobalSkill({ workspaceBasePath, skillName: body.skillName });
+        return jsonResponse({ success: true, skillName: body.skillName });
+    }),
+  });
+}

@@ -1,8 +1,4 @@
-import type {
-  BrowserGateway,
-  BrowserSession,
-  BrowserSessionOptions,
-} from './browser.js';
+import type { BrowserGateway, BrowserSession, BrowserSessionOptions } from './browser.js';
 
 export type ConfiguredBrowserGatewayOptions = {
   base: BrowserGateway;
@@ -28,7 +24,7 @@ export class ConfiguredBrowserGateway implements BrowserGateway {
   }
 
   async createSession(options: BrowserSessionOptions = {}): Promise<BrowserSession> {
-    return this.base.createSession({
+    return await this.base.createSession({
       userAgent: options.userAgent ?? this.userAgent,
       viewport: options.viewport ?? this.viewport,
       headers: {

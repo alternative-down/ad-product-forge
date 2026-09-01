@@ -2,12 +2,16 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   addRoleCapability,
   createRole,
@@ -15,7 +19,7 @@ import {
   getRoles,
   removeRoleCapability,
   updateRole,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { RoleDialog } from './role-dialog';
@@ -27,7 +31,7 @@ import {
   mergeBaseRoleToolIds,
   normalizeRoleFormToolIds,
   type RoleForm,
-} from './roles-page.helpers';
+} from './roles-page-helpers';
 
 export function RolesPage() {
   const queryClient = useQueryClient();
@@ -38,7 +42,10 @@ export function RolesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [roleForm, setRoleForm] = useState<RoleForm>(createEmptyRoleForm);
   const roles = useMemo(
-    () => [...(rolesQuery.data?.items ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    () =>
+      [...(rolesQuery.data?.items ?? [])].sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
     [rolesQuery.data?.items],
   );
   const toolSections = useMemo(
@@ -114,20 +121,22 @@ export function RolesPage() {
       />
 
       <section className="space-y-5">
-        {rolesQuery.isLoading && roles.length === 0 ? <AdminLoadingState label="Carregando papéis..." /> : null}
+        {rolesQuery.isLoading && roles.length === 0 ? (
+          <AdminLoadingState label="Carregando papéis..." />
+        ) : null}
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Papéis cadastrados</div>
         </div>
 
         <div className="flex justify-end">
-          <AdminButton
+          <Button
             onClick={() => {
               setRoleForm(createEmptyRoleForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -144,7 +153,7 @@ export function RolesPage() {
                   <TableCell className="px-4 py-3">{role.name}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -154,8 +163,8 @@ export function RolesPage() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={deleteMutation.isPending || role.assignedAgentCount > 0}
@@ -165,7 +174,7 @@ export function RolesPage() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -181,8 +190,12 @@ export function RolesPage() {
           </Table>
         </div>
 
-        {rolesQuery.error ? <div className="text-sm text-destructive">{rolesQuery.error.message}</div> : null}
-        {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
+        {rolesQuery.error ? (
+          <div className="text-sm text-destructive">{rolesQuery.error.message}</div>
+        ) : null}
+        {deleteMutation.error ? (
+          <div className="text-sm text-destructive">{deleteMutation.error.message}</div>
+        ) : null}
       </section>
 
       <RoleDialog

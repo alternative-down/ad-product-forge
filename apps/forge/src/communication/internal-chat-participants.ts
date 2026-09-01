@@ -1,0 +1,56 @@
+import { eq } from 'drizzle-orm';
+import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+} from '../database/schema';
+import type { Database } from '../database/client';
+import { sortParticipantsBySelfFirst } from './internal-chat-helpers';
+
+// =============================================================================
+// Participant listing
+// =============================================================================
+
+export function createInternalChatParticipants(db: Database) {
+  /**
+   * Lists group members and DM peers for a conversation by accountId.
+   */
+  async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
+    const rows = await db
+      .select({
+        accountId: internalChatConversationMembers.accountId,
+        agentId: internalChatAccounts.agentId,
+        slug: internalChatAccounts.slug,
+        displayName: internalChatAccounts.displayName,
+      })
+      .from(internalChatConversationMembers)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
+      )
+      .where(eq(internalChatConversationMembers.conversationId, conversationId))
+      .all();
+
+    return sortParticipantsBySelfFirst(
+      rows.map((r) => ({
+        accountId: r.accountId,
+        agentId: r.agentId,
+        slug: r.slug,
+        displayName: r.displayName,
+      })),
+      accountId,
+    );
+  }
+
+  /**
+   * Lists group members and DM peers by agentId (resolves account first).
+   */
+  async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
+    const account = await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
+    if (account === null || account === undefined) return [];
+    return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
+  }
+
+  return { listGroupMembersOrDmPeers, listGroupMembersOrDmPeersByAccount };
+}

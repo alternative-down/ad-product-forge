@@ -5,7 +5,10 @@ import { AgentRuntime } from '../core/runtime.js';
 import { RealtimeSpeechRuntimeBridge } from '../integrations/runtime/realtime-speech-runtime-bridge.js';
 import { RuntimeMessageStream } from '../integrations/runtime/runtime-message-stream.js';
 import { RuntimeSpeechRenderer } from '../integrations/runtime/runtime-speech-renderer.js';
-import { ActiveRuntimeVoiceSession, RuntimeVoiceSession } from '../integrations/runtime/runtime-voice-session.js';
+import {
+  ActiveRuntimeVoiceSession,
+  RuntimeVoiceSession,
+} from '../integrations/runtime/runtime-voice-session.js';
 import { collectStreamingTextToSpeech } from '../integrations/gateways/buffered-streaming-tts.js';
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';
 
@@ -24,7 +27,12 @@ describe('runtime voice session', () => {
       })),
     });
     let transcriptionHandler:
-      | ((event: { id: string; text: string; isFinal: boolean; language?: string }) => Promise<void> | void)
+      | ((event: {
+          id: string;
+          text: string;
+          isFinal: boolean;
+          language?: string;
+        }) => Promise<void> | void)
       | undefined;
     const renderedAudio: string[] = [];
 
@@ -95,7 +103,12 @@ describe('runtime voice session', () => {
       })),
     });
     let transcriptionHandler:
-      | ((event: { id: string; text: string; isFinal: boolean; language?: string }) => Promise<void> | void)
+      | ((event: {
+          id: string;
+          text: string;
+          isFinal: boolean;
+          language?: string;
+        }) => Promise<void> | void)
       | undefined;
     let renderedAudio = '';
     let resolveRenderedAudio: (() => void) | null = null;

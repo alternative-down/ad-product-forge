@@ -6,6 +6,7 @@ import type {
   InternalChatContact,
   InternalChatExternalAccount,
 } from './types';
+import type { InternalChatParticipantRole } from './index';
 
 export function getInternalChatAccounts() {
   return request<InternalChatExternalAccount[]>('/admin/internal-chat/accounts');
@@ -89,10 +90,13 @@ export function createHomeInternalChatConversation(input: {
   name?: string;
   participantAccountIds: string[];
 }) {
-  return request<{ conversationId: string; conversationKey: string }>('/admin/internal-chat/conversation/create', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ conversationId: string; conversationKey: string }>(
+    '/admin/internal-chat/conversation/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function updateHomeInternalChatConversation(input: {
@@ -132,10 +136,13 @@ export function archiveHomeInternalChatConversation(input: {
   accountId: string;
   conversationId: string;
 }) {
-  return request<{ conversationId: string; archived: true }>('/admin/internal-chat/conversation/archive', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ conversationId: string; archived: true }>(
+    '/admin/internal-chat/conversation/archive',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function getHomeInternalChatGroupMembers(accountId: string, conversationId: string) {
@@ -148,7 +155,7 @@ export function addHomeInternalChatGroupMember(input: {
   accountId: string;
   conversationId: string;
   participantAccountId: string;
-  role?: 'admin' | 'normal';
+  role?: InternalChatParticipantRole;
 }) {
   return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/add', {
     method: 'POST',
@@ -160,7 +167,7 @@ export function updateHomeInternalChatGroupMemberRole(input: {
   accountId: string;
   conversationId: string;
   participantAccountId: string;
-  role: 'admin' | 'normal';
+  role: InternalChatParticipantRole;
 }) {
   return request<HomeInternalChatGroupMember[]>('/admin/internal-chat/group-member/update-role', {
     method: 'POST',
@@ -177,4 +184,59 @@ export function removeHomeInternalChatGroupMember(input: {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+/**
+ * Creates an EventSource connection to the SSE events endpoint for real-time
+ * internal chat message delivery.
+ *
+ * @param accountId       - The admin account id (required).
+ * @param conversationId   - Optional. When set, only events for this conversation are received.
+ * @param onMessage        - Called with the parsed InternalChatDeliveryMessage when the server sends a message event.
+ * @returns                An open EventSource. Caller is responsible for calling .close() on unmount.
+ */
+export function createInternalChatEventSource(
+  accountId: string,
+  conversationId: string | null,
+  onMessage: (message: InternalChatSseMessage) => void,
+) {
+  const url = `/admin/internal-chat/events?accountId=${encodeURIComponent(accountId)}${
+    conversationId ? `&conversationId=${encodeURIComponent(conversationId)}` : ''
+  }`;
+  const es = new EventSource(url);
+  es.onmessage = (event) => {
+    try {
+      onMessage(JSON.parse(event.data) as InternalChatSseMessage);
+    } catch {
+      // Malformed JSON — ignore.
+    }
+  };
+  return es;
+}
+
+/** Shape of a message delivered via the SSE events endpoint. */
+export interface InternalChatSseMessage {
+  targetKey: string;
+  messageId: string;
+  conversationName?: string;
+  authorId: string;
+  authorDisplayName: string;
+  authorUsername: string;
+  content: string;
+  attachments: Array<{
+    name: string;
+    contentType?: string;
+    sizeBytes?: number;
+    dataBase64?: string;
+  }>;
+  createdAt: string;
+  metadata: {
+    conversationType: 'dm' | 'group';
+    groupMembers?: Array<{
+      participantId: string;
+      agentId?: string | null;
+      slug: string;
+      displayName: string;
+    }>;
+  };
 }

@@ -1,6 +1,6 @@
 # Current Data Model
 
-This file documents the central application database defined in [schema.ts](/home/nicolas/Documentos/github/ad-product-forge/apps/forge/src/database/schema.ts).
+This file documents the central application database defined in [schema.ts](apps/forge/src/database/schema.ts).
 
 ## Core agent tables
 

@@ -10,9 +10,5 @@ export default defineConfig({
   target: 'node22',
   platform: 'node',
   outDir: 'dist',
-  external: [
-    'agent-runtime-core',
-    'agent-runtime-core/integrations',
-    'zod',
-  ],
+  external: ['agent-runtime-core', 'agent-runtime-core/integrations', 'zod'],
 });

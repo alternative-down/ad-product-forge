@@ -13,6 +13,7 @@ O sistema de gestão de orçamento permite ajustar o limite financeiro de contra
 ### Contrato de Execução
 
 Cada agente hired possui um contrato de execução com:
+
 - **budgetUsd**: Limite máximo de gastos em USD
 - **startsAt / endsAt**: Período de vigência
 - **executionState**: Estado atual (`idle` | `running`)
@@ -53,10 +54,10 @@ POST /admin/agent/contract/adjust-budget
 
 ### Parâmetros
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `agentId` | `string` | ID do agente cujo contrato será ajustado |
-| `newBudgetUsd` | `number` | Novo limite de orçamento em USD |
+| Campo          | Tipo     | Descrição                                |
+| -------------- | -------- | ---------------------------------------- |
+| `agentId`      | `string` | ID do agente cujo contrato será ajustado |
+| `newBudgetUsd` | `number` | Novo limite de orçamento em USD          |
 
 ### Response
 
@@ -76,9 +77,11 @@ interface AdjustBudgetResponse {
 ### Aumento de Orçamento
 
 ✅ **Permitido** quando:
+
 - A empresa possui saldo suficiente (`companyCash >= valor do aumento`)
 
 ❌ **Bloqueado** quando:
+
 - Saldo insuficiente na empresa
 - Contrato não encontrado
 - Novo orçamento < valor já gasto
@@ -86,10 +89,12 @@ interface AdjustBudgetResponse {
 ### Redução de Orçamento
 
 ✅ **Permitido** quando:
+
 - Novo orçamento >= valor já gasto
 - Agente está em estado `idle` (não executando)
 
 ❌ **Bloqueado** quando:
+
 - Novo orçamento < valor já gasto
 - Agente está em estado `running`
 
@@ -98,7 +103,7 @@ interface AdjustBudgetResponse {
 ```typescript
 // Cenário: tentar reduzir orçamento abaixo do gasto atual
 const currentSpent = 300; // agente já gastou $300
-const newBudget = 200;    // tentativa de reduzir para $200
+const newBudget = 200; // tentativa de reduzir para $200
 
 // ❌ BLOQUEADO: newBudget < currentSpent
 // "Novo orçamento deve ser >= valor já gasto ($300)"
@@ -151,9 +156,9 @@ interface ContractBudgetAdjustCard {
 
 ### Campos do Formulário
 
-| Campo | Validação |
-|-------|-----------|
-| `newBudget` | > 0, numérico |
+| Campo           | Validação               |
+| --------------- | ----------------------- |
+| `newBudget`     | > 0, numérico           |
 | Botão "Ajustar" | Só habilitado se válido |
 
 ## Perguntas Frequentes

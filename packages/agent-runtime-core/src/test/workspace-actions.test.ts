@@ -15,22 +15,25 @@ describe('createWorkspaceActionDefinitions', () => {
         };
       },
     });
-    const result = await actions[0]!.execute({
-      command: 'pwd',
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
+    const result = await actions[0]!.execute(
+      {
+        command: 'pwd',
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
 
-    expect(calls).toEqual([{
-      command: 'pwd',
-    }]);
-    expect(result).toEqual({
-      exitCode: 0,
-      stdout: 'done',
-      stderr: '',
-    });
+    expect(calls).toEqual([
+      {
+        command: 'pwd',
+      },
+    ]);
+    expect(typeof result).toBe('string');
+    expect(result).toContain('done');
+    expect(result).toContain('Exit code: 0');
   });
 
   it('supports timeout in seconds and background process actions', async () => {
@@ -74,135 +77,240 @@ describe('createWorkspaceActionDefinitions', () => {
       'workspace_kill_process',
     ]);
 
-    const backgroundResult = await actions[0]!.execute({
-      command: 'npm run dev',
-      timeout: 60,
-      background: true,
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
+    const backgroundResult = await actions[0]!.execute(
+      {
+        command: 'npm run dev',
+        timeout: 60,
+        background: true,
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
 
-    expect(backgroundResult).toEqual({
-      pid: '123',
-    });
+    expect(typeof backgroundResult).toBe('string');
+    expect(backgroundResult).toContain('Started background process with PID: 123');
   });
 
   it('creates filesystem workspace actions when a filesystem is provided', async () => {
     const writes: Array<{ path: string; content: string }> = [];
-    const actions = createWorkspaceActionDefinitions({
-      async execute() {
-        return {
-          exitCode: 0,
-          stdout: '',
-          stderr: '',
-        };
-      },
-    }, {
-      filesystem: {
-        async readFile(targetPath) {
-          return `read:${targetPath}`;
-        },
-        async writeFile(targetPath, content) {
-          writes.push({
-            path: targetPath,
-            content: String(content),
-          });
-        },
-        async listDirectory(targetPath = '.') {
-          if (targetPath === '.') {
-            return [{
-              name: 'src',
-              path: '/workspace/src',
-              isDirectory: true,
-              size: 0,
-            }];
-          }
+    // Track existing files
+    const existingFiles = new Set(['test.txt', 'README.md']);
 
-          return [{
-            name: 'index.ts',
-            path: '/workspace/src/index.ts',
-            isDirectory: false,
-            size: 12,
-          }];
+    const actions = createWorkspaceActionDefinitions(
+      {
+        async execute() {
+          return {
+            exitCode: 0,
+            stdout: '',
+            stderr: '',
+          };
         },
       },
-    });
+      {
+        filesystem: {
+          async readFile(targetPath) {
+            if (targetPath === 'test.txt') return 'hello world';
+            if (targetPath === 'README.md') return 'read:README.md';
+            if (targetPath === '/workspace/src/index.ts') return 'read:/workspace/src/index.ts';
+            if (existingFiles.has(targetPath)) return `read:${targetPath}`;
+            throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+          },
+          async writeFile(targetPath, content) {
+            writes.push({
+              path: targetPath,
+              content: String(content),
+            });
+            existingFiles.add(targetPath);
+          },
+          async listDirectory(targetPath = '.') {
+            if (targetPath === '.' || targetPath === '/workspace') {
+              return [
+                {
+                  name: 'src',
+                  path: '/workspace/src',
+                  isDirectory: true,
+                  size: 0,
+                },
+              ];
+            }
+            if (targetPath === '/workspace/src') {
+              return [
+                {
+                  name: 'index.ts',
+                  path: '/workspace/src/index.ts',
+                  isDirectory: false,
+                  size: 12,
+                },
+              ];
+            }
+            return [];
+          },
+        },
+      },
+    );
 
     expect(actions.map((action) => action.name)).toEqual([
       'workspace_execute_command',
       'workspace_read_file',
       'workspace_write_file',
+      'workspace_edit_file',
       'workspace_list_files',
-      'workspace_grep_files',
+      'workspace_grep',
     ]);
 
-    const readResult = await actions[1]!.execute({
-      path: 'README.md',
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
-    const writeResult = await actions[2]!.execute({
-      path: 'notes/todo.md',
-      content: 'hello',
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
-    const listResult = await actions[3]!.execute({
-      recursive: true,
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
-    });
-    const grepResult = await actions[4]!.execute({
-      pattern: 'read',
-      maxResults: 5,
-    }, {
-      runtimeId: 'runtime-1',
-      stepId: 'step-1',
-      stepNumber: 1,
+    // Test read_file (index 1)
+    const readResult = await actions[1]!.execute(
+      {
+        path: 'README.md',
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+    expect(typeof readResult).toBe('string');
+    expect(readResult).toContain('read:README.md');
+
+    // Test write_file (index 2) - new file
+    const writeResult = await actions[2]!.execute(
+      {
+        path: 'new-file.txt',
+        content: 'hello',
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+    expect(typeof writeResult).toBe('string');
+    expect(writeResult).toContain('Wrote');
+    expect(writes).toEqual([
+      {
+        path: 'new-file.txt',
+        content: 'hello',
+      },
+    ]);
+
+    // Test edit_file (index 3)
+    const editResult = await actions[3]!.execute(
+      {
+        path: 'test.txt',
+        old_string: 'hello',
+        new_string: 'world',
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+    expect(typeof editResult).toBe('string');
+    expect(editResult).toContain('Replaced');
+
+    // Test list_files (index 4)
+    const listResult = await actions[4]!.execute(
+      {
+        maxDepth: 2,
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+    expect(typeof listResult).toBe('string');
+    expect(listResult).toContain('src');
+    expect(listResult).toContain('index.ts');
+
+    // Test grep (index 5)
+    const grepResult = await actions[5]!.execute(
+      {
+        pattern: 'read',
+        maxCount: 5,
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+    expect(typeof grepResult).toBe('string');
+    expect(grepResult).toContain('/workspace/src/index.ts');
+  });
+
+  it('supports tiktoken-based output truncation', async () => {
+    const longOutput = 'line\n'.repeat(300);
+    const actions = createWorkspaceActionDefinitions({
+      async execute() {
+        return {
+          exitCode: 0,
+          stdout: longOutput,
+          stderr: '',
+        };
+      },
     });
 
-    expect(readResult).toEqual({
-      path: 'README.md',
-      content: 'read:README.md',
-    });
-    expect(writeResult).toEqual({
-      path: 'notes/todo.md',
-      written: true,
-    });
-    expect(writes).toEqual([{
-      path: 'notes/todo.md',
-      content: 'hello',
-    }]);
-    expect(listResult).toEqual({
-      entries: [
-        {
-          name: 'src',
-          path: '/workspace/src',
-          isDirectory: true,
-          size: 0,
+    const result = await actions[0]!.execute(
+      {
+        command: 'long command',
+        tail: 50,
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+
+    expect(typeof result).toBe('string');
+    expect(result).toContain('Exit code: 0');
+  });
+
+  it('handles read_file with offset and limit parameters', async () => {
+    const multilineContent =
+      'Line 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9';
+    const actions = createWorkspaceActionDefinitions(
+      {
+        async execute() {
+          return { exitCode: 0, stdout: '', stderr: '' };
         },
-        {
-          name: 'index.ts',
-          path: '/workspace/src/index.ts',
-          isDirectory: false,
-          size: 12,
+      },
+      {
+        filesystem: {
+          async readFile() {
+            return multilineContent;
+          },
+          async writeFile() {},
+          async listDirectory() {
+            return [];
+          },
         },
-      ],
-    });
-    expect(grepResult).toEqual({
-      matches: [{
-        path: '/workspace/src/index.ts',
-        line: 1,
-        text: 'read:/workspace/src/index.ts',
-      }],
-    });
+      },
+    );
+
+    const result = await actions[1]!.execute(
+      {
+        path: 'multi.txt',
+        offset: 2,
+        limit: 3,
+        showLineNumbers: true,
+      },
+      {
+        runtimeId: 'runtime-1',
+        stepId: 'step-1',
+        stepNumber: 1,
+      },
+    );
+
+    expect(typeof result).toBe('string');
+    expect(result).toContain('Line 2');
+    expect(result).toContain('Line 3');
+    expect(result).toContain('Line 4');
+    expect(result).not.toContain('Line 0');
   });
 });

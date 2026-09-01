@@ -68,16 +68,12 @@
       "indexes": {
         "agent_execution_contracts_agent_id_idx": {
           "name": "agent_execution_contracts_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_execution_contracts_ends_at_idx": {
           "name": "agent_execution_contracts_ends_at_idx",
-          "columns": [
-            "ends_at"
-          ],
+          "columns": ["ends_at"],
           "isUnique": false
         }
       },
@@ -85,13 +81,9 @@
         "agent_execution_contracts_agent_id_agents_id_fk": {
           "name": "agent_execution_contracts_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_contracts",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -217,30 +209,22 @@
       "indexes": {
         "agent_execution_steps_agent_id_idx": {
           "name": "agent_execution_steps_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_execution_steps_contract_id_idx": {
           "name": "agent_execution_steps_contract_id_idx",
-          "columns": [
-            "contract_id"
-          ],
+          "columns": ["contract_id"],
           "isUnique": false
         },
         "agent_execution_steps_llm_profile_id_idx": {
           "name": "agent_execution_steps_llm_profile_id_idx",
-          "columns": [
-            "llm_profile_id"
-          ],
+          "columns": ["llm_profile_id"],
           "isUnique": false
         },
         "agent_execution_steps_created_at_idx": {
           "name": "agent_execution_steps_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -248,39 +232,27 @@
         "agent_execution_steps_contract_id_agent_execution_contracts_id_fk": {
           "name": "agent_execution_steps_contract_id_agent_execution_contracts_id_fk",
           "tableFrom": "agent_execution_steps",
-          "columnsFrom": [
-            "contract_id"
-          ],
+          "columnsFrom": ["contract_id"],
           "tableTo": "agent_execution_contracts",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "agent_execution_steps_agent_id_agents_id_fk": {
           "name": "agent_execution_steps_agent_id_agents_id_fk",
           "tableFrom": "agent_execution_steps",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "agent_execution_steps_llm_profile_id_llm_profiles_id_fk": {
           "name": "agent_execution_steps_llm_profile_id_llm_profiles_id_fk",
           "tableFrom": "agent_execution_steps",
-          "columnsFrom": [
-            "llm_profile_id"
-          ],
+          "columnsFrom": ["llm_profile_id"],
           "tableTo": "llm_profiles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "restrict"
         }
@@ -331,9 +303,7 @@
       "indexes": {
         "agent_functions_name_idx": {
           "name": "agent_functions_name_idx",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -392,31 +362,22 @@
       "indexes": {
         "idx_agent_mcp_configs_agent_id": {
           "name": "idx_agent_mcp_configs_agent_id",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "idx_agent_mcp_configs_server_id": {
           "name": "idx_agent_mcp_configs_server_id",
-          "columns": [
-            "server_id"
-          ],
+          "columns": ["server_id"],
           "isUnique": false
         },
         "idx_agent_mcp_configs_is_active": {
           "name": "idx_agent_mcp_configs_is_active",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "unique_agent_server": {
           "name": "unique_agent_server",
-          "columns": [
-            "agent_id",
-            "server_id"
-          ],
+          "columns": ["agent_id", "server_id"],
           "isUnique": true
         }
       },
@@ -424,26 +385,18 @@
         "agent_mcp_configs_agent_id_agents_id_fk": {
           "name": "agent_mcp_configs_agent_id_agents_id_fk",
           "tableFrom": "agent_mcp_configs",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "agent_mcp_configs_server_id_mcp_server_configs_id_fk": {
           "name": "agent_mcp_configs_server_id_mcp_server_configs_id_fk",
           "tableFrom": "agent_mcp_configs",
-          "columnsFrom": [
-            "server_id"
-          ],
+          "columnsFrom": ["server_id"],
           "tableTo": "mcp_server_configs",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -494,23 +447,17 @@
       "indexes": {
         "agent_notifications_agent_id_idx": {
           "name": "agent_notifications_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_notifications_created_at_idx": {
           "name": "agent_notifications_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         },
         "agent_notifications_read_at_idx": {
           "name": "agent_notifications_read_at_idx",
-          "columns": [
-            "read_at"
-          ],
+          "columns": ["read_at"],
           "isUnique": false
         }
       },
@@ -518,13 +465,9 @@
         "agent_notifications_agent_id_agents_id_fk": {
           "name": "agent_notifications_agent_id_agents_id_fk",
           "tableFrom": "agent_notifications",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -619,23 +562,17 @@
       "indexes": {
         "agent_prompts_agent_id_idx": {
           "name": "agent_prompts_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_prompts_prompt_type_idx": {
           "name": "agent_prompts_prompt_type_idx",
-          "columns": [
-            "prompt_type"
-          ],
+          "columns": ["prompt_type"],
           "isUnique": false
         },
         "agent_prompts_is_active_idx": {
           "name": "agent_prompts_is_active_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         }
       },
@@ -643,13 +580,9 @@
         "agent_prompts_agent_id_agents_id_fk": {
           "name": "agent_prompts_agent_id_agents_id_fk",
           "tableFrom": "agent_prompts",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -700,10 +633,7 @@
       "indexes": {
         "agent_provider_unique": {
           "name": "agent_provider_unique",
-          "columns": [
-            "agent_id",
-            "provider_type"
-          ],
+          "columns": ["agent_id", "provider_type"],
           "isUnique": true
         }
       },
@@ -711,13 +641,9 @@
         "agent_providers_agent_id_agents_id_fk": {
           "name": "agent_providers_agent_id_agents_id_fk",
           "tableFrom": "agent_providers",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -768,9 +694,7 @@
       "indexes": {
         "agent_roles_name_idx": {
           "name": "agent_roles_name_idx",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -900,30 +824,22 @@
       "indexes": {
         "agent_schedules_agent_id_idx": {
           "name": "agent_schedules_agent_id_idx",
-          "columns": [
-            "agent_id"
-          ],
+          "columns": ["agent_id"],
           "isUnique": false
         },
         "agent_schedules_is_active_idx": {
           "name": "agent_schedules_is_active_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "agent_schedules_next_trigger_at_idx": {
           "name": "agent_schedules_next_trigger_at_idx",
-          "columns": [
-            "next_trigger_at"
-          ],
+          "columns": ["next_trigger_at"],
           "isUnique": false
         },
         "idx_schedules_creator_id": {
           "name": "idx_schedules_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         }
       },
@@ -931,13 +847,9 @@
         "agent_schedules_agent_id_agents_id_fk": {
           "name": "agent_schedules_agent_id_agents_id_fk",
           "tableFrom": "agent_schedules",
-          "columnsFrom": [
-            "agent_id"
-          ],
+          "columnsFrom": ["agent_id"],
           "tableTo": "agents",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1071,39 +983,27 @@
         "agents_function_id_agent_functions_id_fk": {
           "name": "agents_function_id_agent_functions_id_fk",
           "tableFrom": "agents",
-          "columnsFrom": [
-            "function_id"
-          ],
+          "columnsFrom": ["function_id"],
           "tableTo": "agent_functions",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "set null"
         },
         "agents_model_profile_id_llm_profiles_id_fk": {
           "name": "agents_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
-          "columnsFrom": [
-            "model_profile_id"
-          ],
+          "columnsFrom": ["model_profile_id"],
           "tableTo": "llm_profiles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "restrict"
         },
         "agents_om_model_profile_id_llm_profiles_id_fk": {
           "name": "agents_om_model_profile_id_llm_profiles_id_fk",
           "tableFrom": "agents",
-          "columnsFrom": [
-            "om_model_profile_id"
-          ],
+          "columnsFrom": ["om_model_profile_id"],
           "tableTo": "llm_profiles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "restrict"
         }
@@ -1196,16 +1096,12 @@
       "indexes": {
         "company_cash_ledger_status_idx": {
           "name": "company_cash_ledger_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "company_cash_ledger_effective_at_idx": {
           "name": "company_cash_ledger_effective_at_idx",
-          "columns": [
-            "effective_at"
-          ],
+          "columns": ["effective_at"],
           "isUnique": false
         }
       },
@@ -1285,16 +1181,12 @@
       "indexes": {
         "company_recurring_payables_is_active_idx": {
           "name": "company_recurring_payables_is_active_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "company_recurring_payables_next_due_at_idx": {
           "name": "company_recurring_payables_next_due_at_idx",
-          "columns": [
-            "next_due_at"
-          ],
+          "columns": ["next_due_at"],
           "isUnique": false
         }
       },
@@ -1331,24 +1223,17 @@
       "indexes": {
         "function_roles_unique_idx": {
           "name": "function_roles_unique_idx",
-          "columns": [
-            "function_id",
-            "role_id"
-          ],
+          "columns": ["function_id", "role_id"],
           "isUnique": true
         },
         "function_roles_function_id_idx": {
           "name": "function_roles_function_id_idx",
-          "columns": [
-            "function_id"
-          ],
+          "columns": ["function_id"],
           "isUnique": false
         },
         "function_roles_role_id_idx": {
           "name": "function_roles_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
+          "columns": ["role_id"],
           "isUnique": false
         }
       },
@@ -1356,26 +1241,18 @@
         "function_roles_function_id_agent_functions_id_fk": {
           "name": "function_roles_function_id_agent_functions_id_fk",
           "tableFrom": "function_roles",
-          "columnsFrom": [
-            "function_id"
-          ],
+          "columnsFrom": ["function_id"],
           "tableTo": "agent_functions",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "function_roles_role_id_agent_roles_id_fk": {
           "name": "function_roles_role_id_agent_roles_id_fk",
           "tableFrom": "function_roles",
-          "columnsFrom": [
-            "role_id"
-          ],
+          "columnsFrom": ["role_id"],
           "tableTo": "agent_roles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1508,23 +1385,17 @@
       "indexes": {
         "llm_profiles_name_idx": {
           "name": "llm_profiles_name_idx",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         },
         "llm_profiles_model_key_idx": {
           "name": "llm_profiles_model_key_idx",
-          "columns": [
-            "model_key"
-          ],
+          "columns": ["model_key"],
           "isUnique": false
         },
         "llm_profiles_is_enabled_idx": {
           "name": "llm_profiles_is_enabled_idx",
-          "columns": [
-            "is_enabled"
-          ],
+          "columns": ["is_enabled"],
           "isUnique": false
         }
       },
@@ -1583,16 +1454,12 @@
       "indexes": {
         "idx_mastra_instances_base_url": {
           "name": "idx_mastra_instances_base_url",
-          "columns": [
-            "base_url"
-          ],
+          "columns": ["base_url"],
           "isUnique": false
         },
         "idx_mastra_instances_is_local": {
           "name": "idx_mastra_instances_is_local",
-          "columns": [
-            "is_local"
-          ],
+          "columns": ["is_local"],
           "isUnique": false
         }
       },
@@ -1701,16 +1568,12 @@
       "indexes": {
         "idx_mcp_server_configs_name": {
           "name": "idx_mcp_server_configs_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": false
         },
         "idx_mcp_server_configs_is_active": {
           "name": "idx_mcp_server_configs_is_active",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         }
       },
@@ -1747,17 +1610,12 @@
       "indexes": {
         "role_tool_permissions_unique_idx": {
           "name": "role_tool_permissions_unique_idx",
-          "columns": [
-            "role_id",
-            "tool_id"
-          ],
+          "columns": ["role_id", "tool_id"],
           "isUnique": true
         },
         "role_tool_permissions_role_id_idx": {
           "name": "role_tool_permissions_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
+          "columns": ["role_id"],
           "isUnique": false
         }
       },
@@ -1765,13 +1623,9 @@
         "role_tool_permissions_role_id_agent_roles_id_fk": {
           "name": "role_tool_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_tool_permissions",
-          "columnsFrom": [
-            "role_id"
-          ],
+          "columnsFrom": ["role_id"],
           "tableTo": "agent_roles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1808,17 +1662,12 @@
       "indexes": {
         "role_workflow_permissions_unique_idx": {
           "name": "role_workflow_permissions_unique_idx",
-          "columns": [
-            "role_id",
-            "workflow_id"
-          ],
+          "columns": ["role_id", "workflow_id"],
           "isUnique": true
         },
         "role_workflow_permissions_role_id_idx": {
           "name": "role_workflow_permissions_role_id_idx",
-          "columns": [
-            "role_id"
-          ],
+          "columns": ["role_id"],
           "isUnique": false
         }
       },
@@ -1826,13 +1675,9 @@
         "role_workflow_permissions_role_id_agent_roles_id_fk": {
           "name": "role_workflow_permissions_role_id_agent_roles_id_fk",
           "tableFrom": "role_workflow_permissions",
-          "columnsFrom": [
-            "role_id"
-          ],
+          "columnsFrom": ["role_id"],
           "tableTo": "agent_roles",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }

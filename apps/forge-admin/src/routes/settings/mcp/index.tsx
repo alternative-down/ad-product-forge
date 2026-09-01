@@ -3,16 +3,29 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteSystemMcpServer, getSystemMcpServers, upsertSystemMcpServer } from '@/lib/admin-api';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  deleteSystemMcpServer,
+  getSystemMcpServers,
+  upsertSystemMcpServer,
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { createEmptyMcpForm, createMcpForm, McpDialog, toSystemMcpInput } from './-mcp-dialog';
+import {
+  createEmptyMcpForm,
+  createMcpForm,
+  McpDialog,
+  toSystemMcpInput,
+} from '@/components/settings/mcp/mcp-dialog';
 
 export const Route = createFileRoute('/settings/mcp/')({
   component: SettingsMcpIndexRoute,
@@ -28,9 +41,13 @@ function SettingsMcpIndexRoute() {
   const [mcpForm, setMcpForm] = useState(createEmptyMcpForm);
   const upsertMutation = useMutation({
     mutationFn: () => upsertSystemMcpServer(toSystemMcpInput(mcpForm)),
-    onMutate: () => startAdminAction(mcpForm.serverId ? 'Salvando servidor MCP...' : 'Criando servidor MCP...'),
+    onMutate: () =>
+      startAdminAction(mcpForm.serverId ? 'Salvando servidor MCP...' : 'Criando servidor MCP...'),
     onSuccess: async (_data, _variables, context) => {
-      succeedAdminAction(context, mcpForm.serverId ? 'Servidor MCP atualizado.' : 'Servidor MCP criado.');
+      succeedAdminAction(
+        context,
+        mcpForm.serverId ? 'Servidor MCP atualizado.' : 'Servidor MCP criado.',
+      );
       setDialogOpen(false);
       setMcpForm(createEmptyMcpForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'system-mcp'] });
@@ -50,7 +67,9 @@ function SettingsMcpIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {mcpQuery.isLoading && !mcpQuery.data ? <AdminLoadingState label="Carregando MCP..." /> : null}
+      {mcpQuery.isLoading && !mcpQuery.data ? (
+        <AdminLoadingState label="Carregando MCP..." />
+      ) : null}
 
       <PageHeader
         title="MCP"
@@ -60,17 +79,19 @@ function SettingsMcpIndexRoute() {
       <section className="space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="text-lg font-semibold tracking-[-0.03em]">Servidores compartilhados</div>
+            <div className="text-lg font-semibold tracking-[-0.03em]">
+              Servidores compartilhados
+            </div>
           </div>
 
-          <AdminButton
+          <Button
             onClick={() => {
               setMcpForm(createEmptyMcpForm());
               setDialogOpen(true);
             }}
           >
             Novo
-          </AdminButton>
+          </Button>
         </div>
 
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
@@ -94,11 +115,13 @@ function SettingsMcpIndexRoute() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">{server.transport === 'stdio' ? 'stdio' : 'http'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {server.transport === 'stdio' ? 'stdio' : 'http'}
+                  </TableCell>
                   <TableCell className="px-4 py-3">{server.isActive ? 'Sim' : 'Não'}</TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -108,8 +131,8 @@ function SettingsMcpIndexRoute() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
-                      <AdminButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={deleteMutation.isPending}
@@ -117,7 +140,7 @@ function SettingsMcpIndexRoute() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Excluir</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -133,7 +156,9 @@ function SettingsMcpIndexRoute() {
           </Table>
         </div>
 
-        {mcpQuery.error ? <div className="text-sm text-destructive">{mcpQuery.error.message}</div> : null}
+        {mcpQuery.error ? (
+          <div className="text-sm text-destructive">{mcpQuery.error.message}</div>
+        ) : null}
       </section>
 
       <McpDialog

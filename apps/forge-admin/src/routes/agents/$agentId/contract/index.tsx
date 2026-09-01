@@ -9,17 +9,31 @@ import {
   getAgentExecutionSteps,
   renewAgentContract,
   topUpAgentContract,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
+import { Button } from '@/components/ui/button';
+import { AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { ContractAdjustDialog, ContractForm, ContractTerminateDialog } from './-contract-dialogs';
-import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from './-contract-format';
+import {
+  ContractAdjustDialog,
+  ContractForm,
+  ContractTerminateDialog,
+} from '@/components/agents/contract/contract-dialogs';
+import {
+  formatDate,
+  formatDateTime,
+  formatInteger,
+  formatPercent,
+  formatUsd,
+} from '@/components/agents/contract/contract-format';
 
 export const Route = createFileRoute('/agents/$agentId/contract/')({
   component: AgentContractIndexRoute,
@@ -80,7 +94,9 @@ function AgentContractIndexRoute() {
       setDialogOpen(false);
       setContractForm(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'execution-steps'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['admin', 'agent', agentId, 'execution-steps'],
+      });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance-contracts'] });
     },
@@ -127,14 +143,16 @@ function AgentContractIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando contrato..." /> : null}
+      {agentQuery.isLoading && !agentQuery.data ? (
+        <AdminLoadingState label="Carregando contrato..." />
+      ) : null}
       <section className="space-y-5">
         <PageHeader
           title="Contrato"
           actions={
             activeContract ? (
               <>
-                <AdminButton
+                <Button
                   onClick={() => {
                     setContractForm({
                       action: 'adjust-budget',
@@ -144,10 +162,10 @@ function AgentContractIndexRoute() {
                   }}
                 >
                   Editar
-                </AdminButton>
-                <AdminButton variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
+                </Button>
+                <Button variant="destructive" onClick={() => setTerminateDialogOpen(true)}>
                   Demitir
-                </AdminButton>
+                </Button>
               </>
             ) : undefined
           }
@@ -202,7 +220,9 @@ function AgentContractIndexRoute() {
                   <TableCell className="px-4 py-3">{step.kind}</TableCell>
                   <TableCell className="px-4 py-3">{step.modelKey}</TableCell>
                   <TableCell className="px-4 py-3">{formatInteger(step.inputTokens)}</TableCell>
-                  <TableCell className="px-4 py-3">{formatInteger(step.cachedInputTokens)}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatInteger(step.cachedInputTokens)}
+                  </TableCell>
                   <TableCell className="px-4 py-3">{formatInteger(step.outputTokens)}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(step.costUsd, 6)}</TableCell>
                 </TableRow>
@@ -218,9 +238,15 @@ function AgentContractIndexRoute() {
           </Table>
         </div>
         <div ref={sentinelRef} className="h-4" />
-        {stepsQuery.isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
-        {stepsQuery.error ? <div className="text-sm text-destructive">{stepsQuery.error.message}</div> : null}
-        {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+        {stepsQuery.isFetchingNextPage ? (
+          <div className="text-sm text-muted-foreground">Carregando mais...</div>
+        ) : null}
+        {stepsQuery.error ? (
+          <div className="text-sm text-destructive">{stepsQuery.error.message}</div>
+        ) : null}
+        {mutation.error ? (
+          <div className="text-sm text-destructive">{mutation.error.message}</div>
+        ) : null}
       </section>
 
       <ContractAdjustDialog

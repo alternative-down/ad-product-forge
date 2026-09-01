@@ -16,12 +16,12 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 
 ### Diferencial Principal
 
-| Competidor | Foco | ad-product-forge |
-|------------|------|------------------|
+| Competidor          | Foco                | ad-product-forge                 |
+| ------------------- | ------------------- | -------------------------------- |
 | LangChain/LangGraph | Framework para devs | Plataforma low-code para equipes |
-| CrewAI | Orquestração básica | Integração Coolify, self-hosted |
-| Kore.ai / Kore.AI | Enterprise fechado | Open, self-hosted, customizável |
-| Make.com / Zapier | Automação simples | Agentes autônomos com memória |
+| CrewAI              | Orquestração básica | Integração Coolify, self-hosted  |
+| Kore.ai / Kore.AI   | Enterprise fechado  | Open, self-hosted, customizável  |
+| Make.com / Zapier   | Automação simples   | Agentes autônomos com memória    |
 
 **Diferencial的核心:** Self-hosted + Coolify = controle total + deploy simplificado
 
@@ -30,23 +30,27 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 ## 2. Modelos de Preçamento Identificados
 
 ### 2.1 Usage-Based (Baseado em Uso)
+
 - **Tokens consumidos** por agentes
 - Custo proporcional ao uso real
 - Ideal paraProof of Concept (POC)
 
 ### 2.2 Subscription Tiers
-| Tier | Preço Estimado | Features |
-|------|----------------|----------|
-| Free | $0 | 3 agentes, 10 runs/dia |
-| Pro | $29-79/mês | Agentes ilimitados, runs ilimitadas |
-| Enterprise | $199-499/mês | Multi-instance, SSO, priority support |
+
+| Tier       | Preço Estimado | Features                              |
+| ---------- | -------------- | ------------------------------------- |
+| Free       | $0             | 3 agentes, 10 runs/dia                |
+| Pro        | $29-79/mês     | Agentes ilimitados, runs ilimitadas   |
+| Enterprise | $199-499/mês   | Multi-instance, SSO, priority support |
 
 ### 2.3 Per-Agent Pricing
+
 - Cada agente tem custo individual
 - Modelo "pay per agent"
 - Flexível para casos de uso específicos
 
 ### 2.4 Outcome-Based (Baseado em Resultado)
+
 - Pagamento por tarefa concluída
 - Ideal para automação de processos específicos
 - Maior valor percebido pelo cliente
@@ -60,11 +64,13 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 **Proposta:** Loja de agentes pré-configurados para casos de uso comuns
 
 **Modelos de Receita:**
+
 - Marketplace fee (10-15% por transação)
 - Agent subscription (vendas recorrentes)
 - Featured placement (receita publicitária)
 
 **Casos de Uso para Agentes:**
+
 - Agente de Desenvolvimento (code review, refactoring)
 - Agente de Documentação (geração de docs, wikis)
 - Agente de QA (testes automatizados)
@@ -73,6 +79,7 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 - Agente de Análise de Dados (relatórios, dashboards)
 
 **Mercado Alvo:**
+
 - Desenvolvedores individuais: $5-15/agente
 - Small teams (5-20 pessoas): $29-79/mês
 - Agências digitais: $99-199/mês
@@ -88,11 +95,13 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 **Proposta:** Permite comunicação entre instâncias do ad-product-forge
 
 **Casos de Uso:**
+
 - Multi-tenant SaaS
 - Empresas com múltiplos departamentos
 - Consórcios de empresas parceiras
 
 **Modelos de Receita:**
+
 - Multi-instance license
 - Enterprise tier específico
 
@@ -105,11 +114,13 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 **Proposta:** Um agente pode criar tasks/schedules para outros agentes
 
 **Valor Diferencial:**
+
 - Agentes podem se delegar tarefas
 - Workflows mais autônomos
 - Redução de intervenção humana
 
 **Mercado:**
+
 - Automação de processos de TI
 - DevOps automation
 - Business process automation
@@ -121,6 +132,7 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 **Feature Request:** Memória de longo prazo compartilhada entre agentes
 
 **Valor:**
+
 - Agentes "lembram" interações passadas
 - Contexto mantido entre sessões
 - Aprendizagem contínua
@@ -130,24 +142,28 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 ## 4. Segmentos-Alvo Prioritários
 
 ### 4.1 Agências Digitais Brasileiras
+
 - **Tamanho:** 2-20 funcionários
 - **Problema:** Necessidade de automatizar tarefas repetitivas (criar conteúdo, responder clientes)
 - **Willingness to Pay:** $29-99/mês
 - **Prazo:** Curto-médio prazo (3-6 meses)
 
 ### 4.2 Equipes de Desenvolvimento
+
 - **Tamanho:** 5-50 devs
 - **Problema:** Code review, documentação, automação de CI/CD
 - **Willingness to Pay:** $99-299/mês
 - **Prazo:** Médio prazo (6-12 meses)
 
 ### 4.3 Startups de Tecnologia
+
 - **Tamanho:** 3-15 funcionários
 - **Problema:** Automação de processos sem equipe dedicada
 - **Willingness to Pay:** $49-149/mês
 - **Prazo:** Curto prazo (1-3 meses)
 
 ### 4.4 Enterprise (Longo Prazo)
+
 - **Tamanho:** 50+ funcionários
 - **Problema:** Orquestração de múltiplos agentes em escala
 - **Willingness to Pay:** $499-1999/mês
@@ -158,6 +174,7 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 ## 5. Proposta de Valor
 
 ### Tagline Sugerida
+
 > **"Equipes de agentes AI que trabalham 24/7 para sua empresa"**
 
 ### Mensagens-Chave
@@ -185,30 +202,33 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 
 ## 6. Gaps de Produto Identificados
 
-| Gap | Prioridade | Esforço | Notas |
-|-----|------------|---------|-------|
-| Agent Marketplace | Alta | Alto | Receita recorrente |
-| Dashboard de Analytics | Média | Médio | Métricas de uso |
-| Agent Templates Library | Alta | Baixo | Onboarding |
-| Integrações (Slack, Discord) | Média | Médio | Adoção |
-| Billing/Usage Tracking | Alta | Médio | Suporte a pricing |
-| SSO/SAML | Baixa | Alto | Enterprise |
+| Gap                          | Prioridade | Esforço | Notas              |
+| ---------------------------- | ---------- | ------- | ------------------ |
+| Agent Marketplace            | Alta       | Alto    | Receita recorrente |
+| Dashboard de Analytics       | Média      | Médio   | Métricas de uso    |
+| Agent Templates Library      | Alta       | Baixo   | Onboarding         |
+| Integrações (Slack, Discord) | Média      | Médio   | Adoção             |
+| Billing/Usage Tracking       | Alta       | Médio   | Suporte a pricing  |
+| SSO/SAML                     | Baixa      | Alto    | Enterprise         |
 
 ---
 
 ## 7. Roadmap de Go-to-Market
 
 ### Fase 1: MVP (Mês 1-2)
+
 - [ ] Agente Marketplace básico
 - [ ] Dashboard de uso
 - [ ] Pricing tiers (Free/Pro)
 
 ### Fase 2: Crescimento (Mês 3-4)
+
 - [ ] Cross-instance messaging
 - [ ] Agent templates library
 - [ ] Integrações (Slack)
 
 ### Fase 3: Scale (Mês 5-6)
+
 - [ ] Enterprise features (SSO)
 - [ ] Advanced analytics
 - [ ] Outcome-based pricing option
@@ -219,14 +239,15 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 
 ### Preços Competidores
 
-| Plataforma | Free Tier | Pro Tier | Enterprise |
-|------------|-----------|----------|------------|
-| CrewAI | Limitado | ~$25/mês | sob consulta |
-| LangChain | Framework | Enterprise | sob consulta |
-| Kore.ai | Limitado | ~$400/mês | sob consulta |
+| Plataforma           | Free Tier         | Pro Tier   | Enterprise   |
+| -------------------- | ----------------- | ---------- | ------------ |
+| CrewAI               | Limitado          | ~$25/mês   | sob consulta |
+| LangChain            | Framework         | Enterprise | sob consulta |
+| Kore.ai              | Limitado          | ~$400/mês  | sob consulta |
 | **ad-product-forge** | **Full features** | **$29-79** | **$199-499** |
 
 ### Vantagens Competitivas
+
 1. **Self-hosted first** — diferenciador único
 2. **Coolify integration** — deploy em minutos
 3. **Brazilian market** — foco local (LGPD compliance)
@@ -237,15 +258,18 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 ## 9. Recomendações
 
 ### GO ✅
+
 1. **Agent Marketplace** — maior oportunidade de receita recorrente
 2. **Cross-instance messaging (#237)** — habilita用例 enterprise
 3. **Task scheduling (#225)** — autonomia dos agentes
 
 ### HOLD ⏸️
+
 1. **Enterprise SSO** — depende de cliente enterprise
 2. **Outcome-based pricing** — complexo de implementar
 
 ### PRIORIDADE IMEDIATA
+
 1. Implementar pricing tiers (Free/Pro/Enterprise)
 2. Desenvolver Agent Marketplace MVP
 3. Finalizar #237 (cross-instance) e #225 (scheduling)
@@ -261,5 +285,5 @@ Plataforma de **orquestração de agentes AI multi-agente** com foco em automaç
 
 ---
 
-*Documento preparado por Marina — Opportunity Explorer*  
-*Alternative Down — 27 de março de 2026*
+_Documento preparado por Marina — Opportunity Explorer_  
+_Alternative Down — 27 de março de 2026_

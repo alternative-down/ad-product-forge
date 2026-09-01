@@ -48,14 +48,14 @@ export function upsertLlmProfile(input: UpsertLlmProfileInput) {
 }
 
 export function upsertLlmModelPrice(input: UpsertLlmModelPriceInput) {
-  return request<UpsertLlmModelPriceInput>('/admin/system/llm/price/upsert', {
+  return request('/admin/system/llm/price/upsert', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export function updateLlmDefaults(input: UpdateLlmDefaultsInput) {
-  return request<UpdateLlmDefaultsInput>('/admin/system/llm/defaults/update', {
+  return request('/admin/system/llm/defaults/update', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -141,5 +141,23 @@ export function upsertSystemIntegration(
   return request<SystemIntegration>('/admin/system/integration/upsert', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export type FactoryResetResult = {
+  backupPath: string;
+  backupBytes: number;
+  wipedTables: string[];
+  timestamp: number;
+};
+
+export type FactoryResetRequest = {
+  confirm: 'FACTORY_RESET';
+};
+
+export function triggerFactoryReset() {
+  return request<FactoryResetResult>('/system/reset', {
+    method: 'POST',
+    body: JSON.stringify({ confirm: 'FACTORY_RESET' } satisfies FactoryResetRequest),
   });
 }

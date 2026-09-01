@@ -1,148 +1,62 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
+import { createForgeBootstrap } from './forge-bootstrap';
+import { parseEnv } from './config/env';
 
-import { z } from 'zod';
-
-import { getDatabase, runMigrations } from './database/index';
-import { getInternalAgentRegistry } from './agents/internal-agent-registry';
-import { createForgeHttpServer } from './http/server';
-import { createGitHubAppManager } from './github/manager';
-import { createAgentEmailManager } from './email/migadu-manager';
-import { createCoolifyManager } from './coolify/manager';
-import { createMiniMaxManager } from './minimax/manager';
-import { createAgentScheduleManager } from './schedules/manager';
-import { createAgentPendingSummaryReader } from './agents/pending-summary';
-import { registerAdminRoutes } from './admin/routes';
-import { createSystemIntegrationStore } from './system-integrations/store';
-import { createInternalChatService } from './communication/internal-chat-service';
-import { createAgentContractStore } from './agents/agent-contract-store';
-import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
-
-const envSchema = z.object({
-  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
-  FORGE_DATA_PATH: z.string().default('./data'),
-  WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
-  FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
-  FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
-  FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
+// Global exception handlers — must be registered before any async work
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('[uncaughtException]', error);
 });
 
 export async function main() {
-  const env = envSchema.parse(process.env);
+  mainDebug('info', '[forge-startup] main: creating bootstrap');
+  const bootstrap = await createForgeBootstrap();
+  const env = parseEnv();
+  mainDebug('info', `[forge-startup] main: starting http server on port ${bootstrap.publicBaseUrl}`);
+  await bootstrap.httpServer.start();
+  mainDebug('info', `[forge-startup] main: HTTP server listening on port ${env.FORGE_HTTP_PORT}`);
+  mainDebug('info', `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}`);
 
-  // Load database and agents from registry
-  const db = getDatabase();
-  await runMigrations(db);
-  await prepareAgentEmbeddersForStartup({
-    db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-  });
-  const registry = getInternalAgentRegistry();
-  const httpServer = createForgeHttpServer({
-    port: env.FORGE_HTTP_PORT,
-    adminApiKey: env.FORGE_ADMIN_API_KEY,
-  });
-  const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
-  const integrations = createSystemIntegrationStore(db);
-  const internalChat = createInternalChatService(db);
-  const agentContracts = createAgentContractStore(db);
+  mainDebug('info', `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}`);
+  if (bootstrap.allowInsecureLocal) {
+    console.warn(
+      '[forge-main] WARNING: Admin routes served WITHOUT authentication.' +
+        ' Set FORGE_ADMIN_API_KEY for production deployments.',
+    );
+  }
 
-  const emailMailboxes = createAgentEmailManager({
-    db,
-    integrations,
-  });
-  const getAgentPendingSummary = createAgentPendingSummaryReader({
-    db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    internalChat,
-  });
-  const schedules = createAgentScheduleManager({
-    db,
-    getAgentPendingSummary,
-    getAgentExecutionState(agentId) {
-      return agentContracts.getExecutionState(agentId);
-    },
-    notifyAgent(input) {
-      const entry = registry.get(input.agentId);
-
-      if (!entry) {
-        console.warn(`[Forge] Schedule wake requested for unloaded agent ${input.agentId}`);
-        return;
-      }
-
-      console.log(`[Forge] Schedule wake requested for agent ${input.agentId}`);
-      entry.runner.notifyExternalEvent({
-        type: 'schedule',
-        groupKey: `schedule:${input.scheduleId}`,
-        idleOnly: input.idleOnly,
-        groupMetadata: {
-          Source: 'scheduler',
-          ScheduleId: input.scheduleId,
-          ScheduleKind: input.scheduleKind,
-          ScheduleName: input.scheduleName,
-        },
-        idempotencyKey: `schedule:${input.scheduleId}:${input.timestamp}`,
-        text: input.content,
-        timestamp: input.timestamp,
-      });
-    },
-  });
-  const githubApps = createGitHubAppManager({
-    db,
-    httpServer,
-    publicBaseUrl,
-    integrations,
-  });
-  const coolify = createCoolifyManager({
-    integrations,
-  });
-  const minimax = createMiniMaxManager({
-    integrations,
-  });
-  const loaderConfig = {
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    githubApps,
-    emailMailboxes,
-    coolify,
-    minimax,
-    schedules,
-    internalChat,
-  };
-  registerAdminRoutes({
-    db,
-    httpServer,
-    loaderConfig,
-    schedules,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    githubApps,
-    emailMailboxes,
-    coolify,
-    integrations,
-    internalChat,
-  });
-  const agents = await registry.loadAll(db, loaderConfig);
-  await githubApps.loadAllAgents();
-  await schedules.loadAll();
-
-  await httpServer.start();
-  console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);
-
-  // Graceful shutdown handlers
-  const handleShutdown = (signal: string) => {
-    console.log(`\n[${signal}] Shutting down gracefully...`);
-    void schedules
-      .stop()
-      .finally(() => httpServer.stop())
-      .finally(() => {
-        process.exit(0);
-      });
+  const shutdown = async () => {
+    mainDebug('info', 'Shutting down gracefully...');
+    await bootstrap.httpServer.stop();
+    process.exit(0);
   };
 
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
+import { serializeError } from './agents/error-formatting';
+
+/**
+ * Module-local debug helper. Centralizes the forge scope
+ * so call sites only specify the level, message, and context.
+ */
+function mainDebug(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  context?: Record<string, unknown>,
+) {
+  forgeDebug({ scope: 'forge', level, message, context });
 }
 
+
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
-  process.exitCode = 1;
+  console.error('[forge-startup] FATAL: app startup failed' );
+  console.error('[forge-main] Fatal error during startup:', serializeError(error));
+  if (error instanceof Error && error.stack !== null && error.stack !== undefined) {
+    console.error(error.stack);
+  }
+  process.exit(1);
 });

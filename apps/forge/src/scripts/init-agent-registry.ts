@@ -6,12 +6,15 @@ import path from 'node:path';
 import { eq, and } from 'drizzle-orm';
 
 import * as schema from '../database/schema';
-import { getDatabase, runMigrations } from '../database/index';
+
+import { getDatabase } from '../database/client';
+import { runMigrations } from '../database/migrate';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import type { WorkspaceEmbedderId } from '@forge-runtime/core';
+import { type WorkspaceEmbedderId } from '@forge-runtime/core';
 import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
+import { initAgentRegistryDebug } from './init-agent-registry-debug';
 
 /**
  * Agent configuration - hardcoded once, then managed via database
@@ -34,15 +37,15 @@ async function initAgentRegistry() {
   try {
     const systemPrompt = await readFile(
       path.resolve(import.meta.dirname, '../forge-system.md'),
-      'utf8'
+      'utf8',
     );
 
     // Get database connection
     const db = getDatabase();
 
-    console.log('[Init] Running database migrations...');
+    initAgentRegistryDebug('info', 'Running database migrations');
     await runMigrations(db);
-    console.log('[Init] Migrations completed ✓');
+    initAgentRegistryDebug('info', 'Migrations completed');
 
     // Prepare agent configs
     const llmSettings = createLlmSettingsStore(db);
@@ -95,38 +98,16 @@ async function initAgentRegistry() {
     ];
 
     // Register agents
-    console.log('[Init] Registering agents in database...');
+    initAgentRegistryDebug('info', 'Registering agents in database');
     for (const config of agentConfigs) {
       const now = Date.now();
 
-      // Check if agent exists
-      const existing = await db.query.agents.findFirst({
-        where: eq(schema.agents.id, config.id),
-      });
-
-      if (existing) {
-        // Update existing agent
-        await db
-          .update(schema.agents)
-          .set({
-            name: config.name,
-            description: config.description,
-            modelProfileId: config.modelProfileId,
-            omModelProfileId: config.omModelProfileId,
-            instructions: config.instructions,
-            workspaceAutoSync: config.workspaceAutoSync,
-            workspaceBm25: config.workspaceBm25,
-            workspaceEmbedder: config.workspaceEmbedder,
-            workspaceFilesystem: config.workspaceFilesystem,
-            workspaceSandbox: config.workspaceSandbox,
-            updatedAt: now,
-          })
-          .where(eq(schema.agents.id, config.id));
-
-        console.log(`  ✓ Updated agent: ${config.id}`);
-      } else {
-        // Insert new agent
-        await db.insert(schema.agents).values({
+      // Atomic upsert: insert if not exists, otherwise update the 10 mutable
+      // fields. Replaces the prior existence-check + if/else split that
+      // duplicated the field mapping across two paths (#6169).
+      await db
+        .insert(schema.agents)
+        .values({
           id: config.id,
           name: config.name,
           description: config.description,
@@ -140,14 +121,29 @@ async function initAgentRegistry() {
           workspaceSandbox: config.workspaceSandbox,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: schema.agents.id,
+          set: {
+            name: config.name,
+            description: config.description,
+            modelProfileId: config.modelProfileId,
+            omModelProfileId: config.omModelProfileId,
+            instructions: config.instructions,
+            workspaceAutoSync: config.workspaceAutoSync,
+            workspaceBm25: config.workspaceBm25,
+            workspaceEmbedder: config.workspaceEmbedder,
+            workspaceFilesystem: config.workspaceFilesystem,
+            workspaceSandbox: config.workspaceSandbox,
+            updatedAt: now,
+          },
         });
 
-        console.log(`  ✓ Created agent: ${config.id}`);
-      }
+      initAgentRegistryDebug('info', 'Registered agent', { agentId: config.id });
     }
 
     // Register communication providers for agents
-    console.log('[Init] Registering communication providers...');
+    initAgentRegistryDebug('info', 'Registering communication providers');
 
     // Configure internal-chat provider for both agents
     const agentProviderConfigs = [
@@ -168,7 +164,7 @@ async function initAgentRegistry() {
       const existing = await db.query.agentProviders.findFirst({
         where: and(
           eq(schema.agentProviders.agentId, providerConfig.agentId),
-          eq(schema.agentProviders.providerType, providerConfig.providerType)
+          eq(schema.agentProviders.providerType, providerConfig.providerType),
         ),
       });
 
@@ -185,7 +181,7 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agentProviders.id, existing.id));
 
-        console.log(`  ✓ Updated provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
+        initAgentRegistryDebug('info', 'Updated provider', { agentId: providerConfig.agentId, providerType: providerConfig.providerType });
       } else {
         // Insert new provider
         await db.insert(schema.agentProviders).values({
@@ -194,29 +190,20 @@ async function initAgentRegistry() {
           providerType: providerConfig.providerType,
           encryptedCredentials: encryptedCreds,
           createdAt: now,
+          updatedAt: now,
         });
 
-        console.log(`  ✓ Created provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
+        initAgentRegistryDebug('info', 'Created provider', { agentId: providerConfig.agentId, providerType: providerConfig.providerType });
       }
     }
 
-    // Verify agents were registered
-    const agents = await db.query.agents.findMany();
-    console.log(`\n[Init] Agent Registry Status:`);
-    console.log(`  Total agents: ${agents.length}`);
-    agents.forEach((agent: typeof schema.agents.$inferSelect) => {
-      console.log(`    - ${agent.id}: ${agent.name}`);
-      console.log(`      Primary profile: ${agent.modelProfileId}`);
-      console.log(`      OM profile: ${agent.omModelProfileId}`);
-      console.log(`      Instructions: ${agent.instructions ? agent.instructions.substring(0, 50) + '...' : 'N/A'}`);
-    });
-
-    console.log('\n[Init] Agent registry initialized successfully ✓');
+    initAgentRegistryDebug('info', 'Agent registry initialized successfully');
     process.exit(0);
   } catch (error) {
-    console.error('[Init] Error initializing agent registry:', error);
+    initAgentRegistryDebug('error', 'Error initializing agent registry', { error: errorMsg(error) });
     process.exit(1);
   }
 }
+import { errorMsg } from '../agents/error-formatting';
 
 initAgentRegistry();

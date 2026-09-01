@@ -58,6 +58,7 @@ The `LongTermMemory` processor implements step-wise recovery of past knowledge. 
 **Location:** `/packages/mastra-engine/src/agent/memory/long-term-memory.ts`
 
 **Key Methods:**
+
 - `processInputStep()` — Runs on input, injects past memory
 - `processOutputStep()` — Runs on output, writes and indexes observations
 - `searchWorkspace()` — Hybrid search

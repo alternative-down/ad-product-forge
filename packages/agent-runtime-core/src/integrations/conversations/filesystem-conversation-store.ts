@@ -16,30 +16,30 @@ type ConversationStoreFile = {
 type SerializedConversationMessage = Omit<ConversationMessage, 'parts'> & {
   parts: Array<
     | {
-      type: 'text';
-      text: string;
-    }
+        type: 'text';
+        text: string;
+      }
     | {
-      type: 'reasoning';
-      text: string;
-      providerMetadata?: {
-        anthropic?: {
-          signature?: string;
-          redactedData?: string;
+        type: 'reasoning';
+        text: string;
+        providerMetadata?: {
+          anthropic?: {
+            signature?: string;
+            redactedData?: string;
+          };
         };
-      };
-    }
+      }
     | {
-      type: 'image';
-      mimeType: string;
-      bytesBase64: string;
-    }
+        type: 'image';
+        mimeType: string;
+        bytesBase64: string;
+      }
     | {
-      type: 'file';
-      mimeType: string;
-      name: string;
-      bytesBase64: string;
-    }
+        type: 'file';
+        mimeType: string;
+        name: string;
+        bytesBase64: string;
+      }
   >;
 };
 
@@ -96,8 +96,9 @@ export class FilesystemConversationStore implements ConversationStore {
     operationalMemoryGeneration?: number | null | undefined;
   }): Promise<void> {
     const storeFile = await this.readStoreFile();
-    const messageIndex = storeFile.messages.findIndex((message) =>
-      message.threadId === input.threadId && message.id === input.messageId);
+    const messageIndex = storeFile.messages.findIndex(
+      (message) => message.threadId === input.threadId && message.id === input.messageId,
+    );
 
     if (messageIndex < 0) {
       return;
@@ -127,8 +128,9 @@ export class FilesystemConversationStore implements ConversationStore {
     metadata: Record<string, unknown> | undefined;
   }): Promise<void> {
     const storeFile = await this.readStoreFile();
-    const messageIndex = storeFile.messages.findIndex((message) =>
-      message.threadId === input.threadId && message.id === input.messageId);
+    const messageIndex = storeFile.messages.findIndex(
+      (message) => message.threadId === input.threadId && message.id === input.messageId,
+    );
 
     if (messageIndex < 0) {
       return;
@@ -147,8 +149,9 @@ export class FilesystemConversationStore implements ConversationStore {
     replacedByMessageId: string | null;
   }): Promise<void> {
     const storeFile = await this.readStoreFile();
-    const messageIndex = storeFile.messages.findIndex((message) =>
-      message.threadId === input.threadId && message.id === input.messageId);
+    const messageIndex = storeFile.messages.findIndex(
+      (message) => message.threadId === input.threadId && message.id === input.messageId,
+    );
 
     if (messageIndex < 0) {
       return;
@@ -166,16 +169,16 @@ export class FilesystemConversationStore implements ConversationStore {
     const threadMessages = storeFile.messages
       .filter((message) => message.threadId === query.threadId)
       .map(deserializeMessage);
-    const startIndex = query.afterMessageId
+    const startIndex = query.afterMessageId != null
       ? threadMessages.findIndex((message) => message.id === query.afterMessageId) + 1
       : 0;
-    const beforeIndex = query.beforeMessageId
+    const beforeIndex = query.beforeMessageId != null
       ? threadMessages.findIndex((message) => message.id === query.beforeMessageId)
       : -1;
     const endIndex = beforeIndex >= 0 ? beforeIndex : threadMessages.length;
     const selectedMessages = threadMessages.slice(Math.max(0, startIndex), endIndex);
 
-    if (!query.limit || query.limit <= 0) {
+    if (query.limit == null || query.limit <= 0) {
       return query.order === 'desc' ? [...selectedMessages].reverse() : selectedMessages;
     }
 
@@ -186,15 +189,14 @@ export class FilesystemConversationStore implements ConversationStore {
     return selectedMessages.slice(-query.limit);
   }
 
-  async listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]> {
+  async listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]> {
     const storeFile = await this.readStoreFile();
     const threadMessages = storeFile.messages
       .filter((message) => message.threadId === input.threadId)
       .map(deserializeMessage);
     const checkpointIndex = findOperationalMemoryCheckpointIndex(threadMessages);
-    const seedMessages = checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
+    const seedMessages =
+      checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
     const messageMap = new Map(threadMessages.map((message) => [message.id, message]));
     const visibleMessages: ConversationMessage[] = [];
     const seenTerminalIds = new Set<string>();
@@ -216,7 +218,7 @@ export class FilesystemConversationStore implements ConversationStore {
   private async readStoreFile(): Promise<ConversationStoreFile> {
     const rawContent = await readFile(this.filePath, 'utf8').catch(() => null);
 
-    if (!rawContent) {
+    if (rawContent == null) {
       return {
         threads: [],
         messages: [],
@@ -236,7 +238,7 @@ function findOperationalMemoryCheckpointIndex(messages: ConversationMessage[]) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
 
-    if (message.operationalMemoryType === 'checkpoint-summary' && !message.replacedByMessageId) {
+    if (message.operationalMemoryType === 'checkpoint-summary' && message.replacedByMessageId == null) {
       return index;
     }
   }
@@ -251,7 +253,7 @@ function resolveTerminalOperationalMemoryMessage(
   let currentMessage: ConversationMessage | undefined = message;
   const visitedIds = new Set<string>();
 
-  while (currentMessage?.replacedByMessageId) {
+  while (currentMessage?.replacedByMessageId != null) {
     if (visitedIds.has(currentMessage.id)) {
       return currentMessage;
     }

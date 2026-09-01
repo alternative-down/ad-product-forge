@@ -16,9 +16,7 @@ export type RuntimeMessageListener = AsyncEventListener<RuntimeMessageEvent>;
 export class RuntimeMessageStream extends AsyncEventChannel<RuntimeMessageEvent> {
   private readonly unsubscribe: () => void;
 
-  constructor(options: {
-    subscribe(listener: RuntimeEventListener): () => void;
-  }) {
+  constructor(options: { subscribe(listener: RuntimeEventListener): () => void }) {
     super();
 
     this.unsubscribe = options.subscribe((event) => {

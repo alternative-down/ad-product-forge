@@ -7,6 +7,7 @@
 Provide internal agents with a simple administrative view of the company.
 
 This module exists so agents can inspect:
+
 - company cash movements
 - current cash balance
 - scheduled future cash movements
@@ -17,6 +18,7 @@ It does **not** exist to expose runtime internals, execution telemetry, or budge
 ## 2. Scope
 
 ### Included
+
 - company cash ledger entries
 - current company cash balance
 - future ledger entries that are already scheduled
@@ -24,6 +26,7 @@ It does **not** exist to expose runtime internals, execution telemetry, or budge
 - weekly contract value for each active internal agent
 
 ### Excluded
+
 - step-by-step LLM cost
 - OM/LTM execution cost details
 - contract funding state internals
@@ -37,9 +40,11 @@ It does **not** exist to expose runtime internals, execution telemetry, or budge
 ## 3. Agent-Facing Capabilities
 
 ### 3.1 Get Cash Balance
+
 Return the current company cash balance derived from the ledger.
 
 Example output shape:
+
 ```ts
 {
   balanceUsd: number;
@@ -47,9 +52,11 @@ Example output shape:
 ```
 
 ### 3.2 List Cash Movements
+
 Return ledger entries with optional filters.
 
 Supported filters:
+
 - date range
 - direction (`in` or `out`)
 - status
@@ -58,6 +65,7 @@ Supported filters:
 - offset
 
 Example output shape:
+
 ```ts
 {
   items: Array<{
@@ -76,9 +84,11 @@ Example output shape:
 ```
 
 ### 3.3 Get Cash Summary
+
 Return a compact summary for a period.
 
 Example output shape:
+
 ```ts
 {
   periodStart: number;
@@ -93,9 +103,11 @@ Example output shape:
 ```
 
 ### 3.4 List Active Agent Contracts
+
 Return active internal-agent contracts with their weekly value.
 
 Example output shape:
+
 ```ts
 {
   items: Array<{
@@ -111,9 +123,11 @@ Example output shape:
 ```
 
 ### 3.5 Get Active Contract
+
 Return the active contract for one internal agent.
 
 Example output shape:
+
 ```ts
 {
   contractId: string;
@@ -129,10 +143,13 @@ Example output shape:
 ## 4. Data Sources
 
 ### 4.1 Company Cash Ledger
+
 Use the existing company ledger as the source of truth:
+
 - `company_cash_ledger`
 
 Relevant fields:
+
 - `id`
 - `type`
 - `direction`
@@ -146,11 +163,14 @@ Relevant fields:
 - `referenceId`
 
 ### 4.2 Internal-Agent Contracts
+
 Use the existing execution contracts table only as an administrative contract source:
+
 - `agent_execution_contracts`
 - joined with `agents`
 
 Relevant fields:
+
 - `id`
 - `agentId`
 - `budgetUsd`
@@ -159,12 +179,14 @@ Relevant fields:
 - `endsAt`
 
 Important:
+
 - `budgetUsd` is exposed here only as the weekly contract value
 - internal funding state and remaining budget are not part of the micro ERP surface
 
 ## 5. Boundaries
 
 ### What the Micro ERP can expose
+
 - financial movements
 - company balance
 - scheduled future movements
@@ -172,6 +194,7 @@ Important:
 - weekly contract values
 
 ### What must stay internal to the runtime
+
 - `agent_execution_steps`
 - per-step token usage
 - OM/LTM cost rows
@@ -186,12 +209,14 @@ Start simple.
 The first implementation should provide only fixed read operations through application code.
 
 Suggested first surface:
+
 - `list_company_cash`
 - `get_company_cash`
 - `list_internal_agent_contracts`
 - `get_internal_agent_contract`
 
 Direction:
+
 - `list_*` returns embedded subitems or summaries when relevant
 - `get_*` returns one richer item or summary view
 - there is no `manage_*` here because the micro ERP is read-only for agents
@@ -199,6 +224,7 @@ Direction:
 These can later be exposed to agents as tools.
 
 Do not start with:
+
 - dynamic query builders
 - custom saved views
 - generalized reporting engine
@@ -216,6 +242,7 @@ Do not start with:
 **Status:** Partially Implemented
 
 Already available in the system today:
+
 - `company_cash_ledger`
 - `agent_execution_contracts`
 - `agents`
@@ -225,4 +252,5 @@ Already available in the system today:
   - active internal-agent contract read operations
 
 Still missing:
+
 - review of the final agent-facing wording/output shapes after real usage

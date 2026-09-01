@@ -19,35 +19,39 @@ O Ad Product Forge possui um sistema de **Capabilities** (capacidades) baseado e
 
 O sistema vem com funções pré-definidas que cobrem a maioria dos casos de uso:
 
-| Função | Descrição | Permissões Típicas |
-|--------|-----------|-------------------|
-| **OWNER** | Dono da empresa | Todas as permissões |
-| **ADMIN** | Administrador | Gerenciamento completo de agentes |
-| **COORDINATOR** | Coordenador | Criar e gerenciar tarefas entre agentes |
-| **FINANCE** | Financeiro | Apenas operações de orçamento |
-| **AGENT** | Agente padrão | Usar ferramentas, listar próprias tarefas |
+| Função          | Descrição       | Permissões Típicas                        |
+| --------------- | --------------- | ----------------------------------------- |
+| **OWNER**       | Dono da empresa | Todas as permissões                       |
+| **ADMIN**       | Administrador   | Gerenciamento completo de agentes         |
+| **COORDINATOR** | Coordenador     | Criar e gerenciar tarefas entre agentes   |
+| **FINANCE**     | Financeiro      | Apenas operações de orçamento             |
+| **AGENT**       | Agente padrão   | Usar ferramentas, listar próprias tarefas |
 
 ### Permissões por Função
 
 **OWNER e ADMIN**
+
 - Criar e gerenciar agentes
 - Configurar orçamentos e contratos
 - Alterar permissões de outros
 - Acessar todas as ferramentas do sistema
 
 **COORDINATOR**
+
 - Criar tarefas para outros agentes
 - Listar tarefas de toda a equipe
 - Cancelar e atualizar tarefas
 - Monitore o progresso geral
 
 **FINANCE**
+
 - Ver orçamentos de todos os agentes
 - Fazer top-up de contratos
 - Ajustar limites de orçamento
 - Visualizar relatórios financeiros
 
 **AGENT**
+
 - Executar tarefas atribuídas
 - Usar ferramentas permitidas
 - Listar próprias tarefas
@@ -93,6 +97,7 @@ Cada função pode ter permissões de ferramentas personalizadas.
 O sistema possui mais de 60 ferramentas organizadas em categorias:
 
 **Desenvolvimento**
+
 - `list_github_issues` - Listar issues do GitHub
 - `create_github_issue` - Criar issue
 - `list_github_pull_requests` - Listar PRs
@@ -104,22 +109,26 @@ O sistema possui mais de 60 ferramentas organizadas em categorias:
 - `execute_command` - Executar comandos shell
 
 **Gestão de Crons**
+
 - `manage_self_crons` - Criar, atualizar ou deletar cron próprio
 - `list_self_crons` - Listar crons próprios
 - `manage_crons` - Criar, atualizar ou deletar cron para outro agente
 - `list_crons` - Listar crons criados para outros agentes
 
 **Comunicação**
+
 - `send_message` - Enviar mensagem
 - `change_chat_group` - Criar ou atualizar grupo
 
 **Financeiro**
+
 - `get_company_financial_summary` - Ver resumo financeiro
 - `get_company_balance` - Ver saldo da empresa
 - `adjust_agent_contract_budget` - Ajustar orçamento
 - `get_agent_contract_details` - Ver detalhes do contrato
 
 **Sistema**
+
 - `list_agents` - Listar agentes
 - `get_agent_status` - Ver status do agente
 - `hire_agent` - Contratar agente
@@ -179,10 +188,10 @@ Permissões de Workflows:
 
 Além de ferramentas individuais, o sistema possui workflows completos:
 
-| Workflow | Descrição | Quem Pode Executar |
-|----------|-----------|--------------------|
-| `hire_agent` | Contratar novo agente | OWNER, ADMIN |
-| `terminate_agent` | Desligar agente | OWNER, ADMIN |
+| Workflow          | Descrição             | Quem Pode Executar |
+| ----------------- | --------------------- | ------------------ |
+| `hire_agent`      | Contratar novo agente | OWNER, ADMIN       |
+| `terminate_agent` | Desligar agente       | OWNER, ADMIN       |
 
 ### Configurando Permissão de Workflow
 
@@ -197,12 +206,12 @@ Além de ferramentas individuais, o sistema possui workflows completos:
 
 Para compatibilidade, o sistema ainda suporta aliases antigos:
 
-| Alias Antigo | Equivalente Novo |
-|--------------|------------------|
-| `github` | Múltiplas ferramentas GitHub |
-| `filesystem` | Operações de arquivo |
-| `system` | Gerenciamento de agentes |
-| `finance` | Operações financeiras |
+| Alias Antigo | Equivalente Novo             |
+| ------------ | ---------------------------- |
+| `github`     | Múltiplas ferramentas GitHub |
+| `filesystem` | Operações de arquivo         |
+| `system`     | Gerenciamento de agentes     |
+| `finance`    | Operações financeiras        |
 
 ---
 

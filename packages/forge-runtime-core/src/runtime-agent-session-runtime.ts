@@ -1,24 +1,21 @@
-import type {
-  RuntimeActionDefinition,
-} from 'agent-runtime-core/integrations';
+import { logger } from './logger.js';
+import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
-import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
-import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
+import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
-import {
-  createUpdateWorkingMemoryTool,
-} from './runtime-working-memory.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
+import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store.js';
+import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode.js';
 
 export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ForgeConversationMemory;
-  workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
+  workingMemoryStore?: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   syncState(input?: {
     diagnostics?: {
@@ -33,88 +30,111 @@ export type RuntimeAgentSessionRuntime = {
   }): Promise<void>;
 };
 
-function requireCheckpointedOmLimits(
-  input: CreateRuntimeAgentSessionOptions,
-) {
+function requireOperationalMemoryOmLimits(input: CreateRuntimeAgentSessionOptions) {
   if (!input.checkpointedOmLimits) {
-    throw new Error('Checkpointed OM limits are required when conversation overflow consolidation is enabled.');
+    throw new Error(
+      'Operational OM limits are required when conversation overflow consolidation is enabled.',
+    );
   }
 
   return input.checkpointedOmLimits;
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {
-  const workingMemoryTool = input.workingMemoryTool ?? createUpdateWorkingMemoryTool({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    store: input.workingMemoryStore,
-  });
   const checkpointedOmEnabled = input.consolidateConversationOverflow === true;
-  const checkpointedOmLimits = checkpointedOmEnabled ? requireCheckpointedOmLimits(input) : undefined;
+  const checkpointedOmLimits = checkpointedOmEnabled
+    ? requireOperationalMemoryOmLimits(input)
+    : undefined;
 
   const conversationMemory = createForgeConversationMemory({
     threadId: input.threadId,
     conversationStore: input.conversationStore,
     assistantAuthorId: input.assistantAuthorId,
     observer: checkpointedOmEnabled
-      ? createCheckpointedConversationObserver({
-        model: input.checkpointedOmModel ?? input.model,
-        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
-        loadSupportText: checkpointedOmEnabled
-          ? async () => {
-            const state = await readOperationalMemoryState({
-              threadId: input.threadId,
-              store: input.conversationStore,
-              recentTokenLimit: checkpointedOmLimits!.recentRawTokens,
-            });
+      ? createOperationalMemoryConversationObserver({
+          model: input.checkpointedOmModel ?? input.model,
+          agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+          loadSupportText: checkpointedOmEnabled
+            ? async () => {
+                const state = await readOperationalMemoryState({
+                  threadId: input.threadId,
+                  store: input.conversationStore,
+                  recentTokenLimit: checkpointedOmLimits!.recentRawTokens,
+                });
 
-            return takeSupportText(
-              state.observationMessages.map((message) =>
-                message.parts
-                  .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
-                    part.type === 'text' || part.type === 'reasoning')
-                  .map((part) => part.text.trim())
-                  .filter(Boolean)
-                  .join('\n')),
-              checkpointedOmLimits!.observationSupportTokens,
-            );
-          }
-          : undefined,
-      })
+                return takeSupportText(
+                  state.observationMessages.map((message) =>
+                    message.parts
+                      .filter(
+                        (part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                          part.type === 'text' || part.type === 'reasoning',
+                      )
+                      .map((part) => part.text.trim())
+                      .filter(Boolean)
+                      .join('\n'),
+                  ),
+                  checkpointedOmLimits!.observationSupportTokens,
+                );
+              }
+            : undefined,
+        })
       : undefined,
     recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits!.recentRawTokens : undefined,
-    overflowObservationTokenLimit:
-      checkpointedOmEnabled ? checkpointedOmLimits!.rawObservationBatchTokens : undefined,
+    overflowObservationTokenLimit: checkpointedOmEnabled
+      ? checkpointedOmLimits!.rawObservationBatchTokens
+      : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
-  const staticRuntimeActions = [
-    toolToRuntimeAction(workingMemoryTool),
-    ...(input.runtimeActions ?? []),
-  ];
+  const staticRuntimeActions = input.workingMemoryTool
+    ? [toolToRuntimeAction(input.workingMemoryTool), ...(input.runtimeActions ?? [])]
+    : (input.runtimeActions ?? []);
+  let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
+  if (input.todoStore) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const todoLib = new LibsqlTodoStore({
+      client: input.todoStore.client as any,
+      tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime',
+    });
+    todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
+  }
+
+  const planMode = input.planMode ?? new RuntimePlanMode({ agentMemoryPath: input.threadId });
+  let stepCounter = 0;
+  const planModeActions = createPlanModeActions({
+    planMode,
+    getCurrentStepNumber: () => stepCounter,
+  });
 
   return {
     model: input.model,
     assistantAuthorId: input.assistantAuthorId,
     conversationStore: input.conversationStore,
     conversationMemory,
-    workingMemoryStore: input.workingMemoryStore,
     async getRuntimeActions() {
-      let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
+      stepCounter++;
+      let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> =
+        [];
 
       if (input.loadRuntimeActions) {
         try {
           dynamicRuntimeActions = await input.loadRuntimeActions();
         } catch (error) {
-          console.warn('[RuntimeAgentSession] Failed to load dynamic runtime actions:', error);
+          logger.warn('runtime', 'Failed to load dynamic runtime actions', { error });
         }
       }
 
-      return [
+      const allActions = [
         ...staticRuntimeActions,
+        ...(todoUpdateTodosAction ? [todoUpdateTodosAction] : []),
         ...dynamicRuntimeActions,
+        planModeActions.enterPlanMode,
+        planModeActions.exitPlanMode,
       ];
+      const isReadOnly = planMode.isInPlanMode;
+      return isReadOnly ? planMode.filterReadOnlyActions(allActions) : allActions;
     },
     async syncState(options) {
       options?.diagnostics?.record({
@@ -147,16 +167,6 @@ export async function createRuntimeAgentSessionRuntime(
         });
         return;
       }
-
-      await syncCheckpointedOmCompatibility({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-        conversationStore: input.conversationStore,
-        limits: checkpointedOmLimits,
-        reflectionModel: input.checkpointedOmModel ?? input.model,
-        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
-        onCheckpointAdvanced: input.onCheckpointAdvanced,
-      }, options?.diagnostics);
 
       options?.diagnostics?.record({
         at: Date.now(),

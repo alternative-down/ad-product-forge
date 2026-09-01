@@ -16,21 +16,25 @@ export interface RetrievalDocumentSource {
 }
 
 export interface KeywordIndex {
-  index(documents: Array<{
-    id: string;
-    text: string;
-    metadata?: Record<string, unknown>;
-  }>): Promise<void>;
+  index(
+    documents: Array<{
+      id: string;
+      text: string;
+      metadata?: Record<string, unknown>;
+    }>,
+  ): Promise<void>;
   search(query: string, options?: { topK?: number }): Promise<RetrievedDocument[]>;
 }
 
 export interface VectorIndex {
-  index(documents: Array<{
-    id: string;
-    text: string;
-    vector: number[];
-    metadata?: Record<string, unknown>;
-  }>): Promise<void>;
+  index(
+    documents: Array<{
+      id: string;
+      text: string;
+      vector: number[];
+      metadata?: Record<string, unknown>;
+    }>,
+  ): Promise<void>;
   search(vector: number[], options?: { topK?: number }): Promise<RetrievedDocument[]>;
 }
 

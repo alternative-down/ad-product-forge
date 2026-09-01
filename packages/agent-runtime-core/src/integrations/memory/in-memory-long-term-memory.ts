@@ -38,18 +38,20 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
     });
     const vector = embedding.vectors[0];
 
-    if (!vector) {
+    if (vector == null) {
       throw new Error(`Embedder returned no vector for long-term memory document ${document.id}`);
     }
 
     this.documents.set(document.id, document);
     await this.keywordIndex.index([document]);
-    await this.vectorIndex.index([{
-      id: document.id,
-      text: document.text,
-      metadata: document.metadata,
-      vector,
-    }]);
+    await this.vectorIndex.index([
+      {
+        id: document.id,
+        text: document.text,
+        metadata: document.metadata,
+        vector,
+      },
+    ]);
   }
 
   async remove(documentId: string): Promise<void> {
@@ -58,6 +60,7 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
   }
 
   async list(): Promise<LongTermMemoryDocument[]> {
+    await Promise.resolve();
     return Array.from(this.documents.values());
   }
 
@@ -98,16 +101,18 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
     return documents.flatMap((document, index) => {
       const vector = embedding.vectors[index];
 
-      if (!vector) {
+      if (vector == null) {
         return [];
       }
 
-      return [{
-        id: document.id,
-        text: document.text,
-        metadata: document.metadata,
-        vector,
-      }];
+      return [
+        {
+          id: document.id,
+          text: document.text,
+          metadata: document.metadata,
+          vector,
+        },
+      ];
     });
   }
 

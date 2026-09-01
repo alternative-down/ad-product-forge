@@ -1,6 +1,6 @@
 import type { ToolsInput } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+import type { Database } from '../database/client';
 import type { AgentLoaderConfig } from './agent-loader-types';
 import { createMicroErpTools } from '../micro-erp/tools';
 import { createAgentNotificationTools } from '../notifications/tools';
@@ -13,7 +13,10 @@ import { createMiniMaxTools } from '../minimax/tools';
 import { createAgentSkillTools } from './skills-tools';
 import { createInternalAgentTools } from './internal-agent-tools';
 
-export async function loadAgentToolset(input: {
+// Re-exported type alias so consumers don't need Awaited<ReturnType<...>>
+export type AgentToolset = Awaited<ReturnType<typeof loadAgentToolset>>;
+
+export function loadAgentToolset(input: {
   db: Database;
   loaderConfig: AgentLoaderConfig;
   agentId: string;
@@ -21,8 +24,16 @@ export async function loadAgentToolset(input: {
   allowedToolIds: Set<string>;
 }) {
   const microErpTools = createMicroErpTools(input.db, input.allowedToolIds);
-  const notificationTools = createAgentNotificationTools(input.db, input.agentId, input.allowedToolIds);
-  const githubTools = createGitHubTools(input.agentId, input.loaderConfig.githubApps, input.allowedToolIds);
+  const notificationTools = createAgentNotificationTools(
+    input.db,
+    input.agentId,
+    input.allowedToolIds,
+  );
+  const githubTools = createGitHubTools(
+    input.agentId,
+    input.loaderConfig.githubApps,
+    input.allowedToolIds,
+  );
   const coolifyTools = input.loaderConfig.coolify
     ? createCoolifyTools(input.loaderConfig.coolify, input.allowedToolIds)
     : {};

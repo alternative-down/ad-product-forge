@@ -16,6 +16,7 @@ Permitir que agentes internos criem dinamicamente agentes especialistas temporá
 ## Requisitos
 
 ### FR1: Criar Agente Externo
+
 - Agente interno solicita criação de agente externo via ferramenta
 - Entrada: nome, role, systemPrompt, contexto (opcional)
 - Agente externo criado usando `createSimpleAgent()` com workflow
@@ -23,11 +24,13 @@ Permitir que agentes internos criem dinamicamente agentes especialistas temporá
 - Agente externo salvo na tabela `agents` (sem tabela separada)
 
 ### FR2: Comunicação
+
 - Agente externo comunica via ferramentas `sendMessage()` / `getMessages()`
 - Usa provedor `external_agent_chat` (similar ao chat interno)
 - Mensagens roteadas entre agente interno e externo apenas
 
 ### FR3: Terminação
+
 - Agente interno pode terminar agente externo
 - Agente externo marcado como terminado no banco de dados
 - Mensagens não são mais aceitas
@@ -81,6 +84,7 @@ Terminação
 **Nenhuma tabela nova necessária.** Agentes externos armazenados na tabela existente `agents`.
 
 **Adições à tabela agents:**
+
 - `is_external` (booleano, padrão false)
 - `parent_agent_id` (TEXT, opcional - rastreia criador)
 - `terminated_at` (TIMESTAMP, opcional)
@@ -90,6 +94,7 @@ Terminação
 ## Provedor: Chat de Agente Externo
 
 Nova configuração de provedor:
+
 - Nome: `external_agent_chat`
 - Tipo: Mensagens internas (sem credenciais externas)
 - Habilita mensagens entre agentes internos e externos apenas
@@ -100,25 +105,31 @@ Nova configuração de provedor:
 ## Decisões Técnicas
 
 ### 1. Usar Criação Existente de Agentes
+
 **Decisão:** Agentes externos = agentes regulares criados via workflow
 
 **Justificativa:**
+
 - Mais simples que infraestrutura separada
 - Reutiliza capacidades de agentes existentes
 - System prompt fornece definição de escopo/expertise
 
 ### 2. Ferramentas de Mensagens Existentes
+
 **Decisão:** Usar `sendMessage()` / `getMessages()` padrão para comunicação
 
 **Justificativa:**
+
 - Nenhuma ferramenta duplicada necessária
 - Roteamento de provedor lida com isolamento de agentes
 - Mesma API para todos os agentes
 
 ### 3. Mesma Tabela de Agentes
+
 **Decisão:** Agentes externos armazenados na tabela `agents` com flags
 
 **Justificativa:**
+
 - Sem duplicação de schema
 - Gerenciamento unificado de ciclo de vida de agentes
 - Queries mais simples e operações admin

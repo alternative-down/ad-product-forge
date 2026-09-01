@@ -11,7 +11,9 @@ export class AsyncEventChannel<TEvent> implements AsyncIterable<TEvent> {
       return;
     }
 
-    const waiter = this.waiters.values().next().value as ((event: TEvent | null) => void) | undefined;
+    const waiter = this.waiters.values().next().value as
+      | ((event: TEvent | null) => void)
+      | undefined;
 
     if (waiter) {
       this.waiters.delete(waiter);
@@ -42,7 +44,7 @@ export class AsyncEventChannel<TEvent> implements AsyncIterable<TEvent> {
       return null;
     }
 
-    return new Promise<TEvent | null>((resolve) => {
+    return await new Promise<TEvent | null>((resolve) => {
       const waiter = (event: TEvent | null) => {
         if (timeout) {
           clearTimeout(timeout);
@@ -50,11 +52,11 @@ export class AsyncEventChannel<TEvent> implements AsyncIterable<TEvent> {
 
         resolve(event);
       };
-      const timeout = options.timeoutMs
+      const timeout = options.timeoutMs != null
         ? setTimeout(() => {
-          this.waiters.delete(waiter);
-          resolve(null);
-        }, options.timeoutMs)
+            this.waiters.delete(waiter);
+            resolve(null);
+          }, options.timeoutMs)
         : null;
 
       this.waiters.add(waiter);

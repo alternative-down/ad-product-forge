@@ -31,12 +31,14 @@
 ## Solução
 
 Aproveitar o **workspace do Mastra** que já fornece:
+
 - Acesso a arquivos
 - Embeddings
 - Busca semântica
 - Suporte a GraphRAG
 
 **Abordagem:**
+
 - Usar workspace como base de conhecimento
 - Path compartilhado entre agentes (pasta/storage unificado)
 - Integração com embeddings e busca semântica
@@ -73,4 +75,5 @@ Aproveitar o **workspace do Mastra** que já fornece:
 ---
 
 **Histórico do Documento:**
+
 - v1.0 (2026-03-15): Abordagem via Mastra workspace com embeddings e GraphRAG

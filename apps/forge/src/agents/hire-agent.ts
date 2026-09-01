@@ -1,7 +1,9 @@
+import { errorMsg } from './error-formatting';
 import { createId } from '../utils/id';
+import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+import type { Database, DbOrTx } from '../database/client';
 import {
   agents,
   agentExecutionContracts,
@@ -11,94 +13,195 @@ import {
   type NewAgentProvider,
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
-import { encryptSecret } from '../encryption/crypto';
-import type { CreateAgentConfig } from './agent-runtime-types';
-import { getInternalAgentRegistry } from './internal-agent-registry';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
-import type { GitHubAppManager } from '../github/manager';
+import {
+  WorkspaceFilesystemConfigSchema,
+  WorkspaceSandboxConfigSchema,
+} from '../database/schema-config';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
-import { loadAgent } from './agent-loader';
+import type { AgentScheduleManager } from '../schedules/manager/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
+import { encryptSecret } from '../encryption/crypto';
+import { getInternalAgentRegistry } from './internal-agent-registry';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
+import { loadAgent } from './agent-loader';
+import type { GitHubAppManager } from '../github/manager';
+import { hireAgentDebug } from './hire-agent-debug';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+import { z } from 'zod';
 
-export type HireInternalAgentInput = {
-  agentId?: string;
-  roleId: string;
-  roleName?: string;
-  roleDescription?: string;
-  name: string;
-  description?: string;
-  instructions: string;
-  modelProfileId: string;
-  omModelProfileId: string;
-  workspaceBasePath: string;
-  workspaceFilesystem?: WorkspaceFilesystemConfig;
-  workspaceSandbox?: WorkspaceSandboxConfig;
-  weeklyBudgetUsd: number;
-  providerCredentials?: ProviderCredentialsMap;
-  githubApps: GitHubAppManager;
-  emailMailboxes: AgentEmailManager | null;
-  coolify: CoolifyManager | null;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
-  internalChat: InternalChatService;
-};
+/** Validates HireInternalAgentInput before any DB writes or side effects. */
+export const HireInternalAgentInputSchema = z.object({
+  agentId: z.string().min(1).optional(),
+  roleId: z.string().min(1),
+  roleName: z.string().optional(),
+  roleDescription: z.string().optional(),
+  name: z.string().min(1, 'name is required'),
+  description: z.string().optional(),
+  instructions: z.string().min(1, 'instructions are required'),
+  modelProfileId: z.string().min(1, 'modelProfileId is required'),
+  omModelProfileId: z.string().min(1, 'omModelProfileId is required'),
+  workspaceBasePath: z.string().min(1, 'workspaceBasePath is required'),
+  workspaceFilesystem: WorkspaceFilesystemConfigSchema.optional(),
+  workspaceSandbox: WorkspaceSandboxConfigSchema.optional(),
+  weeklyBudgetUsd: z.number().nonnegative('weeklyBudgetUsd must be non-negative'),
+  providerCredentials: z.custom<ProviderCredentialsMap>().optional(),
+  githubApps: z
+    .custom<GitHubAppManager>()
+    .optional()
+    .default({} as unknown as GitHubAppManager),  // runtime: empty object; loadAgent will fail if github features used without config
+  emailMailboxes: z.custom<AgentEmailManager>().nullable(),
+  coolify: z.custom<CoolifyManager>().nullable(),
+  schedules: z.custom<AgentScheduleManager>(),
+  internalChat: z.custom<InternalChatService>(),
+});
 
-export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
-  const agentId = input.agentId ?? createId();
+export type HireInternalAgentInput = z.infer<typeof HireInternalAgentInputSchema>;
+/**
+ * Parses and validates input. Throws ZodError with full field paths on failure.
+ * Call this at the top of hireInternalAgent before any I/O.
+ */
+export function validateHireInternalAgentInput(input: unknown): HireInternalAgentInput {
+  return HireInternalAgentInputSchema.parse(input);
+}
+
+/** Shared rollback helper for hire failures at various stages.
+ *
+ * Cleans up external resources in reverse order of creation, then rolls back
+ * the DB transaction by deleting agent records.
+ *
+ * @param agentId - The agent ID being rolled back
+ * @param provisionedMailbox - Email mailbox provisioned (if any)
+ * @param emailMailboxes - Email manager (if configured)
+ * @param hasHeartbeat - Whether createHeartbeatSchedule succeeded
+ * @param hasLoadAgent - Whether loadAgent succeeded
+ * @param schedules - Schedule manager
+ * @param internalChat - Internal chat service
+ * @param tx - The active DB transaction
+ */
+async function rollbackHire(
+  agentId: string,
+  provisionedMailbox: { address: string } | null,
+  emailMailboxes: HireInternalAgentInput['emailMailboxes'],
+  hasHeartbeat: boolean,
+  hasLoadAgent: boolean,
+  schedules: HireInternalAgentInput['schedules'],
+  internalChat: HireInternalAgentInput['internalChat'],
+
+  tx: DbOrTx,
+) {
+  // Undo external resources in reverse order of creation
+  if (hasHeartbeat || hasLoadAgent) {
+    try {
+      await schedules.removeAgent(agentId);
+    } catch (e) {
+      hireAgentDebug('warn', 'Rollback: removeAgent failed', { agentId, error: errorMsg(e) });
+    }
+  }
+
+  try {
+    await internalChat.deleteAgentAccount({ agentId });
+  } catch (e) {
+    hireAgentDebug('warn', 'Rollback: deleteAgentAccount failed', { agentId, error: errorMsg(e) });
+  }
+
+  // Delegate DB record + email cleanup to shared helper
+  await rollbackHireDbAndEmail(agentId, provisionedMailbox, emailMailboxes, tx);
+}
+/**
+ * Rolls back DB records and cleans up email after a failed hire.
+ * @param agentId - The agent ID being rolled back
+ * @param provisionedMailbox - Email mailbox provisioned (if any)
+ * @param emailMailboxes - Email manager (if configured)
+ * @param tx - The active DB transaction
+ */
+async function rollbackHireDbAndEmail(
+  agentId: string,
+  provisionedMailbox: { address: string } | null,
+  emailMailboxes: HireInternalAgentInput['emailMailboxes'],
+
+  tx: DbOrTx,
+) {
+  await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+  await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+  await tx.delete(agents).where(eq(agents.id, agentId));
+
+  if (provisionedMailbox && emailMailboxes) {
+    try {
+      await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+    } catch (e) {
+      hireAgentDebug('warn', 'Rollback: deleteMailboxByAddress failed', {
+        address: provisionedMailbox.address,
+        error: errorMsg(e),
+      });
+    }
+  }
+}
+
+export async function hireInternalAgent(db: Database, input: unknown) {
+  const validated = validateHireInternalAgentInput(input);
+  const agentId = validated.agentId ?? createId();
   const now = Date.now();
-  const shouldProvisionEmail = input.emailMailboxes ? await input.emailMailboxes.isConfigured() : false;
+  const shouldProvisionEmail = validated.emailMailboxes
+    ? await validated.emailMailboxes.isConfigured()
+    : false;
   const provisionedMailbox = shouldProvisionEmail
-    ? await input.emailMailboxes!.provisionMailbox({
+    ? await validated.emailMailboxes!.provisionMailbox({
         agentId,
-        agentName: input.name,
+        agentName: validated.name,
       })
     : null;
   const providerCredentials: ProviderCredentialsMap = {
     'internal-chat': {
       agentId,
-      displayName: input.name,
-      description: input.roleDescription,
+      displayName: validated.name,
+      description: validated.roleDescription,
     },
-    ...input.providerCredentials,
+    ...validated.providerCredentials,
     ...(provisionedMailbox ? { email: provisionedMailbox.credentials } : {}),
   };
   const agentRecord: NewAgent = {
     id: agentId,
-    name: input.name,
-    description: input.description,
-    roleId: input.roleId,
-    modelProfileId: input.modelProfileId,
-    omModelProfileId: input.omModelProfileId,
-    instructions: input.instructions,
+    name: validated.name,
+    description: validated.description,
+    roleId: validated.roleId,
+    modelProfileId: validated.modelProfileId,
+    omModelProfileId: validated.omModelProfileId,
+    instructions: validated.instructions,
     executionState: 'idle',
     workspaceAutoSync: 1,
     workspaceBm25: 1,
     workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
-    workspaceFilesystem: input.workspaceFilesystem ?? null,
-    workspaceSandbox: input.workspaceSandbox ?? null,
+    workspaceFilesystem: validated.workspaceFilesystem
+      ? JSON.stringify(validated.workspaceFilesystem)
+      : null,
+    workspaceSandbox: validated.workspaceSandbox
+      ? JSON.stringify(validated.workspaceSandbox)
+      : null,
     createdAt: now,
     updatedAt: now,
   };
   const contractRecord: NewAgentExecutionContract = {
     id: createId(),
     agentId,
-    budgetUsd: input.weeklyBudgetUsd,
+    budgetUsd: validated.weeklyBudgetUsd,
     autoRenew: 1,
     startsAt: now,
     endsAt: now + WEEK_MS,
     createdAt: now,
+    updatedAt: now,
   };
 
-  try {
-    await db.insert(agents).values(agentRecord);
+  // Wrap ALL DB writes inside a single transaction.
+  // On any error, the transaction aborts and ALL DB writes roll back automatically.
+  // No partial agent records can survive a failure (#1857).
 
-    await db.insert(agentExecutionContracts).values(contractRecord);
+  await db.transaction(async (tx) => {
+    await tx.insert(agents).values(agentRecord);
+    await tx.insert(agentExecutionContracts).values(contractRecord);
 
     for (const [providerType, credentials] of Object.entries(providerCredentials)) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!credentials) {
         continue;
       }
@@ -109,45 +212,100 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         providerType,
         encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
         createdAt: now,
+        updatedAt: now,
       };
 
-      await db.insert(agentProviders).values(providerRecord);
+      await tx.insert(agentProviders).values(providerRecord);
     }
 
-    await input.internalChat.registerAgentAccount({
-      agentId,
-      displayName: input.name,
-      agentName: input.name,
-      agentDescription: input.description ?? undefined,
-      roleName: input.roleName,
-      roleDescription: input.roleDescription,
-    });
+    // External operations (chat, schedules, runtime load, registry) are called
+    // inside the transaction so their partial successes are also rolled back
+    // if a later op fails. Each external op has its own cleanup logic for any
+    // partial successes before the transaction commits.
 
-    await input.schedules.createHeartbeatSchedule(agentId);
-    const runtime = await loadAgent(db, {
-      agentId,
-      workspaceBasePath: input.workspaceBasePath,
-      githubApps: input.githubApps,
-      emailMailboxes: input.emailMailboxes,
-      coolify: input.coolify,
-      schedules: input.schedules,
-      internalChat: input.internalChat,
-    });
+    try {
+      await validated.internalChat.registerAgentAccount({
+        agentId,
+        displayName: validated.name,
+        agentName: validated.name,
+        agentDescription: validated.description ?? undefined,
+        roleName: validated.roleName,
+        roleDescription: validated.roleDescription,
+      });
+    } catch (err) {
+      hireAgentDebug('error', 'registerAgentAccount failed during hire', { agentId, error: errorMsg(err) });
+      // No external ops succeeded yet — undo DB records and email only
+      await rollbackHireDbAndEmail(agentId, provisionedMailbox, validated.emailMailboxes, tx);
 
-    await getInternalAgentRegistry().add(db, runtime);
-
-    return {
-      agentId,
-      emailAddress: provisionedMailbox?.address ?? null,
-    };
-  } catch (error) {
-    getInternalAgentRegistry().remove(agentId);
-    await db.delete(agents).where(eq(agents.id, agentId));
-
-    if (provisionedMailbox && input.emailMailboxes) {
-      await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+      throw err;
     }
 
-    throw error;
-  }
+    try {
+      await validated.schedules.createHeartbeatSchedule(agentId);
+    } catch (err) {
+      hireAgentDebug('error', 'createHeartbeatSchedule failed during hire', { agentId, error: errorMsg(err) });
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        false, // hasHeartbeat
+        false, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
+
+      throw err;
+    }
+
+    let runtime;
+    try {
+      runtime = await loadAgent(db, {
+        agentId,
+        workspaceBasePath: validated.workspaceBasePath,
+        githubApps: validated.githubApps,
+        emailMailboxes: validated.emailMailboxes,
+        coolify: validated.coolify,
+        schedules: validated.schedules,
+        internalChat: validated.internalChat,
+      });
+    } catch (err) {
+      hireAgentDebug('error', 'loadAgent failed during hire', { agentId, error: errorMsg(err) });
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        true, // hasHeartbeat
+        false, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
+
+      throw err;
+    }
+
+    try {
+      await getInternalAgentRegistry().add(db, runtime);
+    } catch (err) {
+      hireAgentDebug('error', 'registry.add failed during hire', { agentId, error: errorMsg(err) });
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        true, // hasHeartbeat
+        true, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
+
+      throw err;
+    }
+  });
+
+  return {
+    agentId,
+    emailAddress: provisionedMailbox?.address ?? null,
+  };
 }

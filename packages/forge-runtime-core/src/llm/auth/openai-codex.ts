@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import os from 'node:os';
 import path from 'node:path';
+import { logger } from '../../logger.js';
 
 import { z } from 'zod';
 
@@ -17,7 +19,9 @@ const codexCliAuthSchema = z.object({
     .optional(),
 });
 
-export function getOpenAICodexCliAuthFilePath(filePath = path.join(os.homedir(), '.codex', 'auth.json')) {
+export function getOpenAICodexCliAuthFilePath(
+  filePath = path.join(os.homedir(), '.codex', 'auth.json'),
+) {
   return filePath;
 }
 
@@ -28,7 +32,9 @@ function decodeExpiry(token: string) {
       return undefined;
     }
 
-    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(
+      'utf8',
+    );
     const result = z.object({ exp: z.number().optional() }).parse(JSON.parse(decoded));
     return result.exp ? result.exp * 1000 : undefined;
   } catch {
@@ -38,6 +44,7 @@ function decodeExpiry(token: string) {
 
 async function refresh(credential: OAuthCredential) {
   if (!credential.refresh) {
+    logger.warn('auth', 'refresh: OpenAI Codex refresh token missing');
     throw new Error('OpenAI Codex refresh token missing.');
   }
 
@@ -82,7 +89,7 @@ export async function syncOpenAICodexCredential(options?: {
 }): Promise<OAuthCredential> {
   const storePath = options?.storePath ?? oauthStore.getDefaultPath();
   const filePath = options?.cliAuthFilePath ?? getOpenAICodexCliAuthFilePath();
-  const auth = codexCliAuthSchema.parse(await oauthStore.readJsonFile(filePath) ?? {});
+  const auth = codexCliAuthSchema.parse((await oauthStore.readJsonFile(filePath)) ?? {});
   const access = auth.tokens?.access_token;
 
   if (!access) {
@@ -121,5 +128,5 @@ export async function resolveOpenAICodexCredential(options?: {
     return credential;
   }
 
-  return syncOpenAICodexCredential(options);
+  return await syncOpenAICodexCredential(options);
 }

@@ -1,10 +1,14 @@
 import type { StepContentSegment, StepModelResponse, StepRecord } from './types.js';
 
-export function getStepMessageSegments(input: StepRecord | StepModelResponse): StepContentSegment[] {
+export function getStepMessageSegments(
+  input: StepRecord | StepModelResponse,
+): StepContentSegment[] {
   return getSegments(input).filter((segment) => segment.kind === 'message');
 }
 
-export function getStepReasoningSegments(input: StepRecord | StepModelResponse): StepContentSegment[] {
+export function getStepReasoningSegments(
+  input: StepRecord | StepModelResponse,
+): StepContentSegment[] {
   return getSegments(input).filter((segment) => segment.kind === 'reasoning');
 }
 

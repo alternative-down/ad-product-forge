@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { RefreshableLongTermMemoryRecall, SourceBackedLongTermMemory } from '../integrations/memory/refreshable-long-term-memory.js';
+import {
+  RefreshableLongTermMemoryRecall,
+  SourceBackedLongTermMemory,
+} from '../integrations/memory/refreshable-long-term-memory.js';
 
 describe('RefreshableLongTermMemoryRecall', () => {
   it('refreshes only when marked dirty', async () => {
@@ -12,11 +15,13 @@ describe('RefreshableLongTermMemoryRecall', () => {
           refreshCount += 1;
         },
         async search(query: string) {
-          return [{
-            id: 'doc-1',
-            text: query,
-            score: 0.8,
-          }];
+          return [
+            {
+              id: 'doc-1',
+              text: query,
+              score: 0.8,
+            },
+          ];
         },
       },
     });

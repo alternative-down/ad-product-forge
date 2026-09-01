@@ -1,18 +1,27 @@
 import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/error-formatting';
 
-import type { Database } from '../database/index';
-import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger } from '../database/schema';
+import type { Database } from '../database/client';
+import {
+  agents,
+  agentExecutionContracts,
+  agentExecutionSteps,
+  companyCashLedger,
+} from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
+import {
+  COMPANY_CASH_DIRECTIONS,
+  STATUS_CANCELED,
+  STATUS_PLANNED,
+  STATUS_POSTED,
+  type CompanyCashDirection,
+  type CompanyCashStatus,
+} from '../finance/company-cash-enums';
 
-const IN = 'in';
-const OUT = 'out';
-const POSTED = 'posted';
-const PLANNED = 'planned';
-const CANCELED = 'canceled';
-
-export type ListCompanyCashMovementsInput = {
-  direction?: 'in' | 'out';
-  status?: 'planned' | 'posted' | 'canceled';
+type ListCompanyCashMovementsInput = {
+  direction?: CompanyCashDirection;
+  status?: CompanyCashStatus;
   type?: string;
   periodStart?: number;
   periodEnd?: number;
@@ -20,29 +29,29 @@ export type ListCompanyCashMovementsInput = {
   offset?: number;
 };
 
+export type MicroErpReadModel = ReturnType<typeof createMicroErpReadModel>;
+
 export function createMicroErpReadModel(db: Database) {
   const companyCash = createCompanyCashLedger(db);
 
   async function getCompanyCashBalance() {
-    return {
-      balanceUsd: await companyCash.getCurrentBalanceUsd(),
-    };
+    const balanceUsd: number = await companyCash.getCurrentBalanceUsd();
+    return { balanceUsd };
   }
 
   async function listCompanyCashMovements(input: ListCompanyCashMovementsInput = {}) {
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
     const conditions = [];
-
     if (input.direction) {
       conditions.push(eq(companyCashLedger.direction, input.direction));
     }
 
-    if (input.status) {
+    if (input.status !== null && input.status !== undefined) {
       conditions.push(eq(companyCashLedger.status, input.status));
     }
 
-    if (input.type) {
+    if (input.type !== null && input.type !== undefined) {
       conditions.push(eq(companyCashLedger.type, input.type));
     }
 
@@ -66,62 +75,87 @@ export function createMicroErpReadModel(db: Database) {
         total: sql<number>`count(*)`,
       })
       .from(companyCashLedger)
-      .where(where);
+      .where(where)
+      .all();
+
+    let summary;
+    let summaryError: { message: string } | undefined;
+    try {
+      summary = await getCompanyCashSummary({
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+      });
+    } catch (err) {
+      // L#NN-50 #19 v3: distinguish error from no-data (summaryError undefined = no error)
+      const message = errorMsg(err);
+      forgeDebug({
+        scope: 'micro-erp-read-model',
+        level: 'error',
+        message: 'listCompanyCashMovements: getCompanyCashSummary failed',
+        context: { error: message },
+      });
+      summaryError = { message };
+      summary = null;
+    }
 
     return {
       items: rows.map((row) => ({
         ...row,
-        direction: row.direction as 'in' | 'out',
+        direction: row.direction as CompanyCashDirection,
         description: row.description ?? undefined,
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
       })),
       total: countRows[0]?.total ?? 0,
-      summary: await getCompanyCashSummary({
-        periodStart: input.periodStart,
-        periodEnd: input.periodEnd,
-      }),
+      summary,
+      summaryError,
     };
   }
 
-  async function getCompanyCashSummary(input: {
-    periodStart?: number;
-    periodEnd?: number;
-  } = {}) {
+  async function getCompanyCashSummary(
+    input: {
+      periodStart?: number;
+      periodEnd?: number;
+    } = {},
+  ) {
     const now = Date.now();
     const periodStart = input.periodStart ?? startOfCurrentMonth(now);
     const periodEnd = input.periodEnd ?? now;
     const postedTotals = await db
       .select({
-        totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[0]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[1]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
       })
       .from(companyCashLedger)
       .where(
         and(
-          eq(companyCashLedger.status, POSTED),
+          eq(companyCashLedger.status, STATUS_POSTED),
           gte(companyCashLedger.effectiveAt, periodStart),
           lte(companyCashLedger.effectiveAt, periodEnd),
         ),
-      );
+      )
+      .all();
     const scheduledTotals = await db
       .select({
-        scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[0]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${COMPANY_CASH_DIRECTIONS[1]} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
       })
       .from(companyCashLedger)
       .where(
         and(
-          ne(companyCashLedger.status, CANCELED),
-          eq(companyCashLedger.status, PLANNED),
+          ne(companyCashLedger.status, STATUS_CANCELED),
+          eq(companyCashLedger.status, STATUS_PLANNED),
           gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
           lte(companyCashLedger.dueAt, periodEnd),
         ),
-      );
+      )
+      .all();
     const totalInUsd = postedTotals[0]?.totalInUsd ?? 0;
     const totalOutUsd = postedTotals[0]?.totalOutUsd ?? 0;
     const scheduledInUsd = scheduledTotals[0]?.scheduledInUsd ?? 0;
     const scheduledOutUsd = scheduledTotals[0]?.scheduledOutUsd ?? 0;
+
+    const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
     return {
       periodStart,
@@ -129,7 +163,7 @@ export function createMicroErpReadModel(db: Database) {
       totalInUsd,
       totalOutUsd,
       netUsd: totalInUsd - totalOutUsd,
-      balanceUsd: await companyCash.getCurrentBalanceUsd(),
+      balanceUsd,
       scheduledInUsd,
       scheduledOutUsd,
     };
@@ -150,12 +184,10 @@ export function createMicroErpReadModel(db: Database) {
       .from(agentExecutionContracts)
       .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
       .where(
-        and(
-          lte(agentExecutionContracts.startsAt, now),
-          gte(agentExecutionContracts.endsAt, now),
-        ),
+        and(lte(agentExecutionContracts.startsAt, now), gte(agentExecutionContracts.endsAt, now)),
       )
-      .orderBy(desc(agentExecutionContracts.endsAt));
+      .orderBy(desc(agentExecutionContracts.endsAt))
+      .all();
     const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
@@ -189,11 +221,11 @@ export function createMicroErpReadModel(db: Database) {
         ),
       )
       .orderBy(desc(agentExecutionContracts.endsAt))
-      .limit(1);
+      .limit(1)
+      .all();
 
     const contract = row[0];
-
-    if (!contract) {
+    if (contract === null || contract === undefined) {
       return null;
     }
     const metricsByContractId = await getActiveContractMetrics([contract], now);
@@ -232,20 +264,19 @@ export function createMicroErpReadModel(db: Database) {
         })
         .from(agentExecutionSteps)
         .where(inArray(agentExecutionSteps.contractId, contractIds))
-        .groupBy(agentExecutionSteps.contractId),
+        .groupBy(agentExecutionSteps.contractId)
+        .all(),
       db.query.agentExecutionSteps.findMany({
         where: inArray(agentExecutionSteps.contractId, contractIds),
         orderBy: [desc(agentExecutionSteps.createdAt)],
       }),
     ]);
-    const spentUsdByContractId = new Map(
-      spendRows.map((row) => [row.contractId, row.total]),
-    );
+
+    const spentUsdByContractId = new Map(spendRows.map((row) => [row.contractId, row.total]));
     const recentStepsByContractId = new Map<string, typeof stepRows>();
 
     for (const step of stepRows) {
       const recentSteps = recentStepsByContractId.get(step.contractId) ?? [];
-
       if (recentSteps.length >= 10) {
         continue;
       }
@@ -255,22 +286,23 @@ export function createMicroErpReadModel(db: Database) {
     }
 
     return new Map(
-      contractIds.map((contractId) => {
+      contracts.map((contract) => {
+        const contractId = contract.contractId;
         const spentUsd = spentUsdByContractId.get(contractId) ?? 0;
         const recentSteps = recentStepsByContractId.get(contractId) ?? [];
+        const budgetUsd = contractBudgetById.get(contractId) ?? 0;
+        const endsAt = contractEndsAtById.get(contractId) ?? now;
+        const budgetRemainingUsd = Math.max(0, budgetUsd - spentUsd);
+        const budgetUsedPct = budgetUsd > 0 ? (spentUsd / budgetUsd) * 100 : 0;
 
         return [
           contractId,
           {
             spentUsd,
-            spentPercent: getUsagePercent(spentUsd, contractBudgetById.get(contractId) ?? 0),
-            averageStepIntervalMinutes: getAverageStepIntervalMinutes(recentSteps),
-            averageStepIntervalLabel: formatAverageStepInterval(recentSteps),
-            recentStepCount: recentSteps.length,
-            daysRemaining: Math.max(
-              Math.ceil(((contractEndsAtById.get(contractId) ?? now) - now) / 86_400_000),
-              0,
-            ),
+            budgetRemainingUsd,
+            budgetUsedPct,
+            recentSteps,
+            daysUntilEnd: Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24)),
           },
         ];
       }),
@@ -283,66 +315,19 @@ export function createMicroErpReadModel(db: Database) {
     getCompanyCashSummary,
     listActiveInternalAgentContracts,
     getActiveInternalAgentContract,
+    getActiveContractMetrics,
   };
 }
 
-function getUsagePercent(spentUsd: number, budgetUsd: number) {
-  if (budgetUsd <= 0) {
-    return 0;
-  }
-
-  return (spentUsd / budgetUsd) * 100;
-}
-
-function getAverageStepIntervalMinutes(
-  steps: Array<{
-    createdAt: number;
-  }>,
-) {
-  if (steps.length < 2) {
-    return null;
-  }
-
-  const sortedSteps = [...steps].sort((left, right) => left.createdAt - right.createdAt);
-  let totalDiff = 0;
-
-  for (let index = 1; index < sortedSteps.length; index += 1) {
-    totalDiff += sortedSteps[index].createdAt - sortedSteps[index - 1].createdAt;
-  }
-
-  return Math.round(totalDiff / (sortedSteps.length - 1) / 60000);
-}
-
-function formatAverageStepInterval(
-  steps: Array<{
-    createdAt: number;
-  }>,
-) {
-  const totalMinutes = getAverageStepIntervalMinutes(steps);
-
-  if (totalMinutes === null) {
-    return 'Sem dados';
-  }
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (minutes === 0) {
-    return `${hours} h`;
-  }
-
-  return `${hours} h ${minutes} min`;
-}
-
+/**
+ * Returns the timestamp column to use for period filtering.
+ * Uses effectiveAt when available, otherwise falls back to createdAt.
+ */
 function movementTimestamp() {
-  return sql<number>`coalesce(${companyCashLedger.effectiveAt}, ${companyCashLedger.dueAt}, ${companyCashLedger.createdAt})`;
+  return sql`coalesce(${companyCashLedger.effectiveAt}, ${companyCashLedger.createdAt})`;
 }
 
-function startOfCurrentMonth(now: number) {
-  const date = new Date(now);
+function startOfCurrentMonth(timestamp: number): number {
+  const date = new Date(timestamp);
   return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
 }

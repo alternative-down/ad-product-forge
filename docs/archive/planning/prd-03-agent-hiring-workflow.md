@@ -8,6 +8,7 @@
 Define the internal hiring workflow used when one agent requests that the company hire a new permanent agent.
 
 This workflow should behave like a simplified internal HR process:
+
 - one agent requests a new hire
 - the hiring workflow validates whether the company can afford the process
 - the workflow creates the new agent
@@ -17,6 +18,7 @@ This workflow should behave like a simplified internal HR process:
 ## Scope
 
 This PRD covers:
+
 - the hiring request
 - the hiring workflow itself
 - initial agent creation
@@ -25,6 +27,7 @@ This PRD covers:
 - runtime instantiation of the hired agent
 
 This PRD does not cover:
+
 - company cash ledger design in detail
 - contract pacing rules in detail
 - tools by role/function
@@ -32,6 +35,7 @@ This PRD does not cover:
 - advanced provisioning policies
 
 Related documents:
+
 - `PRD-08: Company Cash Ledger`
 - `PRD-34: Agent Operating Budget`
 
@@ -39,6 +43,7 @@ Related documents:
 
 Hiring a new agent is not only agent creation.
 It is a company workflow that includes:
+
 - paying for the hiring process itself
 - creating the hired agent
 - creating the first renewable weekly execution contract
@@ -51,11 +56,13 @@ The hiring workflow handles the rest.
 ## Hiring Request Input
 
 The requesting agent provides:
+
 - the function/professional type needed
 - the weekly amount the company is willing to pay
 - optional additional context for the hiring workflow
 
 The requesting agent does not provide:
+
 - tools
 - provider list
 - direct provisioning instructions
@@ -70,6 +77,7 @@ The workflow should derive the rest.
 An internal agent asks the hiring workflow to hire a new permanent agent.
 
 Input includes:
+
 - requested function
 - weekly contract amount
 - optional additional hiring context
@@ -85,6 +93,7 @@ This is separate from the future weekly contract budget.
 The workflow generates the system prompt for the hired agent.
 
 This prompt should be based on:
+
 - the requested function
 - the hiring context
 - the company's internal conventions
@@ -102,6 +111,7 @@ This is the moment where the new agent becomes a formal company entity.
 The workflow creates the first weekly execution contract for the hired agent.
 
 Rules:
+
 - weekly amount is mandatory
 - auto-renew starts as `true`
 
@@ -120,6 +130,7 @@ It does not register contract funding.
 After the record and first contract exist, the workflow instantiates the hired agent in the runtime.
 
 The current likely direction is:
+
 - a singleton/registry in memory with the active instantiated agents
 
 This registry is specifically for hired internal collaborators.
@@ -127,6 +138,7 @@ This registry is specifically for hired internal collaborators.
 It is not a global registry for every possible agent instance in the system.
 
 Rules for the first version:
+
 - all internal collaborators stored in the agent table are instantiated on application boot
 - hiring adds the new internal collaborator to this registry
 - termination removes the internal collaborator from this registry
@@ -138,13 +150,17 @@ This runtime detail can evolve later, but for now the workflow is responsible fo
 This workflow depends on two other systems:
 
 ### PRD-08
+
 Responsible for:
+
 - recording company cash movements
 - current balance
 - future obligations
 
 ### PRD-34
+
 Responsible for:
+
 - the agent execution contract
 - contract budget capture/funding
 - contract budget consumption
@@ -157,11 +173,13 @@ This PRD only coordinates the hiring event that connects those systems.
 This PRD should not introduce a separate financial model.
 
 It should rely on:
+
 - company ledger records from `PRD-08`
 - execution contracts from `PRD-34`
 - agent registry records from the agent system
 
 Expected business objects involved in the workflow:
+
 - hiring request
 - agent record
 - first execution contract
@@ -172,12 +190,14 @@ Expected business objects involved in the workflow:
 The hiring workflow is responsible for initial provisioning, but the requester does not control that provisioning directly.
 
 For the current implementation, the practical result is still small:
+
 - create the hired agent
 - provision a pending GitHub App integration for it
 - instantiate it in the runtime
 - make it available for internal communication
 
 Current provisioning direction includes:
+
 - GitHub App provisioning flow for source control integration
 - Migadu mailbox provisioning for agent email
 
@@ -192,6 +212,7 @@ For email, the chosen direction is a real mailbox per agent using Migadu, provis
 The workflow should only register financial cost after a real cost-generating operation has effectively happened.
 
 The simple rule for now is:
+
 - if a costly LLM operation actually ran, its cost is recorded
 - if the process fails before any real costly operation happened, there is nothing to record yet
 
@@ -224,6 +245,7 @@ This keeps hiring aligned with both the financial model of the company and the e
 ## Implementation Status
 
 Implemented today:
+
 - internal hiring workflow exists in the Forge app
 - workflow input already matches the business shape:
   - `requestedFunction`
@@ -244,6 +266,7 @@ Implemented today:
   - `githubAppRegistrationUrl`
 
 Current implementation notes:
+
 - the RH prompt generation currently uses a dedicated temporary internal RH agent with:
   - `model = account-oauth/openai-codex/gpt-5.4-mini`
 - the first contract is created unfunded
@@ -251,5 +274,6 @@ Current implementation notes:
 - hiring must happen inside the running Forge app process because it mutates the live in-memory agent registry
 
 Still pending:
+
 - richer hiring logic beyond the current prompt-generation step
 - broader provisioning derived from the requested function

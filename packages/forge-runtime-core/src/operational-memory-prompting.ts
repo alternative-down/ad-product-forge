@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import type { ConversationMessage } from 'agent-runtime-core/integrations';
 
 function formatObserverDate(createdAt: Date | undefined) {
@@ -27,17 +28,24 @@ function normalizeCreatedAt(createdAt: string | undefined) {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function formatObserverPartLine(title: string, body: string, time: string | undefined, previousTime: string | undefined) {
+function formatObserverPartLine(
+  title: string,
+  body: string,
+  time: string | undefined,
+  previousTime: string | undefined,
+) {
   const timeLabel = time && time !== previousTime ? ` (${time})` : '';
   return `${title}${timeLabel}: ${body}`;
 }
 
-function formatObserverLines(lines: Array<{
-  date: string;
-  time: string;
-  title: string;
-  body: string;
-}>) {
+function formatObserverLines(
+  lines: Array<{
+    date: string;
+    time: string;
+    title: string;
+    body: string;
+  }>,
+) {
   const output: string[] = [];
   let previousDate: string | undefined;
   let previousTime: string | undefined;
@@ -128,7 +136,7 @@ function formatConversationMessage(message: ConversationMessage) {
   return formatObserverLines(lines);
 }
 
-export function formatMessagesForObserver(messages: ConversationMessage[]) {
+function formatMessagesForObserver(messages: ConversationMessage[]) {
   return messages
     .map((message) => formatConversationMessage(message))
     .filter(Boolean)
@@ -161,10 +169,10 @@ export function buildObserverSystemPrompt() {
     '</current-task>',
     '',
     '<suggested-response>',
-    'Hint for the agent\'s next message',
+    "Hint for the agent's next message",
     '</suggested-response>',
     '',
-    'Remember: these observations are the assistant\'s only memory. Make them count.',
+    "Remember: these observations are the assistant's only memory. Make them count.",
   ].join('\n');
 }
 
@@ -195,11 +203,14 @@ function buildObserverTaskPrompt(existingObservations?: string) {
   return prompt;
 }
 
-export function buildObserverTaskUserMessage(existingObservations?: string) {
+function _buildObserverTaskUserMessage(existingObservations?: string) {
   return buildObserverTaskPrompt(existingObservations);
 }
 
-export function buildObserverPrompt(existingObservations: string | undefined, messagesToObserve: ConversationMessage[]) {
+export function buildObserverPrompt(
+  existingObservations: string | undefined,
+  messagesToObserve: ConversationMessage[],
+) {
   return [
     '## New Message History to Observe',
     '',
@@ -222,15 +233,20 @@ export function parseObserverOutput(output: string) {
     };
   }
 
-  const observationsMatches = [...output.matchAll(/^[ \t]*<observations>([\s\S]*?)^[ \t]*<\/observations>/gim)];
+  const observationsMatches = [
+    ...output.matchAll(/^[ \t]*<observations>([\s\S]*?)^[ \t]*<\/observations>/gim),
+  ];
   const currentTaskMatch = output.match(/^[ \t]*<current-task>([\s\S]*?)^[ \t]*<\/current-task>/im);
-  const suggestedResponseMatch = output.match(/^[ \t]*<suggested-response>([\s\S]*?)^[ \t]*<\/suggested-response>/im);
-  const observations = observationsMatches.length > 0
-    ? observationsMatches
-      .map((match) => match[1]?.trim() ?? '')
-      .filter(Boolean)
-      .join('\n')
-    : extractListItemsOnly(output);
+  const suggestedResponseMatch = output.match(
+    /^[ \t]*<suggested-response>([\s\S]*?)^[ \t]*<\/suggested-response>/im,
+  );
+  const observations =
+    observationsMatches.length > 0
+      ? observationsMatches
+          .map((match) => match[1]?.trim() ?? '')
+          .filter(Boolean)
+          .join('\n')
+      : extractListItemsOnly(output);
 
   return {
     observations: sanitizeObservationLines(observations),
@@ -299,19 +315,21 @@ function detectDegenerateRepetition(text: string) {
   return text.split('\n').some((line) => line.length > 50_000);
 }
 
-export function buildReflectorSystemPrompt() {
+function _buildReflectorSystemPrompt() {
   return [
-    'You compress batches of observations into a smaller durable reflection.',
+    'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
     'Do not drop operational detail that would still matter for continuity.',
+    'Write descriptively and clearly — do not compress or truncate important context.',
     'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
 
-export function buildReflectorPrompt(observations: string) {
+function _buildReflectorPrompt(observations: string) {
   return [
-    'Compress the observations below into a tighter reflection.',
-    'Preserve the important details while removing redundancy.',
+    'Consolidate the observations below into a clear, detailed reflection.',
+    'Preserve all facts, decisions, and operational details — do not remove content.',
+    'Write descriptively and avoid dropping important context.',
     '',
     '<observations>',
     observations,
@@ -319,15 +337,15 @@ export function buildReflectorPrompt(observations: string) {
   ].join('\n');
 }
 
-export function buildReflectorTaskUserMessage() {
+function _buildReflectorTaskUserMessage() {
   return [
-    'Compress the observations below into a tighter reflection.',
-    'Preserve the important details while removing redundancy.',
+    'Consolidate the observations below into a clear, detailed reflection.',
+    'Preserve all facts, decisions, and operational details — do not remove content.',
     'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
 
-export function parseReflectorOutput(output: string) {
+function _parseReflectorOutput(output: string) {
   const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
 
   return {

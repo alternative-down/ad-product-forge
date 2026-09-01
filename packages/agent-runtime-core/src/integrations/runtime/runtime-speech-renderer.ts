@@ -1,8 +1,6 @@
 import { getStepMessageText } from '../../core/step-output.js';
 import type { StepRecord } from '../../core/types.js';
-import {
-  BufferedStreamingTextToSpeechGateway,
-} from '../gateways/buffered-streaming-tts.js';
+import { BufferedStreamingTextToSpeechGateway } from '../gateways/buffered-streaming-tts.js';
 import type {
   StreamingTextToSpeechGateway,
   StreamingTextToSpeechResponse,
@@ -22,8 +20,9 @@ export class RuntimeSpeechRenderer {
 
   constructor(options: RuntimeSpeechRendererOptions) {
     this.tts = options.tts ?? null;
-    this.streamingTts = options.streamingTts
-      ?? (options.tts ? new BufferedStreamingTextToSpeechGateway({ tts: options.tts }) : null);
+    this.streamingTts =
+      options.streamingTts ??
+      (options.tts ? new BufferedStreamingTextToSpeechGateway({ tts: options.tts }) : null);
   }
 
   async renderText(
@@ -34,7 +33,7 @@ export class RuntimeSpeechRenderer {
       return null;
     }
 
-    return this.tts.synthesize({
+    return await this.tts.synthesize({
       ...request,
       text,
     });
@@ -48,7 +47,7 @@ export class RuntimeSpeechRenderer {
       return null;
     }
 
-    return this.streamingTts.synthesizeStream({
+    return await this.streamingTts.synthesizeStream({
       ...request,
       text,
     });
@@ -58,13 +57,13 @@ export class RuntimeSpeechRenderer {
     record: StepRecord,
     request: Omit<TextToSpeechRequest, 'text'> = {},
   ): Promise<TextToSpeechResponse | null> {
-    return this.renderText(getStepMessageText(record), request);
+    return await this.renderText(getStepMessageText(record), request);
   }
 
   async renderStepStream(
     record: StepRecord,
     request: Omit<TextToSpeechRequest, 'text'> = {},
   ): Promise<StreamingTextToSpeechResponse | null> {
-    return this.renderTextStream(getStepMessageText(record), request);
+    return await this.renderTextStream(getStepMessageText(record), request);
   }
 }

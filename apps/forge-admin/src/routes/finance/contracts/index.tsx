@@ -3,27 +3,32 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  AdminDialogBody,
-  AdminButton,
-  AdminDialogContent,
-  AdminDialogFooter,
-  AdminDialogHeader,
-  AdminLoadingState,
-  AdminDialogTitle,
-  AdminInput,
-  PageHeader,
-} from '@/components/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AdminDialogBody, AdminDialogContent, AdminDialogFooter, AdminDialogHeader, AdminLoadingState, AdminDialogTitle, PageHeader } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   adjustAgentContractBudget,
   getFinanceContracts,
   renewAgentContract,
   topUpAgentContract,
   type FinanceContractsResponse,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/finance/contracts/')({
@@ -91,7 +96,9 @@ function FinanceContractsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {contractsQuery.isLoading && !contractsQuery.data ? <AdminLoadingState label="Carregando contratos..." /> : null}
+      {contractsQuery.isLoading && !contractsQuery.data ? (
+        <AdminLoadingState label="Carregando contratos..." />
+      ) : null}
       <PageHeader title="Contratos" />
 
       <section className="space-y-5">
@@ -119,7 +126,9 @@ function FinanceContractsIndexRoute() {
                   <TableCell className="px-4 py-3">{contract.agentName}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(contract.weeklyValueUsd)}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(contract.spentUsd)}</TableCell>
-                  <TableCell className="px-4 py-3">{formatPercent(contract.spentPercent)}%</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatPercent(contract.spentPercent)}%
+                  </TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.startsAt)}</TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.endsAt)}</TableCell>
                   <TableCell className="px-4 py-3">
@@ -127,7 +136,7 @@ function FinanceContractsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -137,7 +146,7 @@ function FinanceContractsIndexRoute() {
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Editar</span>
-                      </AdminButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -153,8 +162,12 @@ function FinanceContractsIndexRoute() {
           </Table>
         </div>
 
-        {contractsQuery.error ? <div className="text-sm text-destructive">{contractsQuery.error.message}</div> : null}
-        {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+        {contractsQuery.error ? (
+          <div className="text-sm text-destructive">{contractsQuery.error.message}</div>
+        ) : null}
+        {mutation.error ? (
+          <div className="text-sm text-destructive">{mutation.error.message}</div>
+        ) : null}
       </section>
 
       <Dialog
@@ -169,7 +182,9 @@ function FinanceContractsIndexRoute() {
       >
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>{contractForm ? `Alterar contrato · ${contractForm.agentName}` : 'Alterar contrato'}</AdminDialogTitle>
+            <AdminDialogTitle>
+              {contractForm ? `Alterar contrato · ${contractForm.agentName}` : 'Alterar contrato'}
+            </AdminDialogTitle>
           </AdminDialogHeader>
 
           {contractForm ? (
@@ -188,7 +203,9 @@ function FinanceContractsIndexRoute() {
                   <Select
                     value={contractForm.action}
                     onValueChange={(value: ContractForm['action']) =>
-                      setContractForm((current) => (current ? { ...current, action: value } : current))
+                      setContractForm((current) =>
+                        current ? { ...current, action: value } : current,
+                      )
                     }
                     disabled={mutation.isPending}
                   >
@@ -217,7 +234,7 @@ function FinanceContractsIndexRoute() {
                         ? 'Novo valor semanal do novo contrato'
                         : 'Novo valor semanal'}
                   </label>
-                  <AdminInput
+                  <Input
                     id="finance-contract-amount"
                     type="number"
                     step="0.01"
@@ -238,9 +255,9 @@ function FinanceContractsIndexRoute() {
               </AdminDialogBody>
 
               <AdminDialogFooter>
-                <AdminButton type="submit" disabled={mutation.isPending}>
+                <Button type="submit" disabled={mutation.isPending}>
                   {mutation.isPending ? 'Salvando...' : 'Salvar'}
-                </AdminButton>
+                </Button>
               </AdminDialogFooter>
             </form>
           ) : null}

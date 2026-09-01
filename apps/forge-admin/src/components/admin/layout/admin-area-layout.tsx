@@ -4,7 +4,13 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import '../../../styles/app.css';
 import { getStoredAdminSecret, getStoredAdminTheme, setStoredAdminTheme } from '@/lib/admin-secret';
 import { applyAdminThemeToDocument, clearAdminThemeFromDocument } from '@/lib/admin-theme';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { AppShell } from './app-shell';
 import { AdminTopbar } from './admin-topbar';
@@ -100,7 +106,7 @@ function findCurrentSection(pathname: string, sectionItems: AdminAreaSectionItem
   return (
     [...sectionItems]
       .sort((left, right) => right.value.length - left.value.length)
-      .find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`))
-    ?? sectionItems[0]
+      .find((item) => pathname === item.value || pathname.startsWith(`${item.value}/`)) ??
+    sectionItems[0]
   );
 }

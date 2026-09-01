@@ -20,15 +20,19 @@ export function createConversationHistoryPlugin(
   return {
     name: options.name ?? 'conversation-history',
     async provideContext(context) {
-      const threadId = options.selectThreadId?.(context.pendingInputs) ?? selectLatestConversationThreadId(context.pendingInputs);
+      const threadId =
+        options.selectThreadId?.(context.pendingInputs) ??
+        selectLatestConversationThreadId(context.pendingInputs);
 
-      if (!threadId) {
+      if (threadId == null) {
         return [];
       }
 
       const currentMessageIds = new Set(
         context.pendingInputs
-          .map((input) => isConversationRuntimeInputPayload(input.payload) ? input.payload.messageId : null)
+          .map((input) =>
+            isConversationRuntimeInputPayload(input.payload) ? input.payload.messageId : null,
+          )
           .filter((messageId): messageId is string => Boolean(messageId)),
       );
       const messages = await options.store.listMessages({

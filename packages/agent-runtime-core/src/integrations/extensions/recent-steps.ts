@@ -17,25 +17,30 @@ export function createRecentStepsPlugin(options: RecentStepsPluginOptions = {}):
       const recentSteps = context.steps.slice(-maxSteps);
 
       return recentSteps.flatMap((step) => {
-        const visibleSegments = step.modelResponse.segments
-          .filter((segment) => includeKinds.includes(segment.kind));
+        const visibleSegments = step.modelResponse.segments.filter((segment) =>
+          includeKinds.includes(segment.kind),
+        );
 
         if (visibleSegments.length === 0) {
           return [];
         }
 
-        return [{
-          id: `recent-step:${step.id}`,
-          kind: 'recent-step',
-          title: `Recent step ${step.stepNumber}`,
-          text: visibleSegments.map((segment) => {
-            if (segment.kind === 'message') {
-              return segment.text;
-            }
+        return [
+          {
+            id: `recent-step:${step.id}`,
+            kind: 'recent-step',
+            title: `Recent step ${step.stepNumber}`,
+            text: visibleSegments
+              .map((segment) => {
+                if (segment.kind === 'message') {
+                  return segment.text;
+                }
 
-            return `[${segment.kind}] ${segment.text}`;
-          }).join('\n'),
-        }];
+                return `[${segment.kind}] ${segment.text}`;
+              })
+              .join('\n'),
+          },
+        ];
       });
     },
   };

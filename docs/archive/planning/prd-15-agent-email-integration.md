@@ -8,6 +8,7 @@
 Give each hired internal agent a dedicated email address under the company domain.
 
 The system must be able to:
+
 - create the mailbox when the agent is hired
 - store the mailbox credentials securely
 - use the mailbox to send and receive email
@@ -18,6 +19,7 @@ The system must be able to:
 The chosen provider is **Migadu**.
 
 Reasoning:
+
 - supports custom domains
 - supports real mailboxes, not only forwarding
 - exposes API endpoints for mailbox management
@@ -30,12 +32,14 @@ It does not switch to an email-webhook-only architecture.
 ## What Email Means In This System
 
 For this project, an agent email account is a normal mailbox:
+
 - address, such as `agent-name@company-domain.com`
 - inbound mail received by the provider
 - outbound mail sent through SMTP
 - mailbox contents read through IMAP
 
 Basic concepts:
+
 - `domain`: the company email domain
 - `mailbox`: the actual inbox for one address
 - `MX`: DNS record that tells the internet which provider receives mail for the domain
@@ -48,12 +52,14 @@ The chosen model is **real mailbox per agent**, not alias-only forwarding.
 ## Scope
 
 This PRD covers:
+
 - provider choice for agent mailboxes
 - mailbox lifecycle for hired internal agents
 - secure storage of mailbox credentials
 - how the email provider fits the current runtime
 
 This PRD does not cover:
+
 - marketing email campaigns
 - email templates
 - newsletter tooling
@@ -64,6 +70,7 @@ This PRD does not cover:
 ### On Hiring
 
 When a new internal agent is hired, the hiring flow should also:
+
 - create a Migadu mailbox for the agent
 - generate or assign mailbox credentials
 - persist those credentials in encrypted agent provider storage
@@ -75,6 +82,7 @@ The hiring requester does not manually specify SMTP/IMAP details.
 ### On Termination
 
 When the internal agent is terminated, the termination flow should also:
+
 - delete the Migadu mailbox for that agent
 - remove the encrypted email provider credentials from local storage
 - stop the local email provider runtime for that agent
@@ -82,6 +90,7 @@ When the internal agent is terminated, the termination flow should also:
 ## Runtime Direction
 
 The current runtime direction remains:
+
 - inbound email through IMAP
 - outbound email through SMTP
 - email integrated as a communication provider
@@ -96,6 +105,7 @@ That is out of scope for this phase.
 Mailbox credentials do **not** belong in communication `accounts`.
 
 Boundary:
+
 - communication `accounts` = identity records for messaging providers and contacts
 - encrypted `agent_providers` storage = per-agent runtime credentials such as the actual mailbox login used by the email provider
 
@@ -104,6 +114,7 @@ The Migadu admin credential stays in app env and the mailbox credentials used by
 ## Expected Credential Shape
 
 The encrypted email provider record should contain at least:
+
 - IMAP host
 - IMAP port
 - IMAP secure flag
@@ -129,10 +140,10 @@ Each hired internal agent should receive a real mailbox on the company domain. T
 
 This keeps email simple, operational, and aligned with the current communication runtime.
 
-
 ## Implementation Status
 
 Implemented today:
+
 - Migadu mailbox provisioning is wired into the internal hiring workflow
 - a hired agent now gets a real mailbox before runtime instantiation finishes
 - mailbox credentials are stored in encrypted `agent_providers` storage under the existing `email` provider record
@@ -140,9 +151,11 @@ Implemented today:
 - the runtime email provider continues to use IMAP and SMTP with the stored mailbox credentials
 
 Current implementation notes:
+
 - hiring requires `MIGADU_API_USER` and `MIGADU_API_KEY` in the app env
 - existing seeded internal agents are not retroactively given mailboxes
 - inbound email still uses IMAP IDLE, not webhooks
 
 Bootstrap direction:
+
 - the runtime uses `MIGADU_API_USER` and `MIGADU_API_KEY` from the app env for provisioning

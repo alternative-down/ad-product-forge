@@ -1,166 +1,75 @@
-import { randomUUID } from 'node:crypto';
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
+import {  errorMsg } from './error-formatting';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  type CheckpointedOmCheckpointPackageInput,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
   forgeDebug,
   type ConversationStore,
+  type RuntimeAgentSessionStepResult,
+  type RuntimeAgentSessionIteration,
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
-import { z } from 'zod';
+import { ltmAgentWarn, ltmDebug } from './ltm-debug-helpers';
+import { LtmRuntimeSessionNotAvailableError, LtmGenerateProducedNoResultError } from './agent-long-term-memory.errors';
 
 import {
   createAgentLongTermMemoryStore,
-  type CheckpointPackageManifest,
   type LongTermMemoryState,
-} from './agent-long-term-memory-store';
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmPackageEntry,
+} from './ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
+import {
+  renderCheckpointPackageReadme,
+  renderReflectionFile,
+  renderObservationFile,
+} from './ltm/renderers';
+import {
+  readLtmState,
+  writeLtmState,
+  markLtmRecallIndexDirty,
+  scheduleLtmRun,
+  clearLtmTimer,
+  applyLtmStateToSnapshot,
+} from './ltm/schedule-helpers';
+import {
+  computeCheckpointTimestamp,
+  formatCheckpointPackageId,
+  writeCheckpointFiles,
+  buildCheckpointPackageManifest,
+  commitCheckpointPackage,
+  cleanupTempPackage,
+  getTempPackagePath,
+  prepareTempPackageDirectory,
+} from './ltm/checkpoint-io';
 
+import { withTimeout } from '../utils/async';
+import { FIVE_MINUTES_MS } from './time-constants';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
-const GENERATE_TIMEOUT_MS = 5 * 60_000;
+const GENERATE_TIMEOUT_MS = FIVE_MINUTES_MS;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 
-type LtmUsage = {
-  inputTokens: number;
-  cachedInputTokens: number;
-  outputTokens: number;
-};
-
-type LtmSnapshot = {
-  running: boolean;
-  queued: boolean;
-  lastRunAt: number | null;
-  lastRunError: string | null;
-  lastRunErrorAt: number | null;
-  lastWrittenPackageId: string | null;
-  lastWrittenAt: number | null;
-  packageCount: number;
-};
-
-function createMemoryAgentInstructions(input: {
-  agentId: string;
-  agentName: string;
-  agentDescription?: string;
-  roleName?: string;
-  roleDescription?: string;
-  instructions: string;
-}) {
-  return [
-    `You are the long-term memory maintenance agent for ${input.agentName}.`,
-    'You are not the main agent itself. You are the long-term memory layer of that agent: the part that consolidates, learns, restructures, and preserves what should remain useful over time.',
-    'Your job is to maintain the durable memory of a specific agent. That memory must stay aligned with who that agent is, what role that agent has, and what kind of work belongs to that agent.',
-    [
-      '<owner_agent_profile>',
-      `- Agent id: ${input.agentId}`,
-      `- Agent name: ${input.agentName}`,
-      input.agentDescription?.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
-      input.roleName?.trim() ? `- Role name: ${input.roleName.trim()}` : null,
-      input.roleDescription?.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
-      '- Assigned instructions:',
-      input.instructions.trim(),
-      '</owner_agent_profile>',
-    ].filter(Boolean).join('\n'),
-    'You are free to explore the workspace broadly and decide for yourself what deserves consolidation, restructuring, rewriting, splitting, merging, or expansion.',
-    'Do not be lazy. Take as much time as needed for the activity, inspect things carefully, revisit relationships between documents, compare evidence from different places, and try better structures when the current one looks weak.',
-    'You should not become passive or merely preserve what already exists. If the current memory base is weak, shallow, repetitive, badly named, badly structured, or missing useful connections, improve it.',
-    'The directory `checkpoints` is not a place to edit. Treat it as unstable input: anything written there may be rewritten later and your changes there would be lost.',
-    'Long-term memory is for durable knowledge, learning, connections, explanations, procedures, documentation, people knowledge, preferences, events, and inferences that remain useful over time.',
-    'The main agent owns transient status and current execution state. Long-term memory should retain what stays useful after the temporary status is gone.',
-    'Write clearly, discursively, and descriptively. These documents are later embedded and retrieved by similarity, so explicit language, context, names, and explanatory prose matter.',
-    'Do not rely on tables, indexes, compressed summaries, or skeletal notes as the main body of memory. Prefer well-written explanatory text.',
-    'Keep documents dense but bounded. Fragment them when needed. It is acceptable for different documents to overlap or repeat phrasing when that improves retrieval, but they must remain consistent with one another.',
-    'If existing files are not aligned with these rules, refactor them. Rename, split, merge, rewrite, or replace them as needed.',
-    'Do not infer totals or conclusions from truncated file listings. Inspect specific directories or files when you need complete evidence.',
-    'Do not create files outside `memory` and `workspace/skills`.',
-    'When repeated procedures justify a reusable skill, use the `skill-creator` skill to create or update it.',
-    'A skill is only valid if the skill folder name matches the skill name declared inside its `SKILL.md` file.',
-  ].filter(Boolean).join('\n\n');
-}
-
-function buildMemoryAgentPrompt() {
-  return [
-    'Explore the workspace actively and improve the long-term memory base of this agent.',
-    'Inspect whatever evidence, documents, checkpoints, memories, and skills help you understand what should be consolidated, reorganized, connected, clarified, or expanded.',
-    'Do not follow a lazy maintenance loop. Revisit existing material, try different structures, discover missing connections, compare documents against one another, and improve weak or fragmented knowledge when you see it.',
-    'Think of this as an offline consolidation phase: review experience, revisit old notes, compare them with new evidence, strengthen useful abstractions, and preserve better long-term structure.',
-    'Prefer durable, descriptive, retrieval-friendly documents and reusable skills when repeated procedures justify them.',
-    'Use the `skill-creator` skill when you decide a reusable skill should be created or updated.',
-    'A skill is only valid when the directory name matches the skill name declared in its `SKILL.md`.',
-    'Do not write status documents, progress snapshots, current-state summaries, or temporary backlog trackers.',
-    `Do not edit \`${CHECKPOINTS_DIR}\`. That area may be rewritten later and anything changed there can be lost.`,
-    'Write clearly, explain things well, and keep information consistent across files even when some overlap or repetition is helpful for retrieval.',
-    'When you finish a maintenance pass, do not spend output tokens on maintenance report tables. Only communicate the minimum necessary outcome.',
-  ].join('\n');
-}
-
-function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
-  const usage = result.usage as {
-    inputTokens?: number;
-    outputTokens?: number;
-    promptTokens?: number;
-    completionTokens?: number;
-    cachedInputTokens?: number;
-    inputTokenDetails?: {
-      noCacheTokens?: number;
-      cacheReadTokens?: number;
-    };
-  };
-  const cachedInputTokens =
-    usage.inputTokenDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
-  const promptTokens = usage.inputTokens ?? usage.promptTokens ?? 0;
-
-  return {
-    inputTokens: promptTokens,
-    cachedInputTokens,
-    outputTokens: usage.outputTokens ?? usage.completionTokens ?? 0,
-  };
-}
+import {
+  LtmUsage,
+  LtmSnapshot,
+  createMemoryAgentInstructions,
+  getUsageFromGenerateResult,
+} from './ltm/generate-helpers';
 
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  message: string,
-  onTimeout?: () => void,
-) {
-  let timer: NodeJS.Timeout | null = null;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => {
-          onTimeout?.();
-          reject(new Error(message));
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
-
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
-  const exists = await fs.access(absoluteRoot).then(() => true).catch(() => false);
-
-  if (!exists) {
-    return [];
-  }
-
   const entries = await fs.readdir(absoluteRoot, { withFileTypes: true });
   const files: string[] = [];
 
@@ -168,7 +77,7 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
     const relativePath = path.posix.join(relativeRoot.replace(/\\/g, '/'), entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await listRelativeFiles(rootPath, relativePath));
+      files.push(...(await listRelativeFiles(rootPath, relativePath)));
       continue;
     }
 
@@ -184,14 +93,23 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
 
 async function snapshotTrackedFiles(agentWorkspacePath: string) {
   const filePaths = [
-    ...await listRelativeFiles(agentWorkspacePath, path.posix.join('workspace', 'memory', MEMORY_DIR)),
-    ...await listRelativeFiles(agentWorkspacePath, SKILLS_DIR.replace(/\\/g, '/')),
+    ...(await listRelativeFiles(
+      agentWorkspacePath,
+      path.posix.join('workspace', 'memory', MEMORY_DIR),
+    )),
+    ...(await listRelativeFiles(agentWorkspacePath, SKILLS_DIR.replace(/\\/g, '/'))),
   ];
   const snapshot = new Map<string, string>();
 
   for (const relativePath of filePaths) {
     const absolutePath = path.resolve(agentWorkspacePath, relativePath);
-    const content = await fs.readFile(absolutePath, 'utf8').catch(() => '');
+    let content = '';
+    try {
+      content = await fs.readFile(absolutePath, 'utf8');
+    } catch (err) {
+      ltmAgentWarn('readSnapshot failed: ' + errorMsg(err));
+      /* file not readable */
+    }
     snapshot.set(relativePath, content);
   }
 
@@ -215,38 +133,6 @@ function diffTrackedFiles(before: Map<string, string>, after: Map<string, string
 
   return Array.from(changed).sort();
 }
-
-function renderCheckpointPackageReadme(input: {
-  payload: CheckpointedOmCheckpointPackageInput;
-}) {
-  return [
-    input.payload.checkpointSummary.text.trim(),
-    '',
-  ].join('\n');
-}
-
-function renderReflectionFile(reflection: CheckpointedOmCheckpointPackageInput['reflections'][number]) {
-  return [
-    '---',
-    `createdAt: ${reflection.createdAt}`,
-    '---',
-    '',
-    reflection.text.trim(),
-    '',
-  ].join('\n');
-}
-
-function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput['observations'][number]) {
-  return [
-    '---',
-    `createdAt: ${observation.createdAt}`,
-    '---',
-    '',
-    observation.text.trim(),
-    '',
-  ].join('\n');
-}
-
 export function createAgentLongTermMemory(input: {
   agentId: string;
   agentName: string;
@@ -265,7 +151,18 @@ export function createAgentLongTermMemory(input: {
   conversationStore: ConversationStore;
   workspaceActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   workspaceEmbedder?: WorkspaceEmbedderId;
-  persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
+  persistenceStore: {
+    readState(): Promise<LongTermMemoryState>;
+    writeState(state: LongTermMemoryState): Promise<{
+      packages: unknown[];
+      lastRunAt: string | null;
+      lastRunError: string | null;
+      lastRunErrorAt: string | null;
+      lastWrittenPackageId: string | null;
+      lastWrittenAt: string | null;
+    }>;
+    writeRecallIndexStamp(reason: string): Promise<void>;
+  };
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
   const memoryPath = path.resolve(input.agentMemoryPath, MEMORY_DIR);
@@ -276,10 +173,10 @@ export function createAgentLongTermMemory(input: {
   let idle = false;
   let running = false;
   let stopped = false;
-  let timer: NodeJS.Timeout | null = null;
+  const timerRef = { current: null as NodeJS.Timeout | null };
   let currentAbortController: AbortController | null = null;
   let refreshRecallIndex: (() => Promise<void>) | null = null;
-  let snapshot: LtmSnapshot = {
+  const snapshot: LtmSnapshot = {
     running: false,
     queued: false,
     lastRunAt: null,
@@ -291,12 +188,7 @@ export function createAgentLongTermMemory(input: {
   };
 
   function clearTimer() {
-    if (!timer) {
-      return;
-    }
-
-    clearTimeout(timer);
-    timer = null;
+    clearLtmTimer(timerRef);
   }
 
   async function ensureInitialized() {
@@ -322,7 +214,6 @@ export function createAgentLongTermMemory(input: {
         instructions: input.instructions,
       }),
       conversationStore: input.conversationStore,
-      workingMemoryStore: input.conversationStore,
       runtimeActions: input.workspaceActions,
       consolidateConversationOverflow: false,
     });
@@ -331,120 +222,77 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    return input.persistenceStore.readState();
+    return await readLtmState(input.persistenceStore);
   }
 
   async function writeState(state: LongTermMemoryState) {
     await ensureInitialized();
-    const persistedState = await input.persistenceStore.writeState(state);
-    snapshot = {
-      ...snapshot,
-      lastRunAt: persistedState.lastRunAt ? Date.parse(persistedState.lastRunAt) : snapshot.lastRunAt,
+    const persistedState = await writeLtmState(input.persistenceStore, state);
+    applyLtmStateToSnapshot(snapshot as Parameters<typeof applyLtmStateToSnapshot>[0], {
+      lastRunAt: persistedState.lastRunAt,
       lastRunError: persistedState.lastRunError,
-      lastRunErrorAt: persistedState.lastRunErrorAt ? Date.parse(persistedState.lastRunErrorAt) : null,
+      lastRunErrorAt: persistedState.lastRunErrorAt,
       lastWrittenPackageId: persistedState.lastWrittenPackageId,
-      lastWrittenAt: persistedState.lastWrittenAt ? Date.parse(persistedState.lastWrittenAt) : null,
-      packageCount: persistedState.packages.length,
-    };
+      lastWrittenAt: persistedState.lastWrittenAt,
+      packages: persistedState.packages,
+    });
   }
 
   async function markRecallIndexDirty(reason: string) {
     await ensureInitialized();
-    await input.persistenceStore.writeRecallIndexStamp(reason);
+    await markLtmRecallIndexDirty(input.persistenceStore, reason);
   }
 
-  async function scheduleRun(delayMs: number) {
-    if (stopped || !idle) {
-      return;
-    }
-
-    clearTimer();
-    timer = setTimeout(() => {
-      timer = null;
-      void runMemoryWorkflow();
-    }, delayMs);
+  function scheduleRun(delayMs: number) {
+    scheduleLtmRun(delayMs, stopped, idle, timerRef, runMemoryWorkflow);
   }
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
-    const existing = state.packages.find((entry) => entry.checkpointGeneration === payload.toGeneration);
+    const existing = (state.packages ?? []).find(
+      (entry) => entry.checkpointGeneration === payload.toGeneration,
+    );
 
     if (existing) {
       return existing;
     }
 
-    const dayKey = payload.checkpointSummary.updatedAt.slice(0, 10);
-    const sequence = state.packages
-      .filter((entry) => entry.packageId.startsWith(`${dayKey}_`))
-      .length + 1;
-    const packageId = `${dayKey}_${String(sequence).padStart(3, '0')}`;
+    const checkpointTimestamp = computeCheckpointTimestamp(payload);
+    const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
+    const sequence =
+      (state.packages ?? []).filter(
+        (entry): boolean =>
+          entry.packageId !== null &&
+          entry.packageId !== undefined &&
+          entry.packageId.startsWith(`${dayKey}_`),
+      ).length + 1;
+    const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
-    const tempPackagePath = `${packagePath}.${randomUUID()}.tmp`;
+    const tempPackagePath = getTempPackagePath(packagePath);
 
-    forgeDebug('ltm', 'checkpoint package write start', {
+    const reflectionCount = (payload as { reflections: { length: number } }).reflections.length;
+    const observationCount = (payload as { observations: { length: number } }).observations.length;
+    ltmDebug('info', 'checkpoint package write start', {
       agentId: input.agentId,
       threadId: payload.threadId,
       packageId,
       checkpointGeneration: payload.toGeneration,
-      reflectionCount: payload.reflections.length,
-      observationCount: payload.observations.length,
+      reflectionCount,
+      observationCount,
     });
 
-    await fs.rm(tempPackagePath, { recursive: true, force: true });
-    await fs.mkdir(tempPackagePath, { recursive: true });
-    await fs.writeFile(
-      path.resolve(tempPackagePath, 'README.md'),
-      renderCheckpointPackageReadme({
-        payload,
-      }),
-    );
+    const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
 
-    if (payload.reflections.length > 0) {
-      await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
-    }
-
-    for (const [index, reflection] of payload.reflections.entries()) {
-      await fs.writeFile(
-        path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
-        renderReflectionFile(reflection),
-      );
-    }
-
-    if (payload.observations.length > 0) {
-      await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
-    }
-
-    for (const [index, observation] of payload.observations.entries()) {
-      await fs.writeFile(
-        path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
-        renderObservationFile(observation),
-      );
-    }
-
-    await fs.rm(packagePath, { recursive: true, force: true });
-    await fs.rename(tempPackagePath, packagePath);
-
-    const manifest: CheckpointPackageManifest = {
-      packageId,
-      checkpointGeneration: payload.toGeneration,
-      fromGeneration: payload.fromGeneration,
-      toGeneration: payload.toGeneration,
-      createdAt: payload.checkpointSummary.updatedAt,
-      checkpointSummaryUpdatedAt: payload.checkpointSummary.updatedAt,
-      reflectionCount: payload.reflections.length,
-      observationCount: payload.observations.length,
-    };
-
-    state.packages.push(manifest);
+    (state.packages ?? []).push(manifest);
     state.lastWrittenPackageId = packageId;
-    state.lastWrittenAt = payload.checkpointSummary.updatedAt;
+    state.lastWrittenAt = new Date(checkpointTimestamp).toISOString();
     state.lastRunError = null;
     state.lastRunErrorAt = null;
     await writeState(state);
     await markRecallIndexDirty('checkpoint-write');
     await refreshRecallIndex?.();
 
-    forgeDebug('ltm', 'checkpoint package write complete', {
+    ltmDebug('info', 'checkpoint package write complete', {
       agentId: input.agentId,
       threadId: payload.threadId,
       packageId,
@@ -455,36 +303,31 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function recordLtmStep(usage: LtmUsage) {
-    if (!input.modelProfileId) {
-      return;
-    }
-
     const contract = await input.contractStore.getRunnableContract(input.agentId);
-
     if (!contract) {
       return;
     }
-
     const pricing = await input.contractStore.getUsagePricing({
       pricingModelKey: input.pricingModelKey,
-      profileId: input.modelProfileId,
+      profileId: input.modelProfileId ?? '',
     });
+
     let costUsd = 0;
 
-    if (pricing.modelPrice) {
+    if (pricing.modelPrice !== null && pricing.modelPrice !== undefined) {
       const uncachedInputTokens = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
       costUsd =
-        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-          + (usage.cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-          + (usage.outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-        * pricing.contractCostMultiplier;
+        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+          (usage.cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+          (usage.outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+        pricing.contractCostMultiplier;
     }
 
     await input.contractStore.recordAgentStep({
       agentId: input.agentId,
       contractId: contract.id,
-      llmProfileId: input.modelProfileId,
-      modelKey: input.pricingModelKey,
+      llmProfileId: input.modelProfileId ?? '',
+      modelKey: input.pricingModelKey as string,
       kind: 'ltm',
       inputTokens: usage.inputTokens,
       cachedInputTokens: usage.cachedInputTokens,
@@ -499,34 +342,54 @@ export function createAgentLongTermMemory(input: {
 
   async function estimateNextLtmDelayMs() {
     const contract = await input.contractStore.getRunnableContract(input.agentId);
-
-    if (!contract || !input.modelProfileId) {
+    if (!contract) {
       return 0;
     }
-
     const pricing = await input.contractStore.getUsagePricing({
       pricingModelKey: input.pricingModelKey,
-      profileId: input.modelProfileId,
+      profileId: input.modelProfileId ?? '',
     });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    if (recentSteps.length === 0 || !pricing.modelPrice) {
+    if (
+      recentSteps.length === 0 ||
+      pricing.modelPrice === null ||
+      pricing.modelPrice === undefined
+    ) {
       return 0;
     }
 
     const averageInputTokens =
-      recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.inputTokens,
+        0,
+      ) / recentSteps.length;
     const averageCachedInputTokens =
-      recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.cachedInputTokens,
+        0,
+      ) / recentSteps.length;
     const averageOutputTokens =
-      recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.outputTokens,
+        0,
+      ) / recentSteps.length;
     const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
     const estimatedStepUsd =
-      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-        + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-        + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-      * pricing.contractCostMultiplier;
+      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+        (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+        (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+      pricing.contractCostMultiplier;
 
     if (estimatedStepUsd <= 0) {
       return 0;
@@ -547,8 +410,9 @@ export function createAgentLongTermMemory(input: {
   async function generateLtmRun(prompt: string) {
     await ensureInitialized();
 
-    if (!memoryAgent) {
-      throw new Error(`LTM runtime session is not available for ${input.agentId}`);
+    if (memoryAgent == null) {
+      ltmDebug('warn', 'initializeLtmSession: runtime not available', { agentId: input.agentId });
+      throw new LtmRuntimeSessionNotAvailableError(input.agentId);
     }
 
     let result: Awaited<ReturnType<typeof memoryAgent.generate>> | null = null;
@@ -570,11 +434,11 @@ export function createAgentLongTermMemory(input: {
 
               await sleep(runDelayMs);
             },
-            onStepFinish: async (stepResult) => {
+            onStepFinish: async (stepResult: RuntimeAgentSessionStepResult) => {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
-            onIterationComplete: async (iteration) => {
-              forgeDebug('ltm', 'memory workflow step complete', {
+            onIterationComplete: async (iteration: RuntimeAgentSessionIteration) => {
+              ltmDebug('info', 'memory workflow step complete', {
                 agentId: input.agentId,
                 hasToolCalls: iteration.toolCalls.length > 0,
                 outputLength: iteration.text.length,
@@ -598,11 +462,11 @@ export function createAgentLongTermMemory(input: {
         );
         break;
       } catch (error) {
-        forgeDebug('ltm', 'memory workflow attempt failed', {
+        ltmDebug('info', 'memory workflow attempt failed', {
           agentId: input.agentId,
           attempt,
           maxAttempts: GENERATE_MAX_ATTEMPTS,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMsg(error),
         });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
@@ -615,8 +479,9 @@ export function createAgentLongTermMemory(input: {
       }
     }
 
-    if (!result) {
-      throw new Error(`LTM generate produced no result for ${input.agentId}`);
+    if (result == null) {
+      ltmDebug('error', 'generateLtmSummary: no result produced', { agentId: input.agentId });
+      throw new LtmGenerateProducedNoResultError(input.agentId);
     }
 
     return result;
@@ -629,7 +494,7 @@ export function createAgentLongTermMemory(input: {
 
     clearTimer();
     const state = await readState();
-    const availablePackages = state.packages;
+    const availablePackages = state.packages ?? [];
 
     if (availablePackages.length === 0) {
       snapshot.queued = false;
@@ -643,17 +508,26 @@ export function createAgentLongTermMemory(input: {
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
     try {
-      forgeDebug('ltm', 'memory workflow start', {
+      ltmDebug('info', 'memory workflow start', {
         agentId: input.agentId,
-        packageIds: availablePackages.map((entry) => entry.packageId),
-        packageCount: state.packages.length,
+        packageIds: availablePackages.map((entry: { packageId: string }) => entry.packageId),
+        packageCount: (state.packages ?? []).length,
       });
 
       const changedFiles = new Set<string>();
       const nextState = await readState();
 
-      if (nextState.packages.length > 0) {
-        await generateLtmRun(buildMemoryAgentPrompt());
+      if ((nextState.packages ?? []).length > 0) {
+        await generateLtmRun(
+          createMemoryAgentInstructions({
+            agentId: input.agentId,
+            agentName: input.agentName,
+            agentDescription: input.agentDescription,
+            roleName: input.roleName,
+            roleDescription: input.roleDescription,
+            instructions: input.instructions,
+          }),
+        );
         const nowIso = new Date().toISOString();
         nextState.lastRunAt = nowIso;
         nextState.lastRunError = null;
@@ -667,9 +541,9 @@ export function createAgentLongTermMemory(input: {
         changedFiles.add(filePath);
       }
 
-      forgeDebug('ltm', 'memory workflow complete', {
+      ltmDebug('info', 'memory workflow complete', {
         agentId: input.agentId,
-        packageIds: state.packages.map((entry) => entry.packageId),
+        packageIds: (state.packages ?? []).map((entry: { packageId: string }) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       });
 
@@ -681,10 +555,10 @@ export function createAgentLongTermMemory(input: {
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;
-      state.lastRunError = error instanceof Error ? error.message : String(error);
+      state.lastRunError = errorMsg(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
-      forgeDebug('ltm', 'memory workflow failed', {
+      ltmDebug('info', 'memory workflow failed', {
         agentId: input.agentId,
         error: state.lastRunError,
       });
@@ -707,20 +581,22 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-      await writeCheckpointPackage(payload);
+      return await writeCheckpointPackage(payload);
     },
 
     async onAgentIdle() {
       idle = true;
-      snapshot.queued = true;
-      await scheduleRun(0);
+      if (!stopped) snapshot.queued = true;
+      if (!stopped) await scheduleRun(0);
     },
 
     onAgentRunning() {
       idle = false;
       clearTimer();
       snapshot.queued = false;
-      currentAbortController?.abort(new Error('LTM run interrupted because main agent resumed running'));
+      currentAbortController?.abort(
+        new Error('LTM run interrupted because main agent resumed running'),
+      );
     },
 
     getSnapshot() {
@@ -732,12 +608,21 @@ export function createAgentLongTermMemory(input: {
 
       return {
         ...snapshot,
-        lastRunAt: state.lastRunAt ? Date.parse(state.lastRunAt) : snapshot.lastRunAt,
+        lastRunAt:
+          state.lastRunAt !== null && state.lastRunAt !== undefined
+            ? Date.parse(String(state.lastRunAt))
+            : snapshot.lastRunAt,
         lastRunError: state.lastRunError,
-        lastRunErrorAt: state.lastRunErrorAt ? Date.parse(state.lastRunErrorAt) : null,
+        lastRunErrorAt:
+          state.lastRunErrorAt !== null && state.lastRunErrorAt !== undefined
+            ? Date.parse(String(state.lastRunErrorAt))
+            : null,
         lastWrittenPackageId: state.lastWrittenPackageId,
-        lastWrittenAt: state.lastWrittenAt ? Date.parse(state.lastWrittenAt) : null,
-        packageCount: state.packages.length,
+        lastWrittenAt:
+          state.lastWrittenAt !== null && state.lastWrittenAt !== undefined
+            ? Date.parse(String(state.lastWrittenAt))
+            : null,
+        packageCount: (state.packages ?? []).length,
       };
     },
 

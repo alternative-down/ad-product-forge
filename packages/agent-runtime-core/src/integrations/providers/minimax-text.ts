@@ -16,9 +16,7 @@ export type MiniMaxTextModelOptions = {
   headers?: Record<string, string>;
 };
 
-export function createMiniMaxTextModelAdapter(
-  options: MiniMaxTextModelOptions,
-) {
+export function createMiniMaxTextModelAdapter(options: MiniMaxTextModelOptions) {
   const anthropic = createAnthropic({
     apiKey: options.apiKey,
     baseURL: options.baseURL ?? 'https://api.minimax.io/anthropic/v1',
@@ -46,6 +44,7 @@ export class MiniMaxProviderGateway implements StepModelProviderGateway {
   }
 
   async createStepModel(config: StepModelProviderConfig) {
+    await Promise.resolve();
     return createMiniMaxTextModelAdapter({
       apiKey: this.apiKey,
       baseURL: this.baseURL,

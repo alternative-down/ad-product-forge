@@ -4,13 +4,13 @@
 
 ### Duration Scale
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--duration-instant` | 50ms | Micro-interactions |
-| `--duration-fast` | 100ms | Hover states |
-| `--duration-normal` | 200ms | Default transitions |
-| `--duration-slow` | 300ms | Modals, panels |
-| `--duration-slower` | 500ms | Complex animations |
+| Token                | Value | Usage               |
+| -------------------- | ----- | ------------------- |
+| `--duration-instant` | 50ms  | Micro-interactions  |
+| `--duration-fast`    | 100ms | Hover states        |
+| `--duration-normal`  | 200ms | Default transitions |
+| `--duration-slow`    | 300ms | Modals, panels      |
+| `--duration-slower`  | 500ms | Complex animations  |
 
 ### Easing Functions
 
@@ -25,10 +25,15 @@
 ## Common Transitions
 
 ### Fade In
+
 ```css
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in {
@@ -37,10 +42,15 @@
 ```
 
 ### Fade Out
+
 ```css
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .fade-out {
@@ -49,6 +59,7 @@
 ```
 
 ### Scale In
+
 ```css
 @keyframes scaleIn {
   from {
@@ -67,6 +78,7 @@
 ```
 
 ### Slide In Up
+
 ```css
 @keyframes slideInUp {
   from {
@@ -85,6 +97,7 @@
 ```
 
 ### Slide In Down
+
 ```css
 @keyframes slideInDown {
   from {
@@ -105,11 +118,13 @@
 ## Hover Animations
 
 ### Button Hover
+
 ```css
 .button {
-  transition: background-color var(--duration-fast) var(--ease-default),
-              box-shadow var(--duration-fast) var(--ease-default),
-              transform var(--duration-fast) var(--ease-default);
+  transition:
+    background-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default);
 }
 
 .button:hover {
@@ -122,10 +137,12 @@
 ```
 
 ### Card Hover
+
 ```css
 .card {
-  transition: box-shadow var(--duration-normal) var(--ease-default),
-              transform var(--duration-normal) var(--ease-default);
+  transition:
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-normal) var(--ease-default);
 }
 
 .card:hover {
@@ -135,6 +152,7 @@
 ```
 
 ### Link Hover
+
 ```css
 .link {
   transition: color var(--duration-fast) var(--ease-default);
@@ -148,9 +166,12 @@
 ## Loading Animations
 
 ### Spinner
+
 ```css
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -164,10 +185,15 @@
 ```
 
 ### Skeleton Pulse
+
 ```css
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
@@ -183,10 +209,15 @@
 ```
 
 ### Progress Bar
+
 ```css
 @keyframes progress {
-  0% { width: 0%; }
-  100% { width: 100%; }
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
 .progress-bar {
@@ -200,6 +231,7 @@
 ## Toast Animations
 
 ### Toast Enter
+
 ```css
 @keyframes toastEnter {
   from {
@@ -218,6 +250,7 @@
 ```
 
 ### Toast Exit
+
 ```css
 @keyframes toastExit {
   from {
@@ -238,6 +271,7 @@
 ## Modal Animations
 
 ### Modal Backdrop
+
 ```css
 .modal-backdrop {
   animation: fadeIn var(--duration-normal) var(--ease-out);
@@ -245,6 +279,7 @@
 ```
 
 ### Modal Content
+
 ```css
 .modal-content {
   animation: scaleIn var(--duration-slow) var(--ease-out);
@@ -276,12 +311,14 @@
 ## Usage Guidelines
 
 ### Do
+
 - Use consistent animation durations
 - Choose appropriate easing for the context
 - Test on reduced motion preferences
 - Keep animations subtle and purposeful
 
 ### Don't
+
 - Don't animate layout properties (width, height) for performance
 - Don't use excessive animation duration
 - Don't animate during critical user actions
