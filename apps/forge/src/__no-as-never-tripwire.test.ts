@@ -42,7 +42,7 @@ const FORGE_SRC = import.meta.dirname;
 // Format: { file: count } — count helps validate allowlist consistency.
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
-  ['github/manager.ts', 3],
+  ['github/manager.ts', 4],  // D63: 3→4 (5 raw 'as never', 4 after comment strip; L156 retained per #5816 Phase 2 follow-up)
   ['github/ops/issues.ts', 0],
   // Phase 2 P2 cleanup targets
   ['agents/create-forge-agent.ts', 5],
