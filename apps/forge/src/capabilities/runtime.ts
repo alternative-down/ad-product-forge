@@ -280,7 +280,7 @@ export async function changeAgentRole(input: {
 
   const actorIsSelf = input.actorAgentId === input.targetAgentId;
   const actorIsAdmin = actorAgent.roleId === 'admin';
-  if (!actorIsSelf && !actorIsAdmin) {
+  if (!(actorIsSelf || actorIsAdmin)) {
     capabilitiesRuntimeDebug('warn', 'changeAgentRole: actor lacks permission', {
         actorAgentId: input.actorAgentId,
         actorRoleId: actorAgent.roleId,
