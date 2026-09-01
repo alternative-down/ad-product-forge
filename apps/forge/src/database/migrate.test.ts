@@ -42,6 +42,7 @@ vi.mock('../database/config', () => ({
 }));
 
 import { runMigrations } from './migrate';
+import { SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP } from './fixup-system-settings';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 const mockDb = {
@@ -67,6 +68,8 @@ describe('runMigrations', () => {
   beforeEach(() => {
     debugCalls.length = 0;
     vi.clearAllMocks();
+    (mockDb.all as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (mockDb.run as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     readMigrationFilesMock.mockReturnValue([]);
   });
 
@@ -91,13 +94,24 @@ describe('runMigrations', () => {
   });
 
   test('repairs system_settings.created_at before recording migration 0031', async () => {
+    readMigrationFilesMock.mockReturnValue([
+      {
+        sql: [
+          'ALTER TABLE system_settings ADD COLUMN created_at integer NOT NULL DEFAULT (unixepoch());',
+        ],
+        bps: true,
+        folderMillis: SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP,
+        hash: 'migration-0031-hash',
+      },
+    ]);
+
     await runMigrations(mockDb);
 
     const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((call) =>
       extractSqlText(call[0]).toUpperCase(),
     );
-    const addColumnIndex = runCalls.findIndex((statement) =>
-      statement.includes('ALTER TABLE') && statement.includes('ADD COLUMN'),
+    const addColumnIndex = runCalls.findIndex(
+      (statement) => statement.includes('ALTER TABLE') && statement.includes('ADD COLUMN'),
     );
     const journalInsertIndex = runCalls.findIndex((statement) =>
       statement.includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
@@ -166,13 +180,11 @@ describe('runMigrations', () => {
     expect(runCalls).toContain('CREATE TABLE foo (id text);');
     expect(runCalls).toContain('CREATE INDEX foo_idx ON foo (id);');
     expect(runCalls).toContain('CREATE TABLE bar (id text);');
-    // 3 __drizzle_migrations inserts total (D56 Sprint 0):
-    //   - 1 from cleanupFixupJournalEntry (real hash for migration 0031)
-    //   - 2 from the migration loop (one per applied migration)
+    // One bookkeeping INSERT per applied migration.
     const insertedMigrations = runCalls.filter((stmt) =>
       stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
     );
-    expect(insertedMigrations.length).toBe(3);
+    expect(insertedMigrations.length).toBe(2);
   });
 
   test('skips migrations whose folderMillis is already at or below the last applied row', async () => {
@@ -209,11 +221,11 @@ describe('runMigrations', () => {
       extractSqlText(c[0]),
     );
     expect(runCalls).toContain('CREATE TABLE baz (id text);');
-    // One INSERT records the system_settings fixup and one records this migration.
+    // The bookkeeping INSERT should still happen once.
     const insertedMigrations = runCalls.filter((stmt) =>
       stmt.toUpperCase().includes('INSERT INTO __DRIZZLE_MIGRATIONS'),
     );
-    expect(insertedMigrations.length).toBe(2);
+    expect(insertedMigrations.length).toBe(1);
   });
 
   test('logs error with context when migrate throws', async () => {

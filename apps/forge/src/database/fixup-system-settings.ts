@@ -44,6 +44,7 @@ const WRONG_HASH = '66ab776775372a9034465edf2720f560ebfb8343';
 const TARGET_TABLE = 'system_settings';
 const TARGET_COLUMN = 'created_at';
 const MIGRATION_0031_TAG = '0031_add_created_at_to_system_settings';
+export const SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP = 1781902527000;
 
 /**
  * Compute the Drizzle hash for a migration tag. Mirrors the algorithm in
@@ -113,7 +114,8 @@ export async function fixupSystemSettingsCreatedAt(
   db: LibSQLDatabase<Record<string, unknown>>,
   options: FixupColumnsOptions = {},
 ): Promise<FixupColumnsResult> {
-  const timestamp = options.timestamp ?? Date.now();
+  const timestamp = options.timestamp ?? SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP;
+  const backfillTimestamp = Date.now();
 
   // Resolve migrations folder (runtime-friendly: walks up from cwd).
   const migrationsFolder = options.migrationsFolder ?? findMigrationsFolder(process.cwd());
@@ -189,7 +191,7 @@ export async function fixupSystemSettingsCreatedAt(
 
   if (!realHashInJournal) {
     await db.run(
-      sql`UPDATE ${sql.raw(TARGET_TABLE)} SET ${sql.raw(TARGET_COLUMN)} = ${timestamp} WHERE ${sql.raw(TARGET_COLUMN)} = 0`,
+      sql`UPDATE ${sql.raw(TARGET_TABLE)} SET ${sql.raw(TARGET_COLUMN)} = ${backfillTimestamp} WHERE ${sql.raw(TARGET_COLUMN)} = 0`,
     );
   }
 

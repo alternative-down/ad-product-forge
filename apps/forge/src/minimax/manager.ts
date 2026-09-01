@@ -165,7 +165,7 @@ export class MiniMaxClient {
     const baseResp = this.getObject(body.base_resp);
     if (baseResp) {
       const message = this.getString(baseResp.status_msg);
-      if (message) {
+      if (message !== undefined && message.length > 0) {
         return message;
       }
     }
@@ -438,7 +438,7 @@ export class MiniMaxClient {
 
     const outTaskId = this.getString(d.task_id);
     const status = this.getString(d.status);
-    if (!outTaskId || !status) {
+    if (outTaskId === undefined || status === undefined) {
       minimaxDebug('warn', 'MiniMax video query response missing task_id or status');
       return this.buildError(
         'INVALID_RESPONSE',

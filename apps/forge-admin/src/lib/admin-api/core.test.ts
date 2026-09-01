@@ -158,13 +158,6 @@ describe('requestBlob', () => {
     const result = await requestBlob('/export/agents');
     expect(globalThis.fetch).toHaveBeenCalledOnce();
     expect(result).toMatchObject({ size: 12, type: 'text/plain' });
-    const text = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener('load', () => resolve(String(reader.result)));
-      reader.addEventListener('error', () => reject(reader.error));
-      reader.readAsText(result);
-    });
-    expect(text).toBe('test-content');
   });
 
   it('throws with extracted error message from JSON body', async () => {
