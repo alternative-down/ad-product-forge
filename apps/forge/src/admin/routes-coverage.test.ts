@@ -50,7 +50,7 @@ const mocks = vi.hoisted(() => {
     registerSystemWriteRoutes: fn(),
     registerFinanceWriteRoutes: fn(),
     registerInternalChatRoutes: fn(),
-    registerAdminWebhooks: fn(),
+    registerWebhookAdminRoutes: fn(),
   };
 });
 
@@ -103,7 +103,7 @@ vi.mock('./routes/finance/write', () => ({
   registerFinanceWriteRoutes: mocks.registerFinanceWriteRoutes,
 }));
 vi.mock('./routes/webhooks/register', () => ({
-  registerAdminWebhooks: mocks.registerAdminWebhooks,
+  registerWebhookAdminRoutes: mocks.registerWebhookAdminRoutes,
 }));
 
 // Mock the read-model + store factories (the "inbound" deps of registerAdminRoutes)
@@ -451,15 +451,17 @@ describe('registerAdminRoutes wiring (#5320 coverage)', () => {
     );
   });
 
-  it('registers admin webhooks with httpServer, db, and registry', () => {
+  it('registers admin webhooks with httpServer and store', () => {
+    // D63 PR #6765: signature changed from { httpServer, db, registry } to (httpServer, store).
+    // The store is the result of createWebhookStore(input.db) — a factory-returned
+    // object with methods (createRoute, createEvent, etc.), NOT a plain { db }.
     const ctx = makeContext();
     registerAdminRoutes(ctx);
-    expect(mocks.registerAdminWebhooks).toHaveBeenCalledTimes(1);
-    expect(mocks.registerAdminWebhooks).toHaveBeenCalledWith({
-      httpServer: ctx.httpServer,
-      db: ctx.db,
-      registry: stores.registry,
-    });
+    expect(mocks.registerWebhookAdminRoutes).toHaveBeenCalledTimes(1);
+    expect(mocks.registerWebhookAdminRoutes).toHaveBeenCalledWith(
+      ctx.httpServer,
+      expect.anything()
+    );
   });
 
   it('calls every sub-register*Routes exactly once (L#NN-17 Class 1 tripwire)', () => {
