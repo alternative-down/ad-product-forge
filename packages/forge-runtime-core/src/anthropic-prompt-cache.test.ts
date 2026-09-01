@@ -6,33 +6,14 @@ import type { LanguageModelV3CallOptions } from '@ai-sdk/provider-v6';
 import { wrapAnthropicPromptCacheModel } from './anthropic-prompt-cache.js';
 
 describe('wrapAnthropicPromptCacheModel', () => {
-  it('marks all messages except the last one for prompt caching', async () => {
+  it('marks one stable-prefix message for prompt caching', async () => {
     const model = wrapAnthropicPromptCacheModel(
       new MockLanguageModelV3({
         doGenerate: async (options: LanguageModelV3CallOptions) => {
           const prompt = options.prompt;
 
-          // First system message should be cached
-          expect(prompt[0]).toMatchObject({
-            role: 'system',
-            providerOptions: {
-              anthropic: {
-                cacheControl: { type: 'ephemeral', ttl: '1h' },
-              },
-            },
-          });
-
-          // Second message (assistant from previous step) should be cached
-          expect(prompt[1]).toMatchObject({
-            role: 'assistant',
-            providerOptions: {
-              anthropic: {
-                cacheControl: { type: 'ephemeral', ttl: '1h' },
-              },
-            },
-          });
-
-          // Third message (user) should be cached
+          expect(prompt[0]?.providerOptions).toBeUndefined();
+          expect(prompt[1]?.providerOptions).toBeUndefined();
           expect(prompt[2]).toMatchObject({
             role: 'user',
             providerOptions: {
@@ -133,10 +114,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
     });
   });
 
-  it('preserves existing cache control and adds to messages without it', async () => {
-    // System has existing cache with 30m ttl - should preserve it
-    // Assistant at index 1 should get cache control (not last)
-    // Assistant at index 2 is last, should NOT get cache control
+  it('preserves existing cache control and marks the stable prefix', async () => {
     const model = wrapAnthropicPromptCacheModel(
       new MockLanguageModelV3({
         doGenerate: async (options: LanguageModelV3CallOptions) => {

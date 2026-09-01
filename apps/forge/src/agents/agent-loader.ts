@@ -32,7 +32,6 @@ function agentLoaderDebug(
   }
 }
 
-
 /**
  * Load agent configuration from database and create agent instance
  *
@@ -46,8 +45,14 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtimeData = await loadAgentRuntimeData(db, config);
   const allowedToolIds = new Set(runtimeData.capabilitySet.toolIds);
 
-  agentLoaderDebug('info', 'Loading agent', { agentId: runtimeData.agent.id, agentName: runtimeData.agent.name });
-  agentLoaderDebug('info', 'Allowed tool IDs', { agentId: runtimeData.agent.id, context: { toolIdCount: allowedToolIds.size } });
+  agentLoaderDebug('info', 'Loading agent', {
+    agentId: runtimeData.agent.id,
+    agentName: runtimeData.agent.name,
+  });
+  agentLoaderDebug('info', 'Allowed tool IDs', {
+    agentId: runtimeData.agent.id,
+    context: { toolIdCount: allowedToolIds.size },
+  });
   await config.internalChat.registerAgentAccount({
     agentId: runtimeData.agent.id,
     displayName:
@@ -65,7 +70,10 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     allowedToolIds,
   });
 
-  agentLoaderDebug('info', 'Tools loaded', { agentId: runtimeData.agent.id, context: toolset.breakdown });
+  agentLoaderDebug('info', 'Tools loaded', {
+    agentId: runtimeData.agent.id,
+    context: toolset.breakdown,
+  });
 
   const runtime = await createInternalAgentRuntime(
     buildAgentRuntimeConfig(config, runtimeData, toolset),
@@ -96,7 +104,15 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     },
   );
 
-  agentLoaderDebug('info', 'Agent loaded successfully', { agentId: runtimeData.agent.id });
+  const memoryUsage = process.memoryUsage();
+  agentLoaderDebug('info', 'Agent loaded successfully', {
+    agentId: runtimeData.agent.id,
+    context: {
+      rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
+      heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      externalMb: Math.round(memoryUsage.external / 1024 / 1024),
+    },
+  });
   return runtime;
 }
 
@@ -116,13 +132,17 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     return new Map<string, InternalAgentRuntime>();
   }
 
-  agentLoaderDebug('info', 'Loading agents from registry', { context: { agentCount: agentConfigs.length } });
+  agentLoaderDebug('info', 'Loading agents from registry', {
+    context: { agentCount: agentConfigs.length },
+  });
 
   const agents = new Map<string, InternalAgentRuntime>();
 
-  const results = await Promise.allSettled(
-    agentConfigs.map((agentConfig) =>
-      loadAgent(db, {
+  const failures: Array<{ agentId: string; reason: unknown }> = [];
+
+  for (const agentConfig of agentConfigs) {
+    try {
+      const runtime = await loadAgent(db, {
         workspaceBasePath: config.workspaceBasePath,
         githubApps: config.githubApps,
         emailMailboxes: config.emailMailboxes,
@@ -131,35 +151,42 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         schedules: config.schedules,
         internalChat: config.internalChat,
         agentId: agentConfig.id,
-      }),
-    ),
-  );
+      });
+      agents.set(agentConfig.id, runtime);
+    } catch (reason) {
+      failures.push({ agentId: agentConfig.id, reason });
+      agentLoaderDebug('error', 'Failed to load agent', {
+        agentId: agentConfig.id,
+        context: { error: errorMsg(reason) },
+      });
+    }
+  }
 
   // #5978: collect all per-agent failures, surface them all (not just the first).
-  // Use Promise.allSettled so we can log AND report every failing agentId, then
-  // throw an aggregate error so callers can react to partial-failure as a unit.
-  const failures: Array<{ agentId: string; reason: unknown }> = [];
-  results.forEach((result, index) => {
-    const agentId = agentConfigs[index]!.id;
-    if (result.status === 'fulfilled') {
-      agents.set(agentId, result.value);
-    } else {
-      failures.push({ agentId, reason: result.reason });
-      agentLoaderDebug('error', 'Failed to load agent', { agentId, context: { error: errorMsg(result.reason) } });
-    }
-  });
+  // Loading remains sequential because each runtime initialization can hydrate
+  // conversation and long-term-memory state. Running all agents concurrently
+  // multiplies peak heap usage by the number of configured agents.
 
-  agentLoaderDebug('info', 'Agent loading complete', { context: { totalAgents: agentConfigs.length, loadedAgents: agents.size, failedAgents: failures.length } });
+  agentLoaderDebug('info', 'Agent loading complete', {
+    context: {
+      totalAgents: agentConfigs.length,
+      loadedAgents: agents.size,
+      failedAgents: failures.length,
+    },
+  });
 
   // #5978: loadAgents MUST NOT silently swallow per-agent failures. If any
   // agent failed to load, throw an aggregate error so callers can react.
   if (failures.length > 0) {
-    const summary = failures
-      .map((f) => f.agentId + ':' + errorMsg(f.reason))
-      .join(', ');
+    const summary = failures.map((f) => f.agentId + ':' + errorMsg(f.reason)).join(', ');
     throw new AgentLoaderMissingCapabilityError(
-      'loadAgents: ' + failures.length + ' of ' + agentConfigs.length +
-      ' agents failed to load (' + summary + ')'
+      'loadAgents: ' +
+        failures.length +
+        ' of ' +
+        agentConfigs.length +
+        ' agents failed to load (' +
+        summary +
+        ')',
     );
   }
 

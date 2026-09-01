@@ -9,17 +9,28 @@ import type { ConversationStore } from '@forge-runtime/core';
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 
-    errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
-    withToolErrorLogging: vi.fn(async (params) => {
-      try {
-        return { valid: true, data: await params.fn() };
-      } catch (error) {
-        // Mirror the real impl: use errorMsg-style formatting
-        const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
-        return { valid: false, error: msg, hint: params.hint || '' };
-      }
-    }),
-  }));
+  errorMsg: vi.fn((err) =>
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err).replace(/^Error: /, ''),
+  ),
+  withToolErrorLogging: vi.fn(async (params) => {
+    try {
+      return { valid: true, data: await params.fn() };
+    } catch (error) {
+      // Mirror the real impl: use errorMsg-style formatting
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : String(error).replace(/^Error: /, '');
+      return { valid: false, error: msg, hint: params.hint || '' };
+    }
+  }),
+}));
 
 import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
 
@@ -50,7 +61,7 @@ function makeStore(
   const messages = overrides.messages ?? [];
   const updateError = overrides.updateError;
   return {
-    listMessages: vi.fn().mockResolvedValue(messages),
+    listOperationalMemoryMessages: vi.fn().mockResolvedValue(messages),
     updateMessage: vi.fn().mockImplementation(async () => {
       if (updateError) throw updateError;
     }),
@@ -66,7 +77,7 @@ function makeStore(
 // ─── normalizeOperationalMemoryMessages ─────────────────────────────────────
 
 describe('normalizeOperationalMemoryMessages', () => {
-  it('calls listMessages with threadId and asc order', async () => {
+  it('loads only active operational-memory messages', async () => {
     const store = makeStore({ messages: [] });
 
     await normalizeOperationalMemoryMessages({
@@ -74,7 +85,7 @@ describe('normalizeOperationalMemoryMessages', () => {
       conversationStore: store,
     });
 
-    expect(store.listMessages).toHaveBeenCalledWith({ threadId: 'thread-42', order: 'asc' });
+    expect(store.listOperationalMemoryMessages).toHaveBeenCalledWith({ threadId: 'thread-42' });
   });
 
   it('does not call updateMessage when no messages returned', async () => {
@@ -268,20 +279,31 @@ describe('normalizeOperationalMemoryMessages', () => {
   it('logs and re-throws when listMessages fails', async () => {
     vi.mock('@forge-runtime/core', () => ({
       forgeDebug: vi.fn(),
-      errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+      errorMsg: vi.fn((err) =>
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : String(err).replace(/^Error: /, ''),
+      ),
       withToolErrorLogging: vi.fn(async (params) => {
         try {
           return { valid: true, data: await params.fn() };
         } catch (error) {
           // Mirror the real impl: use errorMsg-style formatting
-          const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+          const msg =
+            error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : String(error).replace(/^Error: /, '');
           return { valid: false, error: msg, hint: params.hint || '' };
         }
-      })
+      }),
     }));
     const error = new Error('list failed');
     const store = makeStore();
-    (store.listMessages as ReturnType<typeof vi.fn>).mockRejectedValue(error);
+    (store.listOperationalMemoryMessages as ReturnType<typeof vi.fn>).mockRejectedValue(error);
 
     await expect(
       normalizeOperationalMemoryMessages({

@@ -319,6 +319,31 @@ describe('loadAgents', () => {
     expect(mockLoadAgentRuntimeData).toHaveBeenCalledTimes(2);
   });
 
+  it('finishes one runtime before loading the next agent', async () => {
+    let finishFirstRuntime: ((runtime: { id: string }) => void) | undefined;
+    mockCreateAgentRuntime
+      .mockImplementationOnce(
+        async () =>
+          await new Promise<{ id: string }>((resolve) => {
+            finishFirstRuntime = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({ id: 'runtime-2' });
+    const config = {
+      workspaceBasePath: '/workspace',
+      internalChat: mockInternalChat as any,
+    } as unknown as AgentLoaderConfig;
+
+    const loading = loadAgents(mockDb, config);
+    await vi.waitFor(() => expect(mockCreateAgentRuntime).toHaveBeenCalledTimes(1));
+    expect(mockLoadAgentRuntimeData).toHaveBeenCalledTimes(1);
+
+    finishFirstRuntime?.({ id: 'runtime-1' });
+    await loading;
+
+    expect(mockCreateAgentRuntime).toHaveBeenCalledTimes(2);
+  });
+
   it('returns map keyed by agent ID', async () => {
     const config = {
       workspaceBasePath: '/workspace',
@@ -392,7 +417,7 @@ describe('loadAgents', () => {
     } as unknown as AgentLoaderConfig;
 
     await expect(loadAgents(mockDb, config)).rejects.toThrow(
-      /loadAgents: 1 of 2 agents failed to load \(agent-1:agent-1-fail\)/
+      /loadAgents: 1 of 2 agents failed to load \(agent-1:agent-1-fail\)/,
     );
 
     // The Agent loading complete log is still emitted (with correct failure count).

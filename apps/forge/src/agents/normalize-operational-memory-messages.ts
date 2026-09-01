@@ -17,9 +17,8 @@ export async function normalizeOperationalMemoryMessages(input: {
   conversationStore: ConversationStore;
 }) {
   try {
-    const messages = await input.conversationStore.listMessages({
+    const messages = await input.conversationStore.listOperationalMemoryMessages({
       threadId: input.threadId,
-      order: 'asc',
     });
 
     for (const message of messages) {
@@ -27,16 +26,21 @@ export async function normalizeOperationalMemoryMessages(input: {
         continue;
       }
 
-      const normalizedParts = message.parts.map((part: ConversationMessagePart): ConversationMessagePart => {
-        if ((part.type !== 'text' && part.type !== 'reasoning') || typeof part.text !== 'string') {
-          return part;
-        }
+      const normalizedParts = message.parts.map(
+        (part: ConversationMessagePart): ConversationMessagePart => {
+          if (
+            (part.type !== 'text' && part.type !== 'reasoning') ||
+            typeof part.text !== 'string'
+          ) {
+            return part;
+          }
 
-        return {
-          ...part,
-          text: stripOperationalMemoryPrefix(part.text),
-        };
-      });
+          return {
+            ...part,
+            text: stripOperationalMemoryPrefix(part.text),
+          };
+        },
+      );
       const roleChanged = message.role !== 'assistant';
       const partsChanged = JSON.stringify(normalizedParts) !== JSON.stringify(message.parts);
 
