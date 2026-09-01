@@ -32,6 +32,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { readSource, relativeToHere } from '../tripwire-helpers';  // D63 tripwire-helpers adoption (L#NN-32 v8)
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';

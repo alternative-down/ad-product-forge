@@ -25,6 +25,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { readSource, relativeToHere } from '../../tripwire-helpers';  // D63 tripwire-helpers adoption (L#NN-32 v8)
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
