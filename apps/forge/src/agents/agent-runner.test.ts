@@ -417,6 +417,18 @@ describe('createAgentRunner', () => {
       expect(mockScheduler.startHealthcheck).toHaveBeenCalled();
     });
 
+    it('start() does not schedule LTM work for an already idle agent', async () => {
+      const { createAgentRunner } = await import('./agent-runner.js');
+      const runtime = makeRuntime();
+      const onAgentIdle = vi.fn().mockResolvedValue(undefined);
+      runtime.longTermMemory = { onAgentIdle } as never;
+      const runner = createAgentRunner(makeDb(), runtime);
+
+      await runner.start();
+
+      expect(onAgentIdle).not.toHaveBeenCalled();
+    });
+
     it('start() recovers a persisted running state as idle without generating', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       const runner = createAgentRunner(makeDb(), makeRuntime());

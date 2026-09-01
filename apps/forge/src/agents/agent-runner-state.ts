@@ -45,6 +45,11 @@ export type RunnerLifecycleState = {
   lastWakeStartedAt: number | null;
   lastStepStartedAt: number | null;
   lastStepStage: string | null;
+  lastGenerateProgress: {
+    stage: string;
+    at: number;
+    detail: Record<string, unknown> | null;
+  } | null;
   activeRunId: string | null;
   currentGenerateAbortController: AbortController | null;
   runLastMessages: number;
@@ -60,6 +65,7 @@ export function createRunnerLifecycleState(): RunnerLifecycleState {
     lastWakeStartedAt: null,
     lastStepStartedAt: null,
     lastStepStage: null,
+    lastGenerateProgress: null,
     activeRunId: null,
     currentGenerateAbortController: null,
     runLastMessages: 20,

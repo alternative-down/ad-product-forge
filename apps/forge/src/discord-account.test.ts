@@ -44,6 +44,7 @@ vi.mock('discord.js', () => {
 
   const mockClient = {
     login: vi.fn().mockResolvedValue(undefined),
+    isReady: vi.fn().mockReturnValue(true),
     on: vi.fn(),
     once: vi.fn(),
     removeAllListeners: vi.fn(),
@@ -290,6 +291,29 @@ describe('discord-account — new coverage', () => {
       await provider.dispose!();
       expect(getMockClient().removeAllListeners).toHaveBeenCalled();
       expect(getMockClient().destroy).toHaveBeenCalled();
+    });
+  });
+
+  describe('connection health', () => {
+    it('restarts login after two consecutive unready checks', async () => {
+      await provider.dispose?.();
+      vi.useFakeTimers();
+      const client = getMockClient();
+      client.login.mockClear();
+      client.destroy.mockClear();
+      client.isReady.mockReturnValue(false);
+      provider = createDiscordProvider({ agentId: 'agent-1', token: 'test-token' });
+
+      try {
+        await vi.advanceTimersByTimeAsync(60_000);
+
+        expect(client.destroy).toHaveBeenCalledOnce();
+        expect(client.login).toHaveBeenCalledTimes(2);
+      } finally {
+        client.isReady.mockReturnValue(true);
+        await provider.dispose?.();
+        vi.useRealTimers();
+      }
     });
   });
 });

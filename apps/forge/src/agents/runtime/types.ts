@@ -173,8 +173,16 @@ export type RuntimeAgentGenerateOptions = {
   onIterationComplete?: (
     iteration: RuntimeIteration,
   ) =>
-    | Promise<{ continue?: boolean; feedback?: string } | void>
-    | { continue?: boolean; feedback?: string }
+    | Promise<{
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{ role: 'assistant' | 'user'; content: string }>;
+      } | void>
+    | {
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{ role: 'assistant' | 'user'; content: string }>;
+      }
     | void;
 };
 

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { buildIterationFeedback } from './agent-runner-feedback';
-import { isAbortedError } from './agent-runner-generate';
+import { generateWithTimeoutRetries, isAbortedError } from './agent-runner-generate';
 import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 
 const MOCK_RUNTIME_ID = 'agent-42';
@@ -493,6 +493,97 @@ describe('mapStepsToFeedback', () => {
     const result = mapStepsToFeedback(steps);
     expect(result.toolCalls).toEqual([{ name: 't', args: {} }]);
     expect(result.toolResults).toEqual([{ name: 'r', error: err }]);
+  });
+});
+
+describe('generateWithTimeoutRetries runtime integration', () => {
+  it('processes runtime iterations and returns the final control directive', async () => {
+    const register = vi.fn().mockReturnValue(1);
+    const generate = vi.fn(async (_prompt, options) => {
+      const feedback = await options.onIterationComplete?.({
+        iteration: 1,
+        text: 'STOP_AND_IDLE',
+        toolCalls: [],
+        toolResults: [],
+        isFinal: true,
+        finishReason: 'stop',
+        runId: 'run-1',
+        agentId: MOCK_RUNTIME_ID,
+        agentName: 'Agent',
+        messages: [],
+      });
+      expect(feedback).toEqual({ continue: false, feedbackMessages: [] });
+      return { text: 'STOP_AND_IDLE', usage: { inputTokens: 10, outputTokens: 2 } };
+    });
+    const epochState = {
+      activeRunEpoch: 1,
+      activeStepEpoch: 1,
+      activeGenerateToken: 0,
+      activeRunId: 'run-1',
+    };
+
+    const result = await generateWithTimeoutRetries(
+      'hello',
+      1,
+      'contract-1',
+      { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 60_000 },
+      null,
+      {
+        db: {} as never,
+        runtime: { id: MOCK_RUNTIME_ID } as never,
+        currentRuntime: {
+          id: MOCK_RUNTIME_ID,
+          mastraId: 'mastra-1',
+          agent: { generate },
+          longTermMemoryRecall: null,
+        } as never,
+        store: {} as never,
+        usage: { recordAgentStep: vi.fn().mockResolvedValue(undefined) } as never,
+        notifications: { createNotification: vi.fn().mockResolvedValue(undefined) } as never,
+        homeMetricSnapshots: { recordSnapshot: vi.fn().mockResolvedValue(undefined) } as never,
+        messageManager: {} as never,
+        runLastMessages: 20,
+        flushPendingRunMessages: vi.fn().mockReturnValue(null),
+        scheduler: {} as never,
+        epochState,
+        backoffState: { backoffMs: 60_000, instant: false, nextStepAt: null },
+        progressState: {
+          lastStepStartedAt: Date.now(),
+          lastStepStage: 'agent-generate',
+          lastGenerateProgress: null,
+        },
+        loopState: { lastLoopSignature: null, repeatedLoopCount: 0 },
+        loopDetector: {
+          register,
+          reset: vi.fn(),
+          isStuck: vi.fn().mockReturnValue(false),
+          getSignatureCount: vi.fn().mockReturnValue(1),
+        },
+        currentGenerateAbortController: null,
+        setCurrentGenerateAbortController: vi.fn(),
+        markGenerateProgress: vi.fn(),
+        setBackoffMs: vi.fn(),
+        setInstant: vi.fn(),
+        setNextStepAt: vi.fn(),
+        setLoopSignature: vi.fn(),
+        loopSignature: '',
+        activeRunId: 'run-1',
+        loadAgentContextInstructions: vi.fn().mockResolvedValue(null),
+        isStopped: () => false,
+      },
+    );
+
+    expect(generate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ maxSteps: 30, runId: 'run-1' }),
+    );
+    expect(register).toHaveBeenCalledOnce();
+    expect(result).toEqual(expect.objectContaining({
+      text: 'STOP_AND_IDLE',
+      finishReason: 'stop',
+      inputTokens: 10,
+      outputTokens: 2,
+    }));
   });
 });
 

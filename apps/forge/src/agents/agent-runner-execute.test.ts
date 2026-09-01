@@ -121,7 +121,7 @@ function makeDeps(
     mastraId: 'mastra-1',
     pricingModelKey: 'flat-rate',
     modelProfileId: 'profile-1',
-    stopped: false,
+    isStopped: () => overrides.stopped ?? false,
     executingRef: { value: false },
     isStaleRun: () => false,
     epochState: mockEpochState(),
@@ -279,7 +279,6 @@ it('returns immediately when run becomes stale after generate call', async () =>
   const deps = makeDeps({ store, isStaleRun });
   isStaleRun.mockReturnValueOnce(false); // guard
   isStaleRun.mockReturnValueOnce(false); // idle check
-  isStaleRun.mockReturnValueOnce(false); // after setExecutionState
   isStaleRun.mockReturnValueOnce(false); // after loading contract
   isStaleRun.mockReturnValueOnce(true); // after generate call
   await executeStep(deps as any);
@@ -387,6 +386,22 @@ it('resets scheduler backoff on successful non-stop generation', async () => {
   const deps = makeDeps({ store, scheduler, messageManager, generateWithTimeoutRetries });
   await executeStep(deps as any);
   expect(scheduler.resetBackoff).toHaveBeenCalledTimes(1);
+});
+
+it('returns to idle after a completed generation with no pending messages', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const transitionToIdle = vi.fn().mockResolvedValue(undefined);
+  const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
+  const deps = makeDeps({ store, transitionToIdle, onRunnerIdle });
+
+  await executeStep(deps as any);
+
+  expect(transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
+  expect(onRunnerIdle).toHaveBeenCalledOnce();
 });
 
 it('queues next step when pending messages exist after non-stop generation', async () => {

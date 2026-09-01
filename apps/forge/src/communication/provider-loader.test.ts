@@ -73,6 +73,7 @@ describe('loadCommunicationProviders', () => {
 
     expect(providers.map((p) => p.id)).toEqual(['email']);
     expect(discordProvider.getSelfContact).toHaveBeenCalledOnce();
+    expect(discordProvider.dispose).toHaveBeenCalledOnce();
     expect(mockForgeDebug).toHaveBeenCalledOnce();
     expect(mockForgeDebug).toHaveBeenCalledWith(
       expect.objectContaining({

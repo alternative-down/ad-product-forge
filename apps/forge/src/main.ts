@@ -31,6 +31,8 @@ export async function main() {
   const shutdown = async () => {
     mainDebug('info', 'Shutting down gracefully...');
     await bootstrap.httpServer.stop();
+    await bootstrap.registry.disposeAll();
+    mainDebug('info', 'Agent runtimes disposed');
     process.exit(0);
   };
 

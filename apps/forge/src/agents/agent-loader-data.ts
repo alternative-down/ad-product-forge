@@ -58,7 +58,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     where: eq(agents.id, config.agentId),
   });
 
-  if (agent === undefined) {
+  if (agent === undefined || agent === null) {
     agentLoaderDataDebug('warn', 'loadAgentData: agent not in registry', { agentId: config.agentId });
     throw new AgentLoaderDataAgentNotFoundError(config.agentId);
   }
@@ -128,6 +128,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
 
   const providers = await loadCommunicationProviders(providerCredentials, {
     internalChat: config.internalChat,
+    agentId: agent.id,
   });
 
   return {

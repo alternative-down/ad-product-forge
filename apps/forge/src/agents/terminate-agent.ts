@@ -90,7 +90,7 @@ export async function terminateInternalAgent(
       terminateInternalAgentDebug('error', 'db cleanup transaction failed during rollback: ' +
           errorMsg(deleteErr), { agentId: input.agentId });
     }
-    getInternalAgentRegistry().remove(input.agentId);
+    await getInternalAgentRegistry().remove(input.agentId);
     throw err;
   }
 
@@ -110,7 +110,7 @@ export async function terminateInternalAgent(
     await tx.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
     await tx.delete(agents).where(eq(agents.id, input.agentId));
   });
-  getInternalAgentRegistry().remove(input.agentId);
+  await getInternalAgentRegistry().remove(input.agentId);
 
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
   try {

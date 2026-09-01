@@ -101,6 +101,7 @@ export async function loadCommunicationProviders(
   credentials: ProviderCredentialsMap,
   config?: {
     internalChat: InternalChatService;
+    agentId?: string;
   },
 ): Promise<CommunicationProvider[]> {
   const providers: CommunicationProvider[] = [];
@@ -122,9 +123,11 @@ export async function loadCommunicationProviders(
   }
 
   if (credentials.discord) {
+    let provider: CommunicationProvider | null = null;
     try {
       const discord = discordCredentialsSchema.parse(credentials.discord);
-      const provider = createDiscordProvider({
+      provider = createDiscordProvider({
+        agentId: config?.agentId,
         token: discord.token,
         channels: discord.channels ?? undefined,
       });
@@ -138,6 +141,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
+      await provider?.dispose?.();
       providerLoaderDebug('warn', 'Skipping Discord provider because it failed to start', { error: errorMsg(error) });
     }
   }
