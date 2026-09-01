@@ -94,7 +94,7 @@ function createInternalAgentRegistry() {
     return list();
   }
 
-  async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
+  function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents: AgentWakeEvent[] = existingAgent
       ? [
@@ -163,7 +163,15 @@ function createInternalAgentRegistry() {
 
     entry.runner = runner;
     agents.set(runtime.id, entry);
-    await runner.start();
+    void runner.start().catch((error: unknown) => {
+      forgeDebug({
+        scope: 'internal-agent-registry',
+        level: 'error',
+        message: 'Agent runner failed to start',
+        agentId: runtime.id,
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
+    });
   }
 
   function remove(agentId: string) {
