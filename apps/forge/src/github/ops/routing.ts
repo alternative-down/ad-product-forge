@@ -186,8 +186,11 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
 
   async function handleSetupCallback(agentId: string, installationIdValue: string | null) {
     const credentials = await ctx.getCredentials(agentId);
-    if (!credentials || credentials.status !== 'created') {
+    if (!credentials) {
       return html(404, '<h1>GitHub App not ready</h1>');
+    }
+    if (credentials.status === 'pending') {
+      return html(404, '<h1>GitHub App registration not complete</h1>');
     }
     if (installationIdValue === null || installationIdValue === undefined)
       return html(400, '<h1>Missing installation_id</h1>');
@@ -204,6 +207,13 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       manifestConfig: credentials.manifestConfig,
       createdAt: credentials.createdAt,
     };
+    if (credentials.status === 'active' && credentials.installationId !== installationId) {
+      routingOpsDebug('info', 'handleSetupCallback: reinstall detected, updating installationId', {
+        agentId,
+        oldInstallationId: credentials.installationId,
+        newInstallationId: installationId,
+      });
+    }
     await ctx.saveCredentials(agentId, activeCredentials);
     const githubConfig = await ctx.getGlobalConfig();
     await ctx.notifications.createNotification({
