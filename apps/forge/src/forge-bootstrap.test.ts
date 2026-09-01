@@ -100,7 +100,7 @@ function clearEnv(): void {
 }
 
 const fakeDb = { client: 'fake-db' };
-const fakeRegistry = { get: vi.fn() };
+const fakeRegistry = { get: vi.fn(), loadAll: vi.fn(), size: 0 };
 const fakeHttpServer = { listen: vi.fn() };
 const fakeGithubApps = { provision: vi.fn() };
 const fakeCoolify = { createApp: vi.fn() };
@@ -230,6 +230,21 @@ describe('createForgeBootstrap() — happy path', () => {
     expect(ctx.registry).toBe(fakeRegistry);
     expect(ctx.internalChat).toBe(fakeInternalChat);
     expect(ctx.adminApiKey).toBe('test-key-123');
+  });
+
+  it('loads persisted agents with the runtime dependencies', async () => {
+    setEnv();
+    await createForgeBootstrap();
+
+    expect(fakeRegistry.loadAll).toHaveBeenCalledWith(fakeDb, {
+      workspaceBasePath: './workspaces',
+      githubApps: fakeGithubApps,
+      emailMailboxes: null,
+      coolify: fakeCoolify,
+      minimax: fakeMinimax,
+      schedules: fakeSchedules,
+      internalChat: fakeInternalChat,
+    });
   });
 
   it('runs database migrations before wiring factories', async () => {
@@ -422,10 +437,10 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
   });
 
   describe('lifecycle forgeDebug checkpoints', () => {
-    it('emits exactly 11 checkpoint invocations on the happy path', async () => {
+    it('emits exactly 12 checkpoint invocations on the happy path', async () => {
       setEnv();
       await createForgeBootstrap();
-      expect(mockForgeDebug).toHaveBeenCalledTimes(11);
+      expect(mockForgeDebug).toHaveBeenCalledTimes(12);
     });
 
     it('emits checkpoints in documented order', async () => {
@@ -442,6 +457,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
         'bootstrap: stores created',
         'bootstrap: managers created',
         'bootstrap: schedule manager created',
+        'bootstrap: agents loaded',
         'bootstrap: read model created',
         'bootstrap: bootstrap COMPLETE',
       ]);

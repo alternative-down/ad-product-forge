@@ -211,6 +211,19 @@ export async function createForgeBootstrap() {
   });
   bootstrapDebug('info', 'bootstrap: schedule manager created');
 
+  consoleStartupLog('loading agents from database');
+  await registry.loadAll(db, {
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
+    emailMailboxes: null,
+    coolify: coolifyManager,
+    minimax: minimaxManager,
+    schedules,
+    internalChat,
+  });
+  consoleStartupLog('agents loaded', { agentCount: registry.size });
+  bootstrapDebug('info', 'bootstrap: agents loaded', { agentCount: registry.size });
+
   const readModel = createAdminReadModel({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,

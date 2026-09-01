@@ -8,6 +8,11 @@
 
 import type { AgentListItem, SceneAgent, DeskAnimationState } from '../index';
 import { resolveDeskAmbientPose } from '../index';
+import {
+  TILE_SIZE,
+  WORLD_OFFSET_X,
+  WORLD_OFFSET_Y,
+} from '@/components/home/pixel/scene-constants';
 
 export { type SceneAgent };
 
