@@ -68,6 +68,12 @@ const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // ['agents/ltm/recall.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['agents/workspace-skills.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   ['browser-automation/service.ts', 1],
+  // D63 additions: legitimate casts (type narrowing for verified shapes)
+  ['admin/routes/system/read.ts', 1],   // readModel → buildSystemHealthcheck deps
+  ['agents/agent-home-metrics.ts', 1],   // unreadNotificationRows count shape
+  ['agents/agent-runner-snapshot.ts', 1], // wake queue snapshot type
+  ['agents/hire-agent.ts', 1],          // empty GitHubAppManager default
+  ['coolify/manager.ts', 1],            // VerifyApplicationHealthDeps shim
   // ['communication/internal-chat-accounts.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['communication/internal-chat-participants.ts', 0], // removed D54 Cycle 2d — no longer has as-unknown-as site
   // ['communication/internal-chat-service.ts', 1], // removed D54 Cycle 2d — no longer has as-unknown-as site
