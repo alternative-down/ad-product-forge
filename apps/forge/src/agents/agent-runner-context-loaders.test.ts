@@ -37,11 +37,15 @@ function fakeDb(
     timezone: string | null;
   }>,
 ) {
+  // Production code calls .all() to materialize the query (libsql/drizzle).
+  // Mock must chain .all() to return the same rows.
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue(scheduleRows),
+          limit: vi.fn().mockReturnValue({
+            all: vi.fn().mockResolvedValue(scheduleRows),
+          }),
         }),
       }),
     }),
