@@ -8,6 +8,8 @@ const mockForgeDebug = vi.hoisted(() => vi.fn());
 const mockWithTimeout = vi.hoisted(() => vi.fn((p: Promise<unknown>) => p));
 const mockReadLongTermMemoryState = vi.hoisted(() => vi.fn());
 const mockListThreadMessages = vi.hoisted(() => vi.fn());
+const mockCloseLibsqlClient = vi.hoisted(() => vi.fn());
+const mockLibsqlClient = vi.hoisted(() => ({ execute: vi.fn() }));
 const mockReadOperationalMemoryState = vi.hoisted(() => vi.fn());
 const mockCreateSystemSettingsStore = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -31,7 +33,12 @@ vi.mock('@forge-runtime/core', () => ({
   })),
 }));
 
+vi.mock('@libsql/client', () => ({
+  createClient: vi.fn(() => mockLibsqlClient),
+}));
+
 vi.mock('./conversation-helpers', () => ({
+  closeLibsqlClient: mockCloseLibsqlClient,
   listThreadMessages: mockListThreadMessages,
 }));
 
@@ -112,6 +119,8 @@ describe('createAgentListReadModel', () => {
     mockReadLongTermMemoryState.mockResolvedValue(null);
     mockListThreadMessages.mockReset();
     mockListThreadMessages.mockResolvedValue({ items: [], hasMore: false });
+    mockCloseLibsqlClient.mockReset();
+    mockCloseLibsqlClient.mockResolvedValue(undefined);
     mockReadOperationalMemoryState.mockReset();
     mockReadOperationalMemoryState.mockResolvedValue(null);
   });
@@ -126,6 +135,36 @@ describe('createAgentListReadModel', () => {
       });
       const result = await model.listAgents();
       expect(result).toEqual([]);
+    });
+
+    it('closes the per-agent libsql client after attempting to read runtime memory', async () => {
+      const db = makeMockDb();
+      const agent = {
+        id: 'memory-agent',
+        name: 'Memory Agent',
+        description: null,
+        executionState: 'idle',
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      db.query.agents.findMany.mockResolvedValueOnce([agent]);
+      db.query.agents.findFirst.mockResolvedValueOnce(agent);
+      mockReadOperationalMemoryState.mockResolvedValueOnce({
+        checkpointSummaryMessage: null,
+        metrics: {},
+      });
+
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
+      await model.listAgents();
+
+      expect(mockCloseLibsqlClient).toHaveBeenCalledOnce();
     });
 
     it('maps basic fields (agentId, name, description, executionState)', async () => {
