@@ -31,6 +31,7 @@ type InternalAgentEntry = {
 type GitHubManagerConfig = {
   httpServer: Parameters<typeof createGitHubAppManager>[0]['httpServer'];
   integrations: Parameters<typeof createGitHubAppManager>[0]['integrations'];
+  publicBaseUrl: string;
 };
 
 /**
@@ -66,7 +67,7 @@ function createInternalAgentRegistry() {
   let loaderConfig: (AgentLoaderConfig & Partial<GitHubManagerConfig>) | null = null;
   let memoryRecoveryGeneration = 0;
 
-  async function loadAll(db: Database, config: AgentLoaderConfig) {
+  async function loadAll(db: Database, config: AgentLoaderConfig & GitHubManagerConfig) {
     loaderConfig = config;
     const existingAgentIds = new Set(agents.keys());
 
@@ -203,6 +204,7 @@ function createInternalAgentRegistry() {
             (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? (null as never),
           integrations:
             (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? (null as never),
+          publicBaseUrl: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).publicBaseUrl,
         });
 
     const entry: InternalAgentEntry = {
@@ -228,6 +230,7 @@ function createInternalAgentRegistry() {
             // Inside the null-check, loaderConfig is guaranteed non-null
           httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).httpServer,
           integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).integrations,
+          publicBaseUrl: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).publicBaseUrl,
         });
 
         return await loadAgent(db, {

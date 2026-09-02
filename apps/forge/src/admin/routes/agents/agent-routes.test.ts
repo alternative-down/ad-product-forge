@@ -436,6 +436,14 @@ describe('Agent Write Ops Routes', () => {
     expect(
       routes.find((r) => r.path === '/admin/agent/update-config' && r.method === 'POST'),
     ).toBeDefined();
+    for (const path of [
+      '/admin/agent/github-app/create',
+      '/admin/agent/github-app/validate',
+      '/admin/agent/github-app/recreate',
+      '/admin/agent/github-app/delete',
+    ]) {
+      expect(routes.find((route) => route.path === path && route.method === 'POST')).toBeDefined();
+    }
   });
 
   it('should register exactly 10 write ops routes', () => {

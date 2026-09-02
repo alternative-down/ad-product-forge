@@ -179,7 +179,8 @@ export async function createForgeBootstrap() {
 
   const coolifyManager = createCoolifyManager({ integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
-  const githubApps = createGitHubAppManager({ db, httpServer, integrations });
+  const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
+  const githubApps = createGitHubAppManager({ db, httpServer, integrations, publicBaseUrl });
   bootstrapDebug('info', 'bootstrap: managers created');
 
   // Scheduler for admin operations (route handlers, tool delegation).
@@ -253,6 +254,9 @@ export async function createForgeBootstrap() {
   consoleStartupLog('admin routes ready; loading agents from database');
   await registry.loadAll(db, {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    publicBaseUrl,
+    httpServer,
+    integrations,
     githubApps,
     emailMailboxes: null,
     coolify: coolifyManager,
@@ -265,7 +269,6 @@ export async function createForgeBootstrap() {
   consoleStartupLog('agents loaded', { agentCount: registry.size });
   bootstrapDebug('info', 'bootstrap: agents loaded', { agentCount: registry.size });
 
-  const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   bootstrapDebug('info', 'bootstrap: bootstrap COMPLETE', { publicBaseUrl });
 
   return {
