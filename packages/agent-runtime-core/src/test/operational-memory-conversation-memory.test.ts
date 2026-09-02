@@ -506,6 +506,49 @@ describe('OperationalMemoryConversationMemory', () => {
   });
 
   describe('observer behavior', () => {
+    it('shares one stabilization pass across concurrent callers', async () => {
+      const store = new InMemoryConversationStore();
+
+      for (let index = 1; index <= 10; index += 1) {
+        await store.appendMessage({
+          id: `message-${index}`,
+          threadId: 'thread-1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: generateContentNearTokens(5) }],
+          createdAt: `2026-01-01T00:00:${String(index).padStart(2, '0')}Z`,
+        });
+      }
+
+      let releaseObservation!: () => void;
+      const observationGate = new Promise<void>((resolve) => {
+        releaseObservation = resolve;
+      });
+      let observerCallCount = 0;
+      const memory = new OperationalMemoryConversationMemory({
+        threadId: 'thread-1',
+        store,
+        recentTokenLimit: 2,
+        overflowObservationTokenLimit: 5,
+        maxObservationBatchesPerStabilize: 1,
+        observer: {
+          async observe() {
+            observerCallCount += 1;
+            await observationGate;
+            return { text: 'observed' };
+          },
+        },
+      });
+
+      const first = memory.stabilize();
+      const second = memory.stabilize();
+      releaseObservation();
+
+      const [firstState, secondState] = await Promise.all([first, second]);
+
+      expect(observerCallCount).toBe(1);
+      expect(secondState).toEqual(firstState);
+    });
+
     it('observer is called with overflow messages during stabilize', async () => {
       const store = new InMemoryConversationStore();
 

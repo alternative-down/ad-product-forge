@@ -63,6 +63,7 @@ export class OperationalMemoryConversationMemory {
   private readonly overflowObservationTokenLimit: number | null;
   private readonly observer: OperationalMemoryConversationObserver | null;
   private readonly maxObservationBatchesPerStabilize: number | null;
+  private stabilizationInFlight: Promise<OperationalMemoryConversationState> | null = null;
 
   constructor(options: OperationalMemoryConversationMemoryOptions) {
     this.threadId = options.threadId;
@@ -89,6 +90,23 @@ export class OperationalMemoryConversationMemory {
   }
 
   async stabilize(input?: {
+    diagnostics?: OperationalMemoryConversationDiagnostics;
+  }): Promise<OperationalMemoryConversationState> {
+    if (this.stabilizationInFlight) {
+      return await this.stabilizationInFlight;
+    }
+
+    const stabilization = this.runStabilization(input).finally(() => {
+      if (this.stabilizationInFlight === stabilization) {
+        this.stabilizationInFlight = null;
+      }
+    });
+    this.stabilizationInFlight = stabilization;
+
+    return await stabilization;
+  }
+
+  private async runStabilization(input?: {
     diagnostics?: OperationalMemoryConversationDiagnostics;
   }): Promise<OperationalMemoryConversationState> {
     let state = await this.loadState();

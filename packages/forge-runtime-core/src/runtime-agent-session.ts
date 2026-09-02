@@ -118,6 +118,10 @@ export type RuntimeAgentSession = {
       workingMemory: string;
     }): Promise<void>;
   }>;
+  stabilizeMemory(): Promise<{
+    overflowTokenCount: number;
+    needsMoreOverflowWork: boolean;
+  }>;
   dispose(): Promise<void>;
 };
 
@@ -222,6 +226,9 @@ export async function createRuntimeAgentSession(
           await store.write(value);
         },
       };
+    },
+    async stabilizeMemory() {
+      return await runtime.syncState();
     },
     async dispose() {
       await Promise.resolve();

@@ -193,6 +193,10 @@ export type RuntimeAgent = {
   ): Promise<RuntimeGenerateResult>;
   hasOwnMemory(): boolean;
   getMemory(): Promise<RuntimeWorkingMemory | null>;
+  stabilizeMemory?(): Promise<{
+    overflowTokenCount: number;
+    needsMoreOverflowWork: boolean;
+  }>;
 };
 
 export type RuntimeWorkspaceFilesystem = {

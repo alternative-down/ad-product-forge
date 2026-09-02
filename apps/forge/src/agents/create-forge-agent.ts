@@ -16,7 +16,6 @@ import { createAgentRuntimeMemory } from './runtime/memory';
 import { buildAgentSystemPrompt } from './runtime/prompt';
 import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
-import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
 import type {
   CreateAgentConfig,
   CreateAgentOptions,
@@ -159,6 +158,7 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
+  const checkpointedOmLimits = requireCheckpointedOmLimits(config);
   const runtimeStartedAt = Date.now();
   const logStage = (stage: string, startedAt: number, context?: Record<string, unknown>) => {
     createForgeAgentDebug('info', `runtime initialization: ${stage}`, {
@@ -208,15 +208,6 @@ export async function createInternalAgentRuntime<
     conversationStore: platform.conversationStore,
   });
   logStage('legacy operational memory migration checked', stageStartedAt);
-  stageStartedAt = Date.now();
-  createForgeAgentDebug('info', 'runtime initialization: operational memory normalization starting', {
-    agentId: config.id,
-  });
-  await normalizeOperationalMemoryMessages({
-    threadId: platform.mastraId,
-    conversationStore: platform.conversationStore,
-  });
-  logStage('operational memory messages normalized', stageStartedAt);
   const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
     agentId: config.id,
   });
@@ -287,7 +278,6 @@ export async function createInternalAgentRuntime<
   );
 
   mcpRuntimeActionSource.start();
-  const checkpointedOmLimits = requireCheckpointedOmLimits(config);
 
   stageStartedAt = Date.now();
   createForgeAgentDebug('info', 'runtime initialization: runtime session starting', {

@@ -10,6 +10,8 @@ import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
 import { createCoolifyManager, type CoolifyManager } from '../coolify/manager';
 import { createGitHubAppManager } from '../github/manager';
+import { delay } from '../utils/async';
+import { FIVE_SECONDS_MS } from './time-constants';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -62,6 +64,7 @@ function createPerAgentCoolifyManager(db: Database): CoolifyManager {
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
   let loaderConfig: (AgentLoaderConfig & Partial<GitHubManagerConfig>) | null = null;
+  let memoryRecoveryGeneration = 0;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
@@ -91,7 +94,89 @@ function createInternalAgentRegistry() {
       await remove(agentId);
     }
 
+    memoryRecoveryGeneration += 1;
+    const recoveryGeneration = memoryRecoveryGeneration;
+    void recoverOperationalMemory(runtimes, recoveryGeneration);
+
     return list();
+  }
+
+  async function recoverOperationalMemory(
+    runtimes: Map<string, InternalAgentRuntime>,
+    recoveryGeneration: number,
+  ) {
+    const pendingAgentIds = new Set(
+      [...runtimes.values()]
+        .filter((runtime) => runtime.agent.stabilizeMemory !== undefined)
+        .map((runtime) => runtime.id),
+    );
+
+    forgeDebug({
+      scope: 'internal-agent-registry',
+      level: 'info',
+      message: 'Operational memory background recovery started',
+      context: { recoveryGeneration, agentCount: pendingAgentIds.size },
+    });
+
+    while (
+      recoveryGeneration === memoryRecoveryGeneration &&
+      pendingAgentIds.size > 0
+    ) {
+      for (const agentId of [...pendingAgentIds]) {
+        if (recoveryGeneration !== memoryRecoveryGeneration) {
+          return;
+        }
+
+        const runtime = agents.get(agentId)?.runtime;
+        const stabilizeMemory = runtime?.agent.stabilizeMemory;
+        if (!runtime || !stabilizeMemory) {
+          pendingAgentIds.delete(agentId);
+          continue;
+        }
+
+        const startedAt = Date.now();
+        try {
+          const result = await stabilizeMemory.call(runtime.agent);
+          forgeDebug({
+            scope: 'internal-agent-registry',
+            level: 'info',
+            message: 'Operational memory background recovery pass completed',
+            agentId,
+            context: {
+              recoveryGeneration,
+              durationMs: Date.now() - startedAt,
+              overflowTokenCount: result.overflowTokenCount,
+              needsMoreOverflowWork: result.needsMoreOverflowWork,
+            },
+          });
+
+          if (!result.needsMoreOverflowWork) {
+            pendingAgentIds.delete(agentId);
+          }
+        } catch (error) {
+          forgeDebug({
+            scope: 'internal-agent-registry',
+            level: 'error',
+            message: 'Operational memory background recovery pass failed',
+            agentId,
+            context: {
+              recoveryGeneration,
+              durationMs: Date.now() - startedAt,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
+
+        await delay(FIVE_SECONDS_MS);
+      }
+    }
+
+    forgeDebug({
+      scope: 'internal-agent-registry',
+      level: 'info',
+      message: 'Operational memory background recovery completed',
+      context: { recoveryGeneration },
+    });
   }
 
   async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
@@ -186,6 +271,7 @@ function createInternalAgentRegistry() {
   }
 
   async function disposeAll() {
+    memoryRecoveryGeneration += 1;
     await Promise.all(Array.from(agents.keys(), (agentId) => remove(agentId)));
   }
 
