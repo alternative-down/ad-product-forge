@@ -10,7 +10,6 @@
  * No external dependencies — fully testable in isolation.
  */
 
-
 // ─── Loop signature ────────────────────────────────────────────────────────────
 
 /**
@@ -24,9 +23,15 @@ export function buildIterationLoopSignature(iteration: {
     name: string;
     args: Record<string, unknown>;
   }>;
-}): string {
+}): string | null {
+  const text = iteration.text.trim();
+
+  if (text.length === 0 && iteration.toolCalls.length === 0) {
+    return null;
+  }
+
   return JSON.stringify({
-    text: iteration.text.trim(),
+    text,
     toolCalls: iteration.toolCalls.map((toolCall) => ({
       toolName: toolCall.name,
       args: toolCall.args,

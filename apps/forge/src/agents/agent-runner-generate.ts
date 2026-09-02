@@ -30,19 +30,14 @@ import type { MessageManager } from './agent-runner-messages';
 import type { RuntimeGenerateResult, RuntimeIteration } from './runtime/types';
 
 import { delay, withTimeout } from '../utils/async';
-import {
-  buildStepSystemPrompt,
-
-} from './agent-runner-control-directives';
+import { buildStepSystemPrompt } from './agent-runner-control-directives';
 import { isStaleRun, resetBackoff } from './agent-runner-state';
 import {
   startGenerateAttempt,
   finishGenerateAttempt,
   invalidateInFlightGenerate,
 } from './agent-runner-attempt-lifecycle';
-import {
-  buildIterationFeedback,
-} from './agent-runner-feedback';
+import { buildIterationFeedback } from './agent-runner-feedback';
 import { buildIterationLoopSignature } from './agent-runner-iteration-helpers';
 import { didIterationUpdateWorkingMemory } from './agent-runner-iteration-helpers';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
@@ -83,7 +78,6 @@ export function mapStepsToFeedback(
   };
 }
 
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import {
@@ -96,9 +90,12 @@ import {
 export function isAbortedError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   if (err.name === 'AbortError') return true;
-  return 'code' in err && typeof (err as { code?: unknown }).code === 'string' && (err as { code: string }).code === 'ABORT_ERROR';
+  return (
+    'code' in err &&
+    typeof (err as { code?: unknown }).code === 'string' &&
+    (err as { code: string }).code === 'ABORT_ERROR'
+  );
 }
-
 
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = FIVE_SECONDS_MS;
@@ -263,7 +260,9 @@ export async function generateWithTimeoutRetries(
     });
 
     try {
-      agentRunnerDebug('debug', 'preparing runtime context before generate', { runtimeId: deps.runtime.id });
+      agentRunnerDebug('debug', 'preparing runtime context before generate', {
+        runtimeId: deps.runtime.id,
+      });
       const agentContextInstructions = await deps.loadAgentContextInstructions(
         deps.currentRuntime,
         deps.db,
@@ -271,14 +270,20 @@ export async function generateWithTimeoutRetries(
       const systemPrompt = buildStepSystemPrompt({
         agentContextInstructions,
       });
-      agentRunnerDebug('debug', 'runtime context ready before generate', { runtimeId: deps.runtime.id });
-      const memoryUsage = process.memoryUsage();
-      agentRunnerDebug('info', `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, {
+      agentRunnerDebug('debug', 'runtime context ready before generate', {
         runtimeId: deps.runtime.id,
-        rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
-        heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
-        externalMb: Math.round(memoryUsage.external / 1024 / 1024),
       });
+      const memoryUsage = process.memoryUsage();
+      agentRunnerDebug(
+        'info',
+        `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
+        {
+          runtimeId: deps.runtime.id,
+          rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
+          heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+          externalMb: Math.round(memoryUsage.external / 1024 / 1024),
+        },
+      );
       const stopEventLoopProbe = startGenerateEventLoopProbe(deps.runtime.id);
 
       const iterationState: { current: RuntimeIteration | null } = { current: null };
@@ -320,17 +325,12 @@ export async function generateWithTimeoutRetries(
             const { inputTokens, cachedInputTokens, outputTokens } =
               deps.usage.getUsageFromResult(stepResult);
             const recordedStep = await withTimeout(
-              deps.usage.recordAgentStep(
-                contractId,
-                inputTokens,
-                cachedInputTokens,
-                outputTokens,
-              ),
+              deps.usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
               RUNNER_AWAIT_TIMEOUT_MS,
               `Agent usage recording timed out for ${deps.runtime.id}`,
             );
 
-            if (!deps.workspaceBasePath || !recordedStep) {
+            if (deps.workspaceBasePath === undefined || deps.workspaceBasePath.length === 0) {
               return;
             }
 
@@ -358,7 +358,17 @@ export async function generateWithTimeoutRetries(
             iterationState.current = iteration;
             const signature = buildIterationLoopSignature(iteration);
             deps.setLoopSignature(signature);
-            deps.loopDetector.register(signature);
+            if (signature === null) {
+              deps.loopDetector.reset();
+            } else {
+              const repeatedSignatureCount = deps.loopDetector.register(signature);
+              agentRunnerDebug('debug', 'loop signature registered', {
+                runtimeId: deps.runtime.id,
+                iteration: iteration.iteration,
+                repeatedSignatureCount,
+                signature: signature.slice(0, 500),
+              });
+            }
             if (didIterationUpdateWorkingMemory(iteration)) {
               deps.messageManager.appendPendingRunMessages([
                 {
@@ -400,7 +410,7 @@ export async function generateWithTimeoutRetries(
                 },
                 setNextStepAt: deps.setNextStepAt,
                 loopDetector: deps.loopDetector,
-                loopSignature: signature,
+                loopSignature: signature ?? '',
                 runtime: deps.runtime,
                 notifications: deps.notifications,
                 currentRuntime: {
@@ -427,12 +437,18 @@ export async function generateWithTimeoutRetries(
         return undefined;
       }
 
-      agentRunnerDebug('info', `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`, { runtimeId: deps.runtime.id });
+      agentRunnerDebug(
+        'info',
+        `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
+        { runtimeId: deps.runtime.id },
+      );
 
       return {
         text: iterationState.current?.text ?? result?.text ?? '',
-        toolCalls: iterationState.current?.toolCalls.map(({ name, args }) => ({ name, args })) ?? [],
-        toolResults: iterationState.current?.toolResults.map(({ name, error }) => ({ name, error })) ?? [],
+        toolCalls:
+          iterationState.current?.toolCalls.map(({ name, args }) => ({ name, args })) ?? [],
+        toolResults:
+          iterationState.current?.toolResults.map(({ name, error }) => ({ name, error })) ?? [],
         finishReason: iterationState.current?.finishReason ?? result?.finishReason ?? 'unknown',
         inputTokens,
         outputTokens,
@@ -446,11 +462,16 @@ export async function generateWithTimeoutRetries(
       }
 
       if (isAbortedError(err)) {
-        agentRunnerDebug('info', 'generate aborted (stale or cancelled)', { runtimeId: deps.runtime.id });
+        agentRunnerDebug('info', 'generate aborted (stale or cancelled)', {
+          runtimeId: deps.runtime.id,
+        });
         return undefined;
       }
 
-      agentRunnerDebug('error', 'generate failed', { runtimeId: deps.runtime.id, error: errorMsg(err) });
+      agentRunnerDebug('error', 'generate failed', {
+        runtimeId: deps.runtime.id,
+        error: errorMsg(err),
+      });
 
       // Back off on retryable error
       deps.setBackoffMs(GENERATE_TIMEOUT_BACKOFF_MS);
