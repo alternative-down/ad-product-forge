@@ -232,6 +232,7 @@ export function createAppLifecycleOps(
       const startedAt = Date.now();
       token = await githubApp.getInstallationToken(activeCredentials);
       const fingerprint = createHash('sha256').update(token.token).digest('hex').slice(0, 12);
+      const tokenFormat = token.token.slice(4).includes('.') ? 'stateless' : 'stateful';
 
       try {
         await githubApp.validateInstallationToken({
@@ -248,6 +249,7 @@ export function createAppLifecycleOps(
           durationMs: Date.now() - startedAt,
           repositoryName: input.repositoryName ?? null,
           tokenFingerprint: fingerprint,
+          tokenFormat,
           expiresAt: token.expiresAt,
         });
         break;
@@ -259,6 +261,7 @@ export function createAppLifecycleOps(
           durationMs: Date.now() - startedAt,
           repositoryName: input.repositoryName ?? null,
           tokenFingerprint: fingerprint,
+          tokenFormat,
           status,
           error: errorMsg(error),
         });
@@ -277,6 +280,7 @@ export function createAppLifecycleOps(
       agentId: input.agentId,
       repositoryName: input.repositoryName ?? null,
       tokenFingerprint: createHash('sha256').update(token.token).digest('hex').slice(0, 12),
+      tokenFormat: token.token.slice(4).includes('.') ? 'stateless' : 'stateful',
       expiresAt: token.expiresAt,
     });
 

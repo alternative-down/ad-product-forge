@@ -155,7 +155,12 @@ export function createGitHubAppOps(): GitHubAppOps {
       const app = new App({ appId, privateKey });
       const result = await app.octokit.request(
         'POST /app/installations/{installation_id}/access_tokens',
-        { installation_id: installationId },
+        {
+          installation_id: installationId,
+          headers: {
+            'x-github-stateless-s2s-token': 'disabled',
+          },
+        },
       );
       token = {
         token: result.data.token,

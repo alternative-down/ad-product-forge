@@ -94,7 +94,12 @@ describe('createGitHubAppOps', () => {
       expect(mockRequest).toHaveBeenCalledTimes(2);
       expect(mockRequest).toHaveBeenCalledWith(
         'POST /app/installations/{installation_id}/access_tokens',
-        { installation_id: 67890 },
+        {
+          installation_id: 67890,
+          headers: {
+            'x-github-stateless-s2s-token': 'disabled',
+          },
+        },
       );
     });
 
