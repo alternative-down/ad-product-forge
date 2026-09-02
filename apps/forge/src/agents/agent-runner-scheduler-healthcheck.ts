@@ -5,7 +5,7 @@
  * Extracted from agent-runner-scheduler.ts (#2257).
  *
  * Public interface:
- * - startHealthcheck: no-op (external timer management)
+ * - startHealthcheck: starts the periodic runner recovery callback
  * - clearHealthcheck: clears the healthcheck timer interval
  * - shouldRunHealthcheckAt(now): returns true if a healthcheck should run now
  * - getHealthcheckIntervalMs(): returns the configured interval in ms
@@ -23,20 +23,36 @@ export type SchedulerHealthcheck = {
 
 export interface SchedulerHealthcheckDeps {
   runtimeId: string;
+  onHealthcheck(): Promise<void>;
 }
 
 const RUNNER_HEALTHCHECK_INTERVAL_MS = THIRTY_SECONDS_MS;
 
 export function createSchedulerHealthcheck(_deps: SchedulerHealthcheckDeps): SchedulerHealthcheck {
   let healthcheckTimer: ReturnType<typeof setInterval> | null = null;
-  const healthcheckNextAt: number | null = null;
+  let healthcheckNextAt: number | null = null;
+  let healthcheckRunning = false;
 
   /**
-   * startHealthcheck is a no-op when using external timer management.
-   * External code manages the interval via getHealthcheckIntervalMs().
+   * Starts one interval per scheduler and prevents overlapping probes.
    */
   function startHealthcheck(): void {
-    // No-op: external code manages the interval via getHealthcheckIntervalMs()
+    if (healthcheckTimer !== null) {
+      return;
+    }
+
+    healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
+    healthcheckTimer = setInterval(() => {
+      healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
+      if (healthcheckRunning) {
+        return;
+      }
+
+      healthcheckRunning = true;
+      void _deps.onHealthcheck().finally(() => {
+        healthcheckRunning = false;
+      });
+    }, RUNNER_HEALTHCHECK_INTERVAL_MS);
   }
 
   function clearHealthcheck(): void {
@@ -45,6 +61,7 @@ export function createSchedulerHealthcheck(_deps: SchedulerHealthcheckDeps): Sch
     }
     clearInterval(healthcheckTimer);
     healthcheckTimer = null;
+    healthcheckNextAt = null;
   }
 
   /**

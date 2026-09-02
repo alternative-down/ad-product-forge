@@ -32,6 +32,7 @@ import { touchGenerateTimeout } from './agent-runner-generate-timeout';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { executeStep as executeStepExtracted, type ExecuteStepDeps } from './agent-runner-execute';
+import { runHealthcheck } from './agent-runner-healthcheck';
 
 import { ONE_MINUTE_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
@@ -72,6 +73,7 @@ export function createAgentRunner(
     estimateStepCostUsd: () => usage.estimateStepCostUsd(),
     runtimeId: runtime.id,
     setExecutionState: (id, state) => store.setExecutionState(id, state),
+    onHealthcheck: performHealthcheck,
   });
   const lifecycleState: RunnerLifecycleState = createRunnerLifecycleState();
   const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
@@ -157,6 +159,45 @@ export function createAgentRunner(
       store.setExecutionState(runtime.id, 'idle'),
       `Agent startup execution state recovery timed out for ${runtime.id}`,
     );
+  }
+
+  async function performHealthcheck() {
+    try {
+      const executionState = await store.getExecutionState(runtime.id);
+      agentRunnerDebug('debug', 'runner healthcheck started', {
+        runtimeId: runtime.id,
+        pendingMessageCount: messageManager.getPendingCount(),
+        executionState,
+        runner: getSnapshot(),
+      });
+
+      await runHealthcheck({
+        runtimeId: runtime.id,
+        getExecutionState: () => Promise.resolve(executionState),
+        isLocallyIdle,
+        getPendingCount: () => messageManager.getPendingCount(),
+        getWakeSnapshot: () => wakeQueue.getSnapshot(),
+        onRunnerIdle: () => wakeQueue.onRunnerIdle(),
+        beginRun,
+        queueNextStep: () => queueNextStep(scheduler.getActiveRunEpoch()),
+        onStartingRunTimeout: () => undefined,
+        syncStarterState: () => undefined,
+        syncExecuting: () => undefined,
+        syncTimer: () => undefined,
+        isStaleRun,
+        notifyError: (error) => {
+          agentRunnerDebug('error', 'runner healthcheck step failed', {
+            runtimeId: runtime.id,
+            error: errorMsg(error),
+          });
+        },
+      });
+    } catch (error) {
+      agentRunnerDebug('error', 'runner healthcheck failed', {
+        runtimeId: runtime.id,
+        error: errorMsg(error),
+      });
+    }
   }
 
   async function execute(events: AgentWakeEvent[]) {

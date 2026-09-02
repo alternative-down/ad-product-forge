@@ -9,7 +9,6 @@
  */
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 export type HealthcheckDeps = {
   runtimeId: string;
@@ -17,7 +16,7 @@ export type HealthcheckDeps = {
   isLocallyIdle(): boolean;
   getPendingCount(): number;
   getWakeSnapshot(): {
-    pending: number;
+    pending: boolean;
     waitingForIdle: boolean;
     firstPendingAt?: number | null;
     nextTriggerAt?: number | null;
@@ -56,14 +55,6 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
     onRunnerIdle,
     beginRun,
     queueNextStep,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onStartingRunTimeout,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    syncStarterState,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    syncExecuting,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    syncTimer,
     notifyError,
   } = deps;
 
