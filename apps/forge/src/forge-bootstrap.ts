@@ -18,6 +18,7 @@ import { createSystemIntegrationStore } from './system-integrations/store';
 import { createInternalChatService } from './communication/internal-chat-service';
 import { createAgentContractStore } from './agents/agent-contract-store';
 import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
+import type { AgentLoaderConfig } from './agents/agent-loader-types';
 /**
  * Module-local debug helper. Centralizes the forge-bootstrap scope
  * so call sites only specify the level, message, and context.
@@ -209,7 +210,7 @@ export async function createForgeBootstrap() {
         entry.runner?.notifyExternalEvent({
           type: 'schedule:trigger',
           groupKey: agentId,
-          idempotencyKey: scheduleId,
+          idempotencyKey: `${scheduleId}:${timestamp}`,
           timestamp,
           text: msg,
           idleOnly,
@@ -226,6 +227,16 @@ export async function createForgeBootstrap() {
     internalChat,
   });
 
+  const loaderConfig: AgentLoaderConfig = {
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
+    emailMailboxes: null,
+    coolify: coolifyManager,
+    minimax: minimaxManager,
+    schedules,
+    internalChat,
+  };
+
   bootstrapDebug('info', 'bootstrap: read model created');
   registerAdminRoutes({
     httpServer,
@@ -236,14 +247,8 @@ export async function createForgeBootstrap() {
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     internalChat,
-    // AdminRouteContext requires loaderConfig and emailMailboxes, but
-    // forge-bootstrap does not construct them at this layer — they live in
-    // the per-agent runtime via the registry. The affected routes are only
-    // invoked after the registry wires up loaderConfig per agent. Pass
-    // them as undefined casts for now; tracked as a follow-up to thread
-    // the loader config through bootstrap.
-    loaderConfig: undefined as never,
-    emailMailboxes: undefined as never,
+    loaderConfig,
+    emailMailboxes: loaderConfig.emailMailboxes,
     // Admin API key + insecure-local flag for destructive routes outside /admin/*
     // (e.g. POST /system/reset, re-pathed D49 PR-A per #6521). Same semantics
     // as the server-level path-prefix auth at http/server.ts:270-287.
@@ -253,16 +258,10 @@ export async function createForgeBootstrap() {
 
   consoleStartupLog('admin routes ready; loading agents from database');
   await registry.loadAll(db, {
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    ...loaderConfig,
     publicBaseUrl,
     httpServer,
     integrations,
-    githubApps,
-    emailMailboxes: null,
-    coolify: coolifyManager,
-    minimax: minimaxManager,
-    schedules,
-    internalChat,
   });
   await schedules.loadAll();
   bootstrapDebug('info', 'bootstrap: active schedules loaded');

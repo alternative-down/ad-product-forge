@@ -144,7 +144,7 @@ describe('createRunnerMessageManager — new run preparation', () => {
     expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBeNull();
   });
 
-  it('restores an unacknowledged non-message event when a new run starts', () => {
+  it('does not restore an unacknowledged schedule trigger when a new run starts', () => {
     const state = makeState();
     const manager = createRunnerMessageManager(state, (events) =>
       events.map((event) => event.text).join('|'),
@@ -156,7 +156,7 @@ describe('createRunnerMessageManager — new run preparation', () => {
     manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
     manager.prepareForNewRun();
 
-    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBe('cron pendente');
+    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBeNull();
   });
 });
 
