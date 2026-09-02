@@ -131,12 +131,19 @@ export function createMessageManager(
 
   function restoreFlushedRunMessages() {
     for (const event of state.inFlightRunMessages.values()) {
+      if (event.type.startsWith('message:')) {
+        continue;
+      }
+
       state.pendingRunMessages.set(event.idempotencyKey, event);
       state.flushedRunEventKeys.delete(event.idempotencyKey);
     }
 
     state.flushedRunEventKeyOrder = state.flushedRunEventKeyOrder.filter(
-      (key) => !state.inFlightRunMessages.has(key),
+      (key) => {
+        const event = state.inFlightRunMessages.get(key);
+        return event === undefined || event.type.startsWith('message:');
+      },
     );
     state.inFlightRunMessages.clear();
   }

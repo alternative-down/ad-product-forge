@@ -224,7 +224,7 @@ describe('flushPendingRunMessages', () => {
 });
 
 describe('flushed message delivery lifecycle', () => {
-  it('restores flushed messages after a failed generation', () => {
+  it('does not replay an inbound message after a failed generation', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
     state.pendingRunMessages.set('k1', makeEvent({ idempotencyKey: 'k1', text: 'discord' }));
@@ -235,9 +235,24 @@ describe('flushed message delivery lifecycle', () => {
 
     manager.restoreFlushedRunMessages();
 
-    expect(state.pendingRunMessages.get('k1')?.text).toBe('discord');
+    expect(state.pendingRunMessages.has('k1')).toBe(false);
     expect(state.inFlightRunMessages.size).toBe(0);
-    expect(state.flushedRunEventKeys.has('k1')).toBe(false);
+    expect(state.flushedRunEventKeys.has('k1')).toBe(true);
+  });
+
+  it('restores a non-message wake event after a failed generation', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set(
+      'schedule-1',
+      makeEvent({ idempotencyKey: 'schedule-1', type: 'schedule:trigger', text: 'cron' }),
+    );
+
+    expect(manager.flushPendingRunMessages()).toBe('MESSAGES:cron');
+    manager.restoreFlushedRunMessages();
+
+    expect(state.pendingRunMessages.get('schedule-1')?.text).toBe('cron');
+    expect(state.flushedRunEventKeys.has('schedule-1')).toBe(false);
   });
 
   it('acknowledges flushed messages after a completed generation', () => {
