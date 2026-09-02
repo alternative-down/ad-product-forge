@@ -19,15 +19,6 @@ import {
 import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
 import type { Database } from '../database/client';
 import { agents } from '../database/schema';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type RuntimeStoredMessagePart = {
-  type: string;
-  text?: string;
-  [key: string]: unknown;
-};
 
 export type ThreadDetails = {
   preview: string | null;

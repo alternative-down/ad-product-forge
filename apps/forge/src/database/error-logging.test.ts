@@ -241,7 +241,6 @@ describe('Log format guard (issue #5485, Format A)', () => {
       const matches = findFormatBLocations(content);
       count += matches.length;
     }
-    // eslint-disable-next-line no-console
     console.log('Current Format-B sites:', count, '(baseline:', BASELINE_FORMAT_B_COUNT + ')');
     expect(count).toBeLessThanOrEqual(BASELINE_FORMAT_B_COUNT);
   });
