@@ -19,6 +19,7 @@ async function createDatabase(options: {
   encryptedColumn?: boolean;
   lastFourColumn?: boolean;
   journal?: boolean;
+  laterJournal?: boolean;
 } = {}): Promise<LibSQLDatabase<Record<string, unknown>>> {
   const client = createClient({ url: ':memory:' });
   clients.push(client);
@@ -43,6 +44,12 @@ async function createDatabase(options: {
     await client.execute({
       sql: 'INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)',
       args: ['migration-hash', WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP],
+    });
+  }
+  if (options.laterJournal) {
+    await client.execute({
+      sql: 'INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)',
+      args: ['later-migration', WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP + 1],
     });
   }
 
@@ -70,6 +77,33 @@ describe('fixupWebhookSecretColumns', () => {
     const result = await fixupWebhookSecretColumns(db, 'migration-hash');
 
     expect(result.action).toBe('table_missing');
+  });
+
+  it('recovers webhook tables skipped by an installation with a newer journal', async () => {
+    const db = await createDatabase({ table: false, laterJournal: true });
+
+    const result = await fixupWebhookSecretColumns(db, 'migration-hash');
+
+    expect(result).toEqual({
+      action: 'tables_recovered',
+      addedColumns: ['secret_encrypted', 'secret_last_four'],
+      insertedJournalEntry: true,
+    });
+    expect(await columnNames(db)).toEqual([
+      'route_id',
+      'agent_id',
+      'name',
+      'secret',
+      'secret_encrypted',
+      'secret_last_four',
+      'is_active',
+      'created_at',
+      'updated_at',
+    ]);
+    const eventTables = await db.all<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'webhook_events'",
+    );
+    expect(eventTables).toHaveLength(1);
   });
 
   it('completes a partially applied migration and synchronizes its journal', async () => {
