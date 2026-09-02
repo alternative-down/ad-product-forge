@@ -1,9 +1,15 @@
-import { InMemoryConversationStore, type ConversationMessage } from 'agent-runtime-core/integrations';
+import {
+  InMemoryConversationStore,
+  type ConversationMessage,
+  type ConversationStore,
+} from 'agent-runtime-core/integrations';
+import { createClient } from '@libsql/client';
 import { MockLanguageModelV3 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
 
 import { createForgeConversationMemory } from './memory.js';
 import { consolidateOperationalMemory } from './operational-memory-consolidation.js';
+import { LibsqlConversationStore } from './libsql-conversation-store.js';
 
 const limits = {
   totalContextTokens: 5,
@@ -34,7 +40,7 @@ function createModel() {
   });
 }
 
-async function append(store: InMemoryConversationStore, messages: ConversationMessage[]) {
+async function append(store: ConversationStore, messages: ConversationMessage[]) {
   for (const message of messages) await store.appendMessage(message);
 }
 
@@ -89,6 +95,41 @@ describe('consolidateOperationalMemory', () => {
     ]);
     expect(rendered.map((message) => message.id)).not.toContain('checkpoint-summary:1');
     expect(rendered.map((message) => message.id)).not.toContain('old-raw');
+  });
+
+  it('reuses a checkpoint generation when a retry finds its deterministic id', async () => {
+    const client = createClient({ url: 'file::memory:' });
+    const store = new LibsqlConversationStore({ client, tablePrefix: 'retry_checkpoint' });
+
+    try {
+      await append(store, [
+        {
+          ...memoryMessage('checkpoint-summary:2', 'incomplete summary', 'checkpoint-summary'),
+          operationalMemoryGeneration: 2,
+        },
+        {
+          ...memoryMessage('reflection:2', 'reflection awaiting retry', 'reflection'),
+          operationalMemoryGeneration: 2,
+        },
+      ]);
+
+      await expect(
+        consolidateOperationalMemory({
+          threadId: 'thread-1',
+          resourceId: 'resource-1',
+          store,
+          limits,
+          model: createModel(),
+        }),
+      ).resolves.toBeUndefined();
+
+      const active = await store.listOperationalMemoryMessages({ threadId: 'thread-1' });
+      expect(active).toHaveLength(1);
+      expect(active[0]?.id).toBe('checkpoint-summary:2');
+      expect(active[0]?.parts).toEqual([{ type: 'text', text: 'consolidated 1' }]);
+    } finally {
+      client.close();
+    }
   });
 });
 

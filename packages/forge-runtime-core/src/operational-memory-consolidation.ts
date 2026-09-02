@@ -146,7 +146,7 @@ async function consolidateObservations(
   const generation = (await getLatestGeneration(input.store, input.threadId)) + 1;
   const reflectionId = `reflection:${generation}`;
 
-  await input.store.appendMessage({
+  await persistConsolidatedMessage(input.store, {
     id: reflectionId,
     threadId: input.threadId,
     role: 'assistant',
@@ -202,7 +202,7 @@ async function consolidateReflections(
   const checkpointId = `checkpoint-summary:${generation}`;
   const createdAt = batch.messages.at(-1)?.createdAt ?? batch.messages[0].createdAt;
 
-  await input.store.appendMessage({
+  await persistConsolidatedMessage(input.store, {
     id: checkpointId,
     threadId: input.threadId,
     role: 'assistant',
@@ -212,7 +212,7 @@ async function consolidateReflections(
     createdAt,
   });
   await replaceMessages(input.store, input.threadId, batch.messages, checkpointId);
-  if (previousCheckpoint) {
+  if (previousCheckpoint && previousCheckpoint.id !== checkpointId) {
     await input.store.updateMessageReplacement({
       threadId: input.threadId,
       messageId: previousCheckpoint.id,
@@ -270,12 +270,13 @@ async function generateConsolidatedText(input: {
   texts: string[];
 }) {
   const baseSystemPrompt = buildReflectorSystemPrompt();
-  const alignedSystemPrompt = input.agentSystemPrompt?.trim()
+  const agentSystemPrompt = input.agentSystemPrompt?.trim() ?? '';
+  const alignedSystemPrompt = agentSystemPrompt !== ''
     ? [
         baseSystemPrompt,
         '<main_agent_system_prompt>',
         'Use this main-agent prompt only as alignment context.',
-        input.agentSystemPrompt.trim(),
+        agentSystemPrompt,
         '</main_agent_system_prompt>',
       ].join('\n\n')
     : baseSystemPrompt;
@@ -307,6 +308,57 @@ async function replaceMessages(
         replacedByMessageId: replacementId,
       }),
     ),
+  );
+}
+
+async function persistConsolidatedMessage(
+  store: ConversationStore,
+  message: ConversationMessage,
+): Promise<void> {
+  try {
+    await store.appendMessage(message);
+  } catch (error) {
+    if (!isPrimaryKeyConflict(error)) {
+      throw error;
+    }
+
+    const existingMessage = (await store.listMessages({
+      threadId: message.threadId,
+      order: 'asc',
+    })).find((candidate) => candidate.id === message.id);
+
+    if (
+      existingMessage === undefined ||
+      existingMessage.operationalMemoryType !== message.operationalMemoryType ||
+      existingMessage.operationalMemoryGeneration !== message.operationalMemoryGeneration
+    ) {
+      throw error;
+    }
+
+    await store.updateMessage({
+      threadId: message.threadId,
+      messageId: message.id,
+      role: message.role,
+      parts: message.parts,
+      metadata: message.metadata,
+      operationalMemoryType: message.operationalMemoryType,
+      operationalMemoryGeneration: message.operationalMemoryGeneration,
+    });
+  }
+}
+
+function isPrimaryKeyConflict(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+
+  return (
+    code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
+    message.includes('SQLITE_CONSTRAINT_PRIMARYKEY') ||
+    message.includes('UNIQUE constraint failed')
   );
 }
 
