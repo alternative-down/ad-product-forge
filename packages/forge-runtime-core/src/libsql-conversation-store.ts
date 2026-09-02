@@ -351,66 +351,21 @@ export class LibsqlConversationStore
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
-        with recursive seed as (
-          select
-            rowid,
-            id,
-            thread_id,
-            role,
-            author_id,
-            parts_json,
-            metadata_json,
-            replaced_by_message_id,
-            om_type,
-            om_generation,
-            created_at
-          from ${escapeIdentifier(this.messageTableName)}
-          where thread_id = ?
-        ),
-        replacement_chain(root_id, current_id) as (
-          select id, id
-          from seed
-          union all
-          select replacement_chain.root_id, messages.replaced_by_message_id
-          from replacement_chain
-          join ${escapeIdentifier(this.messageTableName)} as messages
-            on messages.id = replacement_chain.current_id
-          where messages.replaced_by_message_id is not null
-        ),
-        terminal_messages as (
-          select
-            replacement_chain.root_id,
-            replacement_chain.current_id as terminal_id,
-            seed.rowid as source_rowid
-          from replacement_chain
-          join seed
-            on seed.id = replacement_chain.root_id
-          join ${escapeIdentifier(this.messageTableName)} as messages
-            on messages.id = replacement_chain.current_id
-          where messages.replaced_by_message_id is null
-        ),
-        deduped_terminal_messages as (
-          select
-            terminal_id,
-            min(source_rowid) as source_rowid
-          from terminal_messages
-          group by terminal_id
-        )
         select
-          messages.id,
-          messages.thread_id,
-          messages.role,
-          messages.author_id,
-          messages.parts_json,
-          messages.metadata_json,
-          messages.replaced_by_message_id,
-          messages.om_type,
-          messages.om_generation,
-          messages.created_at
-        from deduped_terminal_messages
-        join ${escapeIdentifier(this.messageTableName)} as messages
-          on messages.id = deduped_terminal_messages.terminal_id
-        order by deduped_terminal_messages.source_rowid asc
+          id,
+          thread_id,
+          role,
+          author_id,
+          parts_json,
+          metadata_json,
+          replaced_by_message_id,
+          om_type,
+          om_generation,
+          created_at
+        from ${escapeIdentifier(this.messageTableName)}
+        where thread_id = ?
+          and replaced_by_message_id is null
+        order by rowid asc
       `,
       args: [input.threadId],
     });
