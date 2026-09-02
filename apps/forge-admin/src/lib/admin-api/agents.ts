@@ -172,6 +172,36 @@ export function updateAgentGitHubManifestConfig(input: {
   );
 }
 
+type AgentGitHubProvisioning = NonNullable<AgentDetail['githubProvisioning']>;
+
+export function createAgentGitHubApp(agentId: string) {
+  return request<{ success: true; provisioning: AgentGitHubProvisioning }>(
+    '/admin/agent/github-app/create',
+    { method: 'POST', body: JSON.stringify({ agentId }) },
+  );
+}
+
+export function validateAgentGitHubApp(agentId: string) {
+  return request<{ success: true; expiresAt: string }>('/admin/agent/github-app/validate', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
+export function recreateAgentGitHubApp(agentId: string) {
+  return request<{ success: true; provisioning: AgentGitHubProvisioning }>(
+    '/admin/agent/github-app/recreate',
+    { method: 'POST', body: JSON.stringify({ agentId }) },
+  );
+}
+
+export function deleteAgentGitHubApp(agentId: string) {
+  return request<{ success: true }>('/admin/agent/github-app/delete', {
+    method: 'POST',
+    body: JSON.stringify({ agentId }),
+  });
+}
+
 export function topUpAgentContract(input: TopUpAgentContractInput) {
   return request<{
     agentId: string;

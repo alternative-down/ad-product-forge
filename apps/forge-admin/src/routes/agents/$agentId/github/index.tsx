@@ -4,7 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { AdminLoadingState, PageHeader } from '@/components/admin';
-import { getAgent, updateAgentGitHubManifestConfig } from '@/lib/admin-api/index';
+import {
+  createAgentGitHubApp,
+  deleteAgentGitHubApp,
+  getAgent,
+  recreateAgentGitHubApp,
+  updateAgentGitHubManifestConfig,
+  validateAgentGitHubApp,
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/github/')({
@@ -21,6 +28,9 @@ function AgentGithubIndexRoute() {
   const provisioning = agentQuery.data?.githubProvisioning ?? null;
   const registrationUrl = provisioning?.registrationUrl ?? null;
   const installUrl = provisioning?.installUrl ?? null;
+  const refreshAgent = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
+  };
   const updateManifestMutation = useMutation({
     mutationFn: (manifestConfig: NonNullable<typeof provisioning>['manifestConfig']) =>
       updateAgentGitHubManifestConfig({ agentId, manifestConfig }),
@@ -31,6 +41,46 @@ function AgentGithubIndexRoute() {
     },
     onError: (error, _variables, context) => failAdminAction(context, error),
   });
+  const createMutation = useMutation({
+    mutationFn: () => createAgentGitHubApp(agentId),
+    onMutate: () => startAdminAction('Preparando GitHub App...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'GitHub App preparado. Continue pelo link de criação.');
+      await refreshAgent();
+    },
+    onError: (error, _variables, context) => failAdminAction(context, error),
+  });
+  const validateMutation = useMutation({
+    mutationFn: () => validateAgentGitHubApp(agentId),
+    onMutate: () => startAdminAction('Verificando credencial no GitHub...'),
+    onSuccess: (_data, _variables, context) => {
+      succeedAdminAction(context, 'Credencial válida. Um token novo foi emitido e verificado.');
+    },
+    onError: (error, _variables, context) => failAdminAction(context, error),
+  });
+  const recreateMutation = useMutation({
+    mutationFn: () => recreateAgentGitHubApp(agentId),
+    onMutate: () => startAdminAction('Recriando GitHub App...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'Credencial anterior removida. Continue pelo novo link de criação.');
+      await refreshAgent();
+    },
+    onError: (error, _variables, context) => failAdminAction(context, error),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAgentGitHubApp(agentId),
+    onMutate: () => startAdminAction('Removendo GitHub App...'),
+    onSuccess: async (_data, _variables, context) => {
+      succeedAdminAction(context, 'GitHub App removido deste agente.');
+      await refreshAgent();
+    },
+    onError: (error, _variables, context) => failAdminAction(context, error),
+  });
+  const actionPending =
+    createMutation.isPending ||
+    validateMutation.isPending ||
+    recreateMutation.isPending ||
+    deleteMutation.isPending;
 
   return (
     <div className="min-w-0 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -39,26 +89,60 @@ function AgentGithubIndexRoute() {
         description="Defina o manifest do app antes de criar o GitHub App. Depois que o app já existir, mudanças aqui só valem se ele for recriado."
         actions={
           <>
-            {registrationUrl ? (
+            {!provisioning ? (
+              <Button disabled={actionPending} onClick={() => createMutation.mutate()}>
+                Preparar app
+              </Button>
+            ) : null}
+            {registrationUrl && provisioning?.status === 'pending' ? (
               <Button asChild>
                 <a href={registrationUrl} target="_blank" rel="noreferrer">
                   Criar app
                 </a>
               </Button>
-            ) : (
-              <Button disabled>Criar app</Button>
-            )}
+            ) : null}
             {installUrl ? (
               <Button asChild variant="outline">
                 <a href={installUrl} target="_blank" rel="noreferrer">
                   Instalar app
                 </a>
               </Button>
-            ) : (
-              <Button variant="outline" disabled>
-                Instalar app
+            ) : null}
+            {provisioning?.status === 'active' ? (
+              <Button
+                variant="outline"
+                disabled={actionPending}
+                onClick={() => validateMutation.mutate()}
+              >
+                Verificar credencial
               </Button>
-            )}
+            ) : null}
+            {provisioning ? (
+              <Button
+                variant="outline"
+                disabled={actionPending}
+                onClick={() => {
+                  if (window.confirm('Remover a configuração atual e iniciar um novo GitHub App?')) {
+                    recreateMutation.mutate();
+                  }
+                }}
+              >
+                Recriar app
+              </Button>
+            ) : null}
+            {provisioning ? (
+              <Button
+                variant="ghost"
+                disabled={actionPending}
+                onClick={() => {
+                  if (window.confirm('Remover o GitHub App deste agente?')) {
+                    deleteMutation.mutate();
+                  }
+                }}
+              >
+                Remover
+              </Button>
+            ) : null}
           </>
         }
       />
