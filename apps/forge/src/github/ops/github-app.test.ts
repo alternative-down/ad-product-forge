@@ -3,33 +3,29 @@
  *
  * Coverage scope for #6799 (cascade amplifier fix):
  * - getInstallationToken: success path returns { token, expiresAt }
- * - getInstallationToken: uses refresh: true to bypass Octokit cache
+ * - getInstallationToken: explicitly creates a new token on every call
  * - getInstallationToken: circuit breaker opens after 3 failures in 60s
  * - getInstallationToken: circuit open throws GitHubAppCircuitOpenError (no network)
  * - getInstallationToken: success resets circuit
  * - getInstallationToken: half-open allows retry after cooldown
  * - getInstallationToken: different (appId, installationId) keys have independent circuits
  *
- * L#NN-19b v3: heavy mocking of @octokit/auth-app's createAppAuth
- * per the established pattern in credentials.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAppAuth } from '@octokit/auth-app';
 import { createGitHubAppOps, GitHubAppCircuitOpenError } from './github-app';
 import type { GitHubAppCredentials } from '../types';
 
-vi.mock('@octokit/auth-app', () => ({
-  createAppAuth: vi.fn(),
-}));
+const mockRequest = vi.fn();
 
 vi.mock('octokit', () => ({
-  App: vi.fn().mockImplementation(() => ({
-    octokit: { request: vi.fn() },
-    getInstallationOctokit: vi.fn(),
-  })),
+  App: class MockApp {
+    readonly octokit = { request: mockRequest };
+    readonly getInstallationOctokit = vi.fn();
+  },
+  Octokit: class MockOctokit {
+    readonly request = vi.fn();
+  },
 }));
-
-const mockCreateAppAuth = vi.mocked(createAppAuth);
 
 const activeCredentials: Extract<GitHubAppCredentials, { status: 'active' }> = {
   status: 'active',
@@ -63,8 +59,10 @@ const activeCredentials: Extract<GitHubAppCredentials, { status: 'active' }> = {
   createdAt: 1000,
 };
 
-function makeAuthMock(token: string = 'ghs_fresh_token', expiresAt: string = '2026-12-31T00:00:00Z') {
-  return vi.fn().mockResolvedValue({ token, expiresAt });
+function resolveToken(token: string = 'ghs_fresh_token') {
+  mockRequest.mockResolvedValueOnce({
+    data: { token, expires_at: '2026-12-31T00:00:00Z' },
+  });
 }
 
 describe('createGitHubAppOps', () => {
@@ -80,27 +78,28 @@ describe('createGitHubAppOps', () => {
 
   describe('getInstallationToken', () => {
     it('returns { token, expiresAt } on success', async () => {
-      mockCreateAppAuth.mockReturnValue(makeAuthMock() as never);
+      resolveToken();
       const ops = createGitHubAppOps();
       const result = await ops.getInstallationToken(activeCredentials);
       expect(result.token).toBe('ghs_fresh_token');
       expect(result.expiresAt).toBe('2026-12-31T00:00:00Z');
     });
 
-    it('uses refresh: true to bypass Octokit internal cache (cascade amplifier fix)', async () => {
-      const authFn = makeAuthMock();
-      mockCreateAppAuth.mockReturnValue(authFn as never);
+    it('creates a new token through an explicit GitHub API request on every call', async () => {
+      resolveToken('ghs_first');
+      resolveToken('ghs_second');
       const ops = createGitHubAppOps();
       await ops.getInstallationToken(activeCredentials);
-      expect(authFn).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'installation', refresh: true }),
+      await ops.getInstallationToken(activeCredentials);
+      expect(mockRequest).toHaveBeenCalledTimes(2);
+      expect(mockRequest).toHaveBeenCalledWith(
+        'POST /app/installations/{installation_id}/access_tokens',
+        { installation_id: 67890 },
       );
     });
 
     it('throws with diagnostic context on failure (caller gets actionable error)', async () => {
-      mockCreateAppAuth.mockReturnValue(
-        vi.fn().mockRejectedValue(new Error('Bad credentials [401]')) as never,
-      );
+      mockRequest.mockRejectedValueOnce(new Error('Bad credentials [401]'));
       const ops = createGitHubAppOps();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow(
         /getInstallationToken failed for appId=12345 installationId=67890.*Bad credentials/,
@@ -108,9 +107,7 @@ describe('createGitHubAppOps', () => {
     });
 
     it('opens circuit after 3 failures within 60s (cascade amplifier fix)', async () => {
-      mockCreateAppAuth.mockReturnValue(
-        vi.fn().mockRejectedValue(new Error('Bad credentials [401]')) as never,
-      );
+      mockRequest.mockRejectedValue(new Error('Bad credentials [401]'));
       const ops = createGitHubAppOps();
       // 1st failure
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
@@ -119,43 +116,35 @@ describe('createGitHubAppOps', () => {
       // 3rd failure — circuit should open
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       // 4th call — should throw GitHubAppCircuitOpenError WITHOUT hitting the network
-      const authFn = vi.fn();
-      mockCreateAppAuth.mockReturnValue(authFn as never);
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow(
         GitHubAppCircuitOpenError,
       );
-      expect(authFn).not.toHaveBeenCalled();
+      expect(mockRequest).toHaveBeenCalledTimes(3);
     });
 
     it('success after failures resets the circuit', async () => {
-      const failAuth = vi.fn().mockRejectedValue(new Error('Bad credentials [401]'));
-      const okAuth = vi.fn().mockResolvedValue({
-        token: 'ghs_fresh',
-        expiresAt: '2026-12-31T00:00:00Z',
-      });
-      mockCreateAppAuth.mockReturnValue(failAuth as never);
+      mockRequest.mockRejectedValue(new Error('Bad credentials [401]'));
       const ops = createGitHubAppOps();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       // Now switch to success
-      mockCreateAppAuth.mockReturnValue(okAuth as never);
+      mockRequest.mockReset();
+      resolveToken('ghs_fresh');
       const result = await ops.getInstallationToken(activeCredentials);
       expect(result.token).toBe('ghs_fresh');
       // After success, circuit should be reset — 3 more failures needed to reopen
-      mockCreateAppAuth.mockReturnValue(failAuth as never);
+      mockRequest.mockRejectedValue(new Error('Bad credentials [401]'));
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       // Only 2 failures since reset — circuit still closed
-      const okAuthAfter = vi.fn().mockResolvedValue({ token: 'ghs_after_reset', expiresAt: '2026-12-31T00:00:00Z' });
-      mockCreateAppAuth.mockReturnValue(okAuthAfter as never);
+      mockRequest.mockReset();
+      resolveToken('ghs_after_reset');
       const resultAfter = await ops.getInstallationToken(activeCredentials);
       expect(resultAfter.token).toBe('ghs_after_reset');
     });
 
     it('different (appId, installationId) pairs have independent circuits', async () => {
-      mockCreateAppAuth.mockReturnValue(
-        vi.fn().mockRejectedValue(new Error('Bad credentials [401]')) as never,
-      );
+      mockRequest.mockRejectedValue(new Error('Bad credentials [401]'));
       const ops = createGitHubAppOps();
       const credsA = { ...activeCredentials, appId: 11111, installationId: 22222 };
       const credsB = { ...activeCredentials, appId: 33333, installationId: 44444 };
@@ -174,21 +163,17 @@ describe('createGitHubAppOps', () => {
       // and CIRCUIT_BREAKER_COOLDOWN_MS=60s — too slow for test. Instead, verify
       // that the checkCircuit function returns when elapsedSinceOpen >= cooldown.
       // The state is internal, so we use the public API + a fake time advance.
-      mockCreateAppAuth.mockReturnValue(
-        vi.fn().mockRejectedValue(new Error('Bad credentials [401]')) as never,
-      );
+      mockRequest.mockRejectedValue(new Error('Bad credentials [401]'));
       const ops = createGitHubAppOps();
       // 3 failures to open circuit
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow();
       // Circuit open — fast retry blocked
-      const blockedAuth = vi.fn();
-      mockCreateAppAuth.mockReturnValue(blockedAuth as never);
       await expect(ops.getInstallationToken(activeCredentials)).rejects.toThrow(
         GitHubAppCircuitOpenError,
       );
-      expect(blockedAuth).not.toHaveBeenCalled();
+      expect(mockRequest).toHaveBeenCalledTimes(3);
     });
   });
 });
