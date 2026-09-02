@@ -3,6 +3,7 @@ import {
   safeSerializeRecallSteps,
   safeSerializeGraphResult,
   ltmEscapeXml,
+  buildRecallExcerpt,
   buildRecallSystemMessage,
 } from './helpers';
 
@@ -21,6 +22,15 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 describe('ltm/helpers', () => {
+  describe('buildRecallExcerpt', () => {
+    it('keeps only the first paragraph and truncates long text', () => {
+      const result = buildRecallExcerpt(`${'a'.repeat(400)}\n\nsecond paragraph`);
+
+      expect(result).toHaveLength(320);
+      expect(result.endsWith('…')).toBe(true);
+      expect(result).not.toContain('second paragraph');
+    });
+  });
   describe('safeSerializeRecallSteps', () => {
     it('returns formatted JSON for a plain array', () => {
       const steps = [{ role: 'user', content: 'hello' }];
@@ -144,7 +154,7 @@ describe('ltm/helpers', () => {
         graphHit: true,
         graphScore: 0.8421,
         graphContext: 'The task was completed on Monday',
-        results: [],
+        results: [{ id: 'memory/task.txt', content: 'task context' }],
       });
       expect(result).not.toBeNull();
       expect(result).toContain('<memory-recall');
@@ -168,7 +178,7 @@ describe('ltm/helpers', () => {
       expect(result).not.toBeNull();
       expect(result).toContain('<memory-recall');
       expect(result).toContain('source="workspace"');
-      expect(result).toContain('id="doc-1"');
+      expect(result).toContain('path="doc-1"');
       expect(result).toContain('score="0.9000"');
       expect(result).toContain('config: { port: 3000 }');
       expect(result).toContain('</memory-recall>');
@@ -211,7 +221,7 @@ describe('ltm/helpers', () => {
         results: [{ id: 'd1', content: 'content', score: 0.5 }],
       });
       expect(result).toContain('<instructions>');
-      expect(result).toContain('I remember that');
+      expect(result).toContain('short excerpt');
     });
 
     it('uses null score attribute when graphScore is not a number', () => {
@@ -220,7 +230,7 @@ describe('ltm/helpers', () => {
         graphHit: true,
         graphScore: null,
         graphContext: 'some context',
-        results: [],
+        results: [{ id: 'memory/context.txt', content: 'some context' }],
       });
       expect(result).toContain('source="graph"');
       // null score → no score attribute

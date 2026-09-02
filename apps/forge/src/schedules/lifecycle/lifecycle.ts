@@ -160,10 +160,22 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     try {
       const job = scheduleJob(record.scheduleId, scheduledDate, async (fireDate) => {
         cancelIfNotActive(record.scheduleId, false);
+        forgeDebug({
+          scope: 'schedules',
+          level: 'info',
+          message: 'date schedule firing',
+          context: { scheduleId: record.scheduleId, agentId: record.agentId, fireDate: fireDate.getTime() },
+        });
         await deps.onFire(record, fireDate);
       });
       jobs.set(record.scheduleId, job);
       await store.setNextTriggerAt(record.scheduleId, scheduledDate.getTime());
+      forgeDebug({
+        scope: 'schedules',
+        level: 'info',
+        message: 'date schedule registered',
+        context: { scheduleId: record.scheduleId, agentId: record.agentId, nextTriggerAt: scheduledDate.getTime() },
+      });
     } catch (err) {
       logRegisterFailure('date', record.scheduleId, err);
       throw err;
@@ -181,11 +193,24 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
       job = scheduleJob(record.scheduleId, spec, async (fireDate) => {
         const nextInvocation = jobs.get(record.scheduleId)?.nextInvocation();
         cancelIfNotActive(record.scheduleId, true);
+        forgeDebug({
+          scope: 'schedules',
+          level: 'info',
+          message: 'cron schedule firing',
+          context: { scheduleId: record.scheduleId, agentId: record.agentId, fireDate: fireDate.getTime(), nextTriggerAt: nextInvocation?.getTime() ?? null },
+        });
         await deps.onFire(record, fireDate);
         await store.setNextTriggerAt(record.scheduleId, nextInvocation?.getTime() ?? null);
       });
       jobs.set(record.scheduleId, job);
-      await store.setNextTriggerAt(record.scheduleId, job.nextInvocation()?.getTime() ?? null);
+      const nextTriggerAt = job.nextInvocation()?.getTime() ?? null;
+      await store.setNextTriggerAt(record.scheduleId, nextTriggerAt);
+      forgeDebug({
+        scope: 'schedules',
+        level: 'info',
+        message: 'cron schedule registered',
+        context: { scheduleId: record.scheduleId, agentId: record.agentId, cronExpression: record.cronExpression, timezone: record.timezone ?? null, nextTriggerAt },
+      });
     } catch (err) {
       logRegisterFailure('cron', record.scheduleId, err);
       throw err;
@@ -194,6 +219,12 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   async function loadAll(): Promise<void> {
     const schedules = await store.listActiveSchedules();
+    forgeDebug({
+      scope: 'schedules',
+      level: 'info',
+      message: 'loading active schedules',
+      context: { scheduleCount: schedules.length },
+    });
     // Parallel: Promise.allSettled preserves the "continue on failure" semantics
     // of the previous sequential loop. With ~50 active schedules, startup goes
     // from N×setup-time to ~setup-time total. See #5595.

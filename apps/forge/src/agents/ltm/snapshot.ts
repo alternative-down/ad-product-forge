@@ -119,7 +119,10 @@ export function partitionRecallResults(
       ? `graph:${createHash('sha1').update(input.graph.context).digest('hex')}`
       : null;
 
-  const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
+  const graphAllowed =
+    graphFingerprint !== null &&
+    !seenFingerprints.has(graphFingerprint) &&
+    workspaceResults.length > 0;
   const historyFingerprints = [
     ...(graphFingerprint !== null && graphFingerprint !== undefined ? [graphFingerprint] : []),
     ...workspaceFingerprints,
@@ -129,7 +132,7 @@ export function partitionRecallResults(
     graph: graphAllowed
       ? { hit: input.graph.hit, score: 0, context: input.graph.context ?? '' }
       : { hit: false, score: 0, context: '' },
-    results: graphAllowed ? input.results : workspaceResults,
+    results: workspaceResults,
     historyFingerprints,
   };
 }
@@ -143,16 +146,22 @@ export function buildNextRecallHistory(input: {
   candidateFingerprints: string[];
   windowSize: number;
 }): LongTermMemoryRecallHistory {
-  const seen = new Set(input.recentFingerprints);
+  const seen = new Set<string>();
   const next: string[] = [];
   for (const fp of input.recentFingerprints) {
-    if (!seen.has(fp)) next.push(fp);
+    if (fp.length > 0 && !seen.has(fp)) {
+      seen.add(fp);
+      next.push(fp);
+    }
   }
   for (const fp of input.candidateFingerprints) {
-    if (fp.length > 0 && !seen.has(fp) && next.length < input.windowSize) next.push(fp);
+    if (fp.length > 0 && !seen.has(fp)) {
+      seen.add(fp);
+      next.push(fp);
+    }
   }
   return {
-    recentFingerprints: next,
+    recentFingerprints: next.slice(-input.windowSize),
     updatedAt: new Date().toISOString(),
   };
 }
