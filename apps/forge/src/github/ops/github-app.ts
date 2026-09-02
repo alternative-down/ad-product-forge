@@ -5,12 +5,11 @@
  *
  * Provides:
  * - getInstallationToken: get short-lived installation token from GitHub App
- *   (with circuit breaker + refresh: true to prevent cascade amplification)
+ *   (with circuit breaker and an explicit token-creation request)
  * - createGitHubApp: build the App instance for webhook delivery
  * - createInstallationOctokit: build Octokit for a specific installation
  */
 import { App, Octokit } from 'octokit';
-import { createAppAuth } from '@octokit/auth-app';
 import type { GitHubAppCredentials } from '../types';
 import { errorMsg } from '../../agents/error-formatting';
 
@@ -40,7 +39,8 @@ export interface GitHubAppOps {
 // across many agent wake cycles.
 //
 // Fix:
-// 1. Pass refresh: true to Octokit auth so it bypasses its internal cache.
+// 1. Create each installation token with an explicit GitHub API POST. This
+//    avoids authentication-strategy caches entirely.
 // 2. Track failures per (appId, installationId). After 3 failures within
 //    CIRCUIT_BREAKER_WINDOW_MS, open the circuit: subsequent calls throw
 //    GitHubAppCircuitOpenError without hitting the network. This stops the
@@ -150,21 +150,16 @@ export function createGitHubAppOps(): GitHubAppOps {
     // ── Pre-flight circuit check (no network call if open) ───────────────────
     checkCircuit(circuitByKey, appId, installationId);
 
-    const auth = createAppAuth({
-      appId,
-      privateKey,
-      installationId,
-    });
-
     let token: { token: string; expiresAt: string };
     try {
-      // refresh: true bypasses Octokit's internal cache so we always hit GitHub
-      // with a fresh POST /app/installations/{id}/access_tokens. This is the key
-      // fix to break the existing cascade where Octokit was returning cached 401s.
-      const result = await auth({ type: 'installation', refresh: true });
+      const app = new App({ appId, privateKey });
+      const result = await app.octokit.request(
+        'POST /app/installations/{installation_id}/access_tokens',
+        { installation_id: installationId },
+      );
       token = {
-        token: result.token,
-        expiresAt: result.expiresAt,
+        token: result.data.token,
+        expiresAt: result.data.expires_at,
       };
       recordSuccess(circuitByKey, appId, installationId);
     } catch (error) {
@@ -203,7 +198,12 @@ export function createGitHubAppOps(): GitHubAppOps {
   }) {
     const octokit = new Octokit({ auth: input.token });
 
-    if (input.owner && input.repositoryName) {
+    if (
+      input.owner !== undefined &&
+      input.owner.length > 0 &&
+      input.repositoryName !== undefined &&
+      input.repositoryName.length > 0
+    ) {
       await octokit.request('GET /repos/{owner}/{repo}', {
         owner: input.owner,
         repo: input.repositoryName,

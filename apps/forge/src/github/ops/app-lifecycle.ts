@@ -273,6 +273,13 @@ export function createAppLifecycleOps(
       throw new Error('GitHub installation token validation produced no token');
     }
 
+    appLifecycleOpsDebug('info', 'Returning validated GitHub installation credential', {
+      agentId: input.agentId,
+      repositoryName: input.repositoryName ?? null,
+      tokenFingerprint: createHash('sha256').update(token.token).digest('hex').slice(0, 12),
+      expiresAt: token.expiresAt,
+    });
+
     return {
       username: 'x-access-token',
       token: token.token,
