@@ -24,7 +24,7 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 // Import the module to test getDatabase behavior.
-const { getDatabase } = await import('./client');
+const { configureDatabaseConnection, getDatabase } = await import('./client');
 
 describe('getDatabase', () => {
   beforeEach(() => {
@@ -46,6 +46,23 @@ describe('getDatabase', () => {
   test('has a run method for executing raw SQL', () => {
     const db = getDatabase() as unknown as { run: (sql: unknown) => Promise<void> };
     expect(typeof db.run).toBe('function');
+  });
+
+  test('awaits connection configuration in a deterministic order', async () => {
+    await configureDatabaseConnection();
+
+    expect(mockRun).toHaveBeenCalledTimes(4);
+    expect(mockRun.mock.invocationCallOrder).toEqual(
+      [...mockRun.mock.invocationCallOrder].sort((left, right) => left - right),
+    );
+  });
+
+  test('surfaces connection configuration failures to bootstrap', async () => {
+    mockRun.mockRejectedValueOnce(new Error('database configuration failed'));
+
+    await expect(configureDatabaseConnection()).rejects.toThrow(
+      'database configuration failed',
+    );
   });
 });
 

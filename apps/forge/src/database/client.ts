@@ -28,13 +28,15 @@ const db = drizzle(client, { schema });
 //               writes with the documented tradeoff that the last transaction
 //               may be lost on power failure; the database itself stays consistent.
 //
-// All four PRAGMAs are connection-level configuration. No application code
-// change required and no schema migration needed. Re-applying them on each
-// client construction is safe; SQLite accepts repeated PRAGMA calls.
-db.run(sql`PRAGMA foreign_keys = ON`);
-db.run(sql`PRAGMA busy_timeout = 5000`);
-db.run(sql`PRAGMA journal_mode = WAL`);
-db.run(sql`PRAGMA synchronous = NORMAL`);
+// All four PRAGMAs are connection-level configuration. They must be awaited
+// during bootstrap: starting them at module scope turns an SQLite rejection
+// into an unhandled promise rejection before startup can report the cause.
+export async function configureDatabaseConnection(): Promise<void> {
+  await db.run(sql`PRAGMA foreign_keys = ON`);
+  await db.run(sql`PRAGMA busy_timeout = 5000`);
+  await db.run(sql`PRAGMA journal_mode = WAL`);
+  await db.run(sql`PRAGMA synchronous = NORMAL`);
+}
 
 /**
  * Obtém a instância do database

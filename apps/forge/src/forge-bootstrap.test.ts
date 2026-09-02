@@ -14,6 +14,7 @@
 // ─── Module mocks (must come before any imports of the SUT) ────────────────────
 
 const mockGetDatabase = vi.hoisted(() => vi.fn());
+const mockConfigureDatabaseConnection = vi.hoisted(() => vi.fn());
 const mockRunMigrations = vi.hoisted(() => vi.fn());
 const mockPrepareAgentEmbedders = vi.hoisted(() => vi.fn());
 const mockGetInternalAgentRegistry = vi.hoisted(() => vi.fn());
@@ -32,7 +33,10 @@ const mockErrorMsg = vi.hoisted(() => vi.fn((err: unknown) => String(err)));
 
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug, errorMsg: mockErrorMsg }));
 
-vi.mock('./database/client', () => ({ getDatabase: mockGetDatabase }));
+vi.mock('./database/client', () => ({
+  getDatabase: mockGetDatabase,
+  configureDatabaseConnection: mockConfigureDatabaseConnection,
+}));
 vi.mock('./database/migrate', () => ({ runMigrations: mockRunMigrations }));
 vi.mock('./agents/agent-embedder-maintenance', () => ({
   prepareAgentEmbeddersForStartup: mockPrepareAgentEmbedders,
@@ -495,7 +499,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
     it('emits every checkpoint invocation on the happy path', async () => {
       setEnv();
       await createForgeBootstrap();
-      expect(mockForgeDebug).toHaveBeenCalledTimes(14);
+      expect(mockForgeDebug).toHaveBeenCalledTimes(15);
     });
 
     it('emits checkpoints in documented order', async () => {
@@ -505,6 +509,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
       expect(messages).toEqual([
         'bootstrap: starting',
         'bootstrap: env parsed',
+        'bootstrap: configuring database connection',
         'bootstrap: db obtained, running migrations',
         'bootstrap: migrations complete',
         'bootstrap: agent embedders ready',
