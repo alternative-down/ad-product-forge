@@ -595,8 +595,8 @@ describe('generateWithTimeoutRetries runtime integration', () => {
       expect.anything(),
       expect.objectContaining({ maxSteps: 30, runId: 'run-1' }),
     );
-    expect(register).toHaveBeenCalledOnce();
-    expect(resetLoopDetector).toHaveBeenCalledOnce();
+    expect(register).not.toHaveBeenCalled();
+    expect(resetLoopDetector).not.toHaveBeenCalled();
     expect(recordAgentStep).toHaveBeenCalledWith('contract-1', 10, 4, 2);
     expect(result).toEqual(expect.objectContaining({
       text: 'STOP_AND_IDLE',
