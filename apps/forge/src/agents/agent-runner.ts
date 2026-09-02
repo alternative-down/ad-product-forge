@@ -190,6 +190,14 @@ export function createAgentRunner(
       });
     }
 
+    agentRunnerDebug('info', 'wake events queued for new run', {
+      runtimeId: runtime.id,
+      eventCount: events.length,
+      runnableEventCount: runnableEvents.length,
+      idleOnlyEventCount: idleOnlyEvents.length,
+      pendingMessageCount: messageManager.getPendingCount(),
+    });
+
     await beginRun({
       reloadRuntime: false,
       wakeStartedAt: Date.now(),
@@ -259,7 +267,11 @@ export function createAgentRunner(
       scheduler.resetBackoff();
       lifecycleState.lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
-      messageManager.reset();
+      messageManager.prepareForNewRun();
+      agentRunnerDebug('info', 'new run preserved queued wake events', {
+        runtimeId: runtime.id,
+        pendingMessageCount: messageManager.getPendingCount(),
+      });
       lifecycleState.pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();

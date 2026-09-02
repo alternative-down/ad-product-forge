@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { createMessageManager } from './agent-runner-messages';
+import { createRunnerMessageManager } from './agent-runner-message-manager';
 import type { MessageManagerState } from './agent-runner-messages';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
@@ -108,6 +109,41 @@ describe('createMessageManager — appendPendingRunMessages', () => {
       allowIdleOnly: true,
     });
     expect(state.pendingRunMessages.get('k1')!.idleOnly).toBe(false);
+  });
+});
+
+describe('createRunnerMessageManager — new run preparation', () => {
+  it('preserves the wake message that starts an idle agent run', () => {
+    const state = makeState();
+    const manager = createRunnerMessageManager(state, (events) =>
+      events.map((event) => event.text).join('|'),
+    );
+
+    manager.appendPendingRunMessages([
+      makeEvent({ idempotencyKey: 'discord-1', text: 'Orion, qual o status?' }),
+    ]);
+    manager.prepareForNewRun();
+
+    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBe(
+      'Orion, qual o status?',
+    );
+  });
+
+  it('restores unacknowledged messages when a new run starts', () => {
+    const state = makeState();
+    const manager = createRunnerMessageManager(state, (events) =>
+      events.map((event) => event.text).join('|'),
+    );
+
+    manager.appendPendingRunMessages([
+      makeEvent({ idempotencyKey: 'discord-1', text: 'mensagem ainda não entregue' }),
+    ]);
+    manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
+    manager.prepareForNewRun();
+
+    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBe(
+      'mensagem ainda não entregue',
+    );
   });
 });
 
