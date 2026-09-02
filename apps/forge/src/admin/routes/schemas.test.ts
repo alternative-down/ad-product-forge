@@ -301,19 +301,22 @@ describe('Admin Route Schemas', () => {
   });
 
   describe('createInternalChatConversationSchema', () => {
-    it('allows optional name with memberKeys required', () => {
+    it('validates a direct conversation', () => {
       const result = createInternalChatConversationSchema.parse({
         accountId: 'acct-1',
-        memberKeys: ['user-1'],
+        type: 'dm',
+        participantAccountIds: ['user-1'],
       });
-      expect(result.name).toBeUndefined();
+      expect(result.type).toBe('dm');
+      expect(result.participantAccountIds).toEqual(['user-1']);
     });
 
-    it('validates required accountId with memberKeys', () => {
+    it('validates a named group conversation', () => {
       const result = createInternalChatConversationSchema.parse({
         accountId: 'acct-1',
+        type: 'group',
         name: 'Team Chat',
-        memberKeys: ['user-1'],
+        participantAccountIds: ['user-1'],
       });
       expect(result.accountId).toBe('acct-1');
       expect(result.name).toBe('Team Chat');
@@ -323,6 +326,7 @@ describe('Admin Route Schemas', () => {
   describe('sendInternalChatConversationMessageSchema', () => {
     it('validates required fields', () => {
       const result = sendInternalChatConversationMessageSchema.parse({
+        accountId: 'acct-1',
         conversationId: 'conv-1',
         content: 'Hello team',
       });
@@ -333,6 +337,7 @@ describe('Admin Route Schemas', () => {
   describe('updateInternalChatConversationSchema', () => {
     it('allows optional fields', () => {
       const result = updateInternalChatConversationSchema.parse({
+        accountId: 'acct-1',
         conversationId: 'conv-1',
       });
       expect(result.conversationId).toBe('conv-1');
@@ -340,6 +345,7 @@ describe('Admin Route Schemas', () => {
 
     it('accepts name update', () => {
       const result = updateInternalChatConversationSchema.parse({
+        accountId: 'acct-1',
         conversationId: 'conv-1',
         name: 'New Name',
       });
@@ -350,6 +356,7 @@ describe('Admin Route Schemas', () => {
   describe('archiveInternalChatConversationSchema', () => {
     it('validates required conversationId', () => {
       const result = archiveInternalChatConversationSchema.parse({
+        accountId: 'acct-1',
         conversationId: 'conv-1',
       });
       expect(result.conversationId).toBe('conv-1');

@@ -41,11 +41,29 @@ export const internalChatMessageAttachmentQuerySchema = z.object({
   attachmentName: z.string().min(1),
 });
 
-export const createInternalChatConversationSchema = z.object({
-  accountId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  memberKeys: z.array(z.string()).min(1),
-});
+export const createInternalChatConversationSchema = z
+  .object({
+    accountId: z.string().min(1),
+    type: z.enum(['dm', 'group']),
+    name: z.string().min(1).optional(),
+    participantAccountIds: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((value, context) => {
+    if (value.type === 'dm' && value.participantAccountIds.length !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['participantAccountIds'],
+        message: 'A direct conversation requires exactly one participant',
+      });
+    }
+    if (value.type === 'group' && value.name === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['name'],
+        message: 'A group conversation requires a name',
+      });
+    }
+  });
 
 export const sendInternalChatConversationMessageSchema = z.object({
   accountId: z.string().min(1),

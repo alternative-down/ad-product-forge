@@ -28,9 +28,13 @@ function ThreadMessageContent(input: { message: AgentThreadMessage }) {
   const textParts = (content.parts ?? []).flatMap((part) =>
     part.type === 'text' && typeof part.text === 'string' ? [part.text] : [],
   );
+  const reasoningParts = (content.parts ?? []).flatMap((part) =>
+    part.type === 'reasoning' && typeof part.text === 'string' ? [part.text] : [],
+  );
   const texts = textParts.length > 0 ? textParts : content.content ? [content.content] : [];
+  const reasoning = reasoningParts.length > 0 ? reasoningParts.join('\n\n') : content.reasoning;
 
-  if (texts.length === 0 && !content.reasoning && (content.toolInvocations?.length ?? 0) === 0) {
+  if (texts.length === 0 && !reasoning && (content.toolInvocations?.length ?? 0) === 0) {
     return <p className="text-sm text-muted-foreground">Sem conteúdo textual.</p>;
   }
 
@@ -45,9 +49,7 @@ function ThreadMessageContent(input: { message: AgentThreadMessage }) {
         </p>
       ))}
 
-      {content.reasoning ? (
-        <ThreadDisclosure summary="Reasoning / Thinking" value={content.reasoning} />
-      ) : null}
+      {reasoning ? <ThreadDisclosure summary="Reasoning / Thinking" value={reasoning} /> : null}
 
       {content.toolInvocations?.map((invocation, index) => (
         <ThreadDisclosure

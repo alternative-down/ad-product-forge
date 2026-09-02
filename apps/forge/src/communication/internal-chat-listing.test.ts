@@ -223,17 +223,13 @@ describe('createInternalChatListing -- listConversationsByAccount', () => {
         conversationId: 'conv-1',
         accountId: 'acct-1',
         role: 'admin',
-        displayName: 'Alice',
-        agentId: null,
-        slug: 'alice',
+        account: { displayName: 'Alice', agentId: null, slug: 'alice' },
       },
       {
         conversationId: 'conv-1',
         accountId: 'acct-2',
         role: 'normal',
-        displayName: 'Bob',
-        agentId: null,
-        slug: 'bob',
+        account: { displayName: 'Bob', agentId: null, slug: 'bob' },
       },
     ];
     const db = makeMockDb(convRows, messageRows);
@@ -259,17 +255,13 @@ describe('createInternalChatListing -- listConversationsByAccount', () => {
         conversationId: 'conv-1',
         accountId: 'acct-1',
         role: 'admin',
-        displayName: 'Alice',
-        agentId: null,
-        slug: 'alice',
+        account: { displayName: 'Alice', agentId: null, slug: 'alice' },
       },
       {
         conversationId: 'conv-1',
         accountId: 'acct-2',
         role: 'normal',
-        displayName: 'Bob',
-        agentId: null,
-        slug: 'bob',
+        account: { displayName: 'Bob', agentId: null, slug: 'bob' },
       },
     ];
     const db = makeMockDb(convRows, []);
@@ -323,9 +315,7 @@ describe('createInternalChatListing -- listConversations', () => {
         conversationId: 'conv-1',
         accountId: 'acct-1',
         role: 'admin',
-        displayName: 'Alice',
-        agentId: null,
-        slug: 'alice',
+        account: { displayName: 'Alice', agentId: null, slug: 'alice' },
       },
     ];
     const db = makeMockDb(convRows, messageRows);

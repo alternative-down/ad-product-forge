@@ -307,16 +307,18 @@ describe('createInternalChatConversationSchema', () => {
   it('parses minimal valid input', () => {
     const result = createInternalChatConversationSchema.parse({
       accountId: 'acc-1',
-      memberKeys: ['user-1', 'user-2'],
+      type: 'dm',
+      participantAccountIds: ['user-1'],
     });
-    expect(result.memberKeys).toEqual(['user-1', 'user-2']);
+    expect(result.participantAccountIds).toEqual(['user-1']);
   });
 
   it('parses with optional name', () => {
     const result = createInternalChatConversationSchema.parse({
       accountId: 'a',
+      type: 'group',
       name: 'Team Chat',
-      memberKeys: ['u1'],
+      participantAccountIds: ['u1'],
     });
     expect(result.name).toBe('Team Chat');
   });
@@ -376,7 +378,10 @@ describe('sendInternalChatConversationMessageSchema', () => {
 
 describe('updateInternalChatConversationSchema', () => {
   it('parses minimal valid input (conversationId only)', () => {
-    const result = updateInternalChatConversationSchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' });
+    const result = updateInternalChatConversationSchema.parse({
+      accountId: 'acc-1',
+      conversationId: 'conv-1',
+    });
     expect(result.conversationId).toBe('conv-1');
   });
 
@@ -407,9 +412,9 @@ describe('updateInternalChatConversationSchema', () => {
 
 describe('archiveInternalChatConversationSchema', () => {
   it('parses with conversationId', () => {
-    expect(archiveInternalChatConversationSchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' })).toMatchObject(
-      { conversationId: 'conv-1' },
-    );
+    expect(
+      archiveInternalChatConversationSchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' }),
+    ).toMatchObject({ conversationId: 'conv-1' });
   });
 
   it('rejects missing conversationId', () => {

@@ -5,6 +5,7 @@ const mockListRecentConversations = vi.hoisted(() => vi.fn());
 const mockListThreadMessages = vi.hoisted(() => vi.fn());
 const mockToMastraSafeIdentifier = vi.hoisted(() => vi.fn((v: string) => `safe_${v}`));
 const mockForgeDebug = vi.hoisted(() => vi.fn());
+const mockAgentRegistryGet = vi.hoisted(() => vi.fn());
 
 vi.mock('./conversation-helpers', () => ({
   listRecentConversations: mockListRecentConversations,
@@ -14,10 +15,28 @@ vi.mock('@forge-runtime/core', () => ({
   toMastraSafeIdentifier: mockToMastraSafeIdentifier,
   forgeDebug: mockForgeDebug,
 }));
+vi.mock('../../agents/internal-agent-registry', () => ({
+  getInternalAgentRegistry: () => ({ get: mockAgentRegistryGet }),
+}));
 
 function makeMockInternalChat(overrides: Record<string, unknown> = {}) {
   return {
-    listMessages: vi.fn().mockResolvedValue([]),
+    getMessages: vi.fn().mockResolvedValue([]),
+    ...overrides,
+  };
+}
+
+function makeMessage(overrides: Record<string, unknown> = {}) {
+  return {
+    messageId: 'message-1',
+    provider: 'internal-chat',
+    authorId: 'account-1',
+    targetKey: 'conversation-1',
+    content: 'message',
+    attachments: [],
+    unread: false,
+    createdAt: new Date(0).toISOString(),
+    authorDisplayName: 'Nicolas',
     ...overrides,
   };
 }
@@ -33,6 +52,7 @@ describe('createAgentConversationsReadModel', () => {
     mockToMastraSafeIdentifier.mockReset();
     mockToMastraSafeIdentifier.mockImplementation((v: string) => `safe_${v}`);
     mockForgeDebug.mockReset();
+    mockAgentRegistryGet.mockReset();
     mockListRecentConversations.mockResolvedValue([]);
     mockListThreadMessages.mockResolvedValue({ items: [], totalPages: 0, currentPage: 1 });
   });
@@ -40,32 +60,44 @@ describe('createAgentConversationsReadModel', () => {
   describe('listAgentRecentConversations', () => {
     it('calls listRecentConversations with agentId and default limit 10', async () => {
       mockListRecentConversations.mockResolvedValue([]);
+      const mockChat = makeMockInternalChat();
       const model = createAgentConversationsReadModel({
         db: makeMockDb() as unknown as Parameters<
           typeof createAgentConversationsReadModel
         >[0]['db'],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as unknown as Parameters<
+        internalChat: mockChat as unknown as Parameters<
           typeof createAgentConversationsReadModel
         >[0]['internalChat'],
       });
       await model.listAgentRecentConversations('agent-42');
-      expect(mockListRecentConversations).toHaveBeenCalledWith('agent-42', 10);
+      expect(mockListRecentConversations).toHaveBeenCalledWith(
+        '/tmp',
+        mockChat,
+        'agent-42',
+        'agent-42',
+      );
     });
 
     it('passes custom limit to listRecentConversations', async () => {
       mockListRecentConversations.mockResolvedValue([]);
+      const mockChat = makeMockInternalChat();
       const model = createAgentConversationsReadModel({
         db: makeMockDb() as unknown as Parameters<
           typeof createAgentConversationsReadModel
         >[0]['db'],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as unknown as Parameters<
+        internalChat: mockChat as unknown as Parameters<
           typeof createAgentConversationsReadModel
         >[0]['internalChat'],
       });
       await model.listAgentRecentConversations('agent-1', 25);
-      expect(mockListRecentConversations).toHaveBeenCalledWith('agent-1', 25);
+      expect(mockListRecentConversations).toHaveBeenCalledWith(
+        '/tmp',
+        mockChat,
+        'agent-1',
+        'agent-1',
+      );
     });
 
     it('returns conversations from listRecentConversations', async () => {
@@ -89,7 +121,7 @@ describe('createAgentConversationsReadModel', () => {
   });
 
   describe('listAgentConversationMessages', () => {
-    it('calls internalChat.listMessages with correct params', async () => {
+    it('calls internal chat with the requested conversation and one extra row', async () => {
       const mockChat = makeMockInternalChat();
       const model = createAgentConversationsReadModel({
         db: makeMockDb() as unknown as Parameters<
@@ -102,26 +134,26 @@ describe('createAgentConversationsReadModel', () => {
       });
       await model.listAgentConversationMessages({
         agentId: 'agent-1',
-        provider: 'test-provider',
+        provider: 'internal-chat',
         targetKey: 'conv-abc',
         limit: 20,
         offset: 0,
       });
-      expect(mockChat.listMessages).toHaveBeenCalledWith({
-        provider: 'test-provider',
-        targetKey: 'conv-abc',
-        limit: 20,
+      expect(mockChat.getMessages).toHaveBeenCalledWith({
+        agentId: 'agent-1',
+        conversationKey: 'conv-abc',
+        limit: 21,
         offset: 0,
       });
     });
 
     it('maps messages with authorAgentId set to null', async () => {
       const messages = [
-        { content: 'hello', role: 'user', createdAt: 100 },
-        { content: 'hi there', role: 'assistant', createdAt: 101 },
+        makeMessage({ messageId: 'one', content: 'hello' }),
+        makeMessage({ messageId: 'two', content: 'hi there' }),
       ];
       const mockChat = makeMockInternalChat({
-        listMessages: vi.fn().mockResolvedValue(messages),
+        getMessages: vi.fn().mockResolvedValue(messages),
       });
       const model = createAgentConversationsReadModel({
         db: makeMockDb() as unknown as Parameters<
@@ -134,7 +166,7 @@ describe('createAgentConversationsReadModel', () => {
       });
       const result = await model.listAgentConversationMessages({
         agentId: 'agent-1',
-        provider: 'p',
+        provider: 'internal-chat',
         targetKey: 'k',
         limit: 10,
         offset: 0,
@@ -146,11 +178,9 @@ describe('createAgentConversationsReadModel', () => {
     });
 
     it('maps each message preserving all CommunicationMessageView fields', async () => {
-      const messages = [
-        { content: 'msg', role: 'user', createdAt: 500, provider: 't', targetKey: 'k' },
-      ];
+      const messages = [makeMessage({ content: 'msg', provider: 'internal-chat', targetKey: 'k' })];
       const mockChat = makeMockInternalChat({
-        listMessages: vi.fn().mockResolvedValue(messages),
+        getMessages: vi.fn().mockResolvedValue(messages),
       });
       const model = createAgentConversationsReadModel({
         db: makeMockDb() as unknown as Parameters<
@@ -163,12 +193,38 @@ describe('createAgentConversationsReadModel', () => {
       });
       const result = await model.listAgentConversationMessages({
         agentId: 'agent-1',
-        provider: 'p',
+        provider: 'internal-chat',
         targetKey: 'k',
         limit: 10,
         offset: 0,
       });
-      expect(result.items[0]).toMatchObject({ content: 'msg', role: 'user', createdAt: 500 });
+      expect(result.items[0]).toMatchObject({ content: 'msg', provider: 'internal-chat' });
+    });
+
+    it('loads Discord messages through the agent communication runtime', async () => {
+      const getMessages = vi.fn().mockResolvedValue([makeMessage({ provider: 'discord' })]);
+      mockAgentRegistryGet.mockReturnValue({ runtime: { communication: { getMessages } } });
+      const model = createAgentConversationsReadModel({
+        db: makeMockDb() as never,
+        workspaceBasePath: '/tmp',
+        internalChat: makeMockInternalChat() as never,
+      });
+
+      const result = await model.listAgentConversationMessages({
+        agentId: 'agent-1',
+        provider: 'discord',
+        targetKey: 'channel-1',
+        limit: 10,
+        offset: 20,
+      });
+
+      expect(getMessages).toHaveBeenCalledWith({
+        provider: 'discord',
+        targetKey: 'channel-1',
+        limit: 11,
+        offset: 20,
+      });
+      expect(result.items).toHaveLength(1);
     });
   });
 

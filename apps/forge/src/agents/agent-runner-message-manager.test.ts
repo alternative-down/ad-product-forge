@@ -12,6 +12,7 @@ import type { AgentWakeEvent } from '@forge-runtime/core';
 function makeState(): MessageManagerState {
   return {
     pendingRunMessages: new Map<string, AgentWakeEvent>(),
+    inFlightRunMessages: new Map<string, AgentWakeEvent>(),
     flushedRunEventKeys: new Set<string>(),
     flushedRunEventKeyOrder: [],
     currentFlushSettings: {

@@ -210,6 +210,12 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       },
     );
 
+    if (result === undefined) {
+      messageManager.restoreFlushedRunMessages();
+    } else {
+      messageManager.acknowledgeFlushedRunMessages();
+    }
+
     if (isStaleRun(runEpoch)) {
       return;
     }
@@ -244,6 +250,8 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
     drainWakeQueueAfterStep = true;
   } catch (error) {
+    messageManager.restoreFlushedRunMessages();
+
     if (isStaleRun(runEpoch)) {
       return;
     }

@@ -96,7 +96,10 @@ function createMockInternalChat() {
     addMemberToGroupByAccount: vi.fn().mockResolvedValue({ success: true }),
     updateMemberRoleByAccount: vi.fn().mockResolvedValue({ success: true }),
     removeMemberFromGroupByAccount: vi.fn().mockResolvedValue({ success: true }),
-    sendMessage: vi.fn().mockResolvedValue({ messageId: 'msg-new' }),
+    sendMessage: vi.fn().mockResolvedValue({
+      valid: true,
+      data: { conversationKey: 'conv-001', messageId: 'msg-new' },
+    }),
   };
 }
 
@@ -427,8 +430,7 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/account/update
   // -------------------------------------------------------------------------
-  // FIXED: handler reads body.name (→ displayName) and body.webhookUrl
-  test('POST /admin/internal-chat/account/update — delegates with correct field mapping including webhookUrl', async () => {
+  test('POST /admin/internal-chat/account/update — delegates with the display name', async () => {
     const route = httpServer.routes.find((r) => r.path === '/admin/internal-chat/account/update');
     const body = JSON.stringify({
       accountId: 'acc-upd',
@@ -442,7 +444,6 @@ describe('registerInternalChatRoutes', () => {
     expect(mockChat.updateExternalAccount).toHaveBeenCalledWith({
       accountId: 'acc-upd',
       displayName: 'Updated',
-      webhookUrl: 'https://example.com/webhook',
     });
     expect(res.status).toBe(200);
   });
@@ -463,19 +464,18 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/conversation/create
   // -------------------------------------------------------------------------
-  // FIXED: body.type undefined → always group branch (dm branch unreachable).
-  // accountId stripped by schema — read from query param instead.
-  test('POST /admin/internal-chat/conversation/create — always creates group, accountId from query', async () => {
+  test('POST /admin/internal-chat/conversation/create — creates a group from the request body', async () => {
     const route = httpServer.routes.find(
       (r) => r.path === '/admin/internal-chat/conversation/create',
     );
     const body = JSON.stringify({
       accountId: 'acc-001',
+      type: 'group',
       name: 'Team Alpha',
-      memberKeys: ['acc-002', 'acc-003'],
+      participantAccountIds: ['acc-002', 'acc-003'],
     });
     const res = (await (route!.handler as (req: object) => Promise<unknown>)({
-      query: new URLSearchParams([['accountId', 'acc-001']]),
+      query: new URLSearchParams(),
       bodyText: body,
     })) as { status: number; body: string };
     // createExternalChatGroupWithMembers called in a single transaction (replaces separate createExternalChatGroup + addMemberToGroupByAccount)
@@ -501,7 +501,11 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(
       (r) => r.path === '/admin/internal-chat/conversation/send',
     );
-    const body = JSON.stringify({ conversationId: 'conv-001', content: 'Hello!' });
+    const body = JSON.stringify({
+      accountId: 'acc-001',
+      conversationId: 'conv-001',
+      content: 'Hello!',
+    });
     const res = (await (route!.handler as (req: object) => Promise<unknown>)({
       query: new URLSearchParams(),
       bodyText: body,
