@@ -14,6 +14,10 @@ import {
   fixupWebhookSecretColumns,
   WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP,
 } from './fixup-webhook-secret-columns';
+import {
+  fixupUpdatedAtColumns,
+  UPDATED_AT_COLUMNS_MIGRATION_TIMESTAMP,
+} from './fixup-updated-at-columns';
 
 // ─── queryAppliedMigrations ─────────────────────────────────────────────────
 /**
@@ -93,6 +97,12 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     }
 
     const allMigrations = readMigrationFiles({ migrationsFolder });
+    const updatedAtColumnsMigration = allMigrations.find(
+      (migration) => migration.folderMillis === UPDATED_AT_COLUMNS_MIGRATION_TIMESTAMP,
+    );
+    if (updatedAtColumnsMigration) {
+      await fixupUpdatedAtColumns(db, updatedAtColumnsMigration.hash);
+    }
     const webhookSecretColumnsMigration = allMigrations.find(
       (migration) => migration.folderMillis === WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP,
     );
