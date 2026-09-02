@@ -42,6 +42,7 @@ import { buildIterationLoopSignature } from './agent-runner-iteration-helpers';
 import { didIterationUpdateWorkingMemory } from './agent-runner-iteration-helpers';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { agentRunnerDebug } from './agent-runner-debug';
+import { createLoopDetector } from './agent-runner-loop-detector';
 import { errorMsg } from './error-formatting';
 import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
 
@@ -246,7 +247,10 @@ export async function generateWithTimeoutRetries(
 
   const runDelayMs = Math.max(await deps.scheduler.planNextStepDelay(), 0);
   let suppressNoToolCallReminderForRun = false;
-  deps.loopDetector.reset();
+  const loopDetector = createLoopDetector({
+    lastLoopSignature: null,
+    repeatedLoopCount: 0,
+  });
   for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
     const generateToken = startGenerateAttempt(deps, controller);
@@ -364,9 +368,9 @@ export async function generateWithTimeoutRetries(
             });
             deps.setLoopSignature(signature);
             if (signature === null) {
-              deps.loopDetector.reset();
+              loopDetector.reset();
             } else {
-              const repeatedSignatureCount = deps.loopDetector.register(signature);
+              const repeatedSignatureCount = loopDetector.register(signature);
               agentRunnerDebug('debug', 'loop signature registered', {
                 runtimeId: deps.runtime.id,
                 iteration: iteration.iteration,
@@ -414,7 +418,7 @@ export async function generateWithTimeoutRetries(
                   suppressNoToolCallReminderForRun = value;
                 },
                 setNextStepAt: deps.setNextStepAt,
-                loopDetector: deps.loopDetector,
+                loopDetector,
                 loopSignature: signature ?? '',
                 runtime: deps.runtime,
                 notifications: deps.notifications,
