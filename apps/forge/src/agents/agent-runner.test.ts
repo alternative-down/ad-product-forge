@@ -697,6 +697,25 @@ describe('createAgentRunner', () => {
       expect(result).toBeUndefined();
     });
 
+    it('makes the next step immediate when a message arrives during a running step', async () => {
+      const { createAgentRunner } = await import('./agent-runner.js');
+      mockStore.getExecutionState.mockResolvedValue('running');
+      const runner = createAgentRunner(makeDb(), makeRuntime());
+      runner.start();
+
+      await runner.execute([
+        {
+          type: 'message:internal-chat',
+          idempotencyKey: 'internal-chat:reply-1',
+          timestamp: Date.now(),
+          text: 'Resposta do agente delegado',
+        },
+      ] as any);
+
+      expect(mockMessageManager.appendPendingRunMessages).toHaveBeenCalledOnce();
+      expect(mockScheduler.setInstant).toHaveBeenCalledWith(true);
+    });
+
     it('execute calls beginRun when execution state is idle', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       mockStore.getExecutionState.mockResolvedValue('idle');

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatRecentMessageTime, getInitials, type LocalConversation } from './context';
+import { getLatestConversationMessage } from '@/lib/conversation-time';
 
 export function ConversationListPane(input: {
   accounts: Array<{ accountId: string; displayName: string; slug: string; description: string }>;
@@ -86,61 +87,70 @@ export function ConversationListPane(input: {
         <AdminScrollArea className="h-full" contentClassName="space-y-2">
           {input.selectedAccountId ? (
             input.conversations.length > 0 ? (
-              input.conversations.map((conversation) => {
-                const latestMessage = conversation.messages.at(-1) ?? null;
-                const selected = conversation.id === input.selectedConversationId;
+              [...input.conversations]
+                .sort((left, right) => {
+                  const leftLatest = getLatestConversationMessage(left.messages);
+                  const rightLatest = getLatestConversationMessage(right.messages);
+                  return (
+                    (rightLatest?.createdAt ?? right.updatedAt) -
+                    (leftLatest?.createdAt ?? left.updatedAt)
+                  );
+                })
+                .map((conversation) => {
+                  const latestMessage = getLatestConversationMessage(conversation.messages);
+                  const selected = conversation.id === input.selectedConversationId;
 
-                return (
-                  <Link
-                    key={conversation.id}
-                    to="/home/conversations/$conversationId"
-                    params={{ conversationId: conversation.id }}
-                    className={
-                      selected
-                        ? 'block min-w-0 rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                        : 'block min-w-0 rounded-sm border border-border bg-background px-4 py-3 text-left'
-                    }
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-9 w-9 border border-border bg-muted">
-                        <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                          {getInitials(conversation.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 text-sm font-medium text-foreground">
-                            {conversation.name}
-                          </div>
-                          {latestMessage ? (
-                            <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
-                              {formatRecentMessageTime(latestMessage.createdAt)}
-                            </span>
-                          ) : null}
-                          <div className="flex shrink-0 items-center gap-2 md:hidden">
+                  return (
+                    <Link
+                      key={conversation.id}
+                      to="/home/conversations/$conversationId"
+                      params={{ conversationId: conversation.id }}
+                      className={
+                        selected
+                          ? 'block min-w-0 rounded-sm border border-border bg-muted px-4 py-3 text-left'
+                          : 'block min-w-0 rounded-sm border border-border bg-background px-4 py-3 text-left'
+                      }
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-9 w-9 border border-border bg-muted">
+                          <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                            {getInitials(conversation.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 text-sm font-medium text-foreground">
+                              {conversation.name}
+                            </div>
                             {latestMessage ? (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
                                 {formatRecentMessageTime(latestMessage.createdAt)}
                               </span>
                             ) : null}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                        {latestMessage ? (
-                          <div className="space-y-1 pt-2">
-                            <div className="truncate text-sm text-foreground">
-                              <span className="text-muted-foreground">
-                                {latestMessage.authorDisplayName}:{' '}
-                              </span>
-                              <span>{latestMessage.content}</span>
+                            <div className="flex shrink-0 items-center gap-2 md:hidden">
+                              {latestMessage ? (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatRecentMessageTime(latestMessage.createdAt)}
+                                </span>
+                              ) : null}
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </div>
                           </div>
-                        ) : null}
+                          {latestMessage ? (
+                            <div className="space-y-1 pt-2">
+                              <div className="truncate text-sm text-foreground">
+                                <span className="text-muted-foreground">
+                                  {latestMessage.authorDisplayName}:{' '}
+                                </span>
+                                <span>{latestMessage.content}</span>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                );
-              })
+                    </Link>
+                  );
+                })
             ) : (
               <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
                 Nenhuma conversa ainda.

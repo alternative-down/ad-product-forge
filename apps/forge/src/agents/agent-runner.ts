@@ -175,6 +175,10 @@ export function createAgentRunner(
     if (executionState !== 'idle' || lifecycleState.startingRun) {
       appendPendingRunMessages(runnableEvents);
 
+      if (runnableEvents.length > 0) {
+        scheduler.setInstant(true);
+      }
+
       for (const event of idleOnlyEvents) {
         wakeQueue.notifyExternalEvent(event);
       }
