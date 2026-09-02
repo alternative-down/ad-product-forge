@@ -20,7 +20,7 @@ function makeMockDb(
   const findManyRows = overrides.findManyRows ?? [];
 
   // Terminal node — all chain methods return it so the chain can continue
-  // regardless of method call order (select, from, innerJoin, where, etc.)
+  // regardless of method call order (select, from, joins, where, etc.)
   const terminal: Record<string, unknown> = {};
   terminal.orderBy = vi.fn().mockReturnValue(terminal);
   terminal.offset = vi.fn().mockReturnValue(terminal);
@@ -29,6 +29,7 @@ function makeMockDb(
   terminal.where = vi.fn().mockReturnValue(terminal);
   terminal.from = vi.fn().mockReturnValue(terminal);
   terminal.innerJoin = vi.fn().mockReturnValue(terminal);
+  terminal.leftJoin = vi.fn().mockReturnValue(terminal);
 
   let deleteCallCount = 0;
   const deleteChain: Record<string, unknown> = {};

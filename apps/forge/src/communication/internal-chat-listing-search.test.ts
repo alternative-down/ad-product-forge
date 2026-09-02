@@ -71,7 +71,7 @@ function makeMockDb(rows: unknown[] = []) {
   const L4 = {
     where: vi.fn().mockReturnValue(terminal),
     innerJoin: vi.fn().mockReturnValue(L3),
-    from: vi.fn().mockReturnValue(L3),
+    from: vi.fn().mockReturnValue({ ...L3, leftJoin: vi.fn().mockReturnValue(L2) }),
   };
 
   const membershipFindFirst = vi.fn();
