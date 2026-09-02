@@ -65,13 +65,13 @@ export function buildRecallSystemMessage(input: {
 }) {
   const graphExcerpt = buildRecallExcerpt(input.graphContext);
   const primaryResult = input.results[0];
-  const path = primaryResult ? ltmEscapeXml(primaryResult.id) : null;
+  const path = primaryResult === undefined ? null : ltmEscapeXml(primaryResult.id);
   const items =
-    input.graphHit && graphExcerpt && path
+    input.graphHit && graphExcerpt.length > 0 && path !== null
       ? [
           `  <item source="graph" path="${path}" query="${ltmEscapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${ltmEscapeXml(graphExcerpt)}</item>`,
         ]
-      : primaryResult && path
+      : primaryResult !== undefined && path !== null
         ? [
             `  <item source="workspace" path="${path}" score="${typeof primaryResult.score === 'number' ? primaryResult.score.toFixed(4) : '0.0000'}">${ltmEscapeXml(buildRecallExcerpt(primaryResult.content))}</item>`,
           ]
