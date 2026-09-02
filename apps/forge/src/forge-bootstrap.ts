@@ -4,7 +4,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './agents/error-formatting';
 import { parseEnv } from './config/env';
 
-import { getDatabase } from './database/client';
+import { configureDatabaseConnection, getDatabase } from './database/client';
 import { runMigrations } from './database/migrate';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createForgeHttpServer } from './http/server';
@@ -131,6 +131,9 @@ export async function createForgeBootstrap() {
   }
 
   const db = getDatabase();
+  consoleStartupLog('configuring database connection');
+  bootstrapDebug('info', 'bootstrap: configuring database connection');
+  await configureDatabaseConnection();
   consoleStartupLog('db obtained, running migrations');
   bootstrapDebug('info', 'bootstrap: db obtained, running migrations');
   try {
