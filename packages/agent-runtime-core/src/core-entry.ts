@@ -82,4 +82,4 @@ export type {
   RuntimeStepStreamEvent,
 } from './core/types.js';
 export { runtimeSnapshotSchema } from './core/snapshot-schema.js';
-export { countTokens } from './token-counter.js';
+export { countTokens, estimateTokenCount } from './token-counter.js';

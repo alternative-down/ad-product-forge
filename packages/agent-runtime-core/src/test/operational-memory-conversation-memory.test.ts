@@ -166,7 +166,7 @@ describe('OperationalMemoryConversationMemory', () => {
       const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
-        recentTokenLimit: 10,
+        recentTokenLimit: 12,
         overflowObservationTokenLimit: 5,
         observer: {
           async observe(request) {

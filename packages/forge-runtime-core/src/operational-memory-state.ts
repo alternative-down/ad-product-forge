@@ -1,4 +1,4 @@
-import { countTokens } from 'agent-runtime-core';
+import { estimateTokenCount } from 'agent-runtime-core';
 import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
 import { forgeDebug } from './debug.js';
 
@@ -108,7 +108,7 @@ export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {
-    const tokenCount = Math.max(1, countTokens(text));
+    const tokenCount = estimateTokenCount(text);
     const maximumPlausibleTokenCount = Math.max(1, Buffer.byteLength(text, 'utf8'));
 
     if (
