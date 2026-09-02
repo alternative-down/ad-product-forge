@@ -91,7 +91,7 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
           ),
         },
       );
-      const conditions = [eq(internalChatMessageReads.messageId, internalChatMessages.id)];
+      const conditions = [];
       if (input.dateFrom !== null && input.dateFrom !== undefined) {
         const ts = new Date(input.dateFrom).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} >= ${ts}`);
@@ -112,10 +112,10 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
           authorAccountId: internalChatMessages.authorAccountId,
           authorDisplayName: internalChatAccounts.displayName,
           replyToMessageId: internalChatMessages.replyToMessageId,
-          unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
+          unread: sql<number>`case when ${internalChatMessageReads.messageId} is not null and ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
         })
         .from(internalChatMessages)
-        .innerJoin(
+        .leftJoin(
           internalChatMessageReads,
           and(
             eq(internalChatMessageReads.messageId, internalChatMessages.id),

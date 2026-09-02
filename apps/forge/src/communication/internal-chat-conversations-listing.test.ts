@@ -53,6 +53,7 @@ function createChain() {
   const chain: {
     from: ReturnType<typeof vi.fn>;
     innerJoin: ReturnType<typeof vi.fn>;
+    leftJoin: ReturnType<typeof vi.fn>;
     where: ReturnType<typeof vi.fn>;
     orderBy: ReturnType<typeof vi.fn>;
     limit: ReturnType<typeof vi.fn>;
@@ -60,6 +61,7 @@ function createChain() {
   } = {
     from: vi.fn(),
     innerJoin: vi.fn(),
+    leftJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
     limit: vi.fn(),
@@ -67,6 +69,7 @@ function createChain() {
   };
   chain.from.mockImplementation(() => chain);
   chain.innerJoin.mockImplementation(() => chain);
+  chain.leftJoin.mockImplementation(() => chain);
   chain.where.mockImplementation(() => chain);
   chain.orderBy.mockImplementation(() => chain);
   chain.limit.mockImplementation(() => chain);
@@ -568,4 +571,3 @@ describe('null createdAt handling (regression fix L#NN-32 v8)', () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
-

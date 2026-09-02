@@ -504,6 +504,7 @@ describe('mapStepsToFeedback', () => {
 describe('generateWithTimeoutRetries runtime integration', () => {
   it('processes runtime iterations and returns the final control directive', async () => {
     const register = vi.fn().mockReturnValue(1);
+    const resetLoopDetector = vi.fn();
     const recordAgentStep = vi.fn().mockResolvedValue({ stepId: 'step-1', createdAt: 1 });
     const getUsageFromResult = vi.fn().mockReturnValue({
       inputTokens: 10,
@@ -572,7 +573,7 @@ describe('generateWithTimeoutRetries runtime integration', () => {
         loopState: { lastLoopSignature: null, repeatedLoopCount: 0 },
         loopDetector: {
           register,
-          reset: vi.fn(),
+          reset: resetLoopDetector,
           isStuck: vi.fn().mockReturnValue(false),
           getSignatureCount: vi.fn().mockReturnValue(1),
         },
@@ -595,6 +596,7 @@ describe('generateWithTimeoutRetries runtime integration', () => {
       expect.objectContaining({ maxSteps: 30, runId: 'run-1' }),
     );
     expect(register).toHaveBeenCalledOnce();
+    expect(resetLoopDetector).toHaveBeenCalledOnce();
     expect(recordAgentStep).toHaveBeenCalledWith('contract-1', 10, 4, 2);
     expect(result).toEqual(expect.objectContaining({
       text: 'STOP_AND_IDLE',
