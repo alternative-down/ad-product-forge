@@ -701,6 +701,41 @@ describe('agent-contract-store', () => {
       const store = createAgentContractStore(db);
       expect(await store.getRunnableContract('a-not-ended')).toBeNull();
     });
+    test('creates and funds an auto-renewed contract with complete timestamps', async () => {
+      const now = 1_788_358_403_455;
+      const previousEnd = now - 1000;
+      makeAgent({ id: 'a-auto-renew' });
+      makeContract({
+        id: 'c-expired-auto-renew',
+        agentId: 'a-auto-renew',
+        autoRenew: 1,
+        budgetUsd: 5,
+        startsAt: previousEnd - WEEK_MS,
+        endsAt: previousEnd,
+      });
+      const { db, collections: c2 } = createMockDb(collections);
+      db.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            all: vi.fn(async () => [{ total: 100 }]),
+          })),
+        })),
+      })) as unknown as typeof db.select;
+      const store = createAgentContractStore(db, { now: () => now });
+
+      const result = await store.getRunnableContract('a-auto-renew');
+
+      expect(result).not.toBeNull();
+      expect(result!.startsAt).toBe(previousEnd);
+      expect(result!.endsAt).toBe(previousEnd + WEEK_MS);
+      expect(result!.createdAt).toBe(now);
+      expect(result!.updatedAt).toBe(now);
+      expect(result!.fundedAt).toBe(now);
+      const stored = c2.contracts.get(result!.id);
+      expect(stored?.createdAt).toBe(now);
+      expect(stored?.updatedAt).toBe(now);
+      expect(stored?.fundedAt).toBe(now);
+    });
   });
 
   describe('renewContract', () => {
@@ -760,6 +795,7 @@ describe('agent-contract-store', () => {
       expect(result!.endsAt).toBe(previousEnd + WEEK_MS);
       expect(result!.budgetUsd).toBe(5);
       expect(result!.autoRenew).toBe(1);
+      expect(result!.updatedAt).toBe(result!.createdAt);
     });
   });
 
