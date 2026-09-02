@@ -35,6 +35,7 @@ export interface RunnerMessageManager {
   flushPendingRunMessages(options?: { allowOriginIdleOnly?: boolean }): string | null;
   acknowledgeFlushedRunMessages(): void;
   restoreFlushedRunMessages(): void;
+  prepareForNewRun(): void;
   reset(): void;
   getPendingCount(): number;
   updateFlushSettings(settings: {
@@ -60,6 +61,17 @@ export function createRunnerMessageManager(
 
   function reset(): void {
     state.pendingRunMessages.clear();
+    state.inFlightRunMessages.clear();
+    manager.resetFlushedRunEventKeys();
+  }
+
+  function prepareForNewRun(): void {
+    for (const [key, event] of state.inFlightRunMessages) {
+      if (!state.pendingRunMessages.has(key)) {
+        state.pendingRunMessages.set(key, event);
+      }
+    }
+
     state.inFlightRunMessages.clear();
     manager.resetFlushedRunEventKeys();
   }
@@ -94,6 +106,7 @@ export function createRunnerMessageManager(
     flushPendingRunMessages: manager.flushPendingRunMessages,
     acknowledgeFlushedRunMessages: manager.acknowledgeFlushedRunMessages,
     restoreFlushedRunMessages: manager.restoreFlushedRunMessages,
+    prepareForNewRun,
     reset,
     getPendingCount: manager.getPendingCount,
     updateFlushSettings,
