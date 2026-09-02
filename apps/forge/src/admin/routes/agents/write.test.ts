@@ -1,4 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const routeMocks = vi.hoisted(() => ({
+  clearAgentHistory: vi.fn().mockResolvedValue(undefined),
+  reloadAgentIfLoaded: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('./agent-history', () => ({
+  clearAgentHistory: routeMocks.clearAgentHistory,
+}));
+
+vi.mock('../../../capabilities/runtime', () => ({
+  reloadAgentIfLoaded: routeMocks.reloadAgentIfLoaded,
+}));
+
 import { registerAgentWriteRoutes } from './write';
 
 describe('registerAgentWriteRoutes', () => {
@@ -37,6 +51,36 @@ describe('registerAgentWriteRoutes', () => {
     expect(
       routes.find((r) => r.path === '/admin/agent/clear-history' && r.method === 'POST'),
     ).toBeDefined();
+  });
+
+  it('clears persisted history before reloading the agent', async () => {
+    const db = {} as never;
+    const loaderConfig = {} as never;
+    registerAgentWriteRoutes(mockHttpServer as never, mockReadModel, {
+      db,
+      workspaceBasePath: '/tmp/workspaces',
+      loaderConfig,
+    });
+    const route = routes.find((candidate) => candidate.path === '/admin/agent/clear-history');
+    const handler = route?.handler as (request: { bodyText: string }) => Promise<unknown>;
+
+    await handler({
+      bodyText: JSON.stringify({
+        agentId: 'agent-1',
+        includeLongTermMemoryThread: true,
+      }),
+    });
+
+    expect(routeMocks.clearAgentHistory).toHaveBeenCalledWith({
+      db,
+      workspaceBasePath: '/tmp/workspaces',
+      agentId: 'agent-1',
+      includeLongTermMemoryThread: true,
+    });
+    expect(routeMocks.reloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
+    expect(routeMocks.clearAgentHistory.mock.invocationCallOrder[0]).toBeLessThan(
+      routeMocks.reloadAgentIfLoaded.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('registers POST /admin/agent/ltm-recall-search', () => {

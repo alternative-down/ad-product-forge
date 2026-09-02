@@ -129,7 +129,7 @@ describe('createRunnerMessageManager — new run preparation', () => {
     );
   });
 
-  it('restores unacknowledged messages when a new run starts', () => {
+  it('does not replay an inbound message when a new run starts', () => {
     const state = makeState();
     const manager = createRunnerMessageManager(state, (events) =>
       events.map((event) => event.text).join('|'),
@@ -141,9 +141,22 @@ describe('createRunnerMessageManager — new run preparation', () => {
     manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
     manager.prepareForNewRun();
 
-    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBe(
-      'mensagem ainda não entregue',
+    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBeNull();
+  });
+
+  it('restores an unacknowledged non-message event when a new run starts', () => {
+    const state = makeState();
+    const manager = createRunnerMessageManager(state, (events) =>
+      events.map((event) => event.text).join('|'),
     );
+
+    manager.appendPendingRunMessages([
+      makeEvent({ idempotencyKey: 'schedule-1', type: 'schedule:trigger', text: 'cron pendente' }),
+    ]);
+    manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
+    manager.prepareForNewRun();
+
+    expect(manager.flushPendingRunMessages({ allowOriginIdleOnly: true })).toBe('cron pendente');
   });
 });
 

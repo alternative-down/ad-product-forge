@@ -66,14 +66,7 @@ export function createRunnerMessageManager(
   }
 
   function prepareForNewRun(): void {
-    for (const [key, event] of state.inFlightRunMessages) {
-      if (!state.pendingRunMessages.has(key)) {
-        state.pendingRunMessages.set(key, event);
-      }
-    }
-
-    state.inFlightRunMessages.clear();
-    manager.resetFlushedRunEventKeys();
+    manager.restoreFlushedRunMessages();
   }
 
   function updateFlushSettings(settings: {

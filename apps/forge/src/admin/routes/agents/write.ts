@@ -11,6 +11,7 @@ import { jsonResponse, adminRoutesParseJsonBody } from '../index';
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { labeledRoute } from './admin-route-error-helper';
+import { clearAgentHistory } from './agent-history';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (
@@ -45,6 +46,12 @@ export function registerAgentWriteRoutes(
     path: '/admin/agent/clear-history',
     handler: labeledRoute('Agent clear-history route', async (request) => {
       const body = adminRoutesParseJsonBody(request.bodyText, clearAgentHistorySchema);
+      await clearAgentHistory({
+        db: input.db,
+        workspaceBasePath: input.workspaceBasePath,
+        agentId: body.agentId,
+        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+      });
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
       return jsonResponse({
         success: true,
