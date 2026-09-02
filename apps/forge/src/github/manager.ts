@@ -89,6 +89,7 @@ export function createPerAgentGitHubManager(config: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
+  publicBaseUrl: string;
 }): GitHubAppManager {
   return createGitHubAppManager(config);
 }
@@ -97,6 +98,7 @@ export function createGitHubAppManager(config: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
+  publicBaseUrl: string;
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();

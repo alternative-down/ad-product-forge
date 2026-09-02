@@ -34,6 +34,7 @@ import { registerRoleOps } from './_split/role-ops';
 import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
+import { registerConfigOps } from './_split/config-ops';
 
 /**
  * Bundle of agent lifecycle/contract operations consumed by write-ops
@@ -90,4 +91,10 @@ export function registerAgentWriteOpsRoutes(
 
   // Role ops — extracted to split/role-ops.ts
   registerRoleOps(httpServer, input.db);
+
+  // Agent configuration and per-agent GitHub App lifecycle operations.
+  registerConfigOps(httpServer, input.db, {
+    githubApps: input.githubApps,
+    loaderConfig: input.loaderConfig,
+  });
 }
