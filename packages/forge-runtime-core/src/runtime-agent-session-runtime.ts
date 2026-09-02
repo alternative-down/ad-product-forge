@@ -4,7 +4,6 @@ import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
 import { consolidateOperationalMemory } from './operational-memory-consolidation.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
-import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
@@ -60,14 +59,15 @@ export async function createRuntimeAgentSessionRuntime(
           agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
           loadSupportText: checkpointedOmEnabled
             ? async () => {
-                const state = await readOperationalMemoryState({
+                const messages = await input.conversationStore.listOperationalMemoryMessages({
                   threadId: input.threadId,
-                  store: input.conversationStore,
-                  recentTokenLimit: checkpointedOmLimits!.recentRawTokens,
                 });
+                const observations = messages.filter(
+                  (message) => message.operationalMemoryType === 'observation',
+                );
 
                 return takeSupportText(
-                  state.observationMessages.map((message) =>
+                  observations.map((message) =>
                     message.parts
                       .filter(
                         (part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
@@ -146,11 +146,11 @@ export async function createRuntimeAgentSessionRuntime(
 
       const state = checkpointedOmEnabled
         ? await conversationMemory.memory.stabilize({
-          diagnostics: options?.diagnostics,
-        })
+            diagnostics: options?.diagnostics,
+          })
         : await conversationMemory.memory.sync({
-          diagnostics: options?.diagnostics,
-        });
+            diagnostics: options?.diagnostics,
+          });
 
       options?.diagnostics?.record({
         at: Date.now(),

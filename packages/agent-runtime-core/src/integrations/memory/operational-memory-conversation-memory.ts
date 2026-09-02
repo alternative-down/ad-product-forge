@@ -1,4 +1,4 @@
-import { countTokens } from '../../token-counter.js';
+import { countTokens, estimateTokenCount } from '../../token-counter.js';
 import { randomUUID } from 'node:crypto';
 
 import type { StepContextEntry } from '../../core/types.js';
@@ -376,7 +376,7 @@ export class OperationalMemoryConversationMemory {
 function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
-  return text ? Math.max(1, countTokens(text)) : 1;
+  return text ? estimateTokenCount(text) : 1;
 }
 
 function getMessageText(message: ConversationMessage) {

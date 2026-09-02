@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { countTokens } from 'agent-runtime-core';
+import { estimateTokenCount } from 'agent-runtime-core';
 import {
   InMemoryConversationStore,
   type ConversationMessage,
@@ -21,12 +21,12 @@ async function appendMessages(store: InMemoryConversationStore, messages: Conver
 function generateContentNearTokens(targetTokens: number): { content: string; tokens: number } {
   const baseLine = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ';
   let content = baseLine;
-  let tokens = countTokens(content);
+  let tokens = estimateTokenCount(content);
 
   // Keep adding lines until we exceed target
   while (tokens < targetTokens) {
     content += baseLine;
-    tokens = countTokens(content);
+    tokens = estimateTokenCount(content);
   }
 
   // Binary search for exact token count
@@ -35,7 +35,7 @@ function generateContentNearTokens(targetTokens: number): { content: string; tok
 
   while (low < high) {
     const mid = Math.floor((low + high + 1) / 2);
-    const testTokens = countTokens(content.substring(0, mid));
+    const testTokens = estimateTokenCount(content.substring(0, mid));
 
     if (testTokens <= targetTokens) {
       low = mid;
@@ -44,7 +44,10 @@ function generateContentNearTokens(targetTokens: number): { content: string; tok
     }
   }
 
-  return { content: content.substring(0, low), tokens: countTokens(content.substring(0, low)) };
+  return {
+    content: content.substring(0, low),
+    tokens: estimateTokenCount(content.substring(0, low)),
+  };
 }
 
 describe('operational memory grouping', () => {
