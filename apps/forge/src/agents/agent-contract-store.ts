@@ -110,7 +110,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
     }
 
     const now = time.now();
-    const newContract = {
+    const newContract: NewAgentExecutionContract = {
       id: createId(),
       agentId,
       budgetUsd: latestContract.budgetUsd,
@@ -119,7 +119,8 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       startsAt: latestContract.endsAt,
       endsAt: latestContract.endsAt + WEEK_MS,
       createdAt: now,
-    } as const;
+      updatedAt: now,
+    };
 
     const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
     if (cashBalanceUsd < newContract.budgetUsd) {
@@ -128,7 +129,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
 
     // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
     await db.transaction(async (tx) => {
-      await tx.insert(agentExecutionContracts).values(newContract as NewAgentExecutionContract);
+      await tx.insert(agentExecutionContracts).values(newContract);
 
       await companyCashOperations.recordCashOut(
         {
@@ -144,11 +145,11 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
 
       await tx
         .update(agentExecutionContracts)
-        .set({ fundedAt: now })
+        .set({ fundedAt: now, updatedAt: now })
         .where(eq(agentExecutionContracts.id, newContract.id));
     });
 
-    return newContract;
+    return { ...newContract, fundedAt: now };
   }
 
   async function getActiveContract(agentId: string) {
@@ -305,7 +306,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
     }
 
     const now = time.now();
-    const nextContract = {
+    const nextContract: NewAgentExecutionContract = {
       id: createId(),
       agentId,
       budgetUsd: latestContract.budgetUsd,
@@ -314,7 +315,8 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       startsAt: latestContract.endsAt,
       endsAt: latestContract.endsAt + WEEK_MS,
       createdAt: now,
-    } as const;
+      updatedAt: now,
+    };
 
     await withDbErrorLogging({
       scope: 'agent-contract-store',
@@ -323,7 +325,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       context: { agentId },
       fn: () =>
         db.transaction(async (tx) => {
-          await tx.insert(agentExecutionContracts).values(nextContract as NewAgentExecutionContract);
+          await tx.insert(agentExecutionContracts).values(nextContract);
         }),
     });
     return nextContract;
@@ -361,7 +363,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
 
           await tx
             .update(agentExecutionContracts)
-            .set({ fundedAt: now })
+            .set({ fundedAt: now, updatedAt: now })
             .where(eq(agentExecutionContracts.id, contract.id));
         }),
     });
