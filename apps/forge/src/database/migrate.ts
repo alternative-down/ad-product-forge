@@ -7,6 +7,10 @@ import { readMigrationFiles } from 'drizzle-orm/migrator';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { getAppDatabasePath } from './config';
 import {
+  CONTRACT_IS_ACTIVE_MIGRATION_TIMESTAMP,
+  fixupContractIsActive,
+} from './fixup-contract-is-active';
+import {
   fixupSystemSettingsCreatedAt,
   SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP,
 } from './fixup-system-settings';
@@ -102,6 +106,12 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     );
     if (updatedAtColumnsMigration) {
       await fixupUpdatedAtColumns(db, updatedAtColumnsMigration.hash);
+    }
+    const contractIsActiveMigration = allMigrations.find(
+      (migration) => migration.folderMillis === CONTRACT_IS_ACTIVE_MIGRATION_TIMESTAMP,
+    );
+    if (contractIsActiveMigration) {
+      await fixupContractIsActive(db, contractIsActiveMigration.hash);
     }
     const webhookSecretColumnsMigration = allMigrations.find(
       (migration) => migration.folderMillis === WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP,
