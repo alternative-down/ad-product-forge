@@ -2,6 +2,7 @@ import type { AgentWakeEvent } from '@forge-runtime/core';
 
 export type MessageManagerState = {
   pendingRunMessages: Map<string, AgentWakeEvent>;
+  inFlightRunMessages: Map<string, AgentWakeEvent>;
   flushedRunEventKeys: Set<string>;
   flushedRunEventKeyOrder: string[];
   currentFlushSettings: {
@@ -29,7 +30,7 @@ export function createMessageManager(
         continue;
       }
 
-      if (event.text !== null && event.text !== undefined && event.text.trim() === "") {
+      if (event.text !== null && event.text !== undefined && event.text.trim() === '') {
         continue;
       }
 
@@ -42,7 +43,7 @@ export function createMessageManager(
   }
 
   function shouldIncludePendingRunEventInFlush(event: AgentWakeEvent): boolean {
-    if (event.type.startsWith("message:") !== true) {
+    if (event.type.startsWith('message:') !== true) {
       return true;
     }
 
@@ -118,9 +119,26 @@ export function createMessageManager(
 
     for (const event of events) {
       rememberFlushedRunEventKey(event.idempotencyKey);
+      state.inFlightRunMessages.set(event.idempotencyKey, event);
     }
 
     return formatPendingRunEvents(events);
+  }
+
+  function acknowledgeFlushedRunMessages() {
+    state.inFlightRunMessages.clear();
+  }
+
+  function restoreFlushedRunMessages() {
+    for (const event of state.inFlightRunMessages.values()) {
+      state.pendingRunMessages.set(event.idempotencyKey, event);
+      state.flushedRunEventKeys.delete(event.idempotencyKey);
+    }
+
+    state.flushedRunEventKeyOrder = state.flushedRunEventKeyOrder.filter(
+      (key) => !state.inFlightRunMessages.has(key),
+    );
+    state.inFlightRunMessages.clear();
   }
 
   function updateFlushSettings(settings: {
@@ -140,6 +158,8 @@ export function createMessageManager(
   return {
     appendPendingRunMessages,
     flushPendingRunMessages,
+    acknowledgeFlushedRunMessages,
+    restoreFlushedRunMessages,
     shouldIncludePendingRunEventInFlush,
     resetFlushedRunEventKeys,
     rememberFlushedRunEventKey,

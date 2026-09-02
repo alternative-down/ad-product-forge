@@ -11,6 +11,7 @@ import type { Database } from '../../database/index';
 import { toMastraSafeIdentifier } from '@forge-runtime/core';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import type { CommunicationMessageView } from '@forge-runtime/core';
+import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,18 @@ export interface AgentConversationMessagesInput {
 }
 
 export interface AgentConversationMessagesResult {
-  items: Array<CommunicationMessageView & { authorAgentId: string | null }>;
+  items: Array<{
+    messageId: string;
+    provider: string;
+    authorId: string;
+    authorAgentId: string | null;
+    targetKey: string;
+    content: string;
+    attachments: unknown[];
+    unread: boolean;
+    createdAt: string;
+    authorDisplayName: string;
+  }>;
   hasMore: boolean;
 }
 
@@ -63,26 +75,64 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
 
   async function listAgentRecentConversations(
     agentId: string,
-    _limit = 10,
+    limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return await listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
+    const conversations = await listRecentConversations(
+      workspaceBasePath,
+      internalChat,
+      agentId,
+      agentId,
+    );
+    return conversations.slice(0, limit);
   }
 
   async function listAgentConversationMessages(
     params: AgentConversationMessagesInput,
   ): Promise<AgentConversationMessagesResult> {
-    const messages = await internalChat
-      .getMessages({
-        agentId: params.agentId,
-        conversationKey: params.targetKey,
-        limit: params.limit,
-        offset: params.offset,
-      })
-      .catch(() => []);
+    const requestedLimit = params.limit + 1;
+    const messages =
+      params.provider === 'internal-chat'
+        ? await internalChat.getMessages({
+            agentId: params.agentId,
+            conversationKey: params.targetKey,
+            limit: requestedLimit,
+            offset: params.offset,
+          })
+        : await getExternalConversationMessages(params, requestedLimit);
+
     return {
-      items: messages.map((message) => ({ ...(message as CommunicationMessageView), authorAgentId: null })),
-      hasMore: false,
+      items: messages.slice(0, params.limit).map((message) => ({
+        messageId: message.messageId,
+        provider: message.provider,
+        authorId: message.authorId ?? '',
+        authorAgentId: null,
+        targetKey: message.targetKey ?? params.targetKey,
+        content: message.content,
+        attachments: message.attachments,
+        unread: message.unread,
+        createdAt: message.createdAt,
+        authorDisplayName: message.authorDisplayName ?? 'Unknown author',
+      })),
+      hasMore: messages.length > params.limit,
     };
+  }
+
+  async function getExternalConversationMessages(
+    params: AgentConversationMessagesInput,
+    limit: number,
+  ): Promise<CommunicationMessageView[]> {
+    const runtime = getInternalAgentRegistry().get(params.agentId)?.runtime;
+
+    if (!runtime) {
+      return [];
+    }
+
+    return await runtime.communication.getMessages({
+      provider: params.provider,
+      targetKey: params.targetKey,
+      limit,
+      offset: params.offset,
+    });
   }
 
   async function listAgentThreadMessages(

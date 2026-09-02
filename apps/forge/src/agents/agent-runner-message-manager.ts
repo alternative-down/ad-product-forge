@@ -14,6 +14,7 @@ export interface RunnerMessageManagerState {
     communicationGroupFlushingEnabled: boolean;
   };
   pendingRunMessages: Map<string, AgentWakeEvent>;
+  inFlightRunMessages: Map<string, AgentWakeEvent>;
 }
 
 function _createRunnerMessageManagerState(): RunnerMessageManagerState {
@@ -25,12 +26,15 @@ function _createRunnerMessageManagerState(): RunnerMessageManagerState {
       communicationGroupFlushingEnabled: true,
     },
     pendingRunMessages: new Map<string, AgentWakeEvent>(),
+    inFlightRunMessages: new Map<string, AgentWakeEvent>(),
   };
 }
 
 export interface RunnerMessageManager {
   appendPendingRunMessages(events: AgentWakeEvent[], options?: { allowIdleOnly?: boolean }): void;
   flushPendingRunMessages(options?: { allowOriginIdleOnly?: boolean }): string | null;
+  acknowledgeFlushedRunMessages(): void;
+  restoreFlushedRunMessages(): void;
   reset(): void;
   getPendingCount(): number;
   updateFlushSettings(settings: {
@@ -56,6 +60,7 @@ export function createRunnerMessageManager(
 
   function reset(): void {
     state.pendingRunMessages.clear();
+    state.inFlightRunMessages.clear();
     manager.resetFlushedRunEventKeys();
   }
 
@@ -87,6 +92,8 @@ export function createRunnerMessageManager(
   return {
     appendPendingRunMessages: manager.appendPendingRunMessages,
     flushPendingRunMessages: manager.flushPendingRunMessages,
+    acknowledgeFlushedRunMessages: manager.acknowledgeFlushedRunMessages,
+    restoreFlushedRunMessages: manager.restoreFlushedRunMessages,
     reset,
     getPendingCount: manager.getPendingCount,
     updateFlushSettings,

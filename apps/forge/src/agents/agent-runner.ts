@@ -84,6 +84,7 @@ export function createAgentRunner(
         communicationGroupFlushingEnabled: true,
       },
       pendingRunMessages: new Map<string, AgentWakeEvent>(),
+      inFlightRunMessages: new Map<string, AgentWakeEvent>(),
     },
     formatPendingRunEvents,
   );
@@ -102,10 +103,7 @@ export function createAgentRunner(
     );
 
     if (isStaleRun(_runEpoch)) {
-      await rt(
-        nextRuntime.dispose(),
-        `Agent runtime disposal timed out for ${runtime.id}`,
-      );
+      await rt(nextRuntime.dispose(), `Agent runtime disposal timed out for ${runtime.id}`);
       return;
     }
 
@@ -208,7 +206,7 @@ export function createAgentRunner(
     void messageManager.appendPendingRunMessages(events, options);
   }
 
-function stop() {
+  function stop() {
     lifecycleState.stopped = true;
     lifecycleState.startingRun = false;
     lifecycleState.startingRunStartedAt = null;
@@ -374,27 +372,62 @@ function stop() {
       modelProfileId: currentRuntime.modelProfileId ?? '',
       // Runner state guards
       isStopped: () => lifecycleState.stopped,
-      executingRef: { get value() { return lifecycleState.executing; }, set value(v: boolean) { lifecycleState.executing = v; } },
+      executingRef: {
+        get value() {
+          return lifecycleState.executing;
+        },
+        set value(v: boolean) {
+          lifecycleState.executing = v;
+        },
+      },
       isStaleRun,
       // State containers
       epochState: {
-        get activeRunEpoch() { return schedulerState.activeRunEpoch; },
-        set activeRunEpoch(value) { schedulerState.activeRunEpoch = value; },
-        get activeStepEpoch() { return schedulerState.activeStepEpoch; },
-        set activeStepEpoch(value) { schedulerState.activeStepEpoch = value; },
-        get activeGenerateToken() { return schedulerState.activeGenerateToken; },
-        set activeGenerateToken(value) { schedulerState.activeGenerateToken = value; },
-        get activeRunId() { return lifecycleState.activeRunId; },
-        set activeRunId(value) { lifecycleState.activeRunId = value; },
+        get activeRunEpoch() {
+          return schedulerState.activeRunEpoch;
+        },
+        set activeRunEpoch(value) {
+          schedulerState.activeRunEpoch = value;
+        },
+        get activeStepEpoch() {
+          return schedulerState.activeStepEpoch;
+        },
+        set activeStepEpoch(value) {
+          schedulerState.activeStepEpoch = value;
+        },
+        get activeGenerateToken() {
+          return schedulerState.activeGenerateToken;
+        },
+        set activeGenerateToken(value) {
+          schedulerState.activeGenerateToken = value;
+        },
+        get activeRunId() {
+          return lifecycleState.activeRunId;
+        },
+        set activeRunId(value) {
+          lifecycleState.activeRunId = value;
+        },
       },
       backoffState: schedulerState,
       progressState: {
-        get lastStepStartedAt() { return lifecycleState.lastStepStartedAt; },
-        set lastStepStartedAt(value) { lifecycleState.lastStepStartedAt = value; },
-        get lastStepStage() { return lifecycleState.lastStepStage; },
-        set lastStepStage(value) { lifecycleState.lastStepStage = value; },
-        get lastGenerateProgress() { return lifecycleState.lastGenerateProgress; },
-        set lastGenerateProgress(value) { lifecycleState.lastGenerateProgress = value; },
+        get lastStepStartedAt() {
+          return lifecycleState.lastStepStartedAt;
+        },
+        set lastStepStartedAt(value) {
+          lifecycleState.lastStepStartedAt = value;
+        },
+        get lastStepStage() {
+          return lifecycleState.lastStepStage;
+        },
+        set lastStepStage(value) {
+          lifecycleState.lastStepStage = value;
+        },
+        get lastGenerateProgress() {
+          return lifecycleState.lastGenerateProgress;
+        },
+        set lastGenerateProgress(value) {
+          lifecycleState.lastGenerateProgress = value;
+        },
       },
       loopState: loopManager.getState(),
       // Stores & managers
@@ -423,7 +456,9 @@ function stop() {
           lifecycleState.lastGenerateProgress,
         );
       },
-      setLoopSignature: (sig) => { loopManager.getState().lastLoopSignature = sig; },
+      setLoopSignature: (sig) => {
+        loopManager.getState().lastLoopSignature = sig;
+      },
       loopSignature: loopManager.getState().lastLoopSignature ?? '',
       loadAgentContextInstructions,
       currentRuntime,
@@ -439,7 +474,9 @@ function stop() {
       getRunnerSnapshot: getSnapshot,
       runLastMessages: lifecycleState.runLastMessages,
       currentGenerateAbortController: lifecycleState.currentGenerateAbortController,
-      setCurrentGenerateAbortController: (c) => { lifecycleState.currentGenerateAbortController = c; },
+      setCurrentGenerateAbortController: (c) => {
+        lifecycleState.currentGenerateAbortController = c;
+      },
       // Error logging
       runtime,
     };
@@ -547,12 +584,15 @@ function stop() {
   }
 
   function getSnapshot() {
-    return buildRunnerSnapshot(
-      scheduler,
-      messageManager,
-      wakeQueue,
-      { stopped: lifecycleState.stopped, startingRun: lifecycleState.startingRun, startingRunStartedAt: lifecycleState.startingRunStartedAt, executing: lifecycleState.executing, lastStepStartedAt: lifecycleState.lastStepStartedAt, lastStepStage: lifecycleState.lastStepStage, lastWakeStartedAt: lifecycleState.lastWakeStartedAt },
-    );
+    return buildRunnerSnapshot(scheduler, messageManager, wakeQueue, {
+      stopped: lifecycleState.stopped,
+      startingRun: lifecycleState.startingRun,
+      startingRunStartedAt: lifecycleState.startingRunStartedAt,
+      executing: lifecycleState.executing,
+      lastStepStartedAt: lifecycleState.lastStepStartedAt,
+      lastStepStage: lifecycleState.lastStepStage,
+      lastWakeStartedAt: lifecycleState.lastWakeStartedAt,
+    });
   }
 
   return {

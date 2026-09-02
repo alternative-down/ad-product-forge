@@ -56,6 +56,8 @@ function mockScheduler(
 function mockMessageManager(pendingCount = 0) {
   return {
     getPendingCount: vi.fn().mockReturnValue(pendingCount),
+    acknowledgeFlushedRunMessages: vi.fn(),
+    restoreFlushedRunMessages: vi.fn(),
   };
 }
 
@@ -470,7 +472,9 @@ it('calls agentRunnerDebug on error with correct context fields', async () => {
   // helper signature positional (level, message, context): calls[1][0]=level, calls[1][1]=message, calls[1][2]=context
   expect(errorCall[0]).toBe('error');
   expect(errorCall[1]).toBe('step failed');
-  expect(errorCall[2]).toEqual(expect.objectContaining({ runtimeId: 'runtime-1', mastraId: 'mastra-1' }));
+  expect(errorCall[2]).toEqual(
+    expect.objectContaining({ runtimeId: 'runtime-1', mastraId: 'mastra-1' }),
+  );
 });
 
 it('sets execution absent state on error', async () => {

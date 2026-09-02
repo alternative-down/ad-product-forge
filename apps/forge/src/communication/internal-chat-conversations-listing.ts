@@ -222,9 +222,6 @@ export function createInternalChatConversationListing(
       role: string;
       createdAt: number;
       updatedAt: number;
-      displayName: string;
-      agentId: string | null;
-      slug: string;
       account: {
         id: string;
         slug: string;
@@ -243,10 +240,10 @@ export function createInternalChatConversationListing(
         slug: string;
       } = {
         accountId: row.accountId,
-        displayName: row.displayName,
+        displayName: row.account.displayName,
         role: row.role,
-        agentId: row.agentId,
-        slug: row.slug,
+        agentId: row.account.agentId,
+        slug: row.account.slug,
       };
       const existing = membersByConversationId.get(row.conversationId) ?? [];
       existing.push(entry);
@@ -370,9 +367,6 @@ export function createInternalChatConversationListing(
       role: string;
       createdAt: number;
       updatedAt: number;
-      displayName: string;
-      agentId: string | null;
-      slug: string;
       account: {
         id: string;
         slug: string;
@@ -391,10 +385,10 @@ export function createInternalChatConversationListing(
         slug: string;
       } = {
         accountId: row.accountId,
-        displayName: row.displayName,
+        displayName: row.account.displayName,
         role: row.role,
-        agentId: row.agentId,
-        slug: row.slug,
+        agentId: row.account.agentId,
+        slug: row.account.slug,
       };
       const existing = membersByConversationId.get(row.conversationId) ?? [];
       existing.push(entry);

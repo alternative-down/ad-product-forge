@@ -12,6 +12,7 @@ import type { AgentWakeEvent } from '@forge-runtime/core';
 function makeState(overrides: Partial<MessageManagerState> = {}): MessageManagerState {
   return {
     pendingRunMessages: new Map(),
+    inFlightRunMessages: new Map(),
     flushedRunEventKeys: new Set(),
     flushedRunEventKeyOrder: [],
     currentFlushSettings: {
@@ -219,6 +220,37 @@ describe('flushPendingRunMessages', () => {
     const result = manager.flushPendingRunMessages();
 
     expect(result).toBeNull();
+  });
+});
+
+describe('flushed message delivery lifecycle', () => {
+  it('restores flushed messages after a failed generation', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set('k1', makeEvent({ idempotencyKey: 'k1', text: 'discord' }));
+
+    expect(manager.flushPendingRunMessages()).toBe('MESSAGES:discord');
+    expect(state.pendingRunMessages.size).toBe(0);
+    expect(state.inFlightRunMessages.size).toBe(1);
+
+    manager.restoreFlushedRunMessages();
+
+    expect(state.pendingRunMessages.get('k1')?.text).toBe('discord');
+    expect(state.inFlightRunMessages.size).toBe(0);
+    expect(state.flushedRunEventKeys.has('k1')).toBe(false);
+  });
+
+  it('acknowledges flushed messages after a completed generation', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set('k1', makeEvent({ idempotencyKey: 'k1', text: 'discord' }));
+
+    manager.flushPendingRunMessages();
+    manager.acknowledgeFlushedRunMessages();
+
+    expect(state.pendingRunMessages.size).toBe(0);
+    expect(state.inFlightRunMessages.size).toBe(0);
+    expect(state.flushedRunEventKeys.has('k1')).toBe(true);
   });
 });
 
