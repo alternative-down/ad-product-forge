@@ -10,10 +10,7 @@ import { App, Octokit } from 'octokit';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
 import { LogLevel } from '../../types/log-level';
-import {
-  githubAppInfoResponseSchema,
-  githubAppManifestConversionResponseSchema,
-} from '../types';
+import { githubAppInfoResponseSchema, githubAppManifestConversionResponseSchema } from '../types';
 
 // Subset of AppProvisioningOps fields actually used by routing.
 // createAppName/nanoid/normalizeManifestConfig/DEFAULT_GITHUB_APP_MANIFEST_CONFIG
@@ -34,6 +31,29 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
   ): void => {
     ctx.forgeDebug({ scope: 'github-ops', level, message, context });
   };
+
+  // Webhook delivery deduplication (Closes #6771): store recently-seen
+  // x-github-delivery IDs in a per-process TTL cache so GitHub's
+  // at-least-once redelivery semantics do not trigger duplicate notifications
+  // or duplicate downstream actions. Atomic test-and-set keeps parallel
+  // requests with the same delivery ID from racing past the guard.
+  const WEBHOOK_DEDUP_TTL_MS = 60 * 60 * 1000; // 1h — matches the spec minimum.
+  const webhookDeliveryCache = new Map<string, number>(); // key -> claim timestamp ms.
+
+  function tryClaimWebhookDelivery(agentId: string, delivery: string): boolean {
+    const key = `${agentId}::${delivery}`;
+    const now = Date.now();
+    // Lazy cleanup: drop entries whose TTL has elapsed on every claim.
+    for (const [cachedKey, ts] of webhookDeliveryCache) {
+      if (now - ts >= WEBHOOK_DEDUP_TTL_MS) webhookDeliveryCache.delete(cachedKey);
+    }
+    const previousClaim = webhookDeliveryCache.get(key);
+    if (previousClaim !== undefined && now - previousClaim < WEBHOOK_DEDUP_TTL_MS) {
+      return false; // already claimed within TTL window — dedupe.
+    }
+    webhookDeliveryCache.set(key, now);
+    return true; // newly claimed — proceed with processing.
+  }
 
   function html(status: number, body: string) {
     return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
@@ -155,8 +175,11 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       );
       // Runtime-validated destructure: throws ZodError on missing fields,
       // surfaced as a 500 in the catch below.
-      const { pem, id: appId, webhook_secret } =
-        githubAppManifestConversionResponseSchema.parse(conversionResponse.data);
+      const {
+        pem,
+        id: appId,
+        webhook_secret,
+      } = githubAppManifestConversionResponseSchema.parse(conversionResponse.data);
       const app = new App({ appId, privateKey: pem });
       const appInfoResponse = await app.octokit.request('GET /app');
       // Runtime-validated app info: surfaces missing `name` (cast site E in
@@ -256,6 +279,13 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
     if (event === null || event === undefined || delivery === null || delivery === undefined)
       return html(400, '<h1>Missing webhook headers</h1>');
+    // Delivery deduplication (Closes #6771): short-circuit redeliveries so we
+    // do not create duplicate notifications or trigger downstream side
+    // effects twice. Returns 200 (ack) without scheduling any work.
+    if (!tryClaimWebhookDelivery(agentId, delivery)) {
+      routingOpsDebug('info', 'webhook_deduped', { agentId, delivery, event });
+      return html(200, 'ok');
+    }
     let payload: Record<string, unknown>;
     try {
       payload = JSON.parse(bodyText);

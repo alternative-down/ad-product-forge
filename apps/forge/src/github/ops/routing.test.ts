@@ -488,6 +488,166 @@ describe('createRoutingOps — handleWebhook', () => {
     expect(result.body).toBe('Accepted');
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'webhook-wake' });
   });
+
+  // Closes #6771: delivery deduplication tests.
+  it('returns 200 and skips notification for a delivery ID seen within the TTL', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const headers = {
+      'x-github-event': 'issues',
+      'x-github-delivery': 'dup-id-1',
+      'x-hub-signature-256': sig,
+    };
+
+    const first = await routing.handleWebhook('agent-1', headers, body);
+    const second = await routing.handleWebhook('agent-1', headers, body);
+
+    expect(first.status).toBe(202);
+    expect(first.body).toBe('Accepted');
+    expect(second.status).toBe(200);
+    expect(second.body).toBe('ok');
+    // The redelivery must NOT create a second notification.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('reprocesses a delivery ID after the TTL has elapsed (no false deduplication)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T12:00:00Z'));
+    try {
+      const routing = createRoutingOps(ctx);
+      const body = '{"action":"opened","issue":{"id":1}}';
+      const sig = signWebhookBody(body);
+      const headers = {
+        'x-github-event': 'issues',
+        'x-github-delivery': 'ttl-expiry-id',
+        'x-hub-signature-256': sig,
+      };
+
+      const first = await routing.handleWebhook('agent-1', headers, body);
+      // Advance just past the 1h TTL window so the dedup entry is stale.
+      vi.setSystemTime(new Date('2026-09-02T13:00:01Z'));
+      const second = await routing.handleWebhook('agent-1', headers, body);
+
+      expect(first.status).toBe(202);
+      expect(second.status).toBe(202);
+      // Both deliveries produce notifications — the second is NOT a dedup hit.
+      expect(notifyMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('deduplicates parallel requests that share the same delivery ID', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const headers = {
+      'x-github-event': 'issues',
+      'x-github-delivery': 'parallel-id',
+      'x-hub-signature-256': sig,
+    };
+
+    // Fire 5 parallel webhook deliveries with the same x-github-delivery ID
+    // (simulates GitHub's at-least-once redelivery semantics under load).
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => routing.handleWebhook('agent-1', headers, body)),
+    );
+
+    // Exactly one of the responses must be the 202 Accepted path; the
+    // remaining four must be 200 ok dedup acks.
+    const accepted = results.filter((r) => r.status === 202).length;
+    const deduped = results.filter((r) => r.status === 200).length;
+    expect(accepted).toBe(1);
+    expect(deduped).toBe(4);
+    // And only one notification must ever be created, regardless of
+    // whether the parallel requests interleaved.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits a webhook_deduped debug log when a duplicate delivery is suppressed', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const forgeDebugMock = vi.fn();
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    ctx.forgeDebug = forgeDebugMock as unknown as OpsContext['forgeDebug'];
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const headers = {
+      'x-github-event': 'issues',
+      'x-github-delivery': 'log-test-id',
+      'x-hub-signature-256': sig,
+    };
+
+    await routing.handleWebhook('agent-1', headers, body);
+    await routing.handleWebhook('agent-1', headers, body);
+
+    expect(forgeDebugMock).toHaveBeenCalledWith({
+      scope: 'github-ops',
+      level: 'info',
+      message: 'webhook_deduped',
+      context: expect.objectContaining({
+        agentId: 'agent-1',
+        delivery: 'log-test-id',
+        event: 'issues',
+      }),
+    });
+    // The dedup log should appear exactly once for this single retry.
+    const dedupCalls = forgeDebugMock.mock.calls.filter(
+      (call: unknown[]) =>
+        typeof call[0] === 'object' &&
+        call[0] !== null &&
+        (call[0] as { message?: unknown }).message === 'webhook_deduped',
+    );
+    expect(dedupCalls).toHaveLength(1);
+  });
 });
 
 // Hoisted mock for the octokit module. The Octokit class is used directly
@@ -495,12 +655,7 @@ describe('createRoutingOps — handleWebhook', () => {
 // the App class is used for the authenticated GET /app request after
 // the conversion succeeds. Hoisting is required so vi.mock can reference
 // these values at module-load time without temporal-dead-zone errors.
-const {
-  mockConversionRequest,
-  mockAppRequest,
-  MockOctokit,
-  MockApp,
-} = vi.hoisted(() => {
+const { mockConversionRequest, mockAppRequest, MockOctokit, MockApp } = vi.hoisted(() => {
   const mockConversionRequest = vi.fn();
   const mockAppRequest = vi.fn();
   const MockOctokit = vi.fn().mockImplementation(function (this: unknown) {
@@ -615,10 +770,9 @@ describe('createRoutingOps — handleManifestCallback', () => {
     expect(result.body).toContain('GitHub App created');
     expect(result.body).toContain('my-test-app');
     // The conversion request should hit the unauthenticated Octokit, not App.
-    expect(mockConversionRequest).toHaveBeenCalledWith(
-      'POST /app-manifests/{code}/conversions',
-      { code: 'code-1' },
-    );
+    expect(mockConversionRequest).toHaveBeenCalledWith('POST /app-manifests/{code}/conversions', {
+      code: 'code-1',
+    });
     // The authenticated GET /app call should go through app.octokit.request
     // (typed, no recast) on the App instance constructed with the converted
     // credentials.
