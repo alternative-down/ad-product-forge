@@ -193,6 +193,17 @@ function createConnectionImpl(
               : undefined,
         },
       });
+
+      await db
+        .update(internalChatMessageReads)
+        .set({ readAt: Date.now(), updatedAt: Date.now() })
+        .where(
+          and(
+            eq(internalChatMessageReads.agentId, agentId),
+            eq(internalChatMessageReads.messageId, row.messageId),
+            isNull(internalChatMessageReads.readAt),
+          ),
+        );
     }
   }
 

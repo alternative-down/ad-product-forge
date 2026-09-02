@@ -53,29 +53,47 @@ export async function createCommunicationModule(config: {
 
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
   const pendingMessages: Array<{ providerId: string; message: CommunicationInboundMessage }> = [];
+  const dispatchedMessageKeys = new Set<string>();
+  const dispatchingMessageKeys = new Set<string>();
 
   async function dispatchMessage(providerId: string, message: CommunicationInboundMessage) {
-    const messageView = await toAgentMessageView(activeFilesystem, {
-      messageId: message.messageId,
-      provider: providerId,
-      authorId: message.authorId,
-      targetKey: message.targetKey,
-      content: message.content.trim(),
-      attachments: message.attachments ?? [],
-      unread: true,
-      createdAt: message.createdAt,
-      authorDisplayName: message.authorDisplayName,
-    });
+    const messageKey = `${providerId}:${message.messageId}`;
+    if (dispatchedMessageKeys.has(messageKey) || dispatchingMessageKeys.has(messageKey)) {
+      logger.warn('communication', 'Skipping duplicate inbound message', {
+        providerId,
+        messageId: message.messageId,
+        targetKey: message.targetKey,
+      });
+      return;
+    }
 
-    receiveMessageHandler!({
-      type: `message:${providerId}`,
-      groupKey: `message:${providerId}:${message.targetKey}`,
-      groupMetadata: buildGroupMetadata(providerId, message),
-      idempotencyKey: `${providerId}:${message.messageId}`,
-      itemMetadata: buildItemMetadata(messageView, message),
-      text: message.content.trim(),
-      timestamp: Date.parse(message.createdAt) || Date.now(),
-    });
+    dispatchingMessageKeys.add(messageKey);
+    try {
+      const messageView = await toAgentMessageView(activeFilesystem, {
+        messageId: message.messageId,
+        provider: providerId,
+        authorId: message.authorId,
+        targetKey: message.targetKey,
+        content: message.content.trim(),
+        attachments: message.attachments ?? [],
+        unread: true,
+        createdAt: message.createdAt,
+        authorDisplayName: message.authorDisplayName,
+      });
+
+      receiveMessageHandler!({
+        type: `message:${providerId}`,
+        groupKey: `message:${providerId}:${message.targetKey}`,
+        groupMetadata: buildGroupMetadata(providerId, message),
+        idempotencyKey: messageKey,
+        itemMetadata: buildItemMetadata(messageView, message),
+        text: message.content.trim(),
+        timestamp: Date.parse(message.createdAt) || Date.now(),
+      });
+      dispatchedMessageKeys.add(messageKey);
+    } finally {
+      dispatchingMessageKeys.delete(messageKey);
+    }
   }
 
   async function flushPendingMessages() {

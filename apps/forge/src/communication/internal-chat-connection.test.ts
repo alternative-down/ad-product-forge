@@ -62,6 +62,52 @@ describe('createInternalChatConnection', () => {
       conn.onReceiveMessage('agent_1', handler);
       expect(handler).not.toHaveBeenCalled();
     });
+
+    it('marks replayed unread messages as read after successful delivery', async () => {
+      const updateWhere = vi.fn().mockResolvedValue(undefined);
+      const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+      const selectChain = {
+        from: vi.fn(),
+        innerJoin: vi.fn(),
+        where: vi.fn(),
+        orderBy: vi.fn(),
+        all: vi.fn().mockResolvedValue([
+          {
+            conversationId: 'conv_1',
+            conversationName: null,
+            conversationType: 'dm',
+            messageId: 'msg_replayed',
+            content: 'replayed',
+            createdAt: Date.parse('2026-09-02T16:00:00.000Z'),
+            authorAccountId: 'acct_sender',
+            authorDisplayName: 'Sender',
+            authorSlug: 'sender',
+          },
+        ]),
+      };
+      selectChain.from.mockReturnValue(selectChain);
+      selectChain.innerJoin.mockReturnValue(selectChain);
+      selectChain.where.mockReturnValue(selectChain);
+      selectChain.orderBy.mockReturnValue(selectChain);
+      db = {
+        select: vi.fn().mockReturnValue(selectChain),
+        update: vi.fn().mockReturnValue({ set: updateSet }),
+      };
+      conn = createInternalChatConnection(db as any, deps);
+      const handler = vi.fn().mockResolvedValue(undefined);
+
+      conn.onReceiveMessage('agent_1', handler);
+
+      await vi.waitFor(() => {
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({ messageId: 'msg_replayed', content: 'replayed' }),
+        );
+        expect(updateSet).toHaveBeenCalledWith(
+          expect.objectContaining({ readAt: expect.any(Number), updatedAt: expect.any(Number) }),
+        );
+        expect(updateWhere).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 
   describe('createInternalChatConnection', () => {
