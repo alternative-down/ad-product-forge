@@ -246,6 +246,7 @@ export async function generateWithTimeoutRetries(
 
   const runDelayMs = Math.max(await deps.scheduler.planNextStepDelay(), 0);
   let suppressNoToolCallReminderForRun = false;
+  deps.loopDetector.reset();
   for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
     const generateToken = startGenerateAttempt(deps, controller);

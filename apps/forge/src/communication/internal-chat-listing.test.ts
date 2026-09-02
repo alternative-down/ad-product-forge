@@ -61,7 +61,10 @@ function makeMockDb(
     limit: vi.fn().mockReturnValue(convLimit),
   };
   const msgFrom = {
-    from: vi.fn().mockReturnValue({ innerJoin: vi.fn().mockReturnValue(msgInnerJoin1) }),
+    from: vi.fn().mockReturnValue({
+      innerJoin: vi.fn().mockReturnValue(msgInnerJoin1),
+      leftJoin: vi.fn().mockReturnValue(msgInnerJoin1),
+    }),
   };
 
   let callCount = 0;
@@ -118,7 +121,7 @@ function makeMsgChain(rows: unknown[]) {
   const innerJoin3 = vi.fn(() => ({ where }));
   const innerJoin2 = vi.fn(() => ({ where, innerJoin: innerJoin3 }));
   const innerJoin1 = vi.fn(() => ({ where, innerJoin: innerJoin2 }));
-  const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
+  const from = vi.fn(() => ({ innerJoin: innerJoin1, leftJoin: innerJoin1 }));
   return { from };
 }
 

@@ -128,10 +128,10 @@ export function createInternalChatConversationListing(
         authorAccountId: internalChatMessages.authorAccountId,
         authorDisplayName: internalChatAccounts.displayName,
         replyToMessageId: internalChatMessages.replyToMessageId,
-        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
+        unread: sql<number>`case when ${internalChatMessageReads.messageId} is not null and ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
       })
       .from(internalChatMessages)
-      .innerJoin(
+      .leftJoin(
         internalChatMessageReads,
         and(
           eq(internalChatMessageReads.messageId, internalChatMessages.id),
