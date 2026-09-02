@@ -7,6 +7,18 @@ export type LtmSearchResult = {
   score?: number;
 };
 
+const RECALL_EXCERPT_MAX_LENGTH = 320;
+
+export function buildRecallExcerpt(content: string): string {
+  const paragraph = content
+    .trim()
+    .split(/\n\s*\n/u, 1)[0]
+    ?.replace(/\s+/gu, ' ')
+    .trim() ?? '';
+  if (paragraph.length <= RECALL_EXCERPT_MAX_LENGTH) return paragraph;
+  return `${paragraph.slice(0, RECALL_EXCERPT_MAX_LENGTH - 1).trimEnd()}…`;
+}
+
 export function safeSerializeRecallSteps(steps: unknown[]) {
   try {
     return JSON.stringify(steps, null, 2);
@@ -51,16 +63,19 @@ export function buildRecallSystemMessage(input: {
   graphContext: string;
   results: LtmSearchResult[];
 }) {
-  const items = input.graphHit
-    ? input.graphContext.trim()
+  const graphExcerpt = buildRecallExcerpt(input.graphContext);
+  const primaryResult = input.results[0];
+  const path = primaryResult ? ltmEscapeXml(primaryResult.id) : null;
+  const items =
+    input.graphHit && graphExcerpt && path
       ? [
-          `  <item source="graph" query="${ltmEscapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${ltmEscapeXml(input.graphContext.trim())}</item>`,
+          `  <item source="graph" path="${path}" query="${ltmEscapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${ltmEscapeXml(graphExcerpt)}</item>`,
         ]
-      : []
-    : input.results.map(
-        (result) =>
-          `  <item source="workspace" id="${ltmEscapeXml(result.id)}" score="${typeof result.score === 'number' ? result.score.toFixed(4) : '0.0000'}">${ltmEscapeXml(result.content)}</item>`,
-      );
+      : primaryResult && path
+        ? [
+            `  <item source="workspace" path="${path}" score="${typeof primaryResult.score === 'number' ? primaryResult.score.toFixed(4) : '0.0000'}">${ltmEscapeXml(buildRecallExcerpt(primaryResult.content))}</item>`,
+          ]
+        : [];
 
   if (items.length === 0) {
     return null;
@@ -68,7 +83,7 @@ export function buildRecallSystemMessage(input: {
 
   return [
     `<memory-recall on-datetime="${new Date().toISOString()}">`,
-    `  <instructions>${ltmEscapeXml('Now is the datetime in the on-datetime attribute. These recalled items are past information that is no longer in your active context or that your long-term memory consolidated. You may already have seen or resolved them. Use them only as additional relevant context when useful, and prefer more recent context if there is any conflict. If you mention or use this information, do not talk about memory, long-term memory, or recalled context. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when that is appropriate.')}</instructions>`,
+    `  <instructions>${ltmEscapeXml('This is a short excerpt from past context. Use it only when relevant, prefer newer information on conflicts, and read the full memory at the item path only if more detail is needed.')}</instructions>`,
     ...items,
     '</memory-recall>',
   ].join('\n');

@@ -260,6 +260,8 @@ export async function createForgeBootstrap() {
     schedules,
     internalChat,
   });
+  await schedules.loadAll();
+  bootstrapDebug('info', 'bootstrap: active schedules loaded');
   consoleStartupLog('agents loaded', { agentCount: registry.size });
   bootstrapDebug('info', 'bootstrap: agents loaded', { agentCount: registry.size });
 

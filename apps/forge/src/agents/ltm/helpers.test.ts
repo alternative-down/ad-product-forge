@@ -150,7 +150,7 @@ describe('buildRecallSystemMessage', () => {
       graphHit: true,
       graphScore: 0.95,
       graphContext: 'user reported bug',
-      results: [],
+      results: [{ id: 'memory/bug.txt', content: 'user reported bug' }],
     });
     expect(result).not.toBeNull();
     expect(result).toContain('<memory-recall');
@@ -178,8 +178,8 @@ describe('buildRecallSystemMessage', () => {
     expect(result).toContain('test content');
     expect(result).toContain('doc-1');
     expect(result).toContain('0.8800');
-    expect(result).toContain('another doc');
-    expect(result).toContain('doc-2');
+    expect(result).not.toContain('another doc');
+    expect(result).not.toContain('doc-2');
   });
 
   it('uses score 0.0000 when score is missing', () => {
@@ -200,7 +200,7 @@ describe('buildRecallSystemMessage', () => {
       graphHit: true,
       graphScore: 0.5,
       graphContext: 'user < admin & valid',
-      results: [],
+      results: [{ id: 'memory/access.txt', content: 'access context' }],
     });
     expect(result).toContain('user &lt; admin &amp; valid');
   });
@@ -235,7 +235,7 @@ describe('buildRecallSystemMessage', () => {
       graphHit: true,
       graphScore: 0.5,
       graphContext: 'ctx',
-      results: [],
+      results: [{ id: 'memory/query.txt', content: 'query context' }],
     });
     expect(result).toContain('query="a &amp; b &lt; c"');
   });
@@ -246,10 +246,10 @@ describe('buildRecallSystemMessage', () => {
       graphHit: true,
       graphScore: 0.5,
       graphContext: 'some context',
-      results: [],
+      results: [{ id: 'memory/context.txt', content: 'some context' }],
     });
     expect(result).toContain('<instructions>');
-    expect(result).toContain('datetime');
-    expect(result).toContain('I remember');
+    expect(result).toContain('short excerpt');
+    expect(result).toContain('item path');
   });
 });

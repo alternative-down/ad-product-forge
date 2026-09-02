@@ -108,7 +108,7 @@ const fakeMinimax = { getInfo: vi.fn() };
 const fakeIntegrations = { get: vi.fn() };
 const fakeInternalChat = { send: vi.fn() };
 const fakeAgentContracts = { list: vi.fn() };
-const fakeSchedules = { add: vi.fn() };
+const fakeSchedules = { add: vi.fn(), loadAll: vi.fn().mockResolvedValue(undefined) };
 const fakeReadModel = { query: vi.fn() };
 
 beforeEach(() => {
@@ -437,10 +437,10 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
   });
 
   describe('lifecycle forgeDebug checkpoints', () => {
-    it('emits exactly 12 checkpoint invocations on the happy path', async () => {
+    it('emits every checkpoint invocation on the happy path', async () => {
       setEnv();
       await createForgeBootstrap();
-      expect(mockForgeDebug).toHaveBeenCalledTimes(13);
+      expect(mockForgeDebug).toHaveBeenCalledTimes(14);
     });
 
     it('emits checkpoints in documented order', async () => {
@@ -459,6 +459,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
         'bootstrap: managers created',
         'bootstrap: schedule manager created',
         'bootstrap: read model created',
+        'bootstrap: active schedules loaded',
         'bootstrap: agents loaded',
         'bootstrap: bootstrap COMPLETE',
       ]);

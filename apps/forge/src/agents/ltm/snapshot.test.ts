@@ -126,22 +126,17 @@ describe('partitionRecallResults', () => {
 // ─── buildNextRecallHistory ─────────────────────────────────────────────────
 
 describe('buildNextRecallHistory', () => {
-  it('first loop adds nothing (all recentFingerprints are in seen); empty with no candidates', () => {
-    // First loop: each fp is in seen (built from recentFingerprints), so nothing is added.
-    // Second loop: no candidates provided.
+  it('preserves and deduplicates recent fingerprints when there are no candidates', () => {
     const result = buildNextRecallHistory({
       recentFingerprints: ['fp-1', 'fp-2', 'fp-1', 'fp-3'],
       candidateFingerprints: [],
       windowSize: 10,
     });
 
-    // first loop adds nothing; second loop adds nothing → empty
-    expect(result.recentFingerprints).toEqual([]);
+    expect(result.recentFingerprints).toEqual(['fp-1', 'fp-2', 'fp-3']);
   });
 
-  it('second loop adds candidateFingerprints up to windowSize; first loop skips all recent', () => {
-    // First loop: fp-1 is in seen, skipped.
-    // Second loop: fp-2, fp-3, fp-4 added sequentially (stopped at windowSize=3).
+  it('keeps the newest fingerprints within the window', () => {
     const result = buildNextRecallHistory({
       recentFingerprints: ['fp-1'],
       candidateFingerprints: ['fp-2', 'fp-3', 'fp-4'],
