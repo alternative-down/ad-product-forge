@@ -24,6 +24,10 @@ describe('buildIterationLoopSignature', () => {
     expect(() => JSON.parse(result)).not.toThrow();
   });
 
+  it('does not create a loop signature for an empty iteration', () => {
+    expect(buildIterationLoopSignature({ text: '   ', toolCalls: [] })).toBeNull();
+  });
+
   it('includes trimmed text', () => {
     const result = JSON.parse(buildIterationLoopSignature({ text: '  hello  ', toolCalls: [] }));
     expect(result.text).toBe('hello');
