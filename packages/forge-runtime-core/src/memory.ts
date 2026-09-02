@@ -69,6 +69,7 @@ export function createForgeConversationMemory(
     observer: input.observer,
     recentTokenLimit: input.recentTokenLimit,
     overflowObservationTokenLimit: input.overflowObservationTokenLimit,
+    maxObservationBatchesPerStabilize: input.consolidateOverflow ? 1 : undefined,
   });
 
   return {

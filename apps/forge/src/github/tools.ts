@@ -26,6 +26,10 @@ export function createGitHubTools(
       inputSchema: z.object({
         repositoryName: z
           .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .regex(/^[A-Za-z0-9_.-]+$/, 'Repository name contains unsupported characters')
           .optional()
           .describe(
             'Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.',

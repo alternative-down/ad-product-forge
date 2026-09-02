@@ -324,6 +324,43 @@ describe('OperationalMemoryConversationMemory', () => {
       expect(state.observations.length).toBeGreaterThan(1);
     });
 
+    it('limits observation work per stabilize call when configured', async () => {
+      const store = new InMemoryConversationStore();
+
+      for (let i = 1; i <= 25; i += 1) {
+        await store.appendMessage({
+          id: `bounded-message-${i}`,
+          threadId: 'bounded-thread',
+          role: 'assistant',
+          parts: [{ type: 'text', text: generateContentNearTokens(5) }],
+          createdAt: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+        });
+      }
+
+      const memory = new OperationalMemoryConversationMemory({
+        threadId: 'bounded-thread',
+        store,
+        recentTokenLimit: 2,
+        overflowObservationTokenLimit: 5,
+        maxObservationBatchesPerStabilize: 1,
+        observer: {
+          async observe() {
+            return { text: 'bounded observation' };
+          },
+        },
+      });
+
+      const firstState = await memory.stabilize();
+      expect(firstState.observations).toHaveLength(1);
+      expect(firstState.metrics.overflowTokenCount).toBeGreaterThan(5);
+
+      const secondState = await memory.stabilize();
+      expect(secondState.observations).toHaveLength(2);
+      expect(secondState.metrics.overflowTokenCount).toBeLessThan(
+        firstState.metrics.overflowTokenCount,
+      );
+    });
+
     it('does not observe overflow before the overflow batch limit is reached', async () => {
       const store = new InMemoryConversationStore();
 

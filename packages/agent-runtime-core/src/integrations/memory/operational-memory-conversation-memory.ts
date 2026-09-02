@@ -31,6 +31,7 @@ export type OperationalMemoryConversationMemoryOptions = {
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
   observer?: OperationalMemoryConversationObserver;
+  maxObservationBatchesPerStabilize?: number;
 };
 
 type RawConversationMessage = {
@@ -61,6 +62,7 @@ export class OperationalMemoryConversationMemory {
   private readonly recentTokenLimit: number | null;
   private readonly overflowObservationTokenLimit: number | null;
   private readonly observer: OperationalMemoryConversationObserver | null;
+  private readonly maxObservationBatchesPerStabilize: number | null;
 
   constructor(options: OperationalMemoryConversationMemoryOptions) {
     this.threadId = options.threadId;
@@ -68,6 +70,7 @@ export class OperationalMemoryConversationMemory {
     this.recentTokenLimit = options.recentTokenLimit ?? null;
     this.overflowObservationTokenLimit = options.overflowObservationTokenLimit ?? null;
     this.observer = options.observer ?? null;
+    this.maxObservationBatchesPerStabilize = options.maxObservationBatchesPerStabilize ?? null;
   }
 
   async sync(input?: {
@@ -90,6 +93,7 @@ export class OperationalMemoryConversationMemory {
   }): Promise<OperationalMemoryConversationState> {
     let state = await this.loadState();
     let previousLoopSignature: string | null = null;
+    let appliedBatchCount = 0;
 
     input?.diagnostics?.record({
       at: Date.now(),
@@ -108,6 +112,23 @@ export class OperationalMemoryConversationMemory {
         overflowObservationTokenLimit: this.overflowObservationTokenLimit,
       })
     ) {
+      if (
+        this.maxObservationBatchesPerStabilize !== null &&
+        appliedBatchCount >= this.maxObservationBatchesPerStabilize
+      ) {
+        input?.diagnostics?.record({
+          at: Date.now(),
+          scope: 'operational-memory',
+          phase: 'stabilize-batch-limit-reached',
+          metrics: {
+            ...summarizeOperationalMemoryConversationMetrics(state),
+            appliedBatchCount,
+            maxObservationBatchesPerStabilize: this.maxObservationBatchesPerStabilize,
+          },
+        });
+        return state;
+      }
+
       const loopSignature = JSON.stringify({
         checkpointMessageId: state.checkpointMessageId,
         overflowMessageIds: state.overflowMessageIds,
@@ -133,6 +154,8 @@ export class OperationalMemoryConversationMemory {
         if (!observation) {
           return state;
         }
+
+        appliedBatchCount += 1;
 
         input?.diagnostics?.record({
           at: Date.now(),

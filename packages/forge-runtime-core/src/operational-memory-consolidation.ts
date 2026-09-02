@@ -3,6 +3,7 @@ import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/
 import { generateText, type LanguageModel } from 'ai';
 
 import { normalizeOperationalMemoryText } from './conversation-model-messages.js';
+import { forgeDebug } from './debug.js';
 import {
   estimateMessageUnits,
   readOperationalMemoryState,
@@ -35,6 +36,8 @@ export async function consolidateOperationalMemory(input: {
   onCheckpointAdvanced?: CreateRuntimeAgentSessionOptions['onCheckpointAdvanced'];
   diagnostics?: Diagnostics;
 }) {
+  const startedAt = Date.now();
+  let pass = 0;
   const reflectionBudget = Math.max(
     1,
     input.limits.totalContextTokens -
@@ -44,12 +47,36 @@ export async function consolidateOperationalMemory(input: {
   );
 
   while (true) {
+    pass += 1;
+    const passStartedAt = Date.now();
     const state = await readOperationalMemoryState({
       threadId: input.threadId,
       store: input.store,
       recentTokenLimit: input.limits.recentRawTokens,
     });
     const checkpoint = state.checkpointSummaryMessage;
+
+    forgeDebug({
+      scope: 'operational-memory-consolidation',
+      level: 'info',
+      message: 'consolidation pass state loaded',
+      context: {
+        threadId: input.threadId,
+        pass,
+        passDurationMs: Date.now() - passStartedAt,
+        elapsedMs: Date.now() - startedAt,
+        rawMessageCount: state.metrics.rawMessageCount,
+        recentRawMessageCount: state.metrics.recentRawMessageCount,
+        recentRawTokenCount: state.metrics.recentRawTokenCount,
+        overflowMessageCount: state.metrics.overflowMessageCount,
+        overflowTokenCount: state.metrics.overflowTokenCount,
+        observationTokenCount: state.metrics.observationTokenCount,
+        reflectionTokenCount: state.metrics.reflectionTokenCount,
+        checkpointTokenCount: state.metrics.checkpointTokenCount,
+        reflectionBudget,
+        checkpointGeneration: checkpoint?.operationalMemoryGeneration ?? 0,
+      },
+    });
 
     input.diagnostics?.record({
       at: Date.now(),
@@ -67,15 +94,33 @@ export async function consolidateOperationalMemory(input: {
       state.metrics.observationTokenCount >= input.limits.observationReflectionBatchTokens &&
       state.observationMessages.length > 0
     ) {
+      forgeDebug({
+        scope: 'operational-memory-consolidation',
+        level: 'info',
+        message: 'observation consolidation starting',
+        context: { threadId: input.threadId, pass },
+      });
       await consolidateObservations(input, state.observationMessages);
       continue;
     }
 
     if (state.metrics.reflectionTokenCount >= reflectionBudget && state.reflectionMessages.length > 0) {
+      forgeDebug({
+        scope: 'operational-memory-consolidation',
+        level: 'info',
+        message: 'reflection consolidation starting',
+        context: { threadId: input.threadId, pass },
+      });
       await consolidateReflections(input, state.reflectionMessages, checkpoint, reflectionBudget);
       continue;
     }
 
+    forgeDebug({
+      scope: 'operational-memory-consolidation',
+      level: 'info',
+      message: 'consolidation completed',
+      context: { threadId: input.threadId, passCount: pass, durationMs: Date.now() - startedAt },
+    });
     return;
   }
 }
@@ -84,6 +129,7 @@ async function consolidateObservations(
   input: Parameters<typeof consolidateOperationalMemory>[0],
   observations: ConversationMessage[],
 ) {
+  const startedAt = Date.now();
   const batch = takeOperationalMemoryBatch({
     messages: observations,
     tokenLimit: input.limits.observationReflectionBatchTokens,
@@ -111,6 +157,20 @@ async function consolidateObservations(
   });
   await replaceMessages(input.store, input.threadId, batch.messages, reflectionId);
 
+  forgeDebug({
+    scope: 'operational-memory-consolidation',
+    level: 'info',
+    message: 'reflection persisted',
+    context: {
+      threadId: input.threadId,
+      generation,
+      durationMs: Date.now() - startedAt,
+      sourceMessageCount: batch.messages.length,
+      sourceTokenCount: batch.tokenCount,
+      outputTokenCount: Math.max(1, countTokens(text)),
+    },
+  });
+
   input.diagnostics?.record({
     at: Date.now(),
     scope: 'operational-memory-consolidation',
@@ -125,6 +185,7 @@ async function consolidateReflections(
   previousCheckpoint: ConversationMessage | null,
   reflectionBudget: number,
 ) {
+  const startedAt = Date.now();
   const batch = takeOperationalMemoryBatch({ messages: reflections, tokenLimit: reflectionBudget });
   const text = await generateConsolidatedText({
     model: input.model,
@@ -158,6 +219,21 @@ async function consolidateReflections(
       replacedByMessageId: checkpointId,
     });
   }
+
+  forgeDebug({
+    scope: 'operational-memory-consolidation',
+    level: 'info',
+    message: 'checkpoint persisted',
+    context: {
+      threadId: input.threadId,
+      generation,
+      durationMs: Date.now() - startedAt,
+      sourceMessageCount: batch.messages.length,
+      sourceTokenCount: batch.tokenCount,
+      outputTokenCount: Math.max(1, countTokens(text)),
+      previousCheckpointGeneration: previousCheckpoint?.operationalMemoryGeneration ?? null,
+    },
+  });
 
   input.diagnostics?.record({
     at: Date.now(),

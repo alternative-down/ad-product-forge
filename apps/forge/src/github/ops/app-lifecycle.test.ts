@@ -105,6 +105,7 @@ const mockOctokit = {
 const mockGithubApp = {
   createGitHubApp: vi.fn().mockReturnValue({ octokit: mockOctokit }),
   createInstallationOctokit: vi.fn().mockReturnValue(mockOctokit),
+  validateInstallationToken: vi.fn().mockResolvedValue(undefined),
   getInstallationToken: vi.fn().mockResolvedValue({
     token: 'ghs_testtoken123',
     expiresAt: '2026-12-31T00:00:00Z',
@@ -202,6 +203,7 @@ beforeEach(() => {
     token: 'ghs_testtoken123',
     expiresAt: '2026-12-31T00:00:00Z',
   });
+  mockGithubApp.validateInstallationToken.mockResolvedValue(undefined);
   mockDb.query.agentProviders.findMany.mockResolvedValue([]);
 });
 
@@ -549,6 +551,11 @@ describe('getGitCredentials', () => {
     expect(result.gitUserName).toBe(activeCredentials.appName);
     expect(result.gitUserEmail).toBe(`${activeCredentials.appSlug}@forge.github-app.local`);
     expect(result.repositoryUrl).toBeUndefined();
+    expect(mockGithubApp.validateInstallationToken).toHaveBeenCalledWith({
+      token: 'ghs_testtoken123',
+      owner: undefined,
+      repositoryName: undefined,
+    });
   });
 
   it('includes repositoryUrl when repositoryName is provided', async () => {
@@ -557,5 +564,35 @@ describe('getGitCredentials', () => {
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
     const result = await ops.getGitCredentials({ agentId: 'a-1', repositoryName: 'my-repo' });
     expect(result.repositoryUrl).toBe('https://github.com/acme/my-repo.git');
+    expect(mockGithubApp.validateInstallationToken).toHaveBeenCalledWith({
+      token: 'ghs_testtoken123',
+      owner: 'acme',
+      repositoryName: 'my-repo',
+    });
+  });
+
+  it('mints and validates a fresh token after a transient 401', async () => {
+    vi.useFakeTimers();
+    try {
+      mockCredentials.getActiveCredentials.mockResolvedValue(activeCredentials);
+      mockGithubApp.validateInstallationToken
+        .mockRejectedValueOnce(Object.assign(new Error('Bad credentials'), { status: 401 }))
+        .mockResolvedValueOnce(undefined);
+      const ctx = makeCtx();
+      const ops = createAppLifecycleOps(ctx, {
+        githubApp: mockGithubApp,
+        credentials: mockCredentials,
+      });
+
+      const resultPromise = ops.getGitCredentials({ agentId: 'a-1', repositoryName: 'my-repo' });
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.token).toBe('ghs_testtoken123');
+      expect(mockGithubApp.getInstallationToken).toHaveBeenCalledTimes(2);
+      expect(mockGithubApp.validateInstallationToken).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,5 +1,8 @@
 import { countTokens } from 'agent-runtime-core';
 import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
+import { forgeDebug } from './debug.js';
+
+const SUSPICIOUS_MESSAGE_TOKEN_COUNT = 1_000_000;
 
 export type OperationalMemoryState = {
   checkpointSummaryMessage: ConversationMessage | null;
@@ -32,6 +35,7 @@ export async function readOperationalMemoryState(input: {
   store: ConversationStore;
   recentTokenLimit: number;
 }) {
+  const startedAt = Date.now();
   try {
     const messages = await input.store.listOperationalMemoryMessages({
       threadId: input.threadId,
@@ -50,7 +54,7 @@ export async function readOperationalMemoryState(input: {
       recentTokenLimit: input.recentTokenLimit,
     });
 
-    return {
+    const state = {
       checkpointSummaryMessage,
       reflectionMessages,
       observationMessages,
@@ -77,6 +81,20 @@ export async function readOperationalMemoryState(input: {
         latestThreadMessageAt: messages.at(-1)?.createdAt ?? null,
       },
     } satisfies OperationalMemoryState;
+
+    forgeDebug({
+      scope: 'operational-memory-state',
+      level: 'info',
+      message: 'operational memory state calculated',
+      context: {
+        threadId: input.threadId,
+        durationMs: Date.now() - startedAt,
+        totalMessageCount: messages.length,
+        ...state.metrics,
+      },
+    });
+
+    return state;
   } catch (err) {
     console.warn(
       '[readOperationalMemoryState] Failed to read operational memory state',
@@ -90,7 +108,38 @@ export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {
-    return Math.max(1, countTokens(text));
+    const tokenCount = Math.max(1, countTokens(text));
+    const maximumPlausibleTokenCount = Math.max(1, Buffer.byteLength(text, 'utf8'));
+
+    if (
+      !Number.isSafeInteger(tokenCount) ||
+      tokenCount > maximumPlausibleTokenCount ||
+      tokenCount >= SUSPICIOUS_MESSAGE_TOKEN_COUNT
+    ) {
+      forgeDebug({
+        scope: 'operational-memory-state',
+        level: 'error',
+        message: 'suspicious message token count detected',
+        context: {
+          messageId: message.id,
+          threadId: message.threadId,
+          role: message.role,
+          operationalMemoryType: message.operationalMemoryType ?? 'raw',
+          operationalMemoryGeneration: message.operationalMemoryGeneration ?? null,
+          tokenCount,
+          maximumPlausibleTokenCount,
+          textLength: text.length,
+          partCount: message.parts.length,
+          partTypes: message.parts.map((part) => part.type),
+        },
+      });
+    }
+
+    if (!Number.isSafeInteger(tokenCount) || tokenCount > maximumPlausibleTokenCount) {
+      return maximumPlausibleTokenCount;
+    }
+
+    return tokenCount;
   }
 
   return 1;

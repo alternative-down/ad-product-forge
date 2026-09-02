@@ -101,7 +101,7 @@ function clearEnv(): void {
 
 const fakeDb = { client: 'fake-db' };
 const fakeRegistry = { get: vi.fn(), loadAll: vi.fn(), size: 0 };
-const fakeHttpServer = { listen: vi.fn() };
+const fakeHttpServer = { start: vi.fn().mockResolvedValue(undefined), listen: vi.fn() };
 const fakeGithubApps = { provision: vi.fn() };
 const fakeCoolify = { createApp: vi.fn() };
 const fakeMinimax = { getInfo: vi.fn() };
@@ -440,7 +440,7 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
     it('emits exactly 12 checkpoint invocations on the happy path', async () => {
       setEnv();
       await createForgeBootstrap();
-      expect(mockForgeDebug).toHaveBeenCalledTimes(12);
+      expect(mockForgeDebug).toHaveBeenCalledTimes(13);
     });
 
     it('emits checkpoints in documented order', async () => {
@@ -454,11 +454,12 @@ describe('createForgeBootstrap() — defensive patches (#6308)', () => {
         'bootstrap: migrations complete',
         'bootstrap: agent embedders ready',
         'bootstrap: registry obtained',
+        'bootstrap: startup health server ready',
         'bootstrap: stores created',
         'bootstrap: managers created',
         'bootstrap: schedule manager created',
-        'bootstrap: agents loaded',
         'bootstrap: read model created',
+        'bootstrap: agents loaded',
         'bootstrap: bootstrap COMPLETE',
       ]);
     });

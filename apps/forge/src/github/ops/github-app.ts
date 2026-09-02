@@ -9,9 +9,8 @@
  * - createGitHubApp: build the App instance for webhook delivery
  * - createInstallationOctokit: build Octokit for a specific installation
  */
-import { App } from 'octokit';
+import { App, Octokit } from 'octokit';
 import { createAppAuth } from '@octokit/auth-app';
-import type { Octokit } from 'octokit';
 import type { GitHubAppCredentials } from '../types';
 import { errorMsg } from '../../agents/error-formatting';
 
@@ -25,6 +24,11 @@ export interface GitHubAppOps {
   createInstallationOctokit: (
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
   ) => Promise<Octokit>;
+  validateInstallationToken: (input: {
+    token: string;
+    owner?: string;
+    repositoryName?: string;
+  }) => Promise<void>;
   /** Test hook to reset circuit breaker state. Not part of public API. */
   _resetCircuitBreakerForTesting?: () => void;
 }
@@ -62,39 +66,58 @@ interface CircuitState {
   failures: number;
   firstFailureAt: number;
   openedAt: number | null;
+  halfOpenAttemptInFlight: boolean;
 }
-
-const circuitByKey = new Map<string, CircuitState>();
 
 function circuitKey(appId: number, installationId: number): string {
   return `${appId}-${installationId}`;
 }
 
-function checkCircuit(appId: number, installationId: number): void {
+function checkCircuit(
+  circuitByKey: Map<string, CircuitState>,
+  appId: number,
+  installationId: number,
+): void {
   const key = circuitKey(appId, installationId);
   const state = circuitByKey.get(key);
   if (!state || state.openedAt === null) return;
 
   const elapsedSinceOpen = Date.now() - state.openedAt;
   if (elapsedSinceOpen >= CIRCUIT_BREAKER_COOLDOWN_MS) {
-    // Half-open: allow one attempt. Do not clear state here — let recordSuccess
-    // or recordFailure decide.
+    if (state.halfOpenAttemptInFlight) {
+      throw new GitHubAppCircuitOpenError(appId, installationId);
+    }
+
+    state.halfOpenAttemptInFlight = true;
     return;
   }
   throw new GitHubAppCircuitOpenError(appId, installationId);
 }
 
-function recordSuccess(appId: number, installationId: number): void {
+function recordSuccess(
+  circuitByKey: Map<string, CircuitState>,
+  appId: number,
+  installationId: number,
+): void {
   circuitByKey.delete(circuitKey(appId, installationId));
 }
 
-function recordFailure(appId: number, installationId: number): void {
+function recordFailure(
+  circuitByKey: Map<string, CircuitState>,
+  appId: number,
+  installationId: number,
+): void {
   const key = circuitKey(appId, installationId);
   const now = Date.now();
   const existing = circuitByKey.get(key);
 
   if (!existing || now - existing.firstFailureAt > CIRCUIT_BREAKER_WINDOW_MS) {
-    circuitByKey.set(key, { failures: 1, firstFailureAt: now, openedAt: null });
+    circuitByKey.set(key, {
+      failures: 1,
+      firstFailureAt: now,
+      openedAt: null,
+      halfOpenAttemptInFlight: false,
+    });
     return;
   }
 
@@ -104,24 +127,28 @@ function recordFailure(appId: number, installationId: number): void {
       failures: newFailures,
       firstFailureAt: existing.firstFailureAt,
       openedAt: now,
+      halfOpenAttemptInFlight: false,
     });
   } else {
     circuitByKey.set(key, {
       failures: newFailures,
       firstFailureAt: existing.firstFailureAt,
       openedAt: null,
+      halfOpenAttemptInFlight: false,
     });
   }
 }
 
 export function createGitHubAppOps(): GitHubAppOps {
+  const circuitByKey = new Map<string, CircuitState>();
+
   async function getInstallationToken(
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
   ) {
     const { appId, installationId, privateKey } = credentials;
 
     // ── Pre-flight circuit check (no network call if open) ───────────────────
-    checkCircuit(appId, installationId);
+    checkCircuit(circuitByKey, appId, installationId);
 
     const auth = createAppAuth({
       appId,
@@ -139,9 +166,9 @@ export function createGitHubAppOps(): GitHubAppOps {
         token: result.token,
         expiresAt: result.expiresAt,
       };
-      recordSuccess(appId, installationId);
+      recordSuccess(circuitByKey, appId, installationId);
     } catch (error) {
-      recordFailure(appId, installationId);
+      recordFailure(circuitByKey, appId, installationId);
       throw new Error(
         `getInstallationToken failed for appId=${appId} installationId=${installationId}: ${errorMsg(error)}`,
       );
@@ -169,10 +196,29 @@ export function createGitHubAppOps(): GitHubAppOps {
     return await app.getInstallationOctokit(credentials.installationId);
   }
 
+  async function validateInstallationToken(input: {
+    token: string;
+    owner?: string;
+    repositoryName?: string;
+  }) {
+    const octokit = new Octokit({ auth: input.token });
+
+    if (input.owner && input.repositoryName) {
+      await octokit.request('GET /repos/{owner}/{repo}', {
+        owner: input.owner,
+        repo: input.repositoryName,
+      });
+      return;
+    }
+
+    await octokit.request('GET /installation/repositories', { per_page: 1 });
+  }
+
   return {
     getInstallationToken,
     createGitHubApp,
     createInstallationOctokit,
+    validateInstallationToken,
     _resetCircuitBreakerForTesting: () => circuitByKey.clear(),
   };
 }

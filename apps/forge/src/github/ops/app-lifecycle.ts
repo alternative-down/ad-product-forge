@@ -30,6 +30,8 @@ import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioni
 import type { GitHubAppOps } from './github-app';
 import { LogLevel } from '../../types/log-level';
 import { errorMsg } from '../../agents/error-formatting';
+import { createHash } from 'node:crypto';
+import { delay } from '../../utils/async';
 
 export interface AppLifecycleOpsDeps {
   githubApp: GitHubAppOps;
@@ -233,7 +235,55 @@ export function createAppLifecycleOps(
   async function getGitCredentials(input: { agentId: string; repositoryName?: string }) {
     const githubConfig = await getGlobalConfig();
     const activeCredentials = await credentials.getActiveCredentials(input.agentId);
-    const token = await githubApp.getInstallationToken(activeCredentials);
+    const retryDelaysMs = [0, 1_000, 2_000] as const;
+    let token: Awaited<ReturnType<GitHubAppOps['getInstallationToken']>> | null = null;
+
+    for (const [attemptIndex, retryDelayMs] of retryDelaysMs.entries()) {
+      if (retryDelayMs > 0) {
+        await delay(retryDelayMs);
+      }
+
+      const attempt = attemptIndex + 1;
+      const startedAt = Date.now();
+      token = await githubApp.getInstallationToken(activeCredentials);
+      const fingerprint = createHash('sha256').update(token.token).digest('hex').slice(0, 12);
+
+      try {
+        await githubApp.validateInstallationToken({
+          token: token.token,
+          owner: input.repositoryName ? githubConfig.organization : undefined,
+          repositoryName: input.repositoryName,
+        });
+        appLifecycleOpsDebug('info', 'GitHub installation token validated', {
+          agentId: input.agentId,
+          attempt,
+          durationMs: Date.now() - startedAt,
+          repositoryName: input.repositoryName ?? null,
+          tokenFingerprint: fingerprint,
+          expiresAt: token.expiresAt,
+        });
+        break;
+      } catch (error) {
+        const status = getHttpStatus(error);
+        appLifecycleOpsDebug(attempt === retryDelaysMs.length || status !== 401 ? 'error' : 'warn', 'GitHub installation token validation failed', {
+          agentId: input.agentId,
+          attempt,
+          durationMs: Date.now() - startedAt,
+          repositoryName: input.repositoryName ?? null,
+          tokenFingerprint: fingerprint,
+          status,
+          error: errorMsg(error),
+        });
+
+        if (status !== 401 || attempt === retryDelaysMs.length) {
+          throw error;
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error('GitHub installation token validation produced no token');
+    }
 
     return {
       username: 'x-access-token',
@@ -260,4 +310,12 @@ export function createAppLifecycleOps(
     deleteAgentApp,
     getGitCredentials,
   };
+}
+
+function getHttpStatus(error: unknown): number | null {
+  if (typeof error !== 'object' || error === null || !('status' in error)) {
+    return null;
+  }
+
+  return typeof error.status === 'number' ? error.status : null;
 }
