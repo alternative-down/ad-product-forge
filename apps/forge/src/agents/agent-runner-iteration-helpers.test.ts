@@ -28,25 +28,24 @@ describe('buildIterationLoopSignature', () => {
     expect(buildIterationLoopSignature({ text: '   ', toolCalls: [] })).toBeNull();
   });
 
-  it('includes trimmed text', () => {
-    const result = JSON.parse(buildIterationLoopSignature({ text: '  hello  ', toolCalls: [] }));
-    expect(result.text).toBe('hello');
-  });
-
-  it('excludes leading/trailing whitespace from text', () => {
-    const result = JSON.parse(
+  it('hashes trimmed text without exposing it', () => {
+    const trimmed = JSON.parse(buildIterationLoopSignature({ text: 'hello', toolCalls: [] }));
+    const padded = JSON.parse(
       buildIterationLoopSignature({ text: '\n\thello\n\t', toolCalls: [] }),
     );
-    expect(result.text).toBe('hello');
+    expect(padded.textHash).toBe(trimmed.textHash);
+    expect(JSON.stringify(padded)).not.toContain('hello');
   });
 
-  it('normalises tool calls to { toolName, args }', () => {
+  it('hashes tool arguments without exposing them', () => {
     const iteration = {
       text: 'test',
       toolCalls: [{ name: 'search', args: { query: 'weather' } }],
     };
     const result = JSON.parse(buildIterationLoopSignature(iteration));
-    expect(result.toolCalls).toEqual([{ toolName: 'search', args: { query: 'weather' } }]);
+    expect(result.toolCalls[0].toolName).toBe('search');
+    expect(result.toolCalls[0].argsHash).toHaveLength(64);
+    expect(JSON.stringify(result)).not.toContain('weather');
   });
 
   it('maps multiple tool calls', () => {
@@ -86,6 +85,23 @@ describe('buildIterationLoopSignature', () => {
   it('handles empty tool calls', () => {
     const result = JSON.parse(buildIterationLoopSignature({ text: 'hello', toolCalls: [] }));
     expect(result.toolCalls).toEqual([]);
+  });
+
+  it('does not count changing tool results as the same behavior', () => {
+    const base = {
+      text: '',
+      toolCalls: [{ name: 'status', args: {} }],
+    };
+    const first = buildIterationLoopSignature({
+      ...base,
+      toolResults: [{ name: 'status', result: { state: 'running' } }],
+    });
+    const second = buildIterationLoopSignature({
+      ...base,
+      toolResults: [{ name: 'status', result: { state: 'complete' } }],
+    });
+
+    expect(first).not.toBe(second);
   });
 });
 

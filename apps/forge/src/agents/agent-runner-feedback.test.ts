@@ -93,7 +93,12 @@ describe('stuck loop detection', () => {
 
     const result = await buildIterationFeedback(makeArg({ innerIteration: 0 }) as any, deps);
 
-    expect(result).toEqual({ continue: false, feedbackMessages: [] });
+    expect(result).toEqual({
+      continue: false,
+      feedbackMessages: [
+        expect.objectContaining({ role: 'user', content: expect.stringContaining('stopped') }),
+      ],
+    });
   });
 
   it('creates notification with stuck loop details', async () => {
@@ -112,6 +117,40 @@ describe('stuck loop detection', () => {
         content: expect.stringContaining('Stuck loop detected.'),
       }),
     );
+  });
+
+  it('does not expose tool arguments in the stuck notification', async () => {
+    const deps = makeDeps({
+      loopDetector: makeLoopDetector(true, 6),
+      loopSignature: 'safe-signature-hash',
+      notifications: { createNotification } as never,
+    });
+
+    await buildIterationFeedback(
+      makeArg({
+        toolCalls: [
+          { name: 'workspace_execute_command', args: { command: 'TOKEN=secret-value' } },
+        ],
+      }) as never,
+      deps,
+    );
+
+    const notification = createNotification.mock.calls[0]?.[0] as { content: string };
+    expect(notification.content).toContain('workspace_execute_command');
+    expect(notification.content).not.toContain('secret-value');
+  });
+
+  it('injects corrective feedback before the hard stop threshold', async () => {
+    const deps = makeDeps({ loopDetector: makeLoopDetector(false, 3) });
+
+    const result = await buildIterationFeedback(makeArg() as never, deps);
+
+    expect(result).toEqual({
+      continue: true,
+      feedbackMessages: [
+        expect.objectContaining({ content: expect.stringContaining('Do not call it again') }),
+      ],
+    });
   });
 
   it('bounds a large loop signature before creating the notification', async () => {
