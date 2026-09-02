@@ -226,16 +226,21 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     const stopRequested = controlDirective === 'stop' || controlDirective === 'ignore';
 
     if (stopRequested) {
-      // Signal the finally block to drain the wake queue.
-      // Only call transitionToIdle when there are no pending messages.
-      // With pending messages, we stop generating but stay available.
-      if (messageManager.getPendingCount() === 0) {
+      const pendingMessageCount = messageManager.getPendingCount();
+
+      if (pendingMessageCount === 0) {
         backoffState.nextStepAt = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (loopDetector?.reset) {
           loopDetector.reset();
         }
         await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
+      } else {
+        agentRunnerDebug('info', 'stop deferred because inbound messages are pending', {
+          runtimeId: deps.runtimeId,
+          pendingMessageCount,
+        });
+        continueRunning = true;
       }
       drainWakeQueueAfterStep = true;
       return;

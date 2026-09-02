@@ -348,11 +348,7 @@ it('resets loop detector and clears backoff nextStepAt when stop requested', asy
   expect(backoffState.nextStepAt).toBeNull();
 });
 
-it('drains wake queue when stop requested but pending messages remain', async () => {
-  // With STOP_AND_IDLE and pending messages, the agent stops generating but
-  // stays available to process incoming messages. The wake queue is drained
-  // (via onRunnerIdle) so new messages can wake the agent. No next step is
-  // queued immediately — the agent awaits new incoming messages.
+it('queues another step when a message arrives while stop is requested', async () => {
   const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
   const transitionToIdle = vi.fn().mockResolvedValue(undefined);
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
@@ -367,13 +363,10 @@ it('drains wake queue when stop requested but pending messages remain', async ()
   const baseDeps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
   const deps = { ...baseDeps, onRunnerIdle, transitionToIdle };
   await executeStep(deps as any);
-  // transitionToIdle is skipped — we are not fully going idle (pending messages exist)
   expect(transitionToIdle).not.toHaveBeenCalled();
-  // onRunnerIdle IS called to drain the wake queue, re-enabling new message wake-ups
   expect(onRunnerIdle).toHaveBeenCalledTimes(1);
-  // No backoff reset or next-step queue — the agent awaits incoming messages
   expect(baseDeps.scheduler.resetBackoff).not.toHaveBeenCalled();
-  expect(baseDeps.queueNextStep).not.toHaveBeenCalled();
+  expect(baseDeps.queueNextStep).toHaveBeenCalledWith(1);
 });
 
 it('resets scheduler backoff on successful non-stop generation', async () => {
