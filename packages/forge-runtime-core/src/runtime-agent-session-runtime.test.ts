@@ -15,8 +15,13 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
   const debugMock = vi.fn();
   const errorMock = vi.fn();
 
-  const memorySync = vi.fn().mockResolvedValue(undefined);
-  const memoryStabilize = vi.fn().mockResolvedValue(undefined);
+  const operationalMemoryState = {
+    metrics: {
+      overflowTokenCount: 0,
+    },
+  };
+  const memorySync = vi.fn().mockResolvedValue(operationalMemoryState);
+  const memoryStabilize = vi.fn().mockResolvedValue(operationalMemoryState);
 
   const innerMemory = {
     sync: memorySync,
@@ -246,6 +251,30 @@ describe('syncState', () => {
     await runtime.syncState();
 
     expect(sharedMocks.memoryStabilize).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports whether another overflow recovery pass is required', async () => {
+    sharedMocks.memoryStabilize.mockResolvedValueOnce({
+      metrics: { overflowTokenCount: 500 },
+    });
+
+    const runtime = await createRuntimeAgentSessionRuntime(
+      makeMinimalOptions({
+        consolidateConversationOverflow: true,
+        checkpointedOmLimits: {
+          recentRawTokens: 1000,
+          rawObservationBatchTokens: 500,
+          observationSupportTokens: 200,
+        },
+        checkpointedOmModel: makeModel(),
+        checkpointedOmSystemPrompt: 'test prompt',
+      }),
+    );
+
+    await expect(runtime.syncState()).resolves.toEqual({
+      overflowTokenCount: 500,
+      needsMoreOverflowWork: true,
+    });
   });
 
   it('records diagnostics events during sync when diagnostics callback is provided', async () => {

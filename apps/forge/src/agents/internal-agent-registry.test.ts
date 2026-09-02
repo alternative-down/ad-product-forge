@@ -37,6 +37,7 @@ function makeRuntime(id = 'agent-test-1', name = 'Test Agent'): InternalAgentRun
   return {
     id,
     name,
+    agent: {},
     dispose: vi.fn().mockResolvedValue(undefined),
   } as unknown as InternalAgentRuntime;
 }
@@ -180,6 +181,21 @@ describe('internal-agent-registry', () => {
       vi.mocked(loadAgents).mockResolvedValue(new Map());
       await registry().loadAll(makeDb(), makeConfig() as any);
       expect(registry().list()).toHaveLength(0);
+    });
+
+    it('starts operational memory recovery after agents are registered', async () => {
+      const { loadAgents } = await import('./agent-loader');
+      const stabilizeMemory = vi.fn().mockResolvedValue({
+        overflowTokenCount: 0,
+        needsMoreOverflowWork: false,
+      });
+      const runtime = makeRuntime('memory-agent');
+      runtime.agent.stabilizeMemory = stabilizeMemory;
+      vi.mocked(loadAgents).mockResolvedValue(new Map([[runtime.id, runtime]]));
+
+      await registry().loadAll(makeDb(), makeConfig() as any);
+
+      await vi.waitFor(() => expect(stabilizeMemory).toHaveBeenCalledTimes(1));
     });
   });
 });

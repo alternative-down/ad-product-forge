@@ -9,7 +9,7 @@ interface MetricTileProps {
 }
 
 function MetricTile({ label, current, unit, limit, detail }: MetricTileProps) {
-  const percent = limit && limit > 0 ? Math.min(999, Math.round((current / limit) * 100)) : null;
+  const percent = limit && limit > 0 ? Math.round((current / limit) * 100) : null;
 
   return (
     <div className="rounded-2xl border border-border/80 bg-background/70 px-4 py-3">

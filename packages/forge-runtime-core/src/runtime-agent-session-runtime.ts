@@ -28,7 +28,7 @@ export type RuntimeAgentSessionRuntime = {
         detail?: Record<string, unknown> | null;
       }): void;
     };
-  }): Promise<void>;
+  }): Promise<{ overflowTokenCount: number; needsMoreOverflowWork: boolean }>;
 };
 
 function requireOperationalMemoryOmLimits(input: CreateRuntimeAgentSessionOptions) {
@@ -144,15 +144,13 @@ export async function createRuntimeAgentSessionRuntime(
         phase: 'sync-state-start',
       });
 
-      if (checkpointedOmEnabled) {
-        await conversationMemory.memory.stabilize({
+      const state = checkpointedOmEnabled
+        ? await conversationMemory.memory.stabilize({
+          diagnostics: options?.diagnostics,
+        })
+        : await conversationMemory.memory.sync({
           diagnostics: options?.diagnostics,
         });
-      } else {
-        await conversationMemory.memory.sync({
-          diagnostics: options?.diagnostics,
-        });
-      }
 
       options?.diagnostics?.record({
         at: Date.now(),
@@ -166,7 +164,10 @@ export async function createRuntimeAgentSessionRuntime(
           scope: 'om',
           phase: 'sync-state-finished',
         });
-        return;
+        return {
+          overflowTokenCount: state.metrics.overflowTokenCount,
+          needsMoreOverflowWork: false,
+        };
       }
 
       await consolidateOperationalMemory({
@@ -185,6 +186,11 @@ export async function createRuntimeAgentSessionRuntime(
         scope: 'om',
         phase: 'sync-state-finished',
       });
+      return {
+        overflowTokenCount: state.metrics.overflowTokenCount,
+        needsMoreOverflowWork:
+          state.metrics.overflowTokenCount >= checkpointedOmLimits.rawObservationBatchTokens,
+      };
     },
   };
 }
