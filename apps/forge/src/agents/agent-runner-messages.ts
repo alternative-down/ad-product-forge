@@ -131,7 +131,7 @@ export function createMessageManager(
 
   function restoreFlushedRunMessages() {
     for (const event of state.inFlightRunMessages.values()) {
-      if (event.type.startsWith('message:')) {
+      if (event.type.startsWith('message:') || event.type === 'schedule:trigger') {
         continue;
       }
 
@@ -142,7 +142,9 @@ export function createMessageManager(
     state.flushedRunEventKeyOrder = state.flushedRunEventKeyOrder.filter(
       (key) => {
         const event = state.inFlightRunMessages.get(key);
-        return event === undefined || event.type.startsWith('message:');
+        return event === undefined ||
+          event.type.startsWith('message:') ||
+          event.type === 'schedule:trigger';
       },
     );
     state.inFlightRunMessages.clear();

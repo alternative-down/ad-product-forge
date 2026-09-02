@@ -236,7 +236,7 @@ describe('createForgeBootstrap() — happy path', () => {
     setEnv();
     await createForgeBootstrap();
 
-    expect(fakeRegistry.loadAll).toHaveBeenCalledWith(fakeDb, {
+    expect(fakeRegistry.loadAll).toHaveBeenCalledWith(fakeDb, expect.objectContaining({
       workspaceBasePath: './workspaces',
       githubApps: fakeGithubApps,
       emailMailboxes: null,
@@ -244,7 +244,61 @@ describe('createForgeBootstrap() — happy path', () => {
       minimax: fakeMinimax,
       schedules: fakeSchedules,
       internalChat: fakeInternalChat,
+    }));
+  });
+
+  it('passes the complete loader configuration to admin reload routes', async () => {
+    setEnv();
+    await createForgeBootstrap();
+
+    expect(mockRegisterAdminRoutes).toHaveBeenCalledWith(expect.objectContaining({
+      loaderConfig: {
+        workspaceBasePath: './workspaces',
+        githubApps: fakeGithubApps,
+        emailMailboxes: null,
+        coolify: fakeCoolify,
+        minimax: fakeMinimax,
+        schedules: fakeSchedules,
+        internalChat: fakeInternalChat,
+      },
+      internalChat: fakeInternalChat,
+    }));
+  });
+
+  it('uses a distinct idempotency key for each occurrence of a recurring schedule', async () => {
+    setEnv();
+    const notifyExternalEvent = vi.fn();
+    fakeRegistry.get.mockReturnValue({ runner: { notifyExternalEvent } });
+    await createForgeBootstrap();
+    const scheduleManagerInput = mockCreateAgentScheduleManager.mock.calls[0]?.[0];
+
+    scheduleManagerInput.notifyAgent({
+      agentId: 'agent-1',
+      scheduleId: 'schedule-1',
+      scheduleKind: 'agent',
+      scheduleName: 'Hourly',
+      content: 'run',
+      timestamp: 1_788_370_200_000,
+      idleOnly: true,
     });
+    scheduleManagerInput.notifyAgent({
+      agentId: 'agent-1',
+      scheduleId: 'schedule-1',
+      scheduleKind: 'agent',
+      scheduleName: 'Hourly',
+      content: 'run',
+      timestamp: 1_788_373_800_000,
+      idleOnly: true,
+    });
+
+    expect(notifyExternalEvent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ idempotencyKey: 'schedule-1:1788370200000' }),
+    );
+    expect(notifyExternalEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ idempotencyKey: 'schedule-1:1788373800000' }),
+    );
   });
 
   it('runs database migrations before wiring factories', async () => {
@@ -286,6 +340,7 @@ describe('createForgeBootstrap() — happy path', () => {
       db: fakeDb,
       httpServer: fakeHttpServer,
       integrations: fakeIntegrations,
+      publicBaseUrl: 'http://localhost:3011',
     });
   });
 

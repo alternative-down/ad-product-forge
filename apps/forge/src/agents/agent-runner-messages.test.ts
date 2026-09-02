@@ -240,7 +240,7 @@ describe('flushed message delivery lifecycle', () => {
     expect(state.flushedRunEventKeys.has('k1')).toBe(true);
   });
 
-  it('restores a non-message wake event after a failed generation', () => {
+  it('does not replay a schedule trigger after a failed generation', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
     state.pendingRunMessages.set(
@@ -251,8 +251,23 @@ describe('flushed message delivery lifecycle', () => {
     expect(manager.flushPendingRunMessages()).toBe('MESSAGES:cron');
     manager.restoreFlushedRunMessages();
 
-    expect(state.pendingRunMessages.get('schedule-1')?.text).toBe('cron');
-    expect(state.flushedRunEventKeys.has('schedule-1')).toBe(false);
+    expect(state.pendingRunMessages.has('schedule-1')).toBe(false);
+    expect(state.flushedRunEventKeys.has('schedule-1')).toBe(true);
+  });
+
+  it('restores another non-message wake event after a failed generation', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set(
+      'github-1',
+      makeEvent({ idempotencyKey: 'github-1', type: 'github:push', text: 'push' }),
+    );
+
+    expect(manager.flushPendingRunMessages()).toBe('MESSAGES:push');
+    manager.restoreFlushedRunMessages();
+
+    expect(state.pendingRunMessages.get('github-1')?.text).toBe('push');
+    expect(state.flushedRunEventKeys.has('github-1')).toBe(false);
   });
 
   it('acknowledges flushed messages after a completed generation', () => {
