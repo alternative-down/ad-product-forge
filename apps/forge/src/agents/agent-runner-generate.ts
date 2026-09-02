@@ -356,7 +356,11 @@ export async function generateWithTimeoutRetries(
           },
           onIterationComplete: async (iteration) => {
             iterationState.current = iteration;
-            const signature = buildIterationLoopSignature(iteration);
+            const signature = buildIterationLoopSignature({
+              text: iteration.text,
+              toolCalls: iteration.toolCalls,
+              toolResults: iteration.toolResults,
+            });
             deps.setLoopSignature(signature);
             if (signature === null) {
               deps.loopDetector.reset();

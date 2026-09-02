@@ -7,8 +7,10 @@
  * building stable loop signatures, constructing recall steps, detecting
  * visible assistant text output, and identifying working-memory updates.
  *
- * No external dependencies — fully testable in isolation.
+ * Fully testable in isolation.
  */
+
+import { createHash } from 'node:crypto';
 
 // ─── Loop signature ────────────────────────────────────────────────────────────
 
@@ -23,6 +25,11 @@ export function buildIterationLoopSignature(iteration: {
     name: string;
     args: Record<string, unknown>;
   }>;
+  toolResults?: Array<{
+    name: string;
+    result: unknown;
+    error?: Error;
+  }>;
 }): string | null {
   const text = iteration.text.trim();
 
@@ -31,12 +38,32 @@ export function buildIterationLoopSignature(iteration: {
   }
 
   return JSON.stringify({
-    text,
+    textHash: hashLoopValue(text),
     toolCalls: iteration.toolCalls.map((toolCall) => ({
       toolName: toolCall.name,
-      args: toolCall.args,
+      argsHash: hashLoopValue(toolCall.args),
+    })),
+    toolResults: (iteration.toolResults ?? []).map((toolResult) => ({
+      toolName: toolResult.name,
+      resultHash: hashLoopValue(toolResult.error?.message ?? toolResult.result),
     })),
   });
+}
+
+function hashLoopValue(value: unknown): string {
+  const serialized = JSON.stringify(value, (_key, nestedValue: unknown) => {
+    if (nestedValue !== null && typeof nestedValue === 'object' && !Array.isArray(nestedValue)) {
+      return Object.fromEntries(
+        Object.entries(nestedValue as Record<string, unknown>).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+      );
+    }
+
+    return nestedValue;
+  });
+
+  return createHash('sha256').update(serialized ?? String(value)).digest('hex');
 }
 
 // ─── LTM recall step builder ─────────────────────────────────────────────────

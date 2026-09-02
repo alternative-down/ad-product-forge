@@ -90,7 +90,12 @@ describe('buildIterationFeedback', () => {
 
       const result = await buildIterationFeedback(makeIteration(), deps);
 
-      expect(result).toEqual({ continue: false, feedbackMessages: [] });
+      expect(result).toEqual({
+        continue: false,
+        feedbackMessages: [
+          expect.objectContaining({ role: 'user', content: expect.stringContaining('stopped') }),
+        ],
+      });
     });
 
     it('calls notifications.createNotification when stuck', async () => {

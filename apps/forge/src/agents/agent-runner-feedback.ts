@@ -25,7 +25,7 @@ import {
 import { RUN_STOP_REMINDER } from './system-prompts/run-stop-reminder.js';
 import type { GenerateTimeoutHandle } from './agent-runner-generate-timeout';
 
-const MAX_STUCK_NOTIFICATION_SIGNATURE_LENGTH = 12_000;
+const LOOP_WARNING_START_COUNT = 3;
 
 export interface BuildIterationFeedbackDeps {
   suppressNoToolCallReminderForRun: boolean;
@@ -113,6 +113,9 @@ export async function buildIterationFeedback(
   const stopRequested = controlDirective === 'stop';
 
   if (loopDetector.isStuck()) {
+    const repeatedToolNames = Array.from(
+      new Set(iteration.toolCalls.map((toolCall) => toolCall.name)),
+    );
     await withTimeout(
       notifications.createNotification({
         agentId: runtime.id,
@@ -121,15 +124,37 @@ export async function buildIterationFeedback(
           'Repeated signature count: ' + loopDetector.getSignatureCount(),
           'The agent repeated the same tool/text pattern and was forced to stop.',
           '',
-          'Signature:',
-          loopSignature.slice(0, MAX_STUCK_NOTIFICATION_SIGNATURE_LENGTH),
+          `Signature hash: ${loopSignature.slice(0, 128)}`,
+          `Repeated tools: ${repeatedToolNames.join(', ') || 'none'}`,
         ].join('\n'),
       }),
       30_000,
       'Agent notification creation timed out for ' + runtime.id,
     );
     setNextStepAt?.(null);
-    return { continue: false, feedbackMessages: [] };
+    return {
+      continue: false,
+      feedbackMessages: [
+        {
+          role: 'user',
+          content:
+            'Execution stopped because the same action was repeated without progress. On the next wake, inspect the existing tool result and choose a different action; do not repeat the same call.',
+        },
+      ],
+    };
+  }
+
+  const repeatedSignatureCount = loopDetector.getSignatureCount();
+  if (repeatedSignatureCount >= LOOP_WARNING_START_COUNT) {
+    return {
+      continue: true,
+      feedbackMessages: [
+        {
+          role: 'user',
+          content: `Loop warning: the same action and result were repeated ${repeatedSignatureCount} times. Do not call it again. Use the result already present in context, explain what is blocking progress, or choose a materially different action.`,
+        },
+      ],
+    };
   }
 
   if (iteration.toolCalls.length === 0 && ignoredTextRequested) {

@@ -217,7 +217,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
         : []),
     ];
 
-    if (continuation.continue && continuationMessages.length > 0) {
+    if (continuationMessages.length > 0) {
       await appendRuntimeSessionPromptMessages({
         store: input.runtime.conversationStore,
         threadId: input.session.threadId,

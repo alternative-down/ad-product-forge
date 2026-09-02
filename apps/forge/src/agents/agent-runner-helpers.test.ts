@@ -73,13 +73,15 @@ describe('agent-runner-helpers', () => {
         toolCalls: [{ name: 'tool_a', args: { x: 1 } }],
       });
       const parsed = JSON.parse(sig);
-      expect(parsed.text).toBe('hello');
-      expect(parsed.toolCalls).toEqual([{ toolName: 'tool_a', args: { x: 1 } }]);
+      expect(parsed.textHash).toHaveLength(64);
+      expect(parsed.toolCalls[0].toolName).toBe('tool_a');
+      expect(parsed.toolCalls[0].argsHash).toHaveLength(64);
     });
 
     it('trims whitespace from text', () => {
-      const sig = buildIterationLoopSignature({ text: '  trimmed  ', toolCalls: [] });
-      expect(JSON.parse(sig).text).toBe('trimmed');
+      const padded = buildIterationLoopSignature({ text: '  trimmed  ', toolCalls: [] });
+      const trimmed = buildIterationLoopSignature({ text: 'trimmed', toolCalls: [] });
+      expect(padded).toBe(trimmed);
     });
 
     it('normalizes toolCall keys to toolName', () => {
