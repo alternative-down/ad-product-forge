@@ -135,6 +135,7 @@ export type SchedulerDependencies = {
   runtimeId: string;
   setExecutionState(runtimeId: string, state: 'idle' | 'running' | 'absent'): Promise<void>;
   onAgentIdle?(): Promise<void>;
+  onHealthcheck(): Promise<void>;
 };
 
 export function createScheduler(state: SchedulerState, deps: SchedulerDependencies) {
@@ -155,7 +156,10 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
       return stopped;
     },
   });
-  const healthcheck = createSchedulerHealthcheck({ runtimeId: deps.runtimeId });
+  const healthcheck = createSchedulerHealthcheck({
+    runtimeId: deps.runtimeId,
+    onHealthcheck: deps.onHealthcheck,
+  });
   const steps = createSchedulerSteps({
     runtimeId: deps.runtimeId,
     getRunnableContract: deps.getRunnableContract,
