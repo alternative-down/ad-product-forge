@@ -17,7 +17,7 @@
  */
 import { eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import { agentProviders, agents } from '../../database/schema';
+import { agentProviders } from '../../database/schema';
 import { createAppName } from '../helpers';
 import { githubAppManifestConfigSchema } from '../types';
 import {
@@ -134,26 +134,11 @@ export function createAppLifecycleOps(
   async function getAgentProvisioning(agentId: string) {
     const existingCredentials = await credentials.getCredentials(agentId);
 
-    if (existingCredentials) {
-      return ctx.opsRouting!.buildProvisioning(agentId, existingCredentials);
-    }
-
-    if (!(await isConfigured())) {
+    if (!existingCredentials) {
       return null;
     }
 
-    const agent = await ctx.config.db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-    });
-
-    if (agent === null || agent === undefined) {
-      return null;
-    }
-
-    return await createAgentApp({
-      agentId,
-      agentName: agent.name,
-    });
+    return ctx.opsRouting!.buildProvisioning(agentId, existingCredentials);
   }
 
   async function updateAgentManifestConfig(input: {
@@ -251,7 +236,10 @@ export function createAppLifecycleOps(
       try {
         await githubApp.validateInstallationToken({
           token: token.token,
-          owner: input.repositoryName ? githubConfig.organization : undefined,
+          owner:
+            input.repositoryName !== null && input.repositoryName !== undefined
+              ? githubConfig.organization
+              : undefined,
           repositoryName: input.repositoryName,
         });
         appLifecycleOpsDebug('info', 'GitHub installation token validated', {

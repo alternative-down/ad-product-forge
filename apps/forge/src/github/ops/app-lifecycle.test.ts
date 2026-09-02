@@ -369,15 +369,14 @@ describe('getAgentProvisioning', () => {
     expect(await ops.getAgentProvisioning('a-1')).toBeNull();
   });
 
-  it('creates new provisioning when agent exists but has no credentials', async () => {
+  it('does not create provisioning as a side effect of reading', async () => {
     mockCredentials.getCredentials.mockResolvedValue(null);
     mockCredentials.insertCredentialsIfAbsent.mockResolvedValue(true);
     mockDb.query.agents.findFirst.mockResolvedValue({ id: 'a-1', name: 'Agent One' });
     const ctx = makeCtx();
     const ops = createAppLifecycleOps(ctx, { githubApp: mockGithubApp, credentials: mockCredentials });
-    const result = await ops.getAgentProvisioning('a-1');
-    expect(result).toBe(provisioningShape);
-    expect(mockCredentials.insertCredentialsIfAbsent).toHaveBeenCalled();
+    expect(await ops.getAgentProvisioning('a-1')).toBeNull();
+    expect(mockCredentials.insertCredentialsIfAbsent).not.toHaveBeenCalled();
   });
 });
 

@@ -165,6 +165,79 @@ describe('registerConfigOps', () => {
     });
   });
 
+  describe('GitHub App lifecycle routes', () => {
+    it('creates a pending app explicitly for the selected agent', async () => {
+      const createAgentApp = vi.fn().mockResolvedValue({ status: 'pending' });
+      const { registerConfigOps } = await import('./config-ops');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { createAgentApp },
+        loaderConfig: {},
+      } as any);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-app/create');
+
+      const response = await handler(makeRequest({ agentId: 'agent-123' }));
+
+      expect(response.status).toBe(200);
+      expect(createAgentApp).toHaveBeenCalledWith({
+        agentId: 'agent-123',
+        agentName: 'Test Agent',
+      });
+    });
+
+    it('validates a freshly issued installation credential', async () => {
+      const getGitCredentials = vi.fn().mockResolvedValue({ expiresAt: '2026-09-02T12:00:00Z' });
+      const { registerConfigOps } = await import('./config-ops');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { getGitCredentials },
+        loaderConfig: {},
+      } as any);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-app/validate');
+
+      const response = await handler(makeRequest({ agentId: 'agent-123' }));
+
+      expect(response.status).toBe(200);
+      expect(getGitCredentials).toHaveBeenCalledWith({ agentId: 'agent-123' });
+    });
+
+    it('removes the old app before preparing a replacement', async () => {
+      const deleteAgentApp = vi.fn().mockResolvedValue(undefined);
+      const createAgentApp = vi.fn().mockResolvedValue({ status: 'pending' });
+      const { registerConfigOps } = await import('./config-ops');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { deleteAgentApp, createAgentApp },
+        loaderConfig: {},
+      } as any);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-app/recreate');
+
+      const response = await handler(makeRequest({ agentId: 'agent-123' }));
+
+      expect(response.status).toBe(200);
+      expect(deleteAgentApp).toHaveBeenCalledWith('agent-123');
+      expect(createAgentApp).toHaveBeenCalledWith({
+        agentId: 'agent-123',
+        agentName: 'Test Agent',
+      });
+      expect(deleteAgentApp.mock.invocationCallOrder[0]).toBeLessThan(
+        createAgentApp.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('removes the app configuration for one agent', async () => {
+      const deleteAgentApp = vi.fn().mockResolvedValue(undefined);
+      const { registerConfigOps } = await import('./config-ops');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { deleteAgentApp },
+        loaderConfig: {},
+      } as any);
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-app/delete');
+
+      const response = await handler(makeRequest({ agentId: 'agent-123' }));
+
+      expect(response.status).toBe(200);
+      expect(deleteAgentApp).toHaveBeenCalledWith('agent-123');
+    });
+  });
+
   describe('POST /admin/agent/update-config', () => {
     it('registers the route', async () => {
       const { registerConfigOps } = await import('./config-ops');

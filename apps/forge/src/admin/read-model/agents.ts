@@ -120,7 +120,15 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     workspaceBasePath,
   });
   const listAgents = agentListRM.listAgents;
-  const getAgent = agentListRM.getAgent;
+  async function getAgent(agentId: string) {
+    const agent = await agentListRM.getAgent(agentId);
+    if (agent === null) {
+      return null;
+    }
+
+    const githubProvisioning = await deps.githubApps.getAgentProvisioning(agentId);
+    return { ...agent, githubProvisioning };
+  }
   const {
     listAgentRecentConversations,
     listAgentConversationMessages,

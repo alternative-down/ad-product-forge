@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { jsonResponse, adminRoutesParseJsonBody } from '../../index';
 import { reloadAgentIfLoaded } from '../../../../capabilities/runtime';
 import {
+  agentGitHubAppActionSchema,
   updateAgentGitHubManifestConfigSchema,
   updateAgentConfigSchema,
 } from '../../schemas/agents';
@@ -28,6 +29,26 @@ export function registerConfigOps(
     loaderConfig: AgentLoaderConfig;
   },
 ) {
+  const requireGitHubApps = () => {
+    if (!input.githubApps) {
+      throw new Error('GitHub Apps not configured');
+    }
+
+    return input.githubApps;
+  };
+
+  async function loadAgentName(agentId: string) {
+    const agent = await db.query.agents.findFirst({
+      where: sql`id = ${agentId}`,
+      columns: { name: true },
+    });
+    if (!agent) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
+
+    return agent.name;
+  }
+
   // POST /admin/agent/github-manifest-config/update
   httpServer.registerRoute({
     method: 'POST',
@@ -42,6 +63,51 @@ export function registerConfigOps(
           manifestConfig: body.manifestConfig,
         });
         return jsonResponse({ success: true, agentId: body.agentId, provisioning });
+    }),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-app/create',
+    handler: safeRoute('/admin/agent/github-app/create', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, agentGitHubAppActionSchema);
+      const githubApps = requireGitHubApps();
+      const agentName = await loadAgentName(body.agentId);
+      const provisioning = await githubApps.createAgentApp({ agentId: body.agentId, agentName });
+      return jsonResponse({ success: true, provisioning });
+    }),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-app/validate',
+    handler: safeRoute('/admin/agent/github-app/validate', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, agentGitHubAppActionSchema);
+      const credential = await requireGitHubApps().getGitCredentials({ agentId: body.agentId });
+      return jsonResponse({ success: true, expiresAt: credential.expiresAt });
+    }),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-app/recreate',
+    handler: safeRoute('/admin/agent/github-app/recreate', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, agentGitHubAppActionSchema);
+      const githubApps = requireGitHubApps();
+      const agentName = await loadAgentName(body.agentId);
+      await githubApps.deleteAgentApp(body.agentId);
+      const provisioning = await githubApps.createAgentApp({ agentId: body.agentId, agentName });
+      return jsonResponse({ success: true, provisioning });
+    }),
+  });
+
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-app/delete',
+    handler: safeRoute('/admin/agent/github-app/delete', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, agentGitHubAppActionSchema);
+      await requireGitHubApps().deleteAgentApp(body.agentId);
+      return jsonResponse({ success: true });
     }),
   });
 
