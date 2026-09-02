@@ -159,6 +159,25 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
+  const runtimeStartedAt = Date.now();
+  const logStage = (stage: string, startedAt: number, context?: Record<string, unknown>) => {
+    createForgeAgentDebug('info', `runtime initialization: ${stage}`, {
+      agentId: config.id,
+      durationMs: Date.now() - startedAt,
+      elapsedMs: Date.now() - runtimeStartedAt,
+      ...context,
+    });
+  };
+
+  createForgeAgentDebug('info', 'runtime initialization started', {
+    agentId: config.id,
+    longTermMemoryEnabled: options.longTermMemory ?? false,
+    checkpointedOmEnabled: config.checkpointedOmEnabled === true,
+  });
+  let stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: platform starting', {
+    agentId: config.id,
+  });
   const platform = await createAgentRuntimePlatform({
     agentId: config.id,
     workspaceBasePath: config.workspaceBasePath,
@@ -170,6 +189,7 @@ export async function createInternalAgentRuntime<
     communicationDmFlushingEnabled: config.communicationDmFlushingEnabled,
     communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
   });
+  logStage('platform created', stageStartedAt);
   const configuredTools = (config.tools ?? {}) as ToolsInput;
   const mcpRuntimeActionSource = createAgentMcpRuntimeActionSource(config.id);
   const allAgentTools: ToolsInput = {
@@ -177,16 +197,26 @@ export async function createInternalAgentRuntime<
     ...configuredTools,
   };
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
+  stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: legacy operational memory migration starting', {
+    agentId: config.id,
+  });
   await migrateLegacyCheckpointedOmState({
     db: getDatabase(),
     agentId: config.id,
     threadId: platform.mastraId,
     conversationStore: platform.conversationStore,
   });
+  logStage('legacy operational memory migration checked', stageStartedAt);
+  stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: operational memory normalization starting', {
+    agentId: config.id,
+  });
   await normalizeOperationalMemoryMessages({
     threadId: platform.mastraId,
     conversationStore: platform.conversationStore,
   });
+  logStage('operational memory messages normalized', stageStartedAt);
   const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
     agentId: config.id,
   });
@@ -224,6 +254,10 @@ export async function createInternalAgentRuntime<
         })
       : null;
 
+  stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: runtime memory starting', {
+    agentId: config.id,
+  });
   const runtimeMemory = await createAgentRuntimeMemory({
     agentId: config.id,
     mastraId: platform.mastraId,
@@ -244,6 +278,7 @@ export async function createInternalAgentRuntime<
     persistenceStore: longTermMemoryStore,
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
+  logStage('runtime memory created', stageStartedAt);
 
   longTermMemory?.attachRecallIndexRefresh(
     runtimeMemory.longTermMemoryRecall
@@ -254,6 +289,10 @@ export async function createInternalAgentRuntime<
   mcpRuntimeActionSource.start();
   const checkpointedOmLimits = requireCheckpointedOmLimits(config);
 
+  stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: runtime session starting', {
+    agentId: config.id,
+  });
   const agent = await createRuntimeAgentSession({
     agentId: config.id,
     agentName: config.name,
@@ -272,8 +311,23 @@ export async function createInternalAgentRuntime<
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   } satisfies CreateRuntimeAgentSessionOptions);
+  logStage('runtime session created', stageStartedAt, {
+    runtimeActionCount: platform.workspaceActions.length + Object.keys(allAgentTools).length,
+  });
 
+  stageStartedAt = Date.now();
+  createForgeAgentDebug('info', 'runtime initialization: long-term memory starting', {
+    agentId: config.id,
+    enabled: longTermMemory !== null,
+  });
   await longTermMemory?.start();
+  logStage('long-term memory started', stageStartedAt, {
+    enabled: longTermMemory !== null,
+  });
+  createForgeAgentDebug('info', 'runtime initialization completed', {
+    agentId: config.id,
+    durationMs: Date.now() - runtimeStartedAt,
+  });
 
   return {
     id: config.id,

@@ -127,14 +127,29 @@ export function createDiscordProvider(config: {
 
     reconnecting = true;
     client.destroy();
-    void client.login(config.token)
+    const reloginStartedAt = Date.now();
+    discordAccountDebug('info', 'Discord client relogin starting', logContext({
+      consecutiveUnreadyChecks,
+      readyStatus: client.ws.status,
+    }));
+    void withTimeout(
+      client.login(config.token),
+      THIRTY_SECONDS_MS,
+      'Discord client relogin timed out',
+      () => client.destroy(),
+    )
       .then(() => {
         consecutiveUnreadyChecks = 0;
-        discordAccountDebug('info', 'Discord client relogin succeeded', logContext());
+        discordAccountDebug('info', 'Discord client relogin succeeded', logContext({
+          durationMs: Date.now() - reloginStartedAt,
+          readyStatus: client.ws.status,
+        }));
       })
       .catch((error: unknown) => {
         discordAccountDebug('error', 'Discord client relogin failed', logContext({
           error: errorMsg(error),
+          durationMs: Date.now() - reloginStartedAt,
+          readyStatus: client.ws.status,
         }));
       })
       .finally(() => {
@@ -268,8 +283,17 @@ export function createDiscordProvider(config: {
 
   discordAccountDebug('info', 'Starting login', logContext());
 
-  const ready = client.login(config.token).then(() => {
-    discordAccountDebug('info', 'Login succeeded', logContext());
+  const loginStartedAt = Date.now();
+  const ready = withTimeout(
+    client.login(config.token),
+    THIRTY_SECONDS_MS,
+    'Discord client login timed out',
+    () => client.destroy(),
+  ).then(() => {
+    discordAccountDebug('info', 'Login succeeded', logContext({
+      durationMs: Date.now() - loginStartedAt,
+      readyStatus: client.ws.status,
+    }));
     if (!client.user) {
       throw new DiscordClientNotReadyError();
     }
@@ -466,4 +490,5 @@ export function createDiscordProvider(config: {
 }
 
 import { errorMsg } from './agents/error-formatting';
-import { ONE_MINUTE_MS } from './agents/time-constants';
+import { ONE_MINUTE_MS, THIRTY_SECONDS_MS } from './agents/time-constants';
+import { withTimeout } from './utils/async';

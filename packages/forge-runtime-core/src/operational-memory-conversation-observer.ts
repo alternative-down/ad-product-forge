@@ -2,6 +2,7 @@ import { generateText, type LanguageModel } from 'ai';
 import type { OperationalMemoryConversationObserver } from 'agent-runtime-core/integrations';
 
 import { normalizeOperationalMemoryText } from './conversation-model-messages.js';
+import { forgeDebug } from './debug.js';
 import {
   buildObserverPrompt,
   buildObserverSystemPrompt,
@@ -19,11 +20,23 @@ export function createOperationalMemoryConversationObserver(
 ): OperationalMemoryConversationObserver {
   return {
     async observe(request) {
+      const startedAt = Date.now();
       let supportText: string | undefined;
       let result: Awaited<ReturnType<typeof generateText>> | null = null;
 
       try {
         supportText = (await input.loadSupportText?.()) ?? undefined;
+        forgeDebug({
+          scope: 'operational-memory-observer',
+          level: 'info',
+          message: 'observation support loaded',
+          context: {
+            threadId: request.threadId,
+            durationMs: Date.now() - startedAt,
+            sourceMessageCount: request.messages.length,
+            supportTextLength: supportText?.length ?? 0,
+          },
+        });
       } catch (err) {
         console.warn(
           '[createOperationalMemoryConversationObserver] loadSupportText failed',
@@ -32,10 +45,23 @@ export function createOperationalMemoryConversationObserver(
       }
 
       try {
+        const generationStartedAt = Date.now();
+        forgeDebug({
+          scope: 'operational-memory-observer',
+          level: 'info',
+          message: 'observation model request starting',
+          context: { threadId: request.threadId, sourceMessageCount: request.messages.length },
+        });
         result = await generateText({
           model: input.model,
           system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
           prompt: buildObserverPrompt(supportText?.trim(), request.messages),
+        });
+        forgeDebug({
+          scope: 'operational-memory-observer',
+          level: 'info',
+          message: 'observation model request completed',
+          context: { threadId: request.threadId, durationMs: Date.now() - generationStartedAt },
         });
       } catch (err) {
         console.warn(
@@ -51,6 +77,17 @@ export function createOperationalMemoryConversationObserver(
       if (!text) {
         throw new Error('Operational conversation observer returned no observation text');
       }
+
+      forgeDebug({
+        scope: 'operational-memory-observer',
+        level: 'info',
+        message: 'observation completed',
+        context: {
+          threadId: request.threadId,
+          durationMs: Date.now() - startedAt,
+          outputLength: text.length,
+        },
+      });
 
       return { text };
     },

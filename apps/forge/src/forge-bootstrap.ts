@@ -164,6 +164,13 @@ export async function createForgeBootstrap() {
     allowInsecureLocal,
     allowedOrigins,
   });
+  await httpServer.start();
+  consoleStartupLog('HTTP server listening for startup health checks', {
+    port: env.FORGE_HTTP_PORT,
+  });
+  bootstrapDebug('info', 'bootstrap: startup health server ready', {
+    port: env.FORGE_HTTP_PORT,
+  });
 
   const integrations = createSystemIntegrationStore(db);
   const internalChat = createInternalChatService(db);
@@ -211,19 +218,6 @@ export async function createForgeBootstrap() {
   });
   bootstrapDebug('info', 'bootstrap: schedule manager created');
 
-  consoleStartupLog('loading agents from database');
-  await registry.loadAll(db, {
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    githubApps,
-    emailMailboxes: null,
-    coolify: coolifyManager,
-    minimax: minimaxManager,
-    schedules,
-    internalChat,
-  });
-  consoleStartupLog('agents loaded', { agentCount: registry.size });
-  bootstrapDebug('info', 'bootstrap: agents loaded', { agentCount: registry.size });
-
   const readModel = createAdminReadModel({
     db,
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
@@ -255,6 +249,19 @@ export async function createForgeBootstrap() {
     adminApiKey,
     allowInsecureLocal,
   });
+
+  consoleStartupLog('admin routes ready; loading agents from database');
+  await registry.loadAll(db, {
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
+    githubApps,
+    emailMailboxes: null,
+    coolify: coolifyManager,
+    minimax: minimaxManager,
+    schedules,
+    internalChat,
+  });
+  consoleStartupLog('agents loaded', { agentCount: registry.size });
+  bootstrapDebug('info', 'bootstrap: agents loaded', { agentCount: registry.size });
 
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   bootstrapDebug('info', 'bootstrap: bootstrap COMPLETE', { publicBaseUrl });

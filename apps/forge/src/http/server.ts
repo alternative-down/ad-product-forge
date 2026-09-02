@@ -165,6 +165,7 @@ export function createForgeHttpServer(
       : null;
   const limit = config.maxBodyBytes ?? MAX_BODY_BYTES;
   const routes = new Map<RouteKey, HttpHandler>();
+  let started = false;
 
   // ── Rate Limit Tracking ──────────────────────────────────────────────────
   // Sliding window: tracks request timestamps within the current window.
@@ -395,16 +396,25 @@ export function createForgeHttpServer(
   }
 
   async function start() {
+    if (started) {
+      return;
+    }
+
     await new Promise<void>((resolve, reject) => {
       server.on('error', reject);
       server.listen(config.port, () => {
         server.off('error', reject);
+        started = true;
         resolve();
       });
     });
   }
 
   async function stop(options: { forceTimeoutMs?: number } = {}): Promise<void> {
+    if (!started) {
+      return;
+    }
+
     const forceTimeoutMs = options.forceTimeoutMs ?? 10_000;
 
     // Force-close all existing connections after timeout (graceful shutdown
@@ -429,6 +439,7 @@ export function createForgeHttpServer(
         else resolve();
       });
     });
+    started = false;
   }
 
   const forgeServer: ForgeHttpServer = {
