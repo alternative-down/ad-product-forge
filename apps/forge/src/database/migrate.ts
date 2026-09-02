@@ -10,6 +10,10 @@ import {
   fixupSystemSettingsCreatedAt,
   SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP,
 } from './fixup-system-settings';
+import {
+  fixupWebhookSecretColumns,
+  WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP,
+} from './fixup-webhook-secret-columns';
 
 // ─── queryAppliedMigrations ─────────────────────────────────────────────────
 /**
@@ -88,10 +92,16 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
       await fixupSystemSettingsCreatedAt(db, { migrationsFolder });
     }
 
-    const dbMigrations = await queryAppliedMigrations(db, 1);
-
-    const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
     const allMigrations = readMigrationFiles({ migrationsFolder });
+    const webhookSecretColumnsMigration = allMigrations.find(
+      (migration) => migration.folderMillis === WEBHOOK_SECRET_COLUMNS_MIGRATION_TIMESTAMP,
+    );
+    if (webhookSecretColumnsMigration) {
+      await fixupWebhookSecretColumns(db, webhookSecretColumnsMigration.hash);
+    }
+
+    const dbMigrations = await queryAppliedMigrations(db, 1);
+    const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
 
     migrationsDebug('info', 'Applied rows before migrate', {
       appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' },
@@ -109,10 +119,11 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     // which is what triggered this fix via migration 0026).
     //
     // Running each statement through `db.run()` keeps the libsql
-    // transaction-free path and is idempotent because every DDL in the
-    // migration files uses `IF NOT EXISTS` (or is naturally re-runnable
-    // after a partial failure). This trades a small per-statement round
-    // trip for full coverage of every migration the team writes.
+    // transaction-free path. Migrations with non-idempotent multi-statement
+    // ALTER TABLE operations require a targeted state reconciliation before
+    // this loop so a process interruption cannot create a permanent restart
+    // loop. This trades a small per-statement round trip for full coverage of
+    // every migration the team writes.
     let appliedCount = 0;
     const appliedHashes: string[] = [];
     for (const migration of allMigrations) {
