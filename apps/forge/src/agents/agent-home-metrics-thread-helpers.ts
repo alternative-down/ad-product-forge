@@ -1,6 +1,7 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../utils/libsql-helpers';
 import { errorMsg } from './error-formatting';
 import {
+  calculateOperationalMemoryReflectionBudget,
   forgeDebug,
   LibsqlConversationStore,
   readOperationalMemoryState,
@@ -201,13 +202,13 @@ export async function readAgentRuntimeMemory(
         observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
         reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,  // L#NN-TSC-Phase-4 v1 N=3 LIVE: mapped to existing schema field (was as any on non-existent field)
         reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
-        reflectionBudget: Math.max(
-          0,
-          settings.checkpointedOmTotalContextTokens -
-            settings.checkpointedOmRecentRawTokens -
-            settings.checkpointedOmRawObservationBatchTokens -
+        reflectionBudget: calculateOperationalMemoryReflectionBudget({
+          totalContextTokens: settings.checkpointedOmTotalContextTokens,
+          recentRawTokens: settings.checkpointedOmRecentRawTokens,
+          rawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+          observationReflectionBatchTokens:
             settings.checkpointedOmObservationReflectionBatchTokens,
-        ),
+        }),
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },
     };

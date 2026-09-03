@@ -15,6 +15,7 @@ import {
   parseReflectorOutput,
 } from './operational-memory-prompting.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
+import { calculateOperationalMemoryReflectionBudget } from './operational-memory-budget.js';
 
 type Diagnostics = {
   record(event: {
@@ -38,13 +39,7 @@ export async function consolidateOperationalMemory(input: {
 }) {
   const startedAt = Date.now();
   let pass = 0;
-  const reflectionBudget = Math.max(
-    1,
-    input.limits.totalContextTokens -
-      input.limits.recentRawTokens -
-      input.limits.rawObservationBatchTokens -
-      input.limits.observationReflectionBatchTokens,
-  );
+  const reflectionBudget = calculateOperationalMemoryReflectionBudget(input.limits);
 
   while (true) {
     pass += 1;

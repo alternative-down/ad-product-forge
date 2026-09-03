@@ -40,6 +40,7 @@ import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 import type { Database } from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import {
+  calculateOperationalMemoryReflectionBudget,
   toMastraSafeIdentifier,
   readOperationalMemoryState,
   LibsqlConversationStore,
@@ -269,7 +270,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           observationTokenCount: rawMetrics?.observationTokenCount ?? 0,
           reflectionTriggerTokenLimit: reflectionTriggerLimit,
           reflectionTokenCount: rawMetrics?.reflectionTokenCount ?? 0,
-          reflectionBudget: Math.max(0, totalTokens - recentRawLimit),
+          reflectionBudget: calculateOperationalMemoryReflectionBudget({
+            totalContextTokens: totalTokens,
+            recentRawTokens: recentRawLimit,
+            rawObservationBatchTokens: observationTriggerLimit,
+            observationReflectionBatchTokens: reflectionTriggerLimit,
+          }),
           checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
         },
         ltm:

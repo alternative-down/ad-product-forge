@@ -20,6 +20,15 @@ const limits = {
   reflectionSupportTokens: 0,
 };
 
+const overlappingLimits = {
+  totalContextTokens: 5,
+  recentRawTokens: 10,
+  rawObservationBatchTokens: 5,
+  observationReflectionBatchTokens: 5,
+  observationSupportTokens: 0,
+  reflectionSupportTokens: 0,
+};
+
 function createModel() {
   let generation = 0;
   return new MockLanguageModelV3({
@@ -45,6 +54,44 @@ async function append(store: ConversationStore, messages: ConversationMessage[])
 }
 
 describe('consolidateOperationalMemory', () => {
+  it('keeps a new reflection active until the reflection budget is reached', async () => {
+    const store = new InMemoryConversationStore();
+    await append(store, [
+      memoryMessage('observation-1', 'one two three four five six', 'observation'),
+    ]);
+
+    await consolidateOperationalMemory({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      store,
+      limits: overlappingLimits,
+      model: createModel(),
+    });
+
+    const active = await store.listOperationalMemoryMessages({ threadId: 'thread-1' });
+    expect(active.map((message) => message.operationalMemoryType)).toEqual(['reflection']);
+  });
+
+  it('creates a checkpoint after accumulated reflections reach the budget', async () => {
+    const store = new InMemoryConversationStore();
+    await append(store, [
+      memoryMessage('reflection-1', 'one two three four five six', 'reflection'),
+    ]);
+
+    await consolidateOperationalMemory({
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      store,
+      limits: overlappingLimits,
+      model: createModel(),
+    });
+
+    const active = await store.listOperationalMemoryMessages({ threadId: 'thread-1' });
+    expect(active.map((message) => message.operationalMemoryType)).toEqual([
+      'checkpoint-summary',
+    ]);
+  });
+
   it('projects observations into a reflection and reflections into a checkpoint', async () => {
     const store = new InMemoryConversationStore();
     await append(store, [
