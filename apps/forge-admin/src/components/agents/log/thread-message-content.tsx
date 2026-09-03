@@ -10,8 +10,11 @@ export function ThreadMessageArticle(input: { message: AgentThreadMessage; index
     >
       <div className="min-w-0 space-y-3 pb-5">
         <header className="flex flex-wrap items-center gap-3">
-          <Badge variant="outline">{humanizeRole(input.message.role)}</Badge>
-          {input.message.type ? <Badge variant="outline">{input.message.type}</Badge> : null}
+          <Badge variant="outline">
+            {input.message.type
+              ? humanizeOperationalMemoryType(input.message.type)
+              : humanizeRole(input.message.role)}
+          </Badge>
           <div className="text-xs text-muted-foreground">
             {formatDateTime(input.message.createdAt)}
           </div>
@@ -80,6 +83,22 @@ function getToolSummary(invocation: Record<string, unknown>) {
   const toolName = typeof invocation.toolName === 'string' ? invocation.toolName : 'tool';
   const state = typeof invocation.state === 'string' ? invocation.state : null;
   return state === 'result' ? `Tool result: ${toolName}` : `Tool call: ${toolName}`;
+}
+
+function humanizeOperationalMemoryType(type: string) {
+  if (type === 'observation') {
+    return 'Observação da memória';
+  }
+
+  if (type === 'reflection') {
+    return 'Reflexão da memória';
+  }
+
+  if (type === 'checkpoint-summary') {
+    return 'Checkpoint da memória';
+  }
+
+  return type;
 }
 
 function humanizeRole(role: string) {

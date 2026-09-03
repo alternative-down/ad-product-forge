@@ -11,23 +11,19 @@ import {
   isNonNullObject,
 } from './helpers-type-guards';
 
-export function mergeToolLogMessages<TPart>(
-  messages: Array<{
+type ToolLogMessage<TPart> = {
     id: string;
     role: string;
     threadId: string;
     createdAt: string;
     parts: TPart[];
     metadata?: Record<string, unknown>;
-  }>,
-): Array<{
-  id: string;
-  role: string;
-  threadId: string;
-  createdAt: string;
-  parts: TPart[];
-  metadata?: Record<string, unknown>;
-}> {
+};
+
+export function mergeToolLogMessages<
+  TPart,
+  TMessage extends ToolLogMessage<TPart> = ToolLogMessage<TPart>,
+>(messages: TMessage[]): TMessage[] {
   const merged: typeof messages = [];
 
   for (const message of messages) {
