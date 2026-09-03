@@ -204,7 +204,7 @@ describe('llm/settings-store', () => {
 
       expect(result.profileId).toBe('found-profile');
       expect(result.name).toBe('Found Profile');
-      expect(result.apiKey).toBe(null);
+      expect(result.apiKey).toBe('abc123');
     });
   });
 
