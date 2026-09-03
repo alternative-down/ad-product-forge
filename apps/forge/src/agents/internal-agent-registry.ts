@@ -64,7 +64,7 @@ function createPerAgentCoolifyManager(db: Database): CoolifyManager {
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
-  let loaderConfig: (AgentLoaderConfig & Partial<GitHubManagerConfig>) | null = null;
+  let loaderConfig: (AgentLoaderConfig & GitHubManagerConfig) | null = null;
   let memoryRecoveryGeneration = 0;
 
   async function loadAll(db: Database, config: AgentLoaderConfig & GitHubManagerConfig) {
@@ -87,7 +87,7 @@ function createInternalAgentRegistry() {
     const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime, config);
+      await add(db, runtime);
       existingAgentIds.delete(runtime.id);
     }
 
@@ -180,7 +180,7 @@ function createInternalAgentRegistry() {
     });
   }
 
-  async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
+  async function add(db: Database, runtime: InternalAgentRuntime) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents: AgentWakeEvent[] = existingAgent
       ? [
@@ -192,20 +192,6 @@ function createInternalAgentRegistry() {
       existingAgent.runner?.stop();
       await existingAgent.runtime.dispose();
     }
-
-    // Each running agent gets its own fresh managers — lifetime matched to this agent.
-    const _emailMailboxes = createPerAgentEmailManager(db);
-    const _coolify = createPerAgentCoolifyManager(db);
-    const _githubApps = createGitHubAppManager({
-          db,
-          // httpServer and integrations may not be set — guard with nullish coalescing
-          // These fields are optional on the extended config type
-          httpServer:
-            (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? (null as never),
-          integrations:
-            (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? (null as never),
-          publicBaseUrl: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).publicBaseUrl,
-        });
 
     const entry: InternalAgentEntry = {
       runtime,
@@ -227,10 +213,9 @@ function createInternalAgentRegistry() {
         const reloadCoolify = createPerAgentCoolifyManager(db);
         const reloadGitHubApps = createGitHubAppManager({
           db,
-            // Inside the null-check, loaderConfig is guaranteed non-null
-          httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).httpServer,
-          integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).integrations,
-          publicBaseUrl: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).publicBaseUrl,
+          httpServer: loaderConfig.httpServer,
+          integrations: loaderConfig.integrations,
+          publicBaseUrl: loaderConfig.publicBaseUrl,
         });
 
         return await loadAgent(db, {

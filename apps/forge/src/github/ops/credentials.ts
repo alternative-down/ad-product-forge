@@ -143,10 +143,7 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
     // libsql/libSQL returns a run result with rowsAffected. SQLite under
     // better-sqlite3 returns { changes }. Both indicate 1 when the row
     // was inserted and 0 when the unique constraint was violated.
-    const rowsAffected =
-      (result as unknown as { rowsAffected?: number }).rowsAffected ??
-      (result as unknown as { changes?: number }).changes ??
-      0;
+    const rowsAffected = result.rowsAffected;
 
     if (rowsAffected === 0) {
       credentialsOpsDebug('warn', 'insertCredentialsIfAbsent: row already exists', { agentId });
@@ -179,8 +176,8 @@ export function createCredentialsOps(ctx: OpsContext): CredentialsOps {
 
   function parseCredentials(encryptedCredentials: string) {
     try {
-      const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
-      return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
+      const raw: unknown = JSON.parse(decryptSecret(encryptedCredentials));
+      return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw));
     } catch (error) {
       credentialsOpsDebug('error', 'Failed to parse GitHub credentials: ' + errorMsg(error));
       return null;

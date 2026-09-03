@@ -28,6 +28,7 @@ import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
 import type { RuntimeGenerateResult, RuntimeIteration } from './runtime/types';
+import type { AgentRunnerSnapshot } from './agent-runner-snapshot';
 
 import { delay, withTimeout } from '../utils/async';
 import { buildStepSystemPrompt } from './agent-runner-control-directives';
@@ -44,7 +45,7 @@ import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { agentRunnerDebug } from './agent-runner-debug';
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { errorMsg } from './error-formatting';
-import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS } from './time-constants';
+import { FIVE_SECONDS_MS, THIRTY_SECONDS_MS, TWO_SECONDS_MS } from './time-constants';
 
 type AgentStepWithFeedback = {
   response?: { uiMessages?: Array<{ parts?: unknown[] }> };
@@ -100,8 +101,8 @@ export function isAbortedError(err: unknown): boolean {
 
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = FIVE_SECONDS_MS;
-const EVENT_LOOP_PROBE_INTERVAL_MS = 5_000;
-const EVENT_LOOP_LAG_WARNING_MS = 2_000;
+const EVENT_LOOP_PROBE_INTERVAL_MS = FIVE_SECONDS_MS;
+const EVENT_LOOP_LAG_WARNING_MS = TWO_SECONDS_MS;
 
 function startGenerateEventLoopProbe(runtimeId: string) {
   let expectedAt = Date.now() + EVENT_LOOP_PROBE_INTERVAL_MS;
@@ -151,7 +152,7 @@ export interface GenerateDeps {
   notifications: AgentNotificationStore;
   homeMetricSnapshots: AgentHomeMetricSnapshotStore;
   workspaceBasePath?: string;
-  getRunnerSnapshot: () => unknown;
+  getRunnerSnapshot: () => AgentRunnerSnapshot;
 
   // Messaging
   messageManager: MessageManager;
@@ -344,7 +345,7 @@ export async function generateWithTimeoutRetries(
               workspaceBasePath: deps.workspaceBasePath,
               agentId: deps.currentRuntime.id,
               runtime: deps.currentRuntime,
-              runnerSnapshot: deps.getRunnerSnapshot() as never,
+              runnerSnapshot: deps.getRunnerSnapshot(),
             });
 
             if (snapshot) {

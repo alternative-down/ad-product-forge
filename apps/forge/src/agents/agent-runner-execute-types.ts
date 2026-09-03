@@ -21,6 +21,7 @@ import type { AgentContractStore } from './agent-contract-store';
 import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage } from './agent-runner-usage';
+import type { AgentRunnerSnapshot } from './agent-runner-snapshot';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { GenerateDeps } from './agent-runner-generate';
 
@@ -146,7 +147,7 @@ export interface ExecuteStepDeps {
   notifications: AgentNotificationStore;
   homeMetricSnapshots: AgentHomeMetricSnapshotStore;
   workspaceBasePath?: string;
-  getRunnerSnapshot: () => unknown;
+  getRunnerSnapshot: () => AgentRunnerSnapshot;
   runLastMessages: number;
   currentGenerateAbortController: AbortController | null;
   setCurrentGenerateAbortController: (c: AbortController | null) => void;
