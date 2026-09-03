@@ -44,17 +44,18 @@ import { getDatabase } from '../../database/client';
 // property that Vitest can spy/stub (unlike plain Promise which drops own
 // properties after await).
 function makeMockDb(rows: unknown[] = []) {
+  const thenableWithAll = Object.assign(Promise.resolve(rows), {
+    where: vi.fn(() =>
+      Object.assign(Promise.resolve(rows), {
+        limit: vi.fn(() => Promise.resolve(rows)),
+        all: vi.fn(() => Promise.resolve(rows)),
+      }),
+    ),
+    all: vi.fn(() => Promise.resolve(rows)),
+  });
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn(() =>
-        Object.assign(Promise.resolve(rows), {
-          where: vi.fn(() =>
-            Object.assign(Promise.resolve(rows), {
-              limit: vi.fn(() => Promise.resolve(rows)),
-            }),
-          ),
-        }),
-      ),
+      from: vi.fn(() => thenableWithAll),
     })),
     insert: vi.fn(() => ({
       values: vi.fn().mockResolvedValue(undefined),
@@ -301,6 +302,7 @@ describe('getAgentMcpServers', () => {
             where: vi.fn(() =>
               Object.assign(Promise.resolve(mockRows), {
                 where: vi.fn(),
+                all: vi.fn(() => Promise.resolve(mockRows)),
               }),
             ),
           })),
@@ -323,7 +325,12 @@ describe('getAgentMcpServers', () => {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
-            where: vi.fn(() => Object.assign(Promise.resolve([]), { where: vi.fn() })),
+            where: vi.fn(() =>
+              Object.assign(Promise.resolve([]), {
+                where: vi.fn(),
+                all: vi.fn(() => Promise.resolve([])),
+              }),
+            ),
           })),
         })),
       })),
@@ -339,11 +346,15 @@ describe('getAgentMcpServers', () => {
 
   it('throws and logs when database query fails', async () => {
     const dbError = new Error('SQLITE_CONSTRAINT');
+    const rejectingChain = {
+      all: vi.fn(() => Promise.reject(dbError)),
+      then: (onFulfilled: (v: unknown) => unknown) => Promise.reject(dbError).then(onFulfilled),
+    };
     const mockDb = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
-            where: vi.fn(() => Promise.reject(dbError)),
+            where: vi.fn(() => rejectingChain),
           })),
         })),
       })),
