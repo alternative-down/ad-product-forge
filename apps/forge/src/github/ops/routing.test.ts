@@ -563,7 +563,7 @@ describe('createRoutingOps — handleWebhook', () => {
     }
   });
 
-  it('deduplicates parallel requests that share the same delivery ID', async () => {
+  it('parallel requests with the same delivery return 425 in-flight for peers (only the claim-winner proceeds)', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const notifyMock = vi.fn().mockResolvedValue(undefined);
     const ctx = makeCtx();
@@ -591,15 +591,112 @@ describe('createRoutingOps — handleWebhook', () => {
       Array.from({ length: 5 }, () => routing.handleWebhook('agent-1', headers, body)),
     );
 
-    // Exactly one of the responses must be the 202 Accepted path; the
-    // remaining four must be 200 ok dedup acks.
+    // Exactly one response is the 202 Accepted path (the claim-winner); the
+    // remaining four are 425 Too Early (in-flight: a peer is still
+    // processing). They MUST NOT be 200 ok — committing a duplicate would
+    // risk losing the event if the claim-winner later fails before commit.
     const accepted = results.filter((r) => r.status === 202).length;
-    const deduped = results.filter((r) => r.status === 200).length;
+    const inFlight = results.filter((r) => r.status === 425).length;
     expect(accepted).toBe(1);
-    expect(deduped).toBe(4);
-    // And only one notification must ever be created, regardless of
-    // whether the parallel requests interleaved.
+    expect(inFlight).toBe(4);
+    expect(results.filter((r) => r.status === 200)).toHaveLength(0);
+    // Only one notification must ever be created, regardless of whether
+    // the parallel requests interleaved.
     expect(notifyMock).toHaveBeenCalledTimes(1);
+    // After the claim-winner commits, the next call sees 'committed' and
+    // returns the dedup 200 ok without creating a new notification.
+    const followup = await routing.handleWebhook('agent-1', headers, body);
+    expect(followup.status).toBe(200);
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases the claim when createNotification rejects so a later retry can process the delivery', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn();
+    notifyMock.mockRejectedValueOnce(new Error('persistence failed'));
+    notifyMock.mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const headers = {
+      'x-github-event': 'issues',
+      'x-github-delivery': 'retry-after-fail-id',
+      'x-hub-signature-256': sig,
+    };
+
+    // First delivery: claim-winner. createNotification rejects.
+    await expect(routing.handleWebhook('agent-1', headers, body)).rejects.toThrow(
+      'persistence failed',
+    );
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+
+    // Retry with the same delivery ID. The claim was released on failure,
+    // so the retry must be able to claim it fresh and process the event.
+    const retried = await routing.handleWebhook('agent-1', headers, body);
+    expect(retried.status).toBe(202);
+    expect(retried.body).toBe('Accepted');
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('parallel requests do not all confirm success when the claim-winner fails', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn();
+    // First call (claim-winner) rejects; subsequent calls succeed.
+    notifyMock.mockRejectedValueOnce(new Error('persistence failed'));
+    notifyMock.mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const headers = {
+      'x-github-event': 'issues',
+      'x-github-delivery': 'parallel-fail-id',
+      'x-hub-signature-256': sig,
+    };
+
+    // Fire 5 parallel deliveries with the same x-github-delivery ID. The
+    // claim-winner fails; peers must NOT confirm 200 ok because the
+    // claim-winner might still succeed or release the claim.
+    const results = await Promise.allSettled(
+      Array.from({ length: 5 }, () => routing.handleWebhook('agent-1', headers, body)),
+    );
+
+    const statuses = results.map((r) => (r.status === 'fulfilled' ? r.value.status : 'rejected'));
+    // The blocker: at no point may any peer confirm 200 ok.
+    expect(statuses.filter((s) => s === 200)).toHaveLength(0);
+    // The claim-winner must have rejected.
+    const rejectedCount = results.filter((r) => r.status === 'rejected').length;
+    expect(rejectedCount).toBe(1);
+    // The remaining peers return 425 Too Early (in-flight).
+    const inFlight = statuses.filter((s) => s === 425).length;
+    expect(inFlight).toBeGreaterThanOrEqual(1);
+    expect(notifyMock).toHaveBeenCalledTimes(1); // only the claim-winner called it
+
+    // After the failure the claim was released. A subsequent retry with
+    // the same delivery ID must succeed and create exactly one more
+    // notification (the previously-silenced peers did not count).
+    const retried = await routing.handleWebhook('agent-1', headers, body);
+    expect(retried.status).toBe(202);
+    expect(notifyMock).toHaveBeenCalledTimes(2);
   });
 
   it('emits a webhook_deduped debug log when a duplicate delivery is suppressed', async () => {
