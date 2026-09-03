@@ -264,6 +264,7 @@ describe('OperationalMemoryConversationMemory', () => {
         });
       }
 
+      const latestObservedCreatedAt: string[] = [];
       const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
@@ -271,6 +272,10 @@ describe('OperationalMemoryConversationMemory', () => {
         overflowObservationTokenLimit: 5, // Observation triggers when overflow > 5 tokens
         observer: {
           async observe(request) {
+            const createdAt = request.messages.at(-1)?.createdAt;
+            if (createdAt) {
+              latestObservedCreatedAt.push(new Date(createdAt).toISOString());
+            }
             return { text: request.messages.map((m) => getText(m)).join(' | ') };
           },
         },
@@ -280,6 +285,9 @@ describe('OperationalMemoryConversationMemory', () => {
 
       const state = await memory.getState();
       expect(state.observations.length).toBeGreaterThan(0);
+      expect(state.observations.map((observation) => observation.createdAt)).toEqual(
+        latestObservedCreatedAt,
+      );
     });
 
     it('keeps multiple observation batches for many overflow messages', async () => {

@@ -238,6 +238,55 @@ describe('LibsqlConversationStore', () => {
     }
   });
 
+  it('orders an operational-memory replacement at the end of its replaced interval', async () => {
+    const client = createClient({ url: 'file::memory:' });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_replacement_order',
+    });
+
+    try {
+      const messages: ConversationMessage[] = [
+        {
+          id: 'replaced-raw',
+          threadId: 'thread-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'old raw' }],
+          createdAt: '2026-04-21T00:00:01.000Z',
+        },
+        {
+          id: 'recent-raw',
+          threadId: 'thread-1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'recent raw' }],
+          createdAt: '2026-04-21T00:00:03.000Z',
+        },
+        {
+          id: 'observation-1',
+          threadId: 'thread-1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'old raw summary' }],
+          operationalMemoryType: 'observation',
+          createdAt: '2026-04-21T00:00:01.000Z',
+        },
+      ];
+      for (const message of messages) {
+        await store.appendMessage(message);
+      }
+      await store.updateMessageReplacement({
+        threadId: 'thread-1',
+        messageId: 'replaced-raw',
+        replacedByMessageId: 'observation-1',
+      });
+
+      await expect(
+        store.listOperationalMemoryMessages({ threadId: 'thread-1' }),
+      ).resolves.toMatchObject([{ id: 'observation-1' }, { id: 'recent-raw' }]);
+    } finally {
+      client.close();
+    }
+  });
+
   it('supports descending reads and clearing a thread with its persisted state', async () => {
     const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
     const databasePath = path.join(directoryPath, 'conversation.db');

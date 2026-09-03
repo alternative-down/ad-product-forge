@@ -154,7 +154,11 @@ export class InMemoryConversationStore implements ConversationStore {
       visibleMessages.push(terminalMessage);
     }
 
-    return selectMessagesFromLatestCheckpoint(visibleMessages);
+    const chronologicalMessages = [...visibleMessages].sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt),
+    );
+
+    return selectMessagesFromLatestCheckpoint(chronologicalMessages);
   }
 }
 

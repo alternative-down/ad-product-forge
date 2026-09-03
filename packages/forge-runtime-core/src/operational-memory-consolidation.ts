@@ -145,6 +145,7 @@ async function consolidateObservations(
   });
   const generation = (await getLatestGeneration(input.store, input.threadId)) + 1;
   const reflectionId = `reflection:${generation}`;
+  const createdAt = batch.messages.at(-1)?.createdAt ?? batch.messages[0].createdAt;
 
   await persistConsolidatedMessage(input.store, {
     id: reflectionId,
@@ -153,7 +154,7 @@ async function consolidateObservations(
     parts: [{ type: 'text', text }],
     operationalMemoryType: 'reflection',
     operationalMemoryGeneration: generation,
-    createdAt: batch.messages[0].createdAt,
+    createdAt,
   });
   await replaceMessages(input.store, input.threadId, batch.messages, reflectionId);
 
