@@ -4,12 +4,12 @@ import { describe, it, expect } from 'vitest';
  * Regression tests for #2705 — limit(1) guard bug.
  *
  * drizzle-orm with better-sqlite3 returns an array from .limit(1).
- * When no rows match, existing is [] and existing[0] is undefined.
+ * When no rows match, existing is still a non-null empty array.
  *
- *   [] [0] != null  // true (undefined !== null)
+ *   [] != null  // true
  *
- * So the buggy guard "if (existing[0] != null)" was actually entering
- * the block when NO match existed, then crashing on existing[0].id.
+ * So the buggy guard "if (existing != null)" entered the block when NO
+ * match existed, then crashed on existing[0].id.
  *
  * The correct guard is "if (existing.length > 0)".
  */
@@ -40,12 +40,12 @@ describe('limit(1) guard — existing.length > 0 (#2705)', () => {
       expect(called).toBe(false);
     });
 
-    it('original buggy guard (existing[0] != null) enters block incorrectly', () => {
+    it('original buggy guard (existing != null) enters block incorrectly', () => {
       const existing: Array<{ id: string }> = [];
       let buggyCalled = false;
 
       // Simulates the ORIGINAL buggy guard
-      if (existing[0] != null) {
+      if (existing != null) {
         buggyCalled = true;
       }
 
@@ -78,10 +78,10 @@ describe('limit(1) guard — existing.length > 0 (#2705)', () => {
       expect(called).toBe(false);
     });
 
-    it('original buggy guard (existing[0] != null) enters block incorrectly', () => {
+    it('original buggy guard (existing != null) enters block incorrectly', () => {
       const existing: Array<{ id: string }> = [];
       let buggyCalled = false;
-      if (existing[0] != null) {
+      if (existing != null) {
         buggyCalled = true;
       }
 
