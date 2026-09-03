@@ -77,7 +77,7 @@ export type Scheduler = {
   getHealthcheckIntervalMs(): number;
   scheduleAt(timestamp: number): void;
   beginRun(runEpoch: number, input: BeginRunInput): Promise<void>;
-  queueNextStep(runEpoch: number): Promise<void>;
+  queueNextStep(): Promise<void>;
   refreshRunFlushSettings(): Promise<void>;
   resetFlushedRunEventKeys(): void;
   rememberFlushedRunEventKey(key: string): void;
@@ -146,6 +146,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
   let startingRunStartedAt: number | null = null;
   let executing = false;
   let activeRunId: string | null = null;
+  let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
   const flushManager = createFlushManager({
     runtimeId: deps.runtimeId,
     getSystemSettings: deps.getSystemSettings,
@@ -169,7 +170,11 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     scheduleNextStep,
     planNextStepDelay,
     resetBackoff,
-    advanceStepEpoch,
+    runStep: (runEpoch) => {
+      if (stepCallback) {
+        void stepCallback(runEpoch);
+      }
+    },
     getActiveRunEpoch: () => state.activeRunEpoch,
     setInstant,
     flushManager,
@@ -182,9 +187,6 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
       startingRunStartedAt = s;
     },
   });
-
-  // Step callback — set by the runner orchestrator
-  let _stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
 
   function clearTimer() {
     timerManager.clearTimer();
@@ -508,7 +510,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
   }
 
   function setStepCallback(fn: (runEpoch: number) => Promise<void>) {
-    _stepCallback = fn;
+    stepCallback = fn;
   }
 
   function getAbortController(): AbortController | null {
