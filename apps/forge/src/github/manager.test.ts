@@ -178,7 +178,7 @@ describe('createGitHubAppManager', () => {
       });
     });
 
-    it('creates new provisioning when agent has no credentials but is configured', async () => {
+    it('returns null without creating provisioning when the agent has no credentials', async () => {
       const db = createMockDb({
         agentProvidersFindFirst: null,
         agentsFindFirst: { id: 'agent-new', name: 'Test Agent' },
@@ -189,8 +189,8 @@ describe('createGitHubAppManager', () => {
       const manager = createGitHubAppManager(config as any);
       const result = await manager.getAgentProvisioning('agent-new');
 
-      expect(result).toMatchObject({ agentId: 'agent-new', status: 'pending' });
-      expect((result as any).registrationUrl).toContain('agent-new');
+      expect(result).toBeNull();
+      expect(db.run).not.toHaveBeenCalled();
     });
 
     it('returns null when not configured and agent has no credentials', async () => {
