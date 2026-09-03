@@ -65,20 +65,24 @@ vi.mock('../database/schema', () => ({
 // Each method returns the new object. We simulate this with a chain factory.
 function makeChain(returnValue: unknown = undefined) {
   const chain: Record<string, any> = {};
-  const methods = ['from', 'where', 'limit', 'orderBy', 'set', 'values', 'onConflictDoNothing', 'returning'];
+  const methods = [
+    'from',
+    'where',
+    'limit',
+    'orderBy',
+    'set',
+    'values',
+    'onConflictDoNothing',
+    'returning',
+    'all',
+  ];
   methods.forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(returnValue !== undefined ? returnValue : chain);
   });
-  // Special: where returns a chain that resolves the promise
+  // Configure the terminal result while preserving the full fluent chain.
   chain._resolveWhere = (val: unknown) => {
-    const whereChain: Record<string, any> = {};
-    const chainMethods = ['limit', 'orderBy', 'all'];
-    chainMethods.forEach((m) => {
-      whereChain[m] = vi.fn().mockReturnValue(whereChain);
-    });
-    whereChain.then = (cb: (v: unknown) => void) => cb(val);
-    chain.where.mockReturnValue(whereChain);
-    return whereChain;
+    chain.all.mockResolvedValue(val);
+    return chain;
   };
   return chain;
 }
@@ -166,8 +170,6 @@ describe('createWebhookStore', () => {
   describe('getRoute (#5894: decrypts secret for HMAC verification)', () => {
     it('returns null when no route matches', async () => {
       const store = createWebhookStore(db as any);
-      db.select().from().where().limit().all = vi.fn().mockResolvedValue([]);
-      // Re-stub the select chain to return [].
       db.select.mockReturnValueOnce(makeChain()._resolveWhere([]));
       const result = await store.getRoute('missing');
       expect(result).toBeNull();
