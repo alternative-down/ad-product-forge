@@ -19,6 +19,32 @@ afterEach(async () => {
 });
 
 describe('SqliteWorkspaceRetrieval', () => {
+  it('yields to the event loop while rebuilding a large vector graph', async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), 'forge-sqlite-retrieval-yield-'));
+    temporaryDirectories.push(rootPath);
+    const retrieval = new SqliteWorkspaceRetrieval({
+      databasePath: path.join(rootPath, 'retrieval.db'),
+      source: {
+        async loadDocuments() {
+          return Array.from({ length: 30 }, (_, index) => ({
+            id: `document-${index}`,
+            text: `document ${index}`,
+          }));
+        },
+      },
+      embedder: createTestEmbedder(),
+    });
+    let eventLoopYielded = false;
+    setImmediate(() => {
+      eventLoopYielded = true;
+    });
+
+    await retrieval.refresh();
+
+    expect(eventLoopYielded).toBe(true);
+    retrieval.dispose();
+  });
+
   it('persists embeddings in sqlite and updates only changed documents on refresh', async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), 'forge-sqlite-retrieval-'));
     temporaryDirectories.push(rootPath);
