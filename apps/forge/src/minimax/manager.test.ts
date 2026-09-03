@@ -12,17 +12,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 
-    errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
-    withToolErrorLogging: vi.fn(async (params) => {
-      try {
-        return { valid: true, data: await params.fn() };
-      } catch (error) {
-        // Mirror the real impl: use errorMsg-style formatting
-        const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
-        return { valid: false, error: msg, hint: params.hint || '' };
-      }
-    }),
-  }));
+  errorMsg: vi.fn((err) =>
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err).replace(/^Error: /, ''),
+  ),
+  withToolErrorLogging: vi.fn(async (params) => {
+    try {
+      return { valid: true, data: await params.fn() };
+    } catch (error) {
+      // Mirror the real impl: use errorMsg-style formatting
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : String(error).replace(/^Error: /, '');
+      return { valid: false, error: msg, hint: params.hint || '' };
+    }
+  }),
+}));
 
 vi.mock('../system-integrations/store', () => ({
   createSystemIntegrationStore: vi.fn(),
@@ -961,6 +972,72 @@ describe('MiniMaxClient', () => {
       if (originalEnv !== undefined) {
         process.env.MINIMAX_API_KEY = originalEnv;
       }
+    });
+  });
+
+  // ── URL construction (regression for #6862) ───────────────────────────
+  //
+  // Issue #6862: minimax_tts and minimax_image were returning 404 page not found.
+  // Root cause: MINIMAX_BASE_URL was 'https://api.minimax.io/v1' AND every endpoint
+  // literal in manager.ts started with '/v1/...'. Concat produced
+  // 'https://api.minimax.io/v1/v1/t2a_v2' — double `/v1` — which MiniMax returns 404.
+  // Fix: MINIMAX_BASE_URL is now the bare host, so the constructed URL has a single /v1.
+  // These tests pin that contract so the regression cannot recur.
+
+  describe('URL construction', () => {
+    it('textToSpeech hits https://api.minimax.io/v1/t2a_v2 (single /v1)', async () => {
+      const { MiniMaxClient } = await import('./manager.js');
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'DEADBEEF' },
+        }),
+      );
+
+      const client = new MiniMaxClient({ apiKey: 'test-key' });
+      await client.textToSpeech({ text: 'Hello' });
+
+      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+      const calledUrl = fetchMock.mock.calls[0]?.[0] as string;
+      expect(calledUrl).toBe('https://api.minimax.io/v1/t2a_v2');
+      expect(calledUrl).not.toContain('/v1/v1/');
+    });
+
+    it('generateImage hits https://api.minimax.io/v1/image_generation (single /v1)', async () => {
+      const { MiniMaxClient } = await import('./manager.js');
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: ['AAAA'] },
+        }),
+      );
+
+      const client = new MiniMaxClient({ apiKey: 'test-key' });
+      await client.generateImage({ prompt: 'A sunset' });
+
+      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+      const calledUrl = fetchMock.mock.calls[0]?.[0] as string;
+      expect(calledUrl).toBe('https://api.minimax.io/v1/image_generation');
+      expect(calledUrl).not.toContain('/v1/v1/');
+    });
+
+    it('Authorization header is "Bearer <apiKey>"', async () => {
+      const { MiniMaxClient } = await import('./manager.js');
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'DEADBEEF' },
+        }),
+      );
+
+      const client = new MiniMaxClient({ apiKey: 'secret-key' });
+      await client.textToSpeech({ text: 'Hello' });
+
+      const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+      const callInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      const headers = callInit.headers as Record<string, string>;
+      expect(headers.Authorization).toBe('Bearer secret-key');
+      expect(headers['Content-Type']).toBe('application/json');
     });
   });
 });
