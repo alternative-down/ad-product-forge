@@ -43,17 +43,12 @@ const FORGE_SRC = import.meta.dirname;
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
   ['github/manager.ts', 4],  // D63: 3→4 (5 raw 'as never', 4 after comment strip; L156 retained per #5816 Phase 2 follow-up)
-  ['github/ops/issues.ts', 0],
   // Phase 2 P2 cleanup targets
   ['agents/create-forge-agent.ts', 5],
   // Phase 2 P3 cleanup targets (single-site files)
-  ['agents/hiring-requests-handler.ts', 0], // CLEARED #6199, was 2 sites (L166-L167 'as never' on Drizzle columns)
-  ['agents/internal-agent-registry.ts', 2],
-  ['forge-bootstrap.ts', 2],
   ['github/ops/routing.ts', 2],
   ['admin/routes/internal-chat/events.ts', 1],
   ['agents/agent-long-term-memory.ts', 1],
-  ['github/ops/credentials.ts', 1],
 ]);
 
 function findTsFiles(dir: string): string[] {

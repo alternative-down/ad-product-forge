@@ -49,8 +49,12 @@ export function normalizeManifestConfig(value: unknown): GitHubAppManifestConfig
  * Normalizes GitHub App credentials, ensuring manifestConfig is a valid parsed object.
  */
 export function normalizeGitHubAppCredentials(
-  credentials: Omit<GitHubAppCredentials, 'manifestConfig'> & { manifestConfig?: unknown },
+  credentials: unknown,
 ): GitHubAppCredentials {
+  if (!isRecord(credentials)) {
+    throw new TypeError('GitHub App credentials must be an object');
+  }
+
   return {
     ...credentials,
     manifestConfig: normalizeManifestConfig(credentials.manifestConfig),
