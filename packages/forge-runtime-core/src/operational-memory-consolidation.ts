@@ -15,6 +15,7 @@ import {
   parseReflectorOutput,
 } from './operational-memory-prompting.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
+import { calculateOperationalMemoryReflectionBudget } from './operational-memory-budget.js';
 
 type Diagnostics = {
   record(event: {
@@ -38,13 +39,7 @@ export async function consolidateOperationalMemory(input: {
 }) {
   const startedAt = Date.now();
   let pass = 0;
-  const reflectionBudget = Math.max(
-    1,
-    input.limits.totalContextTokens -
-      input.limits.recentRawTokens -
-      input.limits.rawObservationBatchTokens -
-      input.limits.observationReflectionBatchTokens,
-  );
+  const reflectionBudget = calculateOperationalMemoryReflectionBudget(input.limits);
 
   while (true) {
     pass += 1;
@@ -145,6 +140,7 @@ async function consolidateObservations(
   });
   const generation = (await getLatestGeneration(input.store, input.threadId)) + 1;
   const reflectionId = `reflection:${generation}`;
+  const createdAt = batch.messages.at(-1)?.createdAt ?? batch.messages[0].createdAt;
 
   await persistConsolidatedMessage(input.store, {
     id: reflectionId,
@@ -153,7 +149,7 @@ async function consolidateObservations(
     parts: [{ type: 'text', text }],
     operationalMemoryType: 'reflection',
     operationalMemoryGeneration: generation,
-    createdAt: batch.messages[0].createdAt,
+    createdAt,
   });
   await replaceMessages(input.store, input.threadId, batch.messages, reflectionId);
 

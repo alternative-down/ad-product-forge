@@ -1,6 +1,7 @@
 /** Shared time constants used across agent runner modules. */
 
 export const ONE_SECOND_MS = 1_000;
+export const TWO_SECONDS_MS = 2 * ONE_SECOND_MS;
 
 export const ONE_MINUTE_MS = 60_000;
 export const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;

@@ -15,6 +15,17 @@ name: Auto Merge (L#NN-codified v2)
 #   - retention = now - submitted_at of Veritas APPROVE on current head SHA
 #   - PM bypass via `tpl-pm-fallback` label (PM-Thoren only)
 #   - exit 0 on hold (no merge), comment posted, retry on next trigger
+#
+# D65 #6676: schedule trigger not firing. Root cause: repo default_branch=main,
+# but workflow file exists ONLY on develop — GitHub reads scheduled workflows
+# from the default branch, so the file on develop is invisible to the schedule.
+# Two viable fixes:
+#   - (a) change repo default_branch=develop (admin-only, HD220)
+#   - (b) copy this file to main branch (HD220/ND direct merge)
+# Until either is done, add `push:` trigger as a develop-branch fallback so
+# the workflow still processes open PRs whenever a commit lands on develop.
+# This is a workaround — schedule-based behaviour (idempotent scan-every-5min)
+# is restored by Option (a) or (b) above.
 
 on:
   schedule:
@@ -23,6 +34,8 @@ on:
     types: [submitted, edited, dismissed]
   pull_request:
     types: [synchronize]
+  push:
+    branches: [develop]
   workflow_dispatch:
 
 permissions:
@@ -31,7 +44,7 @@ permissions:
 
 jobs:
   auto-merge:
-    if: github.event.review.state == 'approved' || github.event.action == 'synchronize' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event.review.state == 'approved' || github.event.action == 'synchronize' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       # P0 #5832 fix: actions/checkout@v4 needed for --delete-branch flag

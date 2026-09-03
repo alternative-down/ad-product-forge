@@ -365,7 +365,7 @@ export class LibsqlConversationStore
         from ${escapeIdentifier(this.messageTableName)}
         where thread_id = ?
           and replaced_by_message_id is null
-        order by rowid asc
+        order by created_at asc, rowid asc
       `,
       args: [input.threadId],
     });

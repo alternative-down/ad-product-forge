@@ -151,7 +151,7 @@ export class SqliteWorkspaceRetrieval {
           }
         }
 
-        this.rebuildGraph(db);
+        await this.rebuildGraph(db);
         db.exec('commit');
       } catch (error) {
         db.exec('rollback');
@@ -168,7 +168,7 @@ export class SqliteWorkspaceRetrieval {
         this.deleteDocument(db, row.rowid);
       }
 
-      this.rebuildGraph(db);
+      await this.rebuildGraph(db);
       db.exec('commit');
     } catch (error) {
       db.exec('rollback');
@@ -616,7 +616,7 @@ export class SqliteWorkspaceRetrieval {
     db.prepare('delete from retrieval_documents where rowid = ?').run(rowid);
   }
 
-  private rebuildGraph(db: SqliteDatabase) {
+  private async rebuildGraph(db: SqliteDatabase) {
     db.prepare('delete from retrieval_graph_edges').run();
 
     if (!this.vecReady) {
@@ -629,7 +629,11 @@ export class SqliteWorkspaceRetrieval {
       return;
     }
 
-    for (const document of documents) {
+    for (const [documentIndex, document] of documents.entries()) {
+      if (documentIndex > 0 && documentIndex % 25 === 0) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+
       const embeddingJson = document.embedding_json;
 
       if (!embeddingJson) {

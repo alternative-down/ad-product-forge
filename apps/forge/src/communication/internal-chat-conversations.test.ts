@@ -20,7 +20,9 @@ function makeMockDb(overrides?: {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(memberRows),
+        where: vi.fn().mockReturnValue({
+          all: vi.fn().mockResolvedValue(memberRows),
+        }),
       }),
     }),
     query: {
@@ -75,7 +77,9 @@ describe('createInternalChatConversations', () => {
       },
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(async () => []),
+          where: vi.fn(() => ({
+            all: vi.fn(async () => []),
+          })),
         })),
       })),
       insert: vi.fn(async () => {}),

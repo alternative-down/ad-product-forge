@@ -113,6 +113,7 @@ vi.mock('@forge-runtime/core', () => ({
     clearHealthcheck: vi.fn(),
     onRunnerIdle: vi.fn().mockResolvedValue(undefined),
   })),
+  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === 'string' ? err : String(err).replace(/^Error: /, '')),
 }));
 
 vi.mock('./agent-contract-store', () => ({

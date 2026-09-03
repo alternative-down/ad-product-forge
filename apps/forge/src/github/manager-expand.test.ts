@@ -25,11 +25,17 @@ vi.mock('octokit', () => {
   };
   return {
     App: vi.fn(AppMock),
-    Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })),
+    Octokit: vi.fn(function OctokitMock(this: { request: unknown; auth: unknown }, opts) {
+      this.request = mockRequest;
+      this.auth = opts?.auth;
+    }),
   };
 });
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
-vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+  errorMsg: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+}));
 vi.mock('../notifications/store', () => ({
   createAgentNotificationStore: vi.fn(() => ({ createNotification: vi.fn() })),
 }));
@@ -171,7 +177,11 @@ describe('createGitHubAppManager', () => {
   describe('getGitCredentials', () => {
     it('returns with repositoryUrl', async () => {
       mockDecryptSecret.mockReturnValue(activeJson);
-      mockCreateAppAuth.mockReturnValue(async () => ({ token: 'tok', expiresAt: 9999 }));
+      mockRequest.mockImplementation(async (route: string) =>
+        route.startsWith('POST ')
+          ? { data: { token: 'tok', expires_at: '2099-01-01T00:00:00Z' } }
+          : { data: { id: 1 } },
+      );
       const r = await createGitHubAppManager(
         buildConfig({ organization: 'o' }, df(true)),
       ).getGitCredentials({ agentId: 'a1', repositoryName: 'my-repo' });
@@ -183,7 +193,11 @@ describe('createGitHubAppManager', () => {
     });
     it('omits repositoryUrl when omitted', async () => {
       mockDecryptSecret.mockReturnValue(activeJson);
-      mockCreateAppAuth.mockReturnValue(async () => ({ token: 'tok', expiresAt: 0 }));
+      mockRequest.mockImplementation(async (route: string) =>
+        route.startsWith('POST ')
+          ? { data: { token: 'tok', expires_at: '2099-01-01T00:00:00Z' } }
+          : { data: { repositories: [] } },
+      );
       const r = await createGitHubAppManager(
         buildConfig({ organization: 'o' }, df(true)),
       ).getGitCredentials({ agentId: 'a1' });
@@ -858,8 +872,8 @@ describe('createGitHubAppManager', () => {
         { repositoryName: 'repo', issueNumber: 5, labels: ['bug'] },
       );
       expect(mockRequest).toHaveBeenCalledWith(
-        'DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}',
-        expect.objectContaining({ issue_number: 5, name: 'bug' }),
+        'DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels',
+        expect.objectContaining({ issue_number: 5, labels: 'bug' }),
       );
     });
   });

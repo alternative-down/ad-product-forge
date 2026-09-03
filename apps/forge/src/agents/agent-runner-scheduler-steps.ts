@@ -34,7 +34,7 @@ export interface StepsDeps {
   scheduleNextStep: (delayMs: number, stepFn?: () => void) => void;
   planNextStepDelay: () => Promise<number>;
   resetBackoff: () => void;
-  advanceStepEpoch: () => void;
+  runStep: (runEpoch: number) => void;
   getActiveRunEpoch: () => number;
   setInstant: (value: boolean) => void;
   flushManager: FlushManager;
@@ -110,7 +110,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
       runtimeId,
       scheduleNextStep,
       planNextStepDelay,
-      advanceStepEpoch,
+      runStep,
     } = deps;
 
     if (isStopped() || getExecuting() || isTimerActive() || isStaleRun(getActiveRunEpoch())) {
@@ -140,7 +140,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
     }
 
     scheduleNextStep(nextDelayMs, () => {
-      advanceStepEpoch();
+      runStep(getActiveRunEpoch());
     });
   }
 
