@@ -205,14 +205,14 @@ describe('createAgentLongTermMemoryStore', () => {
       await expect(store.writeState(SAMPLE_STATE)).rejects.toThrow('Insert error');
     });
 
-    it('sets updatedAt to current ISO timestamp', async () => {
+    it('sets updatedAt to the current epoch timestamp string', async () => {
       mockDb.statesFindFirst.mockResolvedValue(null);
 
       const before = Date.now();
       const result = await store.writeState(SAMPLE_STATE);
       const after = Date.now();
 
-      const resultTime = new Date(result.updatedAt).getTime();
+      const resultTime = Number(result.updatedAt);
       expect(resultTime).toBeGreaterThanOrEqual(before);
       expect(resultTime).toBeLessThanOrEqual(after + 1000);
     });
