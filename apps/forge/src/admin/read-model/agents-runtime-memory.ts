@@ -19,6 +19,7 @@ import { eq } from 'drizzle-orm';
 import { agents } from '../../database/schema';
 import { createClient } from '@libsql/client';
 import {
+  calculateOperationalMemoryReflectionBudget,
   LibsqlConversationStore,
   readOperationalMemoryState,
   toMastraSafeIdentifier,
@@ -318,13 +319,13 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
           reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
           activeReflectionBlockCount: operationalMemoryState.reflectionMessages.length,
           reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
-          reflectionBudget: Math.max(
-            0,
-            settings.checkpointedOmTotalContextTokens -
-              settings.checkpointedOmRecentRawTokens -
-              settings.checkpointedOmRawObservationBatchTokens -
+          reflectionBudget: calculateOperationalMemoryReflectionBudget({
+            totalContextTokens: settings.checkpointedOmTotalContextTokens,
+            recentRawTokens: settings.checkpointedOmRecentRawTokens,
+            rawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+            observationReflectionBatchTokens:
               settings.checkpointedOmObservationReflectionBatchTokens,
-          ),
+          }),
           checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
           checkpointSummaryUpToGeneration:
             checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
