@@ -234,7 +234,7 @@ describe('createAgentNotificationStore', () => {
       const source = readFileSync(STORE_SOURCE_PATH, 'utf8');
       expect(source).toMatch(/input.content.length > MAX_NOTIFICATION_CONTENT_LENGTH/);
       // Throws instead of returning null — silent failure pattern removed.
-      expect(source).toMatch(/throw new Error\(\s*'createNotification content length/);
+      expect(source).toMatch(/throw new NotificationContentTooLongError\(/);
     });
   });
 
