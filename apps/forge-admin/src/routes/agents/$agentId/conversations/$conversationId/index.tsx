@@ -53,7 +53,10 @@ function AgentConversationDetailIndexRoute() {
     enabled: Boolean(selectedConversation),
   });
   const messages = useMemo(
-    () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.items),
+    () =>
+      [...(messagesQuery.data?.pages ?? [])]
+        .reverse()
+        .flatMap((page) => [...page.items].reverse()),
     [messagesQuery.data?.pages],
   );
   const hasNextPage = messagesQuery.hasNextPage;
