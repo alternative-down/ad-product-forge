@@ -284,11 +284,17 @@ export class OperationalMemoryConversationMemory {
     });
     const observationId = `observation:${randomUUID()}`;
     const observationText = response.text.trim();
+    const latestSourceMessage = observationBatch.messages.at(-1);
+
+    if (!latestSourceMessage) {
+      return null;
+    }
+
     const observation: OperationalMemoryConversationObservation = {
       id: observationId,
       text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
-      createdAt: observationBatch.messages[0].createdAt.toISOString(),
+      createdAt: latestSourceMessage.createdAt.toISOString(),
       units: countTokens(observationText),
     };
 

@@ -110,6 +110,10 @@ describe('consolidateOperationalMemory', () => {
     const active = await store.listOperationalMemoryMessages({ threadId: 'thread-1' });
     expect(active.map((message) => message.operationalMemoryType)).toEqual(['checkpoint-summary']);
     expect(active[0]?.operationalMemoryGeneration).toBe(2);
+
+    const persistedMessages = await store.listMessages({ threadId: 'thread-1', order: 'asc' });
+    const reflection = persistedMessages.find((message) => message.id === 'reflection:2');
+    expect(reflection?.createdAt).toBe('2026-09-01T00:00:02.000Z');
   });
 
   it('replaces the previous checkpoint and renders only the latest summary plus recent raw', async () => {
