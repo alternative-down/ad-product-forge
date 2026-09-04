@@ -29,6 +29,23 @@ type NormalizedStripePayment = {
   providerPaymentId: string;
   subscriptionId?: string;
   customerId: string;
+  /**
+   * Monetary amount in the row's `currency` unit (NOT necessarily USD).
+   *
+   * For Stripe, the currency comes from the webhook event's `obj.currency` field
+   * (defaulting to `'usd'` if missing). The amount is converted from minor units
+   * (cents) by dividing by 100. Common currencies include usd, eur, gbp.
+   *
+   * L#NN-50 #23 N=5 (#6876): the legacy field name `amountUsd` is a misnomer.
+   * It is the amount in the row's `currency`, NOT USD. Renaming the field is
+   * gated on a DB migration that updates the `amount_usd` column. Until that
+   * migration lands, downstream aggregation queries MUST consult `currency`
+   * and apply FX conversion at query time.
+   *
+   * Tripwire: `__lnn-50-23-asaas-and-stripe-currency-co-occurrence-tripwire.test.ts`
+   * (P0 #5993.2) asserts every `amountUsd:` write in this file has a co-located
+   * `currency:` field in the same return literal.
+   */
   amountUsd: number;
   currency: string;
   status: 'completed' | 'failed' | 'refunded';
@@ -105,7 +122,10 @@ function parseRefunded(event: StripeWebhookPayload): NormalizedStripePayment | n
   };
 }
 
-const STRIPE_EVENT_HANDLERS: Record<string, (event: StripeWebhookPayload) => NormalizedStripePayment | null> = {
+const STRIPE_EVENT_HANDLERS: Record<
+  string,
+  (event: StripeWebhookPayload) => NormalizedStripePayment | null
+> = {
   'payment_intent.succeeded': parseSucceeded,
   'payment_intent.payment_failed': parseFailed,
   'checkout.session.completed': parseCheckoutCompleted,
@@ -114,7 +134,6 @@ const STRIPE_EVENT_HANDLERS: Record<string, (event: StripeWebhookPayload) => Nor
 };
 
 function dispatchStripeEvent(event: StripeWebhookPayload): NormalizedStripePayment | null {
-
   return STRIPE_EVENT_HANDLERS[event.type]?.(event) ?? null;
 }
 
@@ -207,9 +226,7 @@ export function verifyStripeWebhookSignature(
     return false;
   }
   // Compute expected signature: HMAC-SHA256(secret, "t.body")
-  const expected = createHmac('sha256', secret)
-    .update(`${timestamp}.${payloadBody}`)
-    .digest('hex');
+  const expected = createHmac('sha256', secret).update(`${timestamp}.${payloadBody}`).digest('hex');
   const expectedBuf = Buffer.from(expected, 'hex');
   for (const sig of v1Signatures) {
     const sigBuf = Buffer.from(sig, 'hex');
@@ -223,22 +240,30 @@ export function verifyStripeWebhookSignature(
   return false;
 }
 
-export function parseStripePaymentSucceeded(event: StripeWebhookPayload): NormalizedStripePayment | null {
+export function parseStripePaymentSucceeded(
+  event: StripeWebhookPayload,
+): NormalizedStripePayment | null {
   return event.type === 'payment_intent.succeeded' ? dispatchStripeEvent(event) : null;
 }
 
 /** Parse a failed payment_intent.payment_failed Stripe event. */
-export function parseStripePaymentFailed(event: StripeWebhookPayload): NormalizedStripePayment | null {
+export function parseStripePaymentFailed(
+  event: StripeWebhookPayload,
+): NormalizedStripePayment | null {
   return event.type === 'payment_intent.payment_failed' ? dispatchStripeEvent(event) : null;
 }
 
 /** Parse a checkout.session.completed Stripe event (alternative to payment_intent). */
-export function parseStripeCheckoutCompleted(event: StripeWebhookPayload): NormalizedStripePayment | null {
+export function parseStripeCheckoutCompleted(
+  event: StripeWebhookPayload,
+): NormalizedStripePayment | null {
   return event.type === 'checkout.session.completed' ? dispatchStripeEvent(event) : null;
 }
 
 /** Parse a refund event (charge.refunded or payment_intent.refunded). */
-export function parseStripePaymentRefunded(event: StripeWebhookPayload): NormalizedStripePayment | null {
+export function parseStripePaymentRefunded(
+  event: StripeWebhookPayload,
+): NormalizedStripePayment | null {
   return event.type === 'charge.refunded' || event.type === 'payment_intent.refunded'
     ? dispatchStripeEvent(event)
     : null;

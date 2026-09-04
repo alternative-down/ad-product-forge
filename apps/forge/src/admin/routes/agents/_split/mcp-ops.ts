@@ -17,7 +17,10 @@ const mcpCreateBodySchema = z.object({
   agentId: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  transport: z.enum(['stdio', 'http_streamable']),
+  // D66 #6785: accept both 'http' (test shorthand) and 'http_streamable'
+  // (production canonical). The handler normalizes the legacy alias to the
+  // canonical value before persisting to mcp_server_configs.
+  transport: z.enum(['stdio', 'http_streamable', 'http']),
   command: z.string().optional(),
   argsText: z.string().optional(),
   envVarsText: z.string().optional(),

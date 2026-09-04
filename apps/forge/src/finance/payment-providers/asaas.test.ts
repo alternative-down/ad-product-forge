@@ -5,6 +5,7 @@ import {
   normalizeAsaasPaymentReceived,
   normalizeAsaasPaymentConfirmed,
   normalizeAsaasPaymentFailed,
+  normalizeAsaasPaymentRefunded,
   normalizeAsaasEvent,
 } from './asaas';
 
@@ -88,6 +89,48 @@ describe('asaas adapter', () => {
       expect(result!.subscriptionId).toBe('sub_1');
       expect(result!.rawEventJson).toBeDefined();
     });
+
+    // D66 #6877: handleReceived has unique currency branching — only handler
+    // that uses billingType to decide currency. CREDIT_CARD → USD, others → BRL.
+    // These tests exercise both branches of the conditional.
+    it('uses USD currency when billingType is CREDIT_CARD', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 100,
+        billingType: 'CREDIT_CARD',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('usd');
+      expect(result!.status).toBe('completed');
+    });
+
+    it('uses BRL (ASAAS_DEFAULT_CURRENCY) for non-credit-card billingType', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 100,
+        billingType: 'BOLETO',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
+
+    // Optional but recommended: covers PIX path and backward-compat (no billingType).
+    it('uses BRL currency for PIX billingType', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 250.0,
+        billingType: 'PIX',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
+
+    it('uses BRL currency when billingType is undefined (backward compat)', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', { value: 50.0 });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
   });
 
   describe('normalizeAsaasPaymentConfirmed', () => {
@@ -124,6 +167,15 @@ describe('asaas adapter', () => {
       expect(result).not.toBeNull();
       expect(result!.status).toBe('failed');
     });
+
+    // L#NN-50 #23 N=5 (#6876): every failed Asaas payment MUST carry currency.
+    it('PAYMENT_AWAITING_RISK_ANALYSIS co-tags amountUsd value with currency="brl"', () => {
+      const payload = makePayload('PAYMENT_AWAITING_RISK_ANALYSIS', { value: 75.0 });
+      const result = normalizeAsaasPaymentFailed(payload);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('failed');
+      expect(result!.currency).toBe('brl');
+    });
   });
 
   describe('normalizeAsaasEvent', () => {
@@ -137,6 +189,28 @@ describe('asaas adapter', () => {
       const result = normalizeAsaasEvent(payload);
       expect(result).not.toBeNull();
       expect(result!.status).toBe('completed');
+    });
+  });
+
+  // D66 #6875: PAYMENT_REFUNDED path was previously untested (issue parent: #5993).
+  // Refund flow regression risk: handler was unverified. Tests cover the two
+  // contract paths: wrong-event null + happy-path normalized refunded payment.
+  describe('normalizeAsaasPaymentRefunded (#6875)', () => {
+    it('returns null for wrong event', () => {
+      const payload = makePayload('PAYMENT_RECEIVED');
+      expect(normalizeAsaasPaymentRefunded(payload)).toBeNull();
+    });
+
+    it('normalizes PAYMENT_REFUNDED event', () => {
+      const payload = makePayload('PAYMENT_REFUNDED', { value: 199.99, subscription: 'sub_2' });
+      const result = normalizeAsaasPaymentRefunded(payload);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('refunded');
+      expect(result!.provider).toBe('asaas');
+      expect(result!.amountUsd).toBe(199.99);
+      expect(result!.currency).toBe('brl');
+      expect(result!.subscriptionId).toBe('sub_2');
+      expect(result!.rawEventJson).toBeDefined();
     });
   });
 });
