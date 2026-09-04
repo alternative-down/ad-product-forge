@@ -24,11 +24,48 @@
  * - Issue: P2 #5878 (parent: #5993 P1 BUG analysis)
  * - Pattern: __no-asaas-bearer-revert-tripwire.test.ts, __no-bloated-parse-wrapper-tripwire.test.ts
  * - L#NN-50 tripwire family
+ *
+ * Tripwire adoption: uses readSource/relativeToHere from tripwire-helpers
+ * to verify the type signature in asaas.ts declares each expected field
+ * (L#NN-32 v8 / #6210 meta-tripwire compliance).
  */
 import { describe, it, expect } from 'vitest';
 import { normalizeAsaasEvent } from './asaas';
+import { readSource, relativeToHere } from '../../tripwire-helpers';
 
 describe('L#NN-50 tripwire — NormalizedAsaasPayment shape (issue #5878 P2)', () => {
+  // Canonical NormalizedAsaasPayment field set. Update this list ONLY when
+  // intentionally adding/removing a field on the destination type.
+  const EXPECTED_KEYS = [
+    'amountUsd', // (will be renamed to 'amount' per GAP-3 child issue)
+    'currency',
+    'customerId',
+    'provider',
+    'providerPaymentId',
+    'rawEventJson',
+    'status',
+    'subscriptionId',
+  ];
+
+  it('asaas.ts type signature declares every documented NormalizedAsaasPayment field', () => {
+    // Source-level guard: catches renaming / deletions of the type at compile time
+    // boundary. Pairs with the runtime check below (both shapes must stay in sync).
+    const asaasSource = readSource(relativeToHere('finance', 'payment-providers', 'asaas.ts'));
+    const typeBlock = asaasSource.match(
+      /type NormalizedAsaasPayment\s*=\s*{[\s\S]*?};/,
+    );
+    expect(typeBlock, 'NormalizedAsaasPayment type declaration missing from asaas.ts').not.toBeNull();
+    if (typeBlock === null) return;
+    const declared = typeBlock[0];
+    for (const key of EXPECTED_KEYS) {
+      const declRe = new RegExp('\\b' + key + '(\\s*[:?])');
+      expect(
+        declared,
+        `NormalizedAsaasPayment declaration in asaas.ts is missing field "${key}"`,
+      ).toMatch(declRe);
+    }
+  });
+
   // Full Asaas payload with all known fields (both used and dropped).
   // This represents the worst-case input shape; any missing field in
   // the input should NOT appear in the output unless documented.
@@ -50,18 +87,8 @@ describe('L#NN-50 tripwire — NormalizedAsaasPayment shape (issue #5878 P2)', (
     },
   } as any;
 
-  // Canonical NormalizedAsaasPayment field set. Update this list ONLY when
-  // intentionally adding/removing a field on the destination type.
-  const EXPECTED_KEYS = [
-    'amountUsd', // (will be renamed to 'amount' per GAP-3 child issue)
-    'currency',
-    'customerId',
-    'provider',
-    'providerPaymentId',
-    'rawEventJson',
-    'status',
-    'subscriptionId',
-  ];
+  // (EXPECTED_KEYS is defined at the top of the describe block above;
+  // referenced by both the type-source test and the runtime key shape test.)
 
   it('output has exactly the documented keys (no extras, no missing)', () => {
     const result = normalizeAsaasEvent(fullPayload);
