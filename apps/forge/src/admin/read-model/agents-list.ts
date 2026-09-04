@@ -6,7 +6,7 @@
  * Backward-compatible: agents.ts re-exports types and delegates to this module
  */
 
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import type { Agent, AgentExecutionStep } from '../../database/schema';
 import { resolve } from 'node:path';
 import {
@@ -541,6 +541,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     allRoles: { id: string; name: string; description: string | null }[];
     allProfiles: { id: string; name: string; modelKey: string }[];
   }> {
+    const now = Date.now();
     const [
       agentMcpRows,
       agentScheduleRows,
@@ -563,7 +564,13 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         limit: RECENT_NOTIFICATION_LIMIT,
       }),
       db.query.agentExecutionContracts.findMany({
-        where: eq(agentExecutionContracts.agentId, agentId),
+        where: and(
+          eq(agentExecutionContracts.agentId, agentId),
+          lte(agentExecutionContracts.startsAt, now),
+          gte(agentExecutionContracts.endsAt, now),
+        ),
+        orderBy: desc(agentExecutionContracts.endsAt),
+        limit: 1,
       }),
       db.query.agentRoles.findMany({ columns: { id: true, name: true, description: true } }),
       db.query.llmProfiles.findMany({ columns: { id: true, name: true, modelKey: true } }),
@@ -629,17 +636,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
   }
 
   async function calculateSpentUsd(
-    activeContractRows: Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>,
-    agentId: string,
+    activeContractRow:
+      | Awaited<ReturnType<typeof db.query.agentExecutionContracts.findMany>>[number]
+      | null,
   ): Promise<number> {
-    if (activeContractRows.length === 0) return 0;
-    const currentPeriodStart = new Date();
-    currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
+    if (activeContractRow === null) return 0;
+
     const steps = await db.query.agentExecutionSteps.findMany({
-      where: and(
-        eq(agentExecutionSteps.agentId, agentId),
-        gte(agentExecutionSteps.createdAt, currentPeriodStart.getTime()),
-      ),
+      where: eq(agentExecutionSteps.contractId, activeContractRow.id),
       columns: { costUsd: true },
     });
     return steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
@@ -774,7 +778,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     const agentMcpServerRows = await loadMcpServerRowsForAgent(agentMcpRows);
     const mcpServers = buildMcpServerSummaries(agentMcpRows, agentMcpServerRows);
-    const spentUsd = await calculateSpentUsd(activeContractRows, agentId);
+    const activeContractRow = activeContractRows[0] ?? null;
+    const spentUsd = await calculateSpentUsd(activeContractRow);
     const providerRows = await db.query.agentProviders.findMany({
       where: eq(agentProviders.agentId, agentId),
     });
@@ -813,8 +818,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
     const roleMap = new Map(allRoles.map((r) => [r.id, r]));
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
-    const activeContractRow = activeContractRows[0] ?? null;
-
     return buildAgentDetail({
       agent,
       agentTyped,

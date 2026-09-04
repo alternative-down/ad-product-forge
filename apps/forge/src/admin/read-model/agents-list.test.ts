@@ -813,7 +813,7 @@ describe('createAgentListReadModel', () => {
       expect(Array.isArray(result?.recentNotifications)).toBe(true);
     });
 
-    it('computes spent USD from recent steps (calculateSpentUsd coverage)', async () => {
+    it('selects one active contract and computes spend from that contract only', async () => {
       const db = makeMockDb();
       db.query.agents.findFirst.mockResolvedValueOnce({
         id: 'agent-6',
@@ -834,7 +834,14 @@ describe('createAgentListReadModel', () => {
         { agentId: 'agent-6', createdAt: 200, costUsd: 1.0 },
       ]);
       db.query.agentExecutionContracts.findMany.mockResolvedValueOnce([
-        { agentId: 'agent-6', id: 'contract-1' },
+        {
+          agentId: 'agent-6',
+          id: 'contract-1',
+          startsAt: 1,
+          endsAt: 2,
+          budgetUsd: 10,
+          autoRenew: 0,
+        },
       ]);
       db.query.agentExecutionSteps.findMany.mockResolvedValueOnce([
         { costUsd: 0.5 },
@@ -852,8 +859,12 @@ describe('createAgentListReadModel', () => {
         workspaceBasePath: '/tmp',
       });
       const result = await model.getAgent('agent-6');
-      // calculateSpentUsd coverage: 0.5 + 1.0 = 1.5
-      expect(result?.activeContract).not.toBeNull();
+      expect(db.query.agentExecutionContracts.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 1 }),
+      );
+      expect(result?.activeContract?.contractId).toBe('contract-1');
+      expect(result?.activeContract?.spentUsd).toBe(1.5);
+      expect(result?.activeContract?.spentPercent).toBe(15);
       expect(result?.recentExecutionSteps).toBeDefined();
     });
 
