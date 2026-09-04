@@ -56,7 +56,6 @@ const LEGACY_ALLOWLIST = new Set<string>([
   'apps/forge/src/__no-as-unknown-as-tripwire.test.ts',
   'apps/forge/src/admin/routes/__no-format-b-try-catch-admin-tripwire.test.ts',
   'apps/forge/src/admin/routes/agents/_split/__no-redundant-null-undefined-check-tripwire.test.ts',
-  'apps/forge/src/admin/routes/agents/provider-mcp-stub-tripwire.test.ts',
   'apps/forge/src/agents/__no-hardcoded-ms-timeout-consts-tripwire.test.ts',
   'apps/forge/src/agents/top-up-agent-contract.lnn-19-tripwire.test.ts',
   'apps/forge/src/capabilities/queries.lnn-13-tripwire.test.ts',
