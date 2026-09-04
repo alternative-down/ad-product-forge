@@ -20,11 +20,12 @@ export function normalizeOperationalMemoryMessage(
   if (!message.operationalMemoryType) {
     return message;
   }
+  const memoryType = message.operationalMemoryType;
 
   return {
     ...message,
     role: 'assistant',
-    parts: message.parts.map((part) => normalizeOperationalMemoryPart(part)),
+    parts: message.parts.map((part) => normalizeOperationalMemoryPart(part, memoryType)),
   };
 }
 
@@ -99,11 +100,22 @@ export function createConversationModelMessages(messages: ConversationMessage[])
   });
 }
 
-function normalizeOperationalMemoryPart(part: ConversationMessagePart): ConversationMessagePart {
+function normalizeOperationalMemoryPart(
+  part: ConversationMessagePart,
+  memoryType: NonNullable<ConversationMessage['operationalMemoryType']>,
+): ConversationMessagePart {
   if ((part.type === 'text' || part.type === 'reasoning') && typeof part.text === 'string') {
+    const tag =
+      memoryType === 'checkpoint-summary'
+        ? 'resume'
+        : memoryType === 'reflection'
+          ? 'reflections'
+          : 'observations';
+    const text = normalizeOperationalMemoryText(part.text);
+
     return {
       ...part,
-      text: normalizeOperationalMemoryText(part.text),
+      text: `<${tag}>\n${text}\n</${tag}>`,
     };
   }
 
