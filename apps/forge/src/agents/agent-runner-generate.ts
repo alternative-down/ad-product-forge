@@ -118,7 +118,7 @@ function startGenerateEventLoopProbe(runtimeId: string) {
 
   return () => clearInterval(interval);
 }
-const GENERATE_MAX_STEPS_PER_RUN = 30;
+const GENERATE_MAX_STEPS_PER_RUN = 3;
 export const RUNNER_AWAIT_TIMEOUT_MS = THIRTY_SECONDS_MS;
 export const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 

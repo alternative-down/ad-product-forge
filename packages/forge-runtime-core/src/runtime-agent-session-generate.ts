@@ -101,10 +101,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepNumber: iterationNumber - 1,
     });
 
-    // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
-      agentContext: iterationNumber === 1 ? input.options.system : undefined,
+      agentContext: input.options.system,
       todosText:
         iterationNumber === 1
           ? input.options.loadTodosText
