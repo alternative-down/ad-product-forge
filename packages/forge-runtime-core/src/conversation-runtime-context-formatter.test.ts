@@ -14,15 +14,6 @@ describe('conversation-runtime-context-formatter', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null for internal forge-system-instruction type', () => {
-      const result = formatter.formatInput({
-        id: 'input-2',
-        type: 'forge-system-instruction',
-        payload: { instructions: 'be helpful' },
-      });
-      expect(result).toBeNull();
-    });
-
     it('formats text-only conversation payload', () => {
       const result = formatter.formatInput({
         id: 'input-3',
