@@ -4,16 +4,27 @@ import { adminRouteError, safeRoute } from './admin-route-error-helper';
 // Mock forgeDebug
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
-  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+  errorMsg: vi.fn((err) =>
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err).replace(/^Error: /, ''),
+  ),
   withToolErrorLogging: vi.fn(async (params) => {
     try {
       return { valid: true, data: await params.fn() };
     } catch (error) {
       // Mirror the real impl: use errorMsg-style formatting
-      const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : String(error).replace(/^Error: /, '');
       return { valid: false, error: msg, hint: params.hint || '' };
     }
-  })
+  }),
 }));
 
 describe('adminRouteError', () => {
@@ -30,28 +41,28 @@ describe('adminRouteError', () => {
   it('returns 500 status code on null', () => {
     const result = adminRouteError(null);
     expect(result.status).toBe(500);
-    expect(result.body).toEqual({ error: 'null' });
+    expect(JSON.parse(result.body)).toEqual({ error: 'null' });
   });
 
   it('returns 500 status code on undefined', () => {
     const result = adminRouteError(undefined);
     expect(result.status).toBe(500);
-    expect(result.body).toEqual({ error: 'undefined' });
+    expect(JSON.parse(result.body)).toEqual({ error: 'undefined' });
   });
 
   it('extracts Error.message for Error instances', () => {
     const result = adminRouteError(new Error('specific error message'));
-    expect(result.body).toEqual({ error: 'specific error message' });
+    expect(JSON.parse(result.body)).toEqual({ error: 'specific error message' });
   });
 
   it('extracts string value for string errors', () => {
     const result = adminRouteError('plain string error');
-    expect(result.body).toEqual({ error: 'plain string error' });
+    expect(JSON.parse(result.body)).toEqual({ error: 'plain string error' });
   });
 
   it('returns String(error) for object errors', () => {
     const result = adminRouteError({ code: 'INVALID_INPUT' });
-    expect(result.body).toEqual({ error: '{"code":"INVALID_INPUT"}' });
+    expect(JSON.parse(result.body)).toEqual({ error: '[object Object]' });
   });
 
   it('calls forgeDebug with scope and error message', async () => {
@@ -74,7 +85,7 @@ describe('adminRouteError', () => {
 
     it('includes the path in the response body error', () => {
       const result = adminRouteError(new Error('boom'), { path: '/admin/agent/test' });
-      expect(result.body).toEqual({ error: 'boom' });
+      expect(JSON.parse(result.body)).toEqual({ error: 'boom' });
     });
 
     it('calls forgeDebug with path-aware message and context', async () => {

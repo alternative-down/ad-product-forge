@@ -72,7 +72,7 @@ export function registerLifecycleOps(
       const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
       let entry = ops.registry.get(agentId);
 
-      if (entry !== undefined && entry.runner !== null) {
+      if (entry != null && entry.runner !== null) {
         await entry.runner.forceIdle();
       } else {
         if (ops.loadAgent === undefined) {
