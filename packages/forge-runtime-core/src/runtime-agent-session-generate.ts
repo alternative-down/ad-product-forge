@@ -121,6 +121,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepId,
       stepNumber: iterationNumber,
       actions: runtimeActions,
+      explicitPromptCache:
+        typeof input.runtime.model === 'string' ||
+        !input.runtime.model.modelId.startsWith('MiniMax-M3'),
     });
     const requestDiagnostics = summarizeGenerateRequest({
       system: system.text,
@@ -421,6 +424,7 @@ function buildAiSdkToolSet(input: {
   stepId: string;
   stepNumber: number;
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
+  explicitPromptCache: boolean;
 }): ToolSet {
   const toolSet: ToolSet = {};
   const lastActionIndex = input.actions.length - 1;
@@ -430,7 +434,7 @@ function buildAiSdkToolSet(input: {
       description: action.description,
       inputSchema: action.inputSchema,
       providerOptions:
-        index === lastActionIndex
+        input.explicitPromptCache && index === lastActionIndex
           ? {
               anthropic: {
                 cacheControl: {

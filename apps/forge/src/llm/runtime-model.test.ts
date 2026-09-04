@@ -110,6 +110,20 @@ describe('resolveProfileRuntimeModel', () => {
     expect(result).toMatchObject({ cached: true });
   });
 
+  test('uses MiniMax-M3 automatic caching without the explicit cache middleware', async () => {
+    const model = { modelId: 'MiniMax-M3', provider: 'anthropic.messages' };
+    mocks.createAnthropic.mockReturnValue(() => model);
+
+    const result = await resolveProfileRuntimeModel({
+      modelKey: 'minimax-coding-plan/MiniMax-M3',
+      baseUrl: null,
+      apiKey: 'minimax-key',
+    });
+
+    expect(result).toBe(model);
+    expect(mocks.wrapAnthropicPromptCacheModel).not.toHaveBeenCalled();
+  });
+
   test('resolves minimax-coding-plan with custom baseUrl', async () => {
     mockModel.mockReturnValue({ id: 'minimax-model', apiKey: 'minimax-key' });
     mocks.createAnthropic.mockReturnValue(() => mockModel);
