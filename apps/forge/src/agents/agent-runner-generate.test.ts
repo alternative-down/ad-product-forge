@@ -593,7 +593,7 @@ describe('generateWithTimeoutRetries runtime integration', () => {
 
     expect(generate).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ maxSteps: 30, runId: 'run-1' }),
+      expect.objectContaining({ maxSteps: 3, runId: 'run-1' }),
     );
     expect(register).not.toHaveBeenCalled();
     expect(resetLoopDetector).not.toHaveBeenCalled();

@@ -57,7 +57,7 @@ describe('createRuntimeAgentSession', () => {
         expect(systemMessages).toEqual([
           {
             role: 'system',
-            content: 'Base system.',
+            content: 'Base system.\n\nStep system.',
           },
         ]);
         expect(options.prompt.at(-1)).toEqual({
