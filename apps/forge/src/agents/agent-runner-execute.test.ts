@@ -383,7 +383,7 @@ it('resets scheduler backoff on successful non-stop generation', async () => {
   expect(scheduler.resetBackoff).toHaveBeenCalledTimes(1);
 });
 
-it('returns to idle after a completed generation with no pending messages', async () => {
+it('queues another step after a completed generation without an explicit stop directive', async () => {
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
@@ -395,8 +395,35 @@ it('returns to idle after a completed generation with no pending messages', asyn
 
   await executeStep(deps as any);
 
-  expect(transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
-  expect(onRunnerIdle).toHaveBeenCalledOnce();
+  expect(transitionToIdle).not.toHaveBeenCalled();
+  expect(onRunnerIdle).not.toHaveBeenCalled();
+  expect(deps.queueNextStep).toHaveBeenCalledWith(1);
+});
+
+it('logs why a completed generation continues instead of silently becoming idle', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
+    text: '',
+    toolCalls: [{ name: 'workspace_execute_command', args: {} }],
+    finishReason: 'tool-calls',
+  });
+  const deps = makeDeps({ store, generateWithTimeoutRetries });
+
+  await executeStep(deps as any);
+
+  expect(agentRunnerDebug).toHaveBeenCalledWith(
+    'info',
+    'generation completed without stop directive; continuing run',
+    expect.objectContaining({
+      runtimeId: 'runtime-1',
+      finishReason: 'tool-calls',
+      toolCallCount: 1,
+    }),
+  );
 });
 
 it('queues next step when pending messages exist after non-stop generation', async () => {
