@@ -196,10 +196,24 @@ export async function createCommunicationModule(config: {
         continue;
       }
 
-      const items = await provider.listConversations({
-        limit: input.limit ?? 20,
-        unread: input.unread,
-      });
+      let items: CommunicationProviderConversation[];
+
+      try {
+        items = await provider.listConversations({
+          limit: input.limit ?? 20,
+          unread: input.unread,
+        });
+      } catch (error) {
+        if (input.provider) {
+          throw error;
+        }
+
+        logger.warn('communication', 'Skipping provider that failed to list conversations', {
+          providerId: provider.id,
+          error,
+        });
+        continue;
+      }
 
       for (const item of items) {
         conversations.push(await toAgentConversationView(activeFilesystem, item));
