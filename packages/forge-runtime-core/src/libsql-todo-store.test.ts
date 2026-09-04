@@ -77,12 +77,11 @@ describe('LibsqlTodoStore', () => {
 });
 
 describe('createUpdateTodosAction', () => {
-  it('accepts one item or a list and clears only with items: []', async () => {
+  it('accepts an items list and clears only with items: []', async () => {
     const store = await createStore();
     const action = createUpdateTodosAction(store);
 
-    await action.execute({ items: { title: 'First' } });
-    await action.execute({ items: [{ title: 'Second' }] });
+    await action.execute({ items: [{ title: 'First' }, { title: 'Second' }] });
     expect(await store.read()).toHaveLength(2);
 
     expect(await action.execute({ items: [] })).toEqual({ todos: [] });
@@ -92,8 +91,11 @@ describe('createUpdateTodosAction', () => {
   it('validates ids, titles, and statuses at the action boundary', async () => {
     const action = createUpdateTodosAction(await createStore());
 
-    await expect(action.execute({ items: { id: 'task-a', title: 'Invalid' } })).rejects.toThrow();
-    await expect(action.execute({ items: { title: '' } })).rejects.toThrow();
-    await expect(action.execute({ items: { title: 'Task', status: 'blocked' } })).rejects.toThrow();
+    await expect(action.execute({ items: { title: 'Not a list' } })).rejects.toThrow();
+    await expect(action.execute({ items: [{ id: 'task-a', title: 'Invalid' }] })).rejects.toThrow();
+    await expect(action.execute({ items: [{ title: '' }] })).rejects.toThrow();
+    await expect(
+      action.execute({ items: [{ title: 'Task', status: 'blocked' }] }),
+    ).rejects.toThrow();
   });
 });
