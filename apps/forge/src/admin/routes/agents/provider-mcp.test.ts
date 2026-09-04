@@ -28,8 +28,11 @@ const chainable = () => {
   fn.default = vi.fn().mockReturnThis();
   return fn;
 };
-vi.mock('zod', () => ({
-  z: {
+vi.mock('zod', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('zod')>();
+  return {
+    ZodError: actual.ZodError,
+    z: {
     object: vi.fn().mockImplementation(() => ({
       parse: vi.fn().mockImplementation((x) => x),
       safeParse: vi.fn().mockImplementation((x) => ({ success: true, data: x })),
@@ -46,8 +49,9 @@ vi.mock('zod', () => ({
     union: vi.fn().mockImplementation(() => chainable()),
     literal: chainable,
     intersection: vi.fn().mockImplementation(() => chainable()),
-  },
-}));
+    },
+  };
+});
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
