@@ -71,14 +71,40 @@ export function formatWorkingMemoryValue(value: string | null | undefined): stri
     const parsed: unknown = JSON.parse(value ?? '');
     if (!isNonNullObject(parsed)) return null;
     const entries = Object.entries(parsed)
-      .filter(([, item]) => item !== null && item !== undefined)
-      .map(([fieldKey, item]) => `- **${humanizeMemoryKey(fieldKey)}**: ${String(item).trim()}`);
+      .map(([fieldKey, item]) => formatWorkingMemoryEntry(fieldKey, item, 0))
+      .filter((entry): entry is string => entry !== null);
     return entries.length > 0 ? entries.join('\n') : null;
   } catch (err) {
     adminDebug('debug', 'entriesToMarkdown failed: ' + errorMsg(err));
     // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }
+}
+
+function formatWorkingMemoryEntry(
+  fieldKey: string,
+  value: unknown,
+  indentation: number,
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const prefix = ' '.repeat(indentation);
+  const label = humanizeMemoryKey(fieldKey);
+
+  if (isNonNullObject(value)) {
+    const children = Object.entries(value)
+      .map(([childKey, childValue]) =>
+        formatWorkingMemoryEntry(childKey, childValue, indentation + 2),
+      )
+      .filter((entry): entry is string => entry !== null);
+
+    return children.length > 0 ? [`${prefix}- **${label}**:`, ...children].join('\n') : null;
+  }
+
+  const text = Array.isArray(value) ? value.join(', ').trim() : String(value).trim();
+  return text !== '' ? `${prefix}- **${label}**: ${text}` : null;
 }
 
 /**
