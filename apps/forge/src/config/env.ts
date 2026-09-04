@@ -12,7 +12,6 @@ import { z } from 'zod';
  *   - http/server.ts                (FORGE_HTTP_MAX_BODY_BYTES, FORGE_GIT_SHA, FORGE_DEPLOY_TIME)
  *   - main.ts                       (FORGE_HTTP_PORT)
  *   - minimax/manager.ts            (MINIMAX_API_KEY)
- *   - src/scripts/reset-agent-embedder-indexes.ts (WORKSPACE_BASE_PATH)
  *   - drizzle.config.ts             (DATABASE_URL, DATABASE_AUTH_TOKEN)
  *   - forge-bootstrap.ts            (7 vars, previously inline envSchema)
  *
