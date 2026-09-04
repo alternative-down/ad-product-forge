@@ -1,14 +1,10 @@
 /**
  * Agent debug/observability read model — extracted from agents.ts (phase 5c).
- * Covers: getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch.
+ * Covers operational-memory debug exports.
  *
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
 
-import { eq } from 'drizzle-orm';
-import { agents } from '../../database/schema';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { Database } from '../../database/index';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
@@ -26,7 +22,6 @@ function adminReadModelAgentsDebug(
 ) {
   forgeDebug({ scope: 'admin-read-model', level, message, context });
 }
-
 
 export interface AgentDebugReadModelDeps {
   db: Database;
@@ -68,32 +63,20 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
           return null;
         })
       )(agentId).catch((err) => {
-        adminReadModelAgentsDebug('warn', 'getAgentRuntimeStatus: agent not loaded', { agentId, error: errorMsg(err) });
+        adminReadModelAgentsDebug('warn', 'getAgentRuntimeStatus: agent not loaded', {
+          agentId,
+          error: errorMsg(err),
+        });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
     if (agent === null || agent === undefined) return null;
-    const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
-      adminReadModelAgentsDebug('warn', 'getAgentRuntimeStatus: LTM recall not available', { agentId, error: errorMsg(err) });
-      return null;
-    });
-    return { agent, runtimeMemory, snapshots, ltm };
-  }
-
-  async function debugAgentLongTermMemoryRecallSearch(
-    agentId: string,
-    _input: AgentLongTermMemoryRecallDebugSearchInput,
-  ) {
-    const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (agent === null || agent === undefined) return null;
-    const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
-    return { ltmRecall };
+    return { agent, runtimeMemory, snapshots };
   }
 
   return {
     getAgentOmDebugExport,
-    debugAgentLongTermMemoryRecallSearch,
     getAgentRuntimeMemory: getAgentRuntimeMemoryFn,
   };
 }

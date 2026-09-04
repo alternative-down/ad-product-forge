@@ -97,7 +97,7 @@ It also already contains a first executable implementation slice:
 - filesystem-backed usage metering
 - explicit runtime snapshot restore and filesystem snapshot storage
 - filesystem-backed operational memory
-- optional operational-memory and long-term-memory modules
+- optional operational-memory and retrieval modules
 - retrievable filesystem-backed long-term memory, not just document storage
 - buffered realtime STT adapter built on top of batch speech transcription
 - concrete MiniMax integrations for:
@@ -184,7 +184,7 @@ The runtime currently supports:
 - observer-based external monitoring without side effects inside plugins
 - explicit reset of in-memory runtime state
 - reusable recent-context and recall-oriented extensions
-- reusable operational-memory and long-term-memory modules
+- reusable operational-memory and retrieval modules
 - mutable per-runtime context notes outside the core
 - optional journaling and historical replay support
 - optional filesystem-backed persistence modules

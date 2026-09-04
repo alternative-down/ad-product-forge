@@ -317,7 +317,6 @@ export function createAgentRunner(
         runtimeId: runtime.id,
         pendingMessageCount: messageManager.getPendingCount(),
       });
-      lifecycleState.pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
 
@@ -328,8 +327,6 @@ export function createAgentRunner(
       if (isStaleRun(_runEpoch)) {
         return;
       }
-
-      currentRuntime.longTermMemory?.onAgentRunning();
 
       if (input.markRunning) {
         await rt(
@@ -520,8 +517,7 @@ export function createAgentRunner(
       loadAgentContextInstructions,
       currentRuntime,
       db,
-      // Pending messages / LTM
-      pendingLongTermMemoryRecallSystemText: lifecycleState.pendingLongTermMemoryRecallSystemText,
+      // Pending messages
       flushPendingRunMessages: (opts) => messageManager.flushPendingRunMessages(opts),
       // Additional runner state
       usage,
@@ -546,10 +542,6 @@ export function createAgentRunner(
     void rt(
       store.setExecutionState(runtime.id, 'idle'),
       `Agent execution state update timed out for ${runtime.id}`,
-    );
-    void rt(
-      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
-      `Agent long-term memory idle transition timed out for ${runtime.id}`,
     );
   }
 

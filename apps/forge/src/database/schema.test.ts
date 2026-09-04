@@ -18,7 +18,6 @@ import {
   agentExecutionSteps,
   agentHomeMetricSnapshots,
   agentCheckpointedOmStates,
-  agentLongTermMemoryStates,
   agentLongTermMemoryRecallStates,
   agentNotifications,
   agentProviders,
@@ -81,8 +80,6 @@ import type {
   NewAgentHomeMetricSnapshot,
   AgentCheckpointedOmState,
   NewAgentCheckpointedOmState,
-  AgentLongTermMemoryState,
-  NewAgentLongTermMemoryState,
   AgentLongTermMemoryRecallState,
   NewAgentLongTermMemoryRecallState,
   AgentNotification,
@@ -184,16 +181,23 @@ describe('database schema', () => {
 
     it('MigaduSchema accepts valid config', () => {
       expect(() =>
-        MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'test@example.com', apiKey: 'key123' }),
+        MigaduSystemIntegrationConfigSchema.parse({
+          apiUser: 'test@example.com',
+          apiKey: 'key123',
+        }),
       ).not.toThrow();
     });
 
     it('MigaduSchema rejects invalid apiUser', () => {
-      expect(() => MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'not-an-email', apiKey: 'key123' })).toThrow();
+      expect(() =>
+        MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'not-an-email', apiKey: 'key123' }),
+      ).toThrow();
     });
 
     it('MigaduSchema rejects missing apiKey', () => {
-      expect(() => MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'test@example.com', apiKey: '' })).toThrow();
+      expect(() =>
+        MigaduSystemIntegrationConfigSchema.parse({ apiUser: 'test@example.com', apiKey: '' }),
+      ).toThrow();
     });
 
     it('CoolifySchema accepts valid config', () => {
@@ -258,7 +262,9 @@ describe('database schema', () => {
     });
 
     it('MinimaxSchema accepts valid config', () => {
-      expect(() => MinimaxSystemIntegrationConfigSchema.parse({ apiKey: 'minimax-api-key' })).not.toThrow();
+      expect(() =>
+        MinimaxSystemIntegrationConfigSchema.parse({ apiKey: 'minimax-api-key' }),
+      ).not.toThrow();
     });
 
     it('MinimaxSchema rejects empty apiKey', () => {
@@ -275,7 +281,6 @@ describe('database schema', () => {
       expect(agentExecutionSteps).toBeDefined();
       expect(agentHomeMetricSnapshots).toBeDefined();
       expect(agentCheckpointedOmStates).toBeDefined();
-      expect(agentLongTermMemoryStates).toBeDefined();
       expect(agentLongTermMemoryRecallStates).toBeDefined();
       expect(agentNotifications).toBeDefined();
       expect(agentProviders).toBeDefined();
@@ -534,23 +539,6 @@ describe('database schema', () => {
         resourceId: 'r1',
         state: '{}',
       } as unknown as NewAgentCheckpointedOmState;
-      expect(s.agentId).toBe('a1');
-    });
-
-    it('AgentLongTermMemoryState type', () => {
-      const s = {
-        id: 'lm1',
-        agentId: 'a1',
-        state: 'Important',
-        recallIndexStamp: null,
-        createdAt: 0,
-        updatedAt: 0,
-      } as unknown as AgentLongTermMemoryState;
-      expect(s.agentId).toBe('a1');
-    });
-
-    it('NewAgentLongTermMemoryState type', () => {
-      const s = { agentId: 'a1', state: 'Data' } as unknown as NewAgentLongTermMemoryState;
       expect(s.agentId).toBe('a1');
     });
 

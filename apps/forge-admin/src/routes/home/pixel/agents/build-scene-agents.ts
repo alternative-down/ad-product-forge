@@ -8,11 +8,7 @@
 
 import type { AgentListItem, SceneAgent, DeskAnimationState } from '../index';
 import { resolveDeskAmbientPose } from '../index';
-import {
-  TILE_SIZE,
-  WORLD_OFFSET_X,
-  WORLD_OFFSET_Y,
-} from '@/components/home/pixel/scene-constants';
+import { TILE_SIZE, WORLD_OFFSET_X, WORLD_OFFSET_Y } from '@/components/home/pixel/scene-constants';
 
 export { type SceneAgent };
 
@@ -44,11 +40,6 @@ const RUNNING_SLOTS = [
   slot(WORLD_OFFSET_X + 8 * TILE_SIZE, WORLD_OFFSET_Y + 6.85 * TILE_SIZE, 'down'),
   slot(WORLD_OFFSET_X + 4 * TILE_SIZE, WORLD_OFFSET_Y + 11.25 * TILE_SIZE, 'down'),
   slot(WORLD_OFFSET_X + 8 * TILE_SIZE, WORLD_OFFSET_Y + 11.25 * TILE_SIZE, 'down'),
-];
-
-const MEMORY_SLOTS = [
-  slot(WORLD_OFFSET_X + 14.6 * TILE_SIZE, WORLD_OFFSET_Y + 4.9 * TILE_SIZE, 'left'),
-  slot(WORLD_OFFSET_X + 17.2 * TILE_SIZE, WORLD_OFFSET_Y + 4.9 * TILE_SIZE, 'left'),
 ];
 
 const FOCUS_SLOTS = [
@@ -124,40 +115,6 @@ function buildRunning(input: BuildSceneAgentsInput, running: AgentListItem[]): S
       y: slot.y + deskBobOffset,
       dir: forceDeskDefault ? slot.dir : ambientDeskPose.dir,
       frame: forceDeskDefault ? 3 + ((input.tick + index) % 2) : ambientDeskPose.frame,
-      toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
-      bubble: makeBubble(agent, input.nowMs, input.bubbleDeadlines),
-    });
-  }
-
-  return result;
-}
-
-function buildMemory(input: BuildSceneAgentsInput, memory: AgentListItem[]): SceneAgent[] {
-  const result: SceneAgent[] = [];
-
-  for (const [index, agent] of memory.entries()) {
-    const slot = MEMORY_SLOTS[index % MEMORY_SLOTS.length];
-    const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
-    const workPhase = Math.floor((input.tick + index * 13) / 8) % 6;
-    const bucket = Math.floor(input.tick / 24);
-    const variant = hashText(`${agent.agentId}:memory:${bucket}`) % 6;
-
-    const dir: SceneAgent['dir'] =
-      variant <= 1 ? slot.dir : variant === 2 ? 'down' : variant === 3 ? 'left' : slot.dir;
-    const frame: number = variant <= 1 ? 5 : 1;
-
-    result.push({
-      agent,
-      agentId: agent.agentId,
-      name: agent.name,
-      x: slot.x,
-      y: slot.y,
-      dir: isAnimating ? (workPhase === 2 ? 'down' : dir) : dir,
-      frame: isAnimating
-        ? workPhase === 0 || workPhase === 1 || workPhase === 4
-          ? 5 + ((input.tick + index) % 2)
-          : 1
-        : frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
       bubble: makeBubble(agent, input.nowMs, input.bubbleDeadlines),
     });
@@ -257,16 +214,12 @@ function buildHiring(tick: number): SceneAgent {
 // ---------------------------------------------------------------------------
 
 export function buildSceneAgents(input: BuildSceneAgentsInput): SceneAgent[] {
-  const running = input.agents.filter(
-    (a) => a.executionState === 'running' && !a.overview.ltm.running,
-  );
-  const memory = input.agents.filter((a) => a.overview.ltm.running);
+  const running = input.agents.filter((a) => a.executionState === 'running');
   const absent = input.agents.filter((a) => a.executionState === 'absent');
-  const idle = input.agents.filter((a) => a.executionState === 'idle' && !a.overview.ltm.running);
+  const idle = input.agents.filter((a) => a.executionState === 'idle');
 
   return [
     ...buildRunning(input, running),
-    ...buildMemory(input, memory),
     ...buildIdle(input, idle),
     ...buildAbsent(absent),
     buildHiring(input.tick),

@@ -129,12 +129,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     const githubProvisioning = await deps.githubApps.getAgentProvisioning(agentId);
     return { ...agent, githubProvisioning };
   }
-  const {
-    listAgentRecentConversations,
-    listAgentConversationMessages,
-    listAgentThreadMessages,
-    listAgentLongTermMemoryThreadMessages,
-  } = conversationsRM;
+  const { listAgentRecentConversations, listAgentConversationMessages, listAgentThreadMessages } =
+    conversationsRM;
 
   async function listAgentExecutionSteps(input: {
     agentId: string;
@@ -161,7 +157,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     getAgentRuntimeMemory,
     listRecentAgentHomeMetricSnapshots,
   });
-  const { getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch } = debugRM;
+  const { getAgentOmDebugExport } = debugRM;
 
   return {
     getDashboard,
@@ -170,10 +166,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     listAgentRecentConversations,
     listAgentExecutionSteps,
     listAgentThreadMessages,
-    listAgentLongTermMemoryThreadMessages,
     listRecentAgentHomeMetricSnapshots,
     getAgentOmDebugExport,
-    debugAgentLongTermMemoryRecallSearch,
     listAgentConversationMessages,
     listAgentContracts,
     listAgentSchedules,

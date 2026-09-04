@@ -185,19 +185,6 @@ export const agentCheckpointedOmStates = sqliteTable(
 export type AgentCheckpointedOmState = InferModel<typeof agentCheckpointedOmStates>;
 export type NewAgentCheckpointedOmState = InferModel<typeof agentCheckpointedOmStates, 'insert'>;
 
-export const agentLongTermMemoryStates = sqliteTable('agent_long_term_memory_states', {
-  agentId: text('agent_id')
-    .primaryKey()
-    .references(() => agents.id, { onDelete: 'cascade' }),
-  state: text('state').notNull(),
-  recallIndexStamp: text('recall_index_stamp'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-});
-
-export type AgentLongTermMemoryState = InferModel<typeof agentLongTermMemoryStates>;
-export type NewAgentLongTermMemoryState = InferModel<typeof agentLongTermMemoryStates, 'insert'>;
-
 export const agentLongTermMemoryRecallStates = sqliteTable('agent_long_term_memory_recall_states', {
   agentId: text('agent_id')
     .primaryKey()

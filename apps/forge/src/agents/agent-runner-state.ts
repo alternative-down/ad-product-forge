@@ -53,7 +53,6 @@ export type RunnerLifecycleState = {
   activeRunId: string | null;
   currentGenerateAbortController: AbortController | null;
   runLastMessages: number;
-  pendingLongTermMemoryRecallSystemText: string | null;
 };
 
 export function createRunnerLifecycleState(): RunnerLifecycleState {
@@ -69,6 +68,5 @@ export function createRunnerLifecycleState(): RunnerLifecycleState {
     activeRunId: null,
     currentGenerateAbortController: null,
     runLastMessages: 20,
-    pendingLongTermMemoryRecallSystemText: null,
   };
 }

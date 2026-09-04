@@ -27,17 +27,8 @@ interface ReadModel {
     page: number;
     perPage: number;
   }) => Promise<unknown>;
-  listAgentLongTermMemoryThreadMessages: (params: {
-    agentId: string;
-    page: number;
-    perPage: number;
-  }) => Promise<unknown>;
   getAgentRuntimeMemory: (id: string) => Promise<unknown>;
   getAgentOmDebugExport: (id: string) => Promise<unknown>;
-  debugAgentLongTermMemoryRecallSearch: (
-    agentId: string,
-    opts: { query: string },
-  ) => Promise<unknown>;
   listAgentConversationMessages: (params: {
     agentId: string;
     provider: string;
@@ -47,18 +38,14 @@ interface ReadModel {
   }) => Promise<unknown>;
 }
 
-export function registerAgentReadRoutes(
-  httpServer: ForgeHttpServerAdapter,
-  readModel: ReadModel,
-) {
+export function registerAgentReadRoutes(httpServer: ForgeHttpServerAdapter, readModel: ReadModel) {
   // GET /admin/agents
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agents',
     handler: labeledRoute('Agent list route', async () => {
       return jsonResponse(await readModel.listAgents());
-    
-}),
+    }),
   });
 
   // GET /admin/agent
@@ -71,8 +58,7 @@ export function registerAgentReadRoutes(
       if (agent === null || agent === undefined)
         return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
-    
-}),
+    }),
   });
 
   // GET /admin/agent/recent-conversations
@@ -85,8 +71,7 @@ export function registerAgentReadRoutes(
       if (conversations === null || conversations === undefined)
         return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(conversations);
-    
-}),
+    }),
   });
 
   // GET /admin/agent/execution-steps
@@ -100,8 +85,7 @@ export function registerAgentReadRoutes(
         offset: request.query.get('offset') ?? undefined,
       });
       return jsonResponse(await readModel.listAgentExecutionSteps(query));
-    
-}),
+    }),
   });
 
   // GET /admin/agent/thread-messages
@@ -115,29 +99,7 @@ export function registerAgentReadRoutes(
         perPage: request.query.get('perPage') ?? undefined,
       });
       return jsonResponse(await readModel.listAgentThreadMessages(query));
-    
-}),
-  });
-
-  // GET /admin/agent/ltm-thread-messages
-  httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/ltm-thread-messages',
-    handler: labeledRoute('Agent ltm-thread-messages route', async (request) => {
-      const query = agentThreadMessagesQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-        page: request.query.get('page') ?? undefined,
-        perPage: request.query.get('perPage') ?? undefined,
-      });
-      return jsonResponse(
-        await readModel.listAgentLongTermMemoryThreadMessages({
-          agentId: query.agentId,
-          page: query.page,
-          perPage: query.perPage,
-        }),
-      );
-    
-}),
+    }),
   });
 
   // GET /admin/agent/runtime-memory
@@ -150,8 +112,7 @@ export function registerAgentReadRoutes(
       if (snapshot === null || snapshot === undefined)
         return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(snapshot);
-    
-}),
+    }),
   });
 
   // GET /admin/agent/om-debug-export
@@ -164,8 +125,7 @@ export function registerAgentReadRoutes(
       if (snapshot === null || snapshot === undefined)
         return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(snapshot);
-    
-}),
+    }),
   });
 
   // GET /admin/agent/conversation-messages
@@ -189,7 +149,6 @@ export function registerAgentReadRoutes(
           offset: query.offset,
         }),
       );
-    
-}),
+    }),
   });
 }

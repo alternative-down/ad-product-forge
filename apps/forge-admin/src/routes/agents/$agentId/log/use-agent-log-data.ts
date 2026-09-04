@@ -88,17 +88,12 @@ export function useAgentLogData({ agentId }: UseAgentLogDataOptions) {
   const clearHistoryMutation = useMutation({
     mutationFn: async () => {
       if (
-        !window.confirm(
-          'Limpar o histórico do agente e da LTM? Isso também limpa o estado observado atual.',
-        )
+        !window.confirm('Limpar o histórico do agente? Isso também limpa o estado observado atual.')
       ) {
         return null;
       }
 
-      return clearAgentHistory({
-        agentId,
-        includeLongTermMemoryThread: true,
-      });
+      return clearAgentHistory({ agentId });
     },
     onSuccess: async (result: unknown) => {
       if (!result) {
@@ -107,9 +102,6 @@ export function useAgentLogData({ agentId }: UseAgentLogDataOptions) {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'thread-messages'] }),
-        queryClient.invalidateQueries({
-          queryKey: ['admin', 'agent', agentId, 'ltm-thread-messages'],
-        }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'runtime-memory'] }),
       ]);
     },

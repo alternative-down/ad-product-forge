@@ -31,7 +31,7 @@ vi.mock('../database/schema-agents', () => ({
   agentExecutionSteps: { _name: 'agent_execution_steps' },
   agentHomeMetricSnapshots: { _name: 'agent_home_metric_snapshots' },
   agentCheckpointedOmStates: { _name: 'agent_checkpointed_om_states' },
-  agentLongTermMemoryStates: { _name: 'agent_long_term_memory_states' },
+  agentLongTermMemoryRecallStates: { _name: 'agent_long_term_memory_recall_states' },
   agentLongTermMemoryRecallStates: { _name: 'agent_long_term_memory_recall_states' },
   agentNotifications: { _name: 'agent_notifications' },
   agentSchedules: { _name: 'agent_schedules' },
@@ -96,9 +96,7 @@ vi.mock('../admin/routes/debug', () => ({
   forgeDebug: (...args: unknown[]) => mockForgeDebug(...args),
 }));
 
-const mockErrorMsg = vi.fn((err: unknown) =>
-  err instanceof Error ? err.message : String(err),
-);
+const mockErrorMsg = vi.fn((err: unknown) => (err instanceof Error ? err.message : String(err)));
 vi.mock('../agents/error-formatting', () => ({
   errorMsg: (err: unknown) => mockErrorMsg(err),
 }));
@@ -155,16 +153,30 @@ function makeMockLoader() {
 
 function buildInput(): Parameters<typeof registerSystemWriteRoutes>[0] {
   return {
-    httpServer: makeMockHttpServer() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['httpServer'],
+    httpServer: makeMockHttpServer() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['httpServer'],
     db: makeMockDb() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['db'],
     workspaceBasePath: '/tmp/test-workspace',
     loaderConfig: {} as Parameters<typeof registerSystemWriteRoutes>[0]['loaderConfig'],
-    systemSettings: makeMockSystemSettings() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['systemSettings'],
-    llmSettings: makeMockLlmSettings() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['llmSettings'],
-    llmModelPrices: makeMockLlmModelPrices() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['llmModelPrices'],
-    integrations: makeMockIntegrations() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['integrations'],
-    registry: makeMockRegistry() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['registry'],
-    loadAgent: makeMockLoader() as unknown as Parameters<typeof registerSystemWriteRoutes>[0]['loadAgent'],
+    systemSettings: makeMockSystemSettings() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['systemSettings'],
+    llmSettings: makeMockLlmSettings() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['llmSettings'],
+    llmModelPrices: makeMockLlmModelPrices() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['llmModelPrices'],
+    integrations: makeMockIntegrations() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['integrations'],
+    registry: makeMockRegistry() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['registry'],
+    loadAgent: makeMockLoader() as unknown as Parameters<
+      typeof registerSystemWriteRoutes
+    >[0]['loadAgent'],
     // D49 #6526 P0: allow dev/test mode to bypass auth check on destructive
     // routes. Mirrors http/server.ts:270-287 semantics. Production MUST set
     // FORGE_ADMIN_API_KEY + leave allowInsecureLocal=false.
@@ -258,11 +270,13 @@ describe('performFactoryReset', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(result.backupPath).toBe(`${TEMP_BACKUP_DIR}/forge-factory-reset-1970-01-01T00-00-00-000Z.db`);
+    expect(result.backupPath).toBe(
+      `${TEMP_BACKUP_DIR}/forge-factory-reset-1970-01-01T00-00-00-000Z.db`,
+    );
     expect(result.timestampIso).toBe(FIXED_ISO);
   });
 
-  it('L#19 tripwire: calls db.delete for all 25 target tables (LOCKED defaults coverage)', async () => {
+  it('L#19 tripwire: calls db.delete for every target table (LOCKED defaults coverage)', async () => {
     await performFactoryReset({
       dbPathOverride: TEMP_DB,
       backupDirOverride: TEMP_BACKUP_DIR,
@@ -271,8 +285,8 @@ describe('performFactoryReset', () => {
 
     // Count distinct table references passed to delete()
     const targets = listWipeTargets();
-    expect(targets).toHaveLength(25);
-    expect(mockDelete).toHaveBeenCalledTimes(25);
+    expect(targets).toHaveLength(24);
+    expect(mockDelete).toHaveBeenCalledTimes(24);
   });
 
   it('L#19 tripwire: agents deleted BEFORE llmProfiles (FK restrict order)', async () => {
@@ -309,7 +323,7 @@ describe('performFactoryReset', () => {
     expect(completeEvent).toBeDefined();
     const context = (completeEvent![0] as { context: Record<string, unknown> }).context;
     expect(context.backupPath).toContain(TEMP_BACKUP_DIR);
-    expect(context.wipedTables).toHaveLength(25);
+    expect(context.wipedTables).toHaveLength(24);
     expect(context.timestamp).toBe(FIXED_TS);
   });
 });
@@ -387,9 +401,9 @@ describe('performFactoryReset error handling', () => {
 // =============================================================================
 
 describe('listWipeTargets', () => {
-  it('returns all 24 LOCKED default table names', () => {
+  it('returns all LOCKED default table names', () => {
     const targets = listWipeTargets();
-    expect(targets).toHaveLength(25);
+    expect(targets).toHaveLength(24);
     expect(targets).toContain('llm_profiles');
     expect(targets).toContain('agents');
     expect(targets).toContain('system_settings');
@@ -423,10 +437,13 @@ describe('POST /system/reset route', () => {
     // z.string(), no ZodError is thrown and this test FAILS.
     const input = buildInput();
     registerSystemWriteRoutes(input);
-    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/system/reset',
-    );
-    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+    const route = (
+      input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>
+    ).routes.find((r) => r.path === '/system/reset');
+    const handler = route!.handler as (req: {
+      bodyText: string;
+      headers: Record<string, string>;
+    }) => Promise<unknown>;
 
     // The promise rejects with a ZodError whose message contains 'FACTORY_RESET'.
     await expect(
@@ -453,17 +470,20 @@ describe('POST /system/reset route', () => {
     expect(oldRoute).toBeUndefined();
   });
 
-    it('D49 #6526: route requires x-forge-admin-api-key header (returns 401 when key configured but missing/wrong)', async () => {
+  it('D49 #6526: route requires x-forge-admin-api-key header (returns 401 when key configured but missing/wrong)', async () => {
     const input = buildInput();
     // Override allowInsecureLocal: false and set adminApiKey so the auth check
     // actually validates the header (not the insecure-local fallback).
     input.adminApiKey = 'test-secret-key';
     input.allowInsecureLocal = false;
     registerSystemWriteRoutes(input);
-    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/system/reset',
-    );
-    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+    const route = (
+      input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>
+    ).routes.find((r) => r.path === '/system/reset');
+    const handler = route!.handler as (req: {
+      bodyText: string;
+      headers: Record<string, string>;
+    }) => Promise<unknown>;
 
     const result = (await handler({
       bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
@@ -482,10 +502,13 @@ describe('POST /system/reset route', () => {
     input.adminApiKey = undefined;
     input.allowInsecureLocal = false;
     registerSystemWriteRoutes(input);
-    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/system/reset',
-    );
-    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+    const route = (
+      input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>
+    ).routes.find((r) => r.path === '/system/reset');
+    const handler = route!.handler as (req: {
+      bodyText: string;
+      headers: Record<string, string>;
+    }) => Promise<unknown>;
 
     const result = (await handler({
       bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
@@ -503,10 +526,13 @@ describe('POST /system/reset route', () => {
     input.adminApiKey = 'test-secret-key';
     input.allowInsecureLocal = false;
     registerSystemWriteRoutes(input);
-    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/system/reset',
-    );
-    const handler = route!.handler as (req: { bodyText: string; headers: Record<string, string> }) => Promise<unknown>;
+    const route = (
+      input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>
+    ).routes.find((r) => r.path === '/system/reset');
+    const handler = route!.handler as (req: {
+      bodyText: string;
+      headers: Record<string, string>;
+    }) => Promise<unknown>;
 
     const result = (await handler({
       bodyText: JSON.stringify({ confirm: 'FACTORY_RESET' }),
@@ -517,12 +543,12 @@ describe('POST /system/reset route', () => {
     expect(body.ok).toBe(true);
   });
 
-    it('L#19 tripwire: successful reset returns 200 with backupPath + wipedTables', async () => {
+  it('L#19 tripwire: successful reset returns 200 with backupPath + wipedTables', async () => {
     const input = buildInput();
     registerSystemWriteRoutes(input);
-    const route = (input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>).routes.find(
-      (r) => r.path === '/system/reset',
-    );
+    const route = (
+      input.httpServer as unknown as ReturnType<typeof makeMockHttpServer>
+    ).routes.find((r) => r.path === '/system/reset');
     const handler = route!.handler as (req: {
       bodyText: string;
       headers: Record<string, string>;
@@ -539,7 +565,7 @@ describe('POST /system/reset route', () => {
     const body = JSON.parse(result.body);
     expect(body.ok).toBe(true);
     expect(body.backupPath).toMatch(/^\/tmp\/forge-factory-reset-.*\.db$/);
-    expect(body.wipedTables).toHaveLength(25);
+    expect(body.wipedTables).toHaveLength(24);
   });
 });
 

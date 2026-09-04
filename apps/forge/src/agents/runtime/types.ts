@@ -11,7 +11,6 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../../database/schema';
-import type { AgentContractStore } from '../agent-contract-store';
 import type { LtmRecallSearchMode } from '../ltm/recall/types';
 import type {
   AgentLongTermMemoryRecallDebugSearchInput,
@@ -63,8 +62,6 @@ export type RuntimeModelField = keyof CreateForgeAgentConfig;
 export type CreateForgeAgentConfigSchema = CreateForgeAgentConfig;
 
 export type CreateAgentOptions = {
-  longTermMemory?: boolean;
-  contractStore?: AgentContractStore;
   readRuntimeMemorySettings?: () => Promise<{
     checkpointedOmTotalContextTokens: number;
     checkpointedOmRecentRawTokens: number;
@@ -170,9 +167,7 @@ export type RuntimeAgentGenerateOptions = {
   providerOptions?: Record<string, unknown>;
   prepareStep?: (input: { stepNumber: number }) => Promise<void> | void;
   onStepFinish?: (stepResult: RuntimeGenerateStepResult) => Promise<void> | void;
-  onIterationComplete?: (
-    iteration: RuntimeIteration,
-  ) =>
+  onIterationComplete?: (iteration: RuntimeIteration) =>
     | Promise<{
         continue?: boolean;
         feedback?: string;
@@ -236,33 +231,7 @@ export type InternalAgentRuntime<
       input: AgentLongTermMemoryRecallDebugSearchInput,
     ): Promise<AgentLongTermMemoryRecallDebugSearchResult>;
     dispose?(): Promise<void>;
-  } | null;
-  longTermMemory: {
-    attachRecallIndexRefresh(handler: (() => Promise<void>) | null): void;
-    onAgentIdle(): Promise<void>;
-    onAgentRunning(): void;
-    getSnapshot(): {
-      running: boolean;
-      queued: boolean;
-      lastRunAt: number | null;
-      lastRunError: string | null;
-      lastRunErrorAt: number | null;
-      lastWrittenPackageId: string | null;
-      lastWrittenAt: number | null;
-      packageCount: number;
-    };
-    readSnapshot(): Promise<{
-      running: boolean;
-      queued: boolean;
-      lastRunAt: number | null;
-      lastRunError: string | null;
-      lastRunErrorAt: number | null;
-      lastWrittenPackageId: string | null;
-      lastWrittenAt: number | null;
-      packageCount: number;
-    }>;
-    dispose(): Promise<void>;
-  } | null;
+  };
   onReceiveMessage(handler: (event: AgentWakeEvent) => void): void;
   dispose(): Promise<void>;
 };

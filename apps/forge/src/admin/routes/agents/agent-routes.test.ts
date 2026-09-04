@@ -14,9 +14,7 @@ vi.mock('@forge-runtime/core', () => ({
   // from apps/forge/src/agents/error-formatting.ts → @forge-runtime/core).
   // Without this mock, error path triggers "errorMsg is not a function" →
   // 15 unhandled rejections. Mirror the helpers' real behavior (D63 #5889).
-  errorMsg: vi.fn((err: unknown) =>
-    err instanceof Error ? err.message : String(err),
-  ),
+  errorMsg: vi.fn((err: unknown) => (err instanceof Error ? err.message : String(err))),
 }));
 import { registerAgentReadRoutes } from './read';
 import { registerAgentOperationRoutes } from './operations';
@@ -186,7 +184,6 @@ describe('Agent Read Routes', () => {
         getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
         getAgentOmDebugExport: vi.fn().mockResolvedValue(null),
         listAgentConversationMessages: vi.fn().mockResolvedValue([]),
-        listAgentLongTermMemoryThreadMessages: vi.fn().mockResolvedValue([]),
         listAgentExecutionSteps: vi.fn().mockResolvedValue([]),
         listAgentThreadMessages: vi.fn().mockResolvedValue([]),
         listAgentRecentConversations: vi.fn().mockResolvedValue([]),
@@ -223,11 +220,11 @@ describe('Agent Read Routes', () => {
         listAgentConversationMessages: vi.fn().mockResolvedValue([]),
       } as any,
     );
-    expect(routes).toHaveLength(9);
+    expect(routes).toHaveLength(8);
   });
 });
 
-describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
+describe('Agent Write Routes', () => {
   it('should register POST /admin/agent/clear-history', () => {
     const routes: { method: string; path: string }[] = [];
     const httpServer = {
@@ -243,7 +240,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
     ).toBeDefined();
   });
 
-  it('should register POST /admin/agent/ltm-recall-search', () => {
+  it('should have exactly one write route', () => {
     const routes: { method: string; path: string }[] = [];
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
@@ -253,22 +250,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(
-      routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST'),
-    ).toBeDefined();
-  });
-
-  it('should have exactly 2 write routes', () => {
-    const routes: { method: string; path: string }[] = [];
-    const httpServer = {
-      registerRoute: (route: { method: string; path: string }) => routes.push(route),
-    };
-    registerAgentWriteRoutes(httpServer as any, {} as any, {
-      db: {} as any,
-      workspaceBasePath: '/tmp',
-      loaderConfig: {} as any,
-    });
-    expect(routes).toHaveLength(2);
+    expect(routes).toHaveLength(1);
   });
 });
 

@@ -38,10 +38,6 @@ export class RecallPersistence {
     this.lastInitAt = value;
   }
 
-  async readCurrentIndexStamp(): Promise<string | null> {
-    return await this.persistenceStore.readRecallIndexStamp();
-  }
-
   async getIndexStats(): Promise<{
     workspaceFileCount: number;
     memoryFileCount: number;
@@ -104,7 +100,12 @@ export class RecallPersistence {
     recentFingerprints: string[],
   ): Promise<void> {
     await this.persistRecallSnapshotWithInput(
-      { threadId: threadContext.threadId, resourceId: threadContext.resourceId, step: input.step, steps: input.steps },
+      {
+        threadId: threadContext.threadId,
+        resourceId: threadContext.resourceId,
+        step: input.step,
+        steps: input.steps,
+      },
       {
         history: {
           recentFingerprints,
@@ -121,14 +122,23 @@ export class RecallPersistence {
     payload: {
       queryText: string;
       recallConfig: RecallConfig;
-      indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number };
+      indexStats: {
+        workspaceFileCount: number;
+        memoryFileCount: number;
+        checkpointFileCount: number;
+      };
       dedupedGraph: { hit: boolean; score?: number; context: string };
       filteredResults: LtmSearchResult[];
       history: LongTermMemoryRecallHistory;
     },
   ): Promise<void> {
     await this.persistRecallSnapshotWithInput(
-      { threadId: threadContext.threadId, resourceId: threadContext.resourceId, step: input.step, steps: input.steps },
+      {
+        threadId: threadContext.threadId,
+        resourceId: threadContext.resourceId,
+        step: input.step,
+        steps: input.steps,
+      },
       {
         queryText: payload.queryText,
         recallConfig: payload.recallConfig,
@@ -141,7 +151,7 @@ export class RecallPersistence {
     );
   }
 
-    async readRecallThreadState(
+  async readRecallThreadState(
     threadId: string | null,
     recentRawTokens: number,
   ): Promise<{

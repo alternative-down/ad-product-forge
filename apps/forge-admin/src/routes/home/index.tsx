@@ -92,16 +92,6 @@ function HomeIndexRoute() {
                     label="Média entre steps"
                     value={formatDuration(agent.overview.averageStepIntervalMs)}
                   />
-                  <InfoRow
-                    label="LTM"
-                    value={
-                      agent.overview.ltm.running
-                        ? 'Executando'
-                        : agent.overview.ltm.queued
-                          ? 'Enfileirada'
-                          : 'Ociosa'
-                    }
-                  />
                 </div>
 
                 {agent.overview.om ? (

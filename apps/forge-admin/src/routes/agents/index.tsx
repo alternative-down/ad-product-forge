@@ -49,7 +49,6 @@ function AgentsIndexRoute() {
                 <TableHead className="px-4 py-3 font-medium">Wake</TableHead>
                 <TableHead className="px-4 py-3 font-medium">Notificações</TableHead>
                 <TableHead className="px-4 py-3 font-medium">OM</TableHead>
-                <TableHead className="px-4 py-3 font-medium">LTM</TableHead>
                 <TableHead className="px-4 py-3 text-right font-medium">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -102,20 +101,6 @@ function AgentsIndexRoute() {
                     {agent.overview.om
                       ? `g${agent.overview.om.generationCount} · raw ${formatNullableNumber(agent.overview.om.recentRawTokenCount)}`
                       : '—'}
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <div className="space-y-0.5">
-                      <div>
-                        {agent.overview.ltm.running
-                          ? 'Executando'
-                          : agent.overview.ltm.queued
-                            ? 'Enfileirada'
-                            : 'Ociosa'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {`${formatNullableNumber(agent.overview.ltm.packageCount)} pacotes`}
-                      </div>
-                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">

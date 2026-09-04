@@ -38,8 +38,6 @@ import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
 import {
   agentCheckpointedOmStates as _agentCheckpointedOmStates,
-  agentLongTermMemoryStates as _agentLongTermMemoryStates,
-  agentLongTermMemoryRecallStates as _agentLongTermMemoryRecallStates,
   agentMcpConfigs as _agentMcpConfigs,
   agents as _agents,
   agentProviders as _agentProviders,
@@ -72,7 +70,8 @@ import {
 
 import {
   roleToolPermissionSchema as _roleToolPermissionSchema,
-  roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema} from './schemas';
+  roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema,
+} from './schemas';
 import {
   updateRoleSchema as _updateRoleSchema,
   deleteRoleSchema as _deleteRoleSchema,
@@ -180,11 +179,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   };
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
-  registerAgentOperationRoutes(
-    input.httpServer,
-    { internalChat: input.internalChat },
-    registry,
-  );
+  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
 
   registerAgentSkillsWriteRoutes(input.httpServer, {
     db: input.db,

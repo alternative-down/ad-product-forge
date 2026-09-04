@@ -191,7 +191,7 @@ describe('loadAgent', () => {
     expect(memSettings.checkpointedOmTotalContextTokens).toBe(100);
   });
 
-  it('creates runtime with longTermMemory enabled and contract store', async () => {
+  it('creates runtime with semantic recall settings', async () => {
     const config = makeConfig();
 
     await loadAgent(mockDb, config);
@@ -199,18 +199,9 @@ describe('loadAgent', () => {
     expect(mockCreateAgentRuntime).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        longTermMemory: true,
-        contractStore: expect.any(Object),
+        readRuntimeMemorySettings: expect.any(Function),
       }),
     );
-  });
-
-  it('calls createAgentContractStore with the database', async () => {
-    const config = makeConfig();
-
-    await loadAgent(mockDb, config);
-
-    expect(mockCreateAgentContractStore).toHaveBeenCalledWith(mockDb);
   });
 
   it('returns the created runtime instance', async () => {

@@ -125,7 +125,6 @@ export interface ExecuteStepDeps {
     runEpoch: number,
     contractId: string,
     contract: { id: string; budgetUsd: number; endsAt: number },
-    longTermMemoryRecallSystemText: string | null,
     config: GenerateDeps,
   ) => Promise<GenerateResult | undefined>;
   markGenerateProgress: GenerateDeps['markGenerateProgress'];
@@ -138,8 +137,7 @@ export interface ExecuteStepDeps {
   currentRuntime: InternalAgentRuntime;
   db: Database;
 
-  // ── Pending messages / LTM (set by runner, consumed by executeStep) ───────
-  pendingLongTermMemoryRecallSystemText: string | null;
+  // ── Pending messages (set by runner, consumed by executeStep) ─────────────
   flushPendingRunMessages: (opts: { allowOriginIdleOnly: boolean }) => string | null;
 
   // ── Additional runner state ───────────────────────────────────────────────

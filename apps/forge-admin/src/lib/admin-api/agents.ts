@@ -4,7 +4,6 @@ import type {
   AgentDetail,
   AgentExecutionStepsResponse,
   AgentListItem,
-  AgentLongTermMemoryRecallDebugSearchResult,
   AgentRecentConversation,
   AgentRuntimeMemorySnapshot,
   AgentSchedule,
@@ -65,42 +64,18 @@ export function getAgentThreadMessages(agentId: string, page: number, perPage: n
   );
 }
 
-export function getAgentLongTermMemoryThreadMessages(
-  agentId: string,
-  page: number,
-  perPage: number,
-) {
-  return request<AgentThreadMessagesResponse>(
-    `/admin/agent/ltm-thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
-  );
-}
-
 export function getAgentRuntimeMemory(agentId: string) {
   return request<AgentRuntimeMemorySnapshot>(
     `/admin/agent/runtime-memory?agentId=${encodeURIComponent(agentId)}`,
   );
 }
 
-export function clearAgentHistory(input: {
-  agentId: string;
-  includeLongTermMemoryThread?: boolean;
-}) {
-  return request<{ success: true; agentId: string; includeLongTermMemoryThread: boolean }>(
-    '/admin/agent/clear-history',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        agentId: input.agentId,
-        includeLongTermMemoryThread: input.includeLongTermMemoryThread ?? true,
-      }),
-    },
-  );
-}
-
-export function runAgentLongTermMemoryRecallSearch(input: { agentId: string; query: string }) {
-  return request<AgentLongTermMemoryRecallDebugSearchResult>('/admin/agent/ltm-recall-search', {
+export function clearAgentHistory(input: { agentId: string }) {
+  return request<{ success: true; agentId: string }>('/admin/agent/clear-history', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      agentId: input.agentId,
+    }),
   });
 }
 

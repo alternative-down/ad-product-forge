@@ -8,11 +8,7 @@ import { AdminLoadingState } from '@/components/admin';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 import type { AgentListItem } from '@/lib/admin-api/index/types';
 import { buildSceneAgents } from './agents/build-scene-agents';
-import {
-  TILE_SIZE,
-  WORLD_OFFSET_X,
-  WORLD_OFFSET_Y,
-} from '@/components/home/pixel/scene-constants';
+import { TILE_SIZE, WORLD_OFFSET_X, WORLD_OFFSET_Y } from '@/components/home/pixel/scene-constants';
 
 export const Route = createFileRoute('/home/pixel/')({
   component: HomePixelRoute,
@@ -1071,9 +1067,7 @@ function advanceDeskAnimationState(input: {
   tick: number;
 }) {
   const nextState: Record<string, DeskAnimationState> = {};
-  const runningAgents = input.agents.filter(
-    (agent) => agent.executionState === 'running' && !agent.overview.ltm.running,
-  );
+  const runningAgents = input.agents.filter((agent) => agent.executionState === 'running');
 
   for (const agent of runningAgents) {
     const currentState =

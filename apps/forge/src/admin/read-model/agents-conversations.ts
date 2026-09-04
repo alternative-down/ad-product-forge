@@ -1,7 +1,7 @@
 /**
  * Agent conversation read model — extracted from agents.ts (phase 4).
  * Covers: listAgentRecentConversations, listAgentConversationMessages,
- * listAgentThreadMessages, listAgentLongTermMemoryThreadMessages.
+ * listAgentThreadMessages.
  *
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
@@ -144,21 +144,9 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     });
   }
 
-  async function listAgentLongTermMemoryThreadMessages(
-    params: AgentThreadMessagesInput,
-  ): Promise<AgentThreadMessagesResult> {
-    return await listThreadMessages(workspaceBasePath, params.agentId, {
-      page: params.page,
-      perPage: params.perPage,
-      threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
-      tablePrefix: toMastraSafeIdentifier(params.agentId),
-    });
-  }
-
   return {
     listAgentRecentConversations,
     listAgentConversationMessages,
     listAgentThreadMessages,
-    listAgentLongTermMemoryThreadMessages,
   };
 }
