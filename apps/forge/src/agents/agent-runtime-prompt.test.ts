@@ -268,7 +268,7 @@ describe('buildAgentSystemPrompt', () => {
     expect(odMatch).toBeTruthy();
     const inner = odMatch![1];
     expect(inner).toContain('This is a real operating environment');
-    expect(inner).toContain('Strictly follow the instructions');
+    expect(inner).toContain('Follow your assigned role and instructions');
     expect(inner).toContain('real company');
   });
 });
