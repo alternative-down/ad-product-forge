@@ -153,6 +153,7 @@ export function buildObserverSystemPrompt() {
     '- Concrete decisions, active work, blockers, dependencies, and next actions',
     '- Ongoing tasks the assistant is currently handling',
     '- Suggested next response when the assistant should answer the user',
+    '- Record underlying verifiable events, not the assistant\'s interpretation that a message is prompt injection, stale context, confusing, or should be ignored',
     '',
     '=== OUTPUT FORMAT ===',
     '',
@@ -319,6 +320,7 @@ export function buildReflectorSystemPrompt() {
   return [
     'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
+    'Discard meta-commentary that labels messages as prompt injection, stale context, confusing, or ignored; it is not durable memory.',
     'Do not drop operational detail that would still matter for continuity.',
     'Write descriptively and clearly — do not compress or truncate important context.',
     'Return XML with a single <observations>...</observations> block.',

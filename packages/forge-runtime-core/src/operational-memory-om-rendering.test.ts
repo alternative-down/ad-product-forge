@@ -24,7 +24,7 @@ describe('operational-memory-om-rendering', () => {
       expect(result).toHaveLength(1);
       expect(result[0].role).toBe('system');
       expect(result[0].content).toContain('Summary text');
-      expect(result[0].content).toContain('Checkpoint summary:');
+      expect(result[0].content).toBe('<resume>\nSummary text\n</resume>');
     });
 
     it('returns system messages for reflection blocks', () => {
@@ -36,7 +36,8 @@ describe('operational-memory-om-rendering', () => {
       expect(result).toHaveLength(2);
       result.forEach((msg) => {
         expect(msg.role).toBe('system');
-        expect(msg.content).toContain('Active reflection:');
+        expect(msg.content).toContain('<reflections>');
+        expect(msg.content).toContain('</reflections>');
       });
     });
 
@@ -52,7 +53,7 @@ describe('operational-memory-om-rendering', () => {
       // reflectedGeneration=1 means reflected → filtered out
       expect(result).toHaveLength(1);
       expect(result[0].content).toContain('Observation 1');
-      expect(result[0].content).toContain('Active observation:');
+      expect(result[0].content).toBe('<observations>\nObservation 1\n</observations>');
     });
 
     it('filters out null and empty text blocks', () => {
@@ -111,7 +112,7 @@ describe('operational-memory-om-rendering', () => {
         activeReflectionBlocks: [{ text: 'Ref A' }, { text: 'Ref B' }],
         observationBlocks: [],
       });
-      expect(result[1]).toContain('Active reflections:');
+      expect(result[1]).toContain('<reflections>');
       expect(result[1]).toContain('Ref A');
       expect(result[1]).toContain('Ref B');
     });
@@ -122,7 +123,7 @@ describe('operational-memory-om-rendering', () => {
         activeReflectionBlocks: [],
         observationBlocks: [{ reflectedGeneration: null, text: 'Obs 1' }],
       });
-      expect(result[2]).toContain('Active observations:');
+      expect(result[2]).toContain('<observations>');
       expect(result[2]).toContain('Obs 1');
     });
 

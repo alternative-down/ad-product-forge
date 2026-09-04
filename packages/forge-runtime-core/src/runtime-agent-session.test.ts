@@ -465,7 +465,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'checkpoint text',
+                text: '<resume>\ncheckpoint text\n</resume>',
                 providerOptions: undefined,
               },
             ],
@@ -476,7 +476,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'reflection one',
+                text: '<reflections>\nreflection one\n</reflections>',
                 providerOptions: undefined,
               },
             ],
@@ -487,7 +487,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'reflection two',
+                text: '<reflections>\nreflection two\n</reflections>',
                 providerOptions: undefined,
               },
             ],
@@ -498,7 +498,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'observation one',
+                text: '<observations>\nobservation one\n</observations>',
                 providerOptions: undefined,
               },
             ],

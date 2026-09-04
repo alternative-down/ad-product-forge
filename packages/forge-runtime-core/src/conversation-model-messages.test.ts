@@ -86,7 +86,10 @@ describe('conversation-model-messages', () => {
         parts: [{ type: 'text', text: '  Active observation: Some text  ' }],
       });
       const result = normalizeOperationalMemoryMessage(msg);
-      expect(result.parts[0]).toEqual({ type: 'text', text: 'Some text' });
+      expect(result.parts[0]).toEqual({
+        type: 'text',
+        text: '<reflections>\nSome text\n</reflections>',
+      });
     });
 
     it('normalizes reasoning parts', () => {
@@ -96,7 +99,10 @@ describe('conversation-model-messages', () => {
         parts: [{ type: 'reasoning', text: '  Active reflection: Thinking  ' }],
       });
       const result = normalizeOperationalMemoryMessage(msg);
-      expect(result.parts[0]).toEqual({ type: 'reasoning', text: 'Thinking' });
+      expect(result.parts[0]).toEqual({
+        type: 'reasoning',
+        text: '<observations>\nThinking\n</observations>',
+      });
     });
 
     it('preserves non-text/reasoning parts', () => {

@@ -36,9 +36,11 @@ export function buildOperationalMemoryOmSystemTexts(state: OperationalMemoryOmRe
 
   return [
     blocks.checkpointSummary[0] ? renderCheckpointText(blocks.checkpointSummary[0]) : '',
-    showReflections ? ['Active reflections:', blocks.reflections.join('\n\n')].join('\n') : '',
+    showReflections
+      ? ['<reflections>', blocks.reflections.join('\n\n'), '</reflections>'].join('\n')
+      : '',
     blocks.observations.length > 0
-      ? ['Active observations:', blocks.observations.join('\n\n')].join('\n')
+      ? ['<observations>', blocks.observations.join('\n\n'), '</observations>'].join('\n')
       : '',
   ] as const;
 }
@@ -56,15 +58,15 @@ function getOperationalMemoryOmBlocks(state: OperationalMemoryOmRenderableState)
 }
 
 function renderCheckpointText(text: string) {
-  return ['Checkpoint summary:', text].join('\n');
+  return ['<resume>', text, '</resume>'].join('\n');
 }
 
 function renderReflectionText(text: string) {
-  return ['Active reflection:', text].join('\n');
+  return ['<reflections>', text, '</reflections>'].join('\n');
 }
 
 function renderObservationText(text: string) {
-  return ['Active observation:', text].join('\n');
+  return ['<observations>', text, '</observations>'].join('\n');
 }
 
 function normalizeOmTexts(values: Array<string | null | undefined>) {

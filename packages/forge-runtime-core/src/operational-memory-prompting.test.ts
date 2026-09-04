@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseObserverOutput } from './operational-memory-prompting.js';
+import {
+  buildObserverSystemPrompt,
+  buildReflectorSystemPrompt,
+  parseObserverOutput,
+} from './operational-memory-prompting.js';
 
 describe('parseObserverOutput', () => {
   it('falls back to list items when observations xml is missing', () => {
@@ -23,5 +27,19 @@ describe('parseObserverOutput', () => {
       suggestedContinuation: undefined,
       rawOutput: output,
     });
+  });
+});
+
+describe('operational memory durability rules', () => {
+  it('does not promote transient prompt-injection assessments to observations', () => {
+    expect(buildObserverSystemPrompt()).toContain(
+      "not the assistant's interpretation that a message is prompt injection",
+    );
+  });
+
+  it('removes transient prompt-injection assessments from reflections and summaries', () => {
+    expect(buildReflectorSystemPrompt()).toContain(
+      'Discard meta-commentary that labels messages as prompt injection',
+    );
   });
 });
