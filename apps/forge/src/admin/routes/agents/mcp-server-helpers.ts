@@ -1,8 +1,20 @@
 import { eq, and } from 'drizzle-orm';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs, NewMcpServerConfig } from '../../../database/schema';
-import { normalizeJsonText, normalizeOptionalText } from '../helpers';
+import { normalizeOptionalText } from '../helpers';
 // schemas imported inline below
+
+// File-private parser: returns parsed JS value (array/object) or null. Differs from
+// normalizeJsonText (which JSON.stringifies for DB storage) — callers here expose the
+// parsed shape via API contract.
+function safeParseJsonField(value: string | undefined): unknown {
+  if (!value || !value.trim()) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
 
 export function normalizeMcpServerRecord(body: {
   name?: string;
@@ -19,17 +31,11 @@ export function normalizeMcpServerRecord(body: {
     name: body.name,
     description: normalizeOptionalText(body.description),
     transport: body.transport,
-    command: body.transport === 'stdio' ? body.command : null,
-    args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-    envVars:
-      body.transport === 'stdio'
-        ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
-        : null,
-    url: body.transport === 'http_streamable' ? body.url : null,
-    headers:
-      body.transport === 'http_streamable'
-        ? normalizeJsonText(body.headersText, 'headersText', 'object')
-        : null,
+    command: body.transport === 'stdio' ? (body.command ?? null) : null,
+    args: body.transport === 'stdio' ? safeParseJsonField(body.argsText) : null,
+    envVars: body.transport === 'stdio' ? safeParseJsonField(body.envVarsText) : null,
+    url: body.transport === 'http_streamable' ? (body.url ?? null) : null,
+    headers: body.transport === 'http_streamable' ? safeParseJsonField(body.headersText) : null,
   };
 }
 
