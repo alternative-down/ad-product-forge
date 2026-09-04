@@ -11,7 +11,6 @@
     "typecheck": "npx tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "test": "vitest run",
-    "init-registry": "tsx src/scripts/init-agent-registry.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {

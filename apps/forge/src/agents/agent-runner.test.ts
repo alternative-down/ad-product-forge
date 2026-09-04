@@ -166,7 +166,6 @@ vi.mock('./agent-runner-helpers', () => ({
   extractRunnerControlDirective: vi.fn(() => null),
   extractRunnerControlDirectiveFromIteration: vi.fn(() => null),
   buildRecallStepFromIteration: vi.fn(() => null),
-  didIterationUpdateWorkingMemory: vi.fn(() => false),
   didIterationProduceVisibleAssistantText: vi.fn(() => false),
   collectStepTextParts: vi.fn(() => []),
   hasExactControlDirective: vi.fn(() => false),

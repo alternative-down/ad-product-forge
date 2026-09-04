@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const clientMock = vi.hoisted(() => ({
+  execute: vi.fn(),
+  close: vi.fn(),
+}));
+
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
   toMastraSafeIdentifier: vi.fn((id: string) => id.replace(/[^a-zA-Z0-9]/g, '-')),
@@ -27,18 +32,22 @@ vi.mock('drizzle-orm/libsql', () => ({
 }));
 
 vi.mock('@libsql/client', () => ({
-  createClient: vi.fn().mockReturnValue({ close: vi.fn() }),
+  createClient: vi.fn().mockReturnValue(clientMock),
 }));
 
 vi.mock('node:fs/promises', async () => {
-  const actual = await vi.importActual('node:fs/promises');
-  return {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  const mocked = {
     ...actual,
-    stat: vi.fn(),
+    stat: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
     mkdir: vi.fn(),
     rename: vi.fn(),
-    readdir: vi.fn(),
+    readdir: vi.fn().mockResolvedValue([]),
     rm: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 

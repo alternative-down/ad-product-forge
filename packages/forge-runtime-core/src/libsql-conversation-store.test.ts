@@ -88,13 +88,6 @@ describe('LibsqlConversationStore', () => {
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
       });
-      await store.write({
-        threadId: 'thread-1',
-        resourceId: 'thread-1',
-        workingMemory: '{"identity":{"roleCore":"test"}}',
-        updatedAt: '2026-04-21T00:00:04.000Z',
-      });
-
       await expect(store.getThread('thread-1')).resolves.toEqual({
         id: 'thread-1',
         title: 'General',
@@ -163,17 +156,6 @@ describe('LibsqlConversationStore', () => {
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
       });
-      await expect(
-        store.read({
-          threadId: 'thread-1',
-          resourceId: 'thread-1',
-        }),
-      ).resolves.toEqual({
-        threadId: 'thread-1',
-        resourceId: 'thread-1',
-        workingMemory: '{"identity":{"roleCore":"test"}}',
-        updatedAt: '2026-04-21T00:00:04.000Z',
-      });
     } finally {
       await client.close();
     }
@@ -233,6 +215,37 @@ describe('LibsqlConversationStore', () => {
           beforeMessageId: 'message-3',
         }),
       ).resolves.toMatchObject([{ id: 'message-1' }, { id: 'message-2' }]);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('drops the legacy working memory table during schema initialization', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: `file:${databasePath}`,
+    });
+    await client.execute(`
+      create table test_runtime_cleanup_working_memory (
+        thread_id text primary key,
+        working_memory text not null
+      )
+    `);
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_cleanup',
+    });
+
+    try {
+      await store.listThreads();
+      const result = await client.execute({
+        sql: `select name from sqlite_master where type = 'table' and name = ?`,
+        args: ['test_runtime_cleanup_working_memory'],
+      });
+
+      expect(result.rows).toEqual([]);
     } finally {
       await client.close();
     }
@@ -330,13 +343,6 @@ describe('LibsqlConversationStore', () => {
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
       });
-      await store.write({
-        threadId: 'thread-1',
-        resourceId: 'thread-1',
-        workingMemory: '{"identity":{"roleCore":"test"}}',
-        updatedAt: '2026-04-21T00:00:04.000Z',
-      });
-
       await expect(
         store.listMessages({
           threadId: 'thread-1',
@@ -353,12 +359,6 @@ describe('LibsqlConversationStore', () => {
         }),
       ).resolves.toEqual([]);
       await expect(store.load('thread-1')).resolves.toBeNull();
-      await expect(
-        store.read({
-          threadId: 'thread-1',
-          resourceId: 'thread-1',
-        }),
-      ).resolves.toBeNull();
       await expect(store.getThread('thread-1')).resolves.toBeNull();
     } finally {
       await client.close();

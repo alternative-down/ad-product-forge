@@ -63,7 +63,6 @@ function AgentLogIndexRoute() {
       />
 
       <AgentRuntimeMemorySection
-        workingMemory={runtimeMemory?.workingMemory ?? null}
         agentContext={runtimeMemory?.agentContext ?? null}
         executionState={runtimeMemory?.executionState ?? 'idle'}
         lastExecutionError={runtimeMemory?.lastExecutionError ?? null}

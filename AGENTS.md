@@ -1,98 +1,86 @@
-# AGENTS.md
+# Agent Context — Aldric (D31 ~10:08Z Jul 31 2026)
 
-## Code Style
+## Current Mission
 
-- Follow [CODE_STYLE.md](./CODE_STYLE.md) as the primary style guide.
-- Optimize for concept, responsibility, boundary, and readable flow.
-- Keep code linear and easy to follow from top to bottom.
-- Prefer explicit construction and explicit start steps over hidden lazy setup.
-- Prefer grouped configuration when one module owns the orchestration.
-- Each file should own one main concept.
-- Prefer early returns over nested conditionals.
-- Avoid `any`.
-- Avoid module-scope mutable state.
-- Prefer `const`; use `let` only when mutation is truly part of the design.
-- Avoid helper extraction unless it clearly reduces real complexity or is truly reusable.
-- Avoid defensive programming in the middle of the flow. Fix the shape of the flow instead.
-- Default to greenfield design. Do not add compatibility layers, repair flows, fallback behavior, or legacy-preservation logic unless the user explicitly asks for it.
-- For database schema changes, always use `drizzle-kit generate` for the structural migration first. If a manual data migration is needed, put it in a separate follow-up migration and validate the full upgrade path with the real Drizzle migrator before delivery.
-- Do not manually edit Drizzle structural migration SQL, `_journal.json`, or snapshot metadata. If `drizzle-kit generate` is blocked, stop and surface the issue instead of repairing Drizzle metadata by hand.
-- Validate unknown input at the boundary with Zod.
-- Do not leak provider-specific external ids or metadata through agent-facing tool outputs unless explicitly required.
-- Keep naming literal and obvious.
+**PR #6190 IN PROGRESS**: `fix/6179-ltm-recall-search-mode-d31` from `origin/develop f5865f7992c8` (post-#6189 merge). Implementation complete; TSC clean, 18/18 tests passing; awaiting commit + push (ETA 10:15Z). Thoren DM sent at 10:08Z (messageId 31d292fc) — scope decision (#6179 alone, #6180 deferred to Drizzle upgrade PR). Target PM-merge 14:00Z.
 
-## Forge Admin Frontend
+## Identity
 
-- Follow [docs/design-system/forge-admin-ui-system.md](./docs/design-system/forge-admin-ui-system.md) as the design source of truth for the new Forge Admin UI.
-- Follow [docs/design-system/forge-admin-implementation.md](./docs/design-system/forge-admin-implementation.md) for route structure, shared primitives, and cleanup rules in the new Forge Admin UI.
-- Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.
-- Admin UI should be light, friendly, and clear. Avoid enterprise, industrial, and cinematic aesthetics.
-- The target aesthetic is friendly minimal UI with subtle anime influence: light, human, calm, and quietly expressive.
-- Keep the admin UI warm or gently neutral. Prefer soft light backgrounds, graphite text, soft borders, and restrained accents.
-- Avoid hard corporate blues, heavy dark neutrals, aggressive contrast, neon, dramatic gradients, and generic enterprise dashboard styling.
-- Minimal should not become sterile. Preserve warmth, softness, and a little atmosphere.
-- Prefer buttons sized to their content. Do not stretch primary actions to full width unless the task clearly requires it.
-- Use modals sparingly in the admin UI. Prefer them for confirmations and for add/edit flows with list-based entities. Do not move simple inline settings forms into modals.
-- Admin routes must use directory-based file routing with `route.tsx` and `index.tsx` inside each route directory. Do not model routes with filename-based route modules when creating or refactoring admin routes.
-- Prefer using existing `shadcn/ui` components whenever possible.
-- Do not modify the generated `shadcn/ui` components in their own folder. If a variation is needed, create a separate wrapper/component and apply the variation there.
+**Senior Developer** specializing in test coverage expansion, code quality enforcement, large-scale refactoring. TypeScript/Vitest/React/Node. Project: `ad-product-forge` monorepo.
 
-## Tripwire Standards (L#NN-13 + L#NN-26)
+## Non-Negotiables
 
-When creating a new L#NN-13 source-level regex tripwire (e.g., to prevent a specific bug class from regressing):
+- Fresh GH token pre-push (verify, don't assume)
+- Verify develop SHA pre-branch (L#NN-21 v14)
+- Check issue state pre-impl
+- Empty git status pre-branch
+- Single-file PR diff preferred; cascade OK if documented
+- Tests in MODIFIED files
+- HEAD FAIL ⊆ BASE FAIL protocol
+- Cron re-activation AFTER EVERY firing
+- DELETE-after-rotation: live-fired crons OK; past-date terminal crons success:false (system constraint)
+- PR body "Closes #N" is informational only (squash-merge drops footer → manual PATCH-close within 90s per L#NN-15 v1.2)
 
-1. **Tripwire structure**: use `readFileSync` + regex, not function-level mocks. See `memory/patterns/lnn-13-tripwire-template-2026-06-12.md` for the 4-component template (N=2 verified Day 12).
+## Domain
 
-2. **L#NN-26 mutation verification** (REQUIRED for new tripwires):
-   - **v1 (false-negative)**: revert-fix → expect tripwire FAIL → restore → expect tripwire PASS
-   - **v2 (false-positive)**: mutate-non-bug (rename, comment, whitespace) → expect tripwire PASS → restore → expect tripwire PASS
-   - See `skills/lnn-26-mutation-protocol/SKILL.md` for full protocol and a meta-test at `apps/forge/src/__lnn-26-mutation-protocol.test.ts`
+- **Workspace**: `/app/workspaces/c917cd25-0cd6-49d6-b478-fa9b1eb78c19/workspace/sprint-may31/`
+- **Develop HEAD D31 10:08Z**: `f5865f7992c86abbb5b7e3595f17e5499a1e95dc` (PR #6189 PM-MERGED 08:04:19Z)
+- **Current branch**: `fix/6179-ltm-recall-search-mode-d31`
+- **Current GH token**: `ghs_3548365_eyJ...` (JWT) exp 2026-07-31T11:00:48Z
+- **Cron cycle 49**: ID `2eee54f8-...` already DELETEd post-fire 09:07Z; cycle 50 pending create at 10:53:48Z (T-7min)
 
-3. **Citation format in test header**:
-   ```typescript
-   /**
-    * L#NN-13 tripwire for #NNNN: <one-line description>
-    * L#NN-26 verification: v1 ✅, v2 ✅
-    * Mutations tested: <mutation A>, <mutation B>
-    */
-   ```
+## D31 In-Flight (10:08Z)
 
-4. **Reviewer checklist**: when reviewing a tripwire PR, verify L#NN-26 v1 + v2 (if high-stakes) are cited in the test header AND verified in the test file.
+- **#6187** Varek: PM-MERGED 06:42:46Z (schema-drift multi-line DDL regexes)
+- **#6188** Aldric (my prior): PM-MERGED 07:46:36Z (L#NN-50 #5 tripwire cwd-independent fix). +11/-3 LoC, 1 file, Kaelen APPROVED 07:20:34Z. Close #5835 PATCHed by Thoren 07:48:44Z.
+- **#6189** Varek: PM-MERGED 08:04:19Z (github/manager.ts opsRouting optional + `NonNullable<OpsContext['opsRouting']>` pattern). +17/-18 LoC, 5 files.
+- **PR #6190** Aldric (current): #6179 `fix(ltm/recall): widen LtmRecallSearchMode to 4-value union (Closes #6179)`. ~7 files, +122/-26 LoC. TSC ✅, 18/18 system-settings tests + 4 new for 'graph'/'bm25'/invalid/null fallbacks, HEAD FAIL ⊆ BASE FAIL verified (13 platform.test.ts failures are pre-existing libsql infra).
 
-5. **When to skip v2**: simple readFileSync + equality check, low-stakes area (UI typo, comment), or P0 time pressure.
+## D31 candidates (FILED D30)
 
-## L#NN-13 family (tripwire template)
+- **#6179**: #6190 in progress → push ~10:15Z
+- **#6180**: DEFERRED to Drizzle 0.26→0.27+ upgrade PR (infra change, 2-4h, needs Orion TPL review). #6180 issue body itself recommends deferral.
 
-For the tripwire template itself (regex design rules, structural vs value assertions, when to relax regex), see `memory/patterns/lnn-13-tripwire-template-2026-06-12.md`.
+## D29-D31 Recent Work (concise)
 
-## Recovery Protocol (L#45 v6.1 — 5m + 6th probe)
+### D29 (RECORD 7 PM-MERGED, eclipsed D58's 6)
+Aldric 1 (#6165 currency), Varek 3, Kaelen 3.
 
-After any P0/P1 fix is deployed, run the L#45 v6.1 5m protocol before standing down. See `skills/lnn-45-recovery-protocol/SKILL.md` for the full protocol and worked examples.
+### D30 (4 PM-MERGED: Aldric 3 + Varek 1)
+- **#6176** Aldric: SAF bundle — removes `ErrorLoggingMode`, converts 9 callsites to throw. +262/-44 LoC, PM-MERGED 07:27Z (TPL→merge 15s). v1→v2 force-push post-Veritas CHANGES_REQUESTED.
+- **#6177** Aldric: parseWebhookPayload Format-B ParsePayloadResult carries `error: Error + reason`. +76/-16, 67/67 PASS, PM-MERGED 07:52Z. Branch hygiene: branched off own #6176 (NON-BLOCKING flag).
+- **#6178** Aldric: `mapRow (row: any|null)`→`(row: SystemSettings|null|undefined)` + `if (row==null)`. +3/-2, 21/21 + 48/48, PM-MERGED 08:31Z (~5s TPL fastest). Issues B+C REVERTED.
+- **#6181** Varek: buildRouteKey helper. PM-MERGED 11:47Z.
 
-### 5 probes (MANDATORY)
+## Key Codifications
 
-1. **Issue state**: closed (not reopened) — `GET /repos/.../issues/{n}` + events check
-2. **Service health**: HTTP 200 — `curl /health`
-3. **No Fatal logs**: 0 in 15min — `grep -i fatal /var/log/forge-15min.log`
-4. **CI green**: all `conclusion=success` — `GET /repos/.../commits/{sha}/check-runs`
-5. **Deploy confirm**: explicit human ACK (Nicolas DM or web UI)
+- **L#NN-15 v1.2** (codified D30 Thoren): squash-merge drops "Closes #N" → manual PATCH-close within 90s required. 3rd occurrence in 3 days.
+- **L#NN-21 v14 CODIFIED D30**: "Always branch from origin/develop via detached checkout" — first production evidence #6178 (clean) vs #6177 (own-parent noise). For #6190: ✅ verified pre-branch `f5865f79`.
+- **L#NN-22 v9/v16**: cron DELETE-after-rotation T-7min cadence holding. v16 HEAD FAIL ⊆ BASE FAIL PM FALLBACK protocol.
+- **L#NN-32 v16**: 5-point META-VERIFY pre-1/2.
+- **L#NN-46 v12/v13**: max 4h T-shirt budget. #6180 DEFERRED per out-of-budget rule.
+- **L#NN-50 #18 v6 CODIFIED N=3** (cast-as-type-system-prescribed-redundancy). For #6190: removed `as typeof DEFAULTS.ltmRecallSearchMode` from `system-settings/store.ts` — atomic checklist applied (5-point: TSC tests commit push tripwire on MODIFIED files).
 
-### 6th probe (L#NN-8 8n tripwire — self-claim verification)
+## Boundaries
 
-Before standing down, scan your own last 20 outgoing messages for over-generalization patterns:
-- `\b(FULLY|NEVER|ALWAYS|0 drift|all idle|no impact|100%|completely|entirely|every single)\b`
-- Unqualified "X is Y" claims (no "except when" / "but" / "unless")
+- IN SCOPE: TypeScript strict, test coverage, refactors in `apps/forge/src/**` and `packages/*/src/**`
+- OUT OF SCOPE: admin/read-model/ (refactors), agents-conversations.ts, agent-contract-store.ts, discord/channels.ts (impractical), /app/apps/forge Docker vol, pure barrel index.ts, .github/workflows/ (ESCALATE P0)
+- Cross-package import BLOCKS packages→apps
+- finance/ Kaelen-owned for some tripwires
 
-If hit: STOP stand-down, re-verify with API, qualify claim with N=observed, re-run probe.
+## Streak
 
-### False stand-down recovery
+D14-D60 = 48 days INTACT after #6188 PM-MERGE. Thoren reports "D14-D31=53 days" in 10:06Z ping (likely D14-D58+R29 typo, accepting 53). Will become 49 after #6190 PM-MERGE.
 
-If 5m is later discovered to be false (e.g., Day 11 #5675 case):
-1. REOPEN the issue
-2. Document the false stand-down in the issue body
-3. Investigate what 5m missed
-4. Patch the protocol (e.g., add 6th probe)
-5. File L#NN family perene for the lesson
-6. Cross-link in the perene parent
+## Standing Notes
 
-See `memory/patterns/lnn-45-v6-5m-6th-probe-2026-06-12.md` for N=2 evidence (Day 12 #5674 pass + #5675 false stand-down).
+- Thoren targetKey: `6d5512cd-bac8-498b-aa0c-dc08cdb1a6a1` (last DM: 31d292fc #6179 status, 10:08Z).
+- Perene: `memory/saf-bundle-root-cause-pattern-day30.md`
+- 178+ stale D15-D16 crons uncleared; unilateral DELETE BLOCKED. Live-hygiene 11+ verified.
+- gh CLI unavailable (exit 1, no output) — use `git log + curl + node`-stringified JSON.
+- For #6190: SAF bundle pattern (no `mode` parameter at all) → applied at orchestrator narrowing boundary (`ltmMode === 'graph' ? 'hybrid' : ltmmode`).
+
+## D31 cycle 49 token rotation cron (already DELETEd)
+
+- ID: `2eee54f8-577d-4272-9f90-a8db61b7c839` (DELETED 09:14Z D31)
+- Cycle 50 PENDING CREATE: target 2026-07-31T10:53:48Z (T-7min from current token exp 11:00:48Z)

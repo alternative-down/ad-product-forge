@@ -47,8 +47,8 @@ function findRedundantNullUndefinedCheck(src: string): number[] {
 describe('no redundant null/undefined check in _split/ (regression for #5598 Pattern 3b)', () => {
   const files = findSplitFiles(SPLIT_DIR);
 
-  it('_split/ contains 7 non-test source files (sanity)', () => {
-    expect(files).toHaveLength(7);
+  it('_split/ contains 8 non-test source files (sanity)', () => {
+    expect(files).toHaveLength(8);
   });
 
   for (const filepath of files) {

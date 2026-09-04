@@ -15,7 +15,7 @@ describe('error handler dedup tripwire (regression for #5579)', () => {
   const splitFiles = findSourceFiles(__dirname);
 
   it('_split/ contains 8 non-test .ts files (sanity)', () => {
-    expect(splitFiles).toHaveLength(7);
+    expect(splitFiles).toHaveLength(8);
   });
 
   for (const filename of splitFiles) {

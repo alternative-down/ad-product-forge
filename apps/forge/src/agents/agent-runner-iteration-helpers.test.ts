@@ -5,14 +5,12 @@
  *   buildIterationLoopSignature — iteration → stable JSON signature
  *   buildRecallStepFromIteration — iteration → LTM recall step format
  *   didIterationProduceVisibleAssistantText — iteration → bool
- *   didIterationUpdateWorkingMemory — iteration → bool
  */
 import { describe, expect, it } from 'vitest';
 import {
   buildIterationLoopSignature,
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
-  didIterationUpdateWorkingMemory,
 } from './agent-runner-iteration-helpers';
 
 // ─── buildIterationLoopSignature ───────────────────────────────────────────
@@ -224,34 +222,5 @@ describe('didIterationProduceVisibleAssistantText', () => {
   it('skips non-object messages', () => {
     const messages = ['not an object', 123, { role: 'assistant', content: 'valid' }];
     expect(didIterationProduceVisibleAssistantText({ text: '', messages })).toBe(true);
-  });
-});
-
-// ─── didIterationUpdateWorkingMemory ─────────────────────────────────────
-
-describe('didIterationUpdateWorkingMemory', () => {
-  it('returns true when updateWorkingMemory is present', () => {
-    const iteration = {
-      toolCalls: [{ name: 'updateWorkingMemory' }],
-    };
-    expect(didIterationUpdateWorkingMemory(iteration)).toBe(true);
-  });
-
-  it('returns false when updateWorkingMemory is absent', () => {
-    const iteration = {
-      toolCalls: [{ name: 'search' }, { name: 'read' }],
-    };
-    expect(didIterationUpdateWorkingMemory(iteration)).toBe(false);
-  });
-
-  it('returns false for empty tool calls', () => {
-    expect(didIterationUpdateWorkingMemory({ toolCalls: [] })).toBe(false);
-  });
-
-  it('detects updateWorkingMemory among other tools', () => {
-    const iteration = {
-      toolCalls: [{ name: 'search' }, { name: 'updateWorkingMemory' }, { name: 'read' }],
-    };
-    expect(didIterationUpdateWorkingMemory(iteration)).toBe(true);
   });
 });

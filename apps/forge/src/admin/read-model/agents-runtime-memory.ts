@@ -1,7 +1,7 @@
 /**
  * agents-runtime-memory.ts
  *
- * Reads runtime memory state for an agent: working memory, operational memory,
+ * Reads runtime memory state for an agent: operational memory,
  * long-term memory snapshots, checkpoint summary, and observability metrics.
  * Extracted from admin/read-model/agents.ts (#2264 phase 1).
  *
@@ -27,7 +27,6 @@ import {
 import { errorMsg } from '../../agents/error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import { formatWorkingMemoryValue } from './helpers';
 import type { ConversationMessage, ConversationMessagePart } from 'agent-runtime-core/integrations';
 import type { LtmSnapshot } from '../../agents/ltm/generate-helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
@@ -56,7 +55,6 @@ export interface AgentRuntimeMemoryInput {
 }
 
 export interface AgentRuntimeMemoryOutput {
-  workingMemory: string | null;
   agentContext: string | null;
   executionState: 'idle' | 'running' | 'absent';
   lastExecutionError: string | null;
@@ -167,9 +165,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         agentContext = null;
       }
 
-      const workingMemory =
-        (await conversationStore.read({ threadId: mastraAgentId, resourceId: mastraAgentId }))
-          ?.workingMemory ?? null;
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const systemSettings = createSystemSettingsStore(db);
       const settings = await systemSettings.getSettings();
@@ -274,7 +269,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
           : null);
 
       return {
-        workingMemory: formatWorkingMemoryValue(workingMemory),
         agentContext,
         executionState: agent.executionState as 'idle' | 'running' | 'absent',
         lastExecutionError: agent.lastExecutionError ?? null,

@@ -31,11 +31,6 @@ export const MIGRATED_FILES: HelperFileMigration[] = [
     expectedOneObjectArgCalls: 0,
   },
   {
-    // D41 #6389 initAgentRegistryDebug: uses 3-positional-arg internally
-    path: 'scripts/init-agent-registry.ts',
-    expectedOneObjectArgCalls: 0,
-  },
-  {
     // D41 #6390 migrationsDebug: uses 3-positional-arg internally
     path: 'database/migrate.ts',
     expectedOneObjectArgCalls: 0,
