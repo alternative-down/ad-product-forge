@@ -10,6 +10,13 @@ import { vi, describe, it, expect } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
+  // D66 #6784 followup: adminRouteError calls errorMsg(error) (re-exported
+  // from apps/forge/src/agents/error-formatting.ts → @forge-runtime/core).
+  // Without this mock, error path triggers "errorMsg is not a function" →
+  // 15 unhandled rejections. Mirror the helpers' real behavior (D63 #5889).
+  errorMsg: vi.fn((err: unknown) =>
+    err instanceof Error ? err.message : String(err),
+  ),
 }));
 import { registerAgentReadRoutes } from './read';
 import { registerAgentOperationRoutes } from './operations';
@@ -70,6 +77,12 @@ vi.mock('../helpers', () => ({
   normalizeOptionalText: (v?: string) => (v?.trim() ? v.trim() : null),
   normalizeJsonText: vi.fn().mockReturnValue(null),
   createId: () => `test-id-${Date.now()}`,
+  // D66 #6784 followup: adminRouteError (admin-route-error-helper.ts:50) calls
+  // jsonResponse to produce 500 responses in error paths. Without this mock,
+  // the route handler rejects with "jsonResponse is not a function" — visible
+  // as 15 unhandled rejections in vitest output. Mirror real helpers.ts
+  // behavior: returns a request-shaped object with status + body.
+  jsonResponse: vi.fn((body: unknown, status = 200) => ({ status, body })),
 }));
 
 vi.mock('node:fs/promises', () => ({ access: vi.fn().mockResolvedValue(undefined) }));
