@@ -24,7 +24,6 @@
  *
  * MIGRATED (uses 3-positional-arg internally):
  * - apps/forge/src/email/migadu-manager.ts (D38 #6300, Aldric)
- * - apps/forge/src/scripts/init-agent-registry.ts (D41 #6389, Kaelen)
  * - apps/forge/src/database/migrate.ts (D41 #6390, Kaelen)
  * - apps/forge/src/agents/hire-agent.ts (D42 cycle 16, Varek)
  * - apps/forge/src/github/ops/labels.ts (D42 cycle 17, Varek)
@@ -70,11 +69,6 @@ const MIGRATED_FILES: HelperFileMigration[] = [
   {
     // D38 #6300 migaduManagerDebug: uses 3-positional-arg internally
     path: 'email/migadu-manager.ts',
-    expectedOneObjectArgCalls: 0,
-  },
-  {
-    // D41 #6389 initAgentRegistryDebug: uses 3-positional-arg internally
-    path: 'scripts/init-agent-registry.ts',
     expectedOneObjectArgCalls: 0,
   },
   {
@@ -376,10 +370,10 @@ describe('L#NN-50 #18 v10 helper-extraction rollout guard', () => {
   // 39 MIGRATED + 0 CANDIDATE = 39 tracked as of D66 scout verification.
   // (Header docstring still lists 4 historical candidates, but they were
   // all promoted out of CANDIDATE_FILES; the array is empty.)
-  it('D66 scout snapshot: 39 MIGRATED + 0 CANDIDATE = 39 tracked (#6766 cat 3 GREEN)', () => {
-    expect(MIGRATED_FILES.length, 'MIGRATED_FILES count drifted from D66 baseline — investigate').toBe(39);
+  it('D66 scout snapshot: 38 MIGRATED + 0 CANDIDATE = 38 tracked (#6766 cat 3 GREEN)', () => {
+    expect(MIGRATED_FILES.length, 'MIGRATED_FILES count drifted from D66 baseline — investigate').toBe(38);
     expect(CANDIDATE_FILES.length, 'CANDIDATE_FILES count drifted from D66 baseline — investigate').toBe(0);
-    expect(MIGRATED_FILES.length + CANDIDATE_FILES.length).toBe(39);
+    expect(MIGRATED_FILES.length + CANDIDATE_FILES.length).toBe(38);
   });
 
   // Verify MIGRATED files have ZERO 1-object-arg calls (regression guard)

@@ -1,6 +1,4 @@
 export type AgentRuntimeMemorySnapshot = {
-  workingMemory: string | null;
-
   agentContext: string | null;
 
   executionState: 'idle' | 'running' | 'absent';

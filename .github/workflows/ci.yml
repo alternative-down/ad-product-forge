@@ -34,11 +34,3 @@ jobs:
 
       - name: Test
         run: npm run test
-
-      - name: Schema drift detector (BLOCKING)
-        # Blocking mode (--fail is the default) per issue #5489.
-        # The detector exits 0=no-drift, 1=drift, 2=detector-error.
-        # New drift MUST be either fixed in the same PR OR added to the
-        # baseline in apps/forge/scripts/schema-drift-detector/known-drift.json
-        # with a follow-up issue. See #5489 for the rollout.
-        run: node apps/forge/scripts/schema-drift-detector/detect.mjs

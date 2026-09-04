@@ -2,14 +2,25 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
 import { zipSync } from 'fflate';
 
+const fsMocks = vi.hoisted(() => ({
+  statMock: vi.fn(),
+  mkdirMock: vi.fn(),
+  rmMock: vi.fn(),
+  writeFileMock: vi.fn(),
+}));
+
 vi.mock('node:fs/promises', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
+  const actual = (await importOriginal()) as typeof import('node:fs/promises');
+  const mocked = {
     ...actual,
-    stat: vi.fn(),
-    mkdir: vi.fn(() => Promise.resolve()),
-    rm: vi.fn(() => Promise.resolve()),
-    writeFile: vi.fn(() => Promise.resolve()),
+    stat: fsMocks.statMock,
+    mkdir: fsMocks.mkdirMock,
+    rm: fsMocks.rmMock,
+    writeFile: fsMocks.writeFileMock,
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 
@@ -17,18 +28,10 @@ vi.mock('./workspace-skill-paths', () => ({
   resolveAgentSkillsRoot: vi.fn(() => '/mock/skills'),
 }));
 
-const fsMocks = {
-  statMock: vi.fn(),
-  mkdirMock: vi.fn(),
-  rmMock: vi.fn(),
-  writeFileMock: vi.fn(),
-};
-
 beforeEach(async () => {
   vi.clearAllMocks();
 
-  const fs = await import('node:fs/promises');
-  fsMocks.statMock.mockRejectedValue(new Error('ENOENT'));
+  fsMocks.statMock.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
   fsMocks.mkdirMock.mockResolvedValue(undefined);
   fsMocks.writeFileMock.mockResolvedValue(undefined);
 });
@@ -52,7 +55,6 @@ describe('installAgentWorkspaceSkillsArchive', () => {
 
   describe('archive installation', () => {
     it('extracts files from archive and returns skill names', async () => {
-      const fs = await import('node:fs/promises');
       fsMocks.mkdirMock.mockResolvedValue(undefined);
 
       const zipBase64 = createZipArchive({
@@ -84,7 +86,6 @@ describe('installAgentWorkspaceSkillsArchive', () => {
     });
 
     it('handles Windows-style path separators', async () => {
-      const fs = await import('node:fs/promises');
       fsMocks.mkdirMock.mockResolvedValue(undefined);
       fsMocks.writeFileMock.mockResolvedValue(undefined);
 
@@ -102,7 +103,6 @@ describe('installAgentWorkspaceSkillsArchive', () => {
     });
 
     it('normalizes paths with leading slashes', async () => {
-      const fs = await import('node:fs/promises');
       fsMocks.mkdirMock.mockResolvedValue(undefined);
       fsMocks.writeFileMock.mockResolvedValue(undefined);
 
@@ -120,7 +120,6 @@ describe('installAgentWorkspaceSkillsArchive', () => {
     });
 
     it('sorts skill names in result', async () => {
-      const fs = await import('node:fs/promises');
       fsMocks.mkdirMock.mockResolvedValue(undefined);
       fsMocks.writeFileMock.mockResolvedValue(undefined);
 

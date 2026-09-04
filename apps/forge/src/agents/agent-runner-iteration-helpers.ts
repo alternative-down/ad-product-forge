@@ -5,7 +5,7 @@
  *
  * Functions for transforming LLM iterations for the LTM recall pipeline:
  * building stable loop signatures, constructing recall steps, detecting
- * visible assistant text output, and identifying working-memory updates.
+ * visible assistant text output.
  *
  * Fully testable in isolation.
  */
@@ -169,15 +169,4 @@ export function didIterationProduceVisibleAssistantText(iteration: {
   }
 
   return false;
-}
-
-// ─── Working-memory update detection ─────────────────────────────────────────
-
-/**
- * Returns true if the iteration contains an updateWorkingMemory tool call.
- */
-export function didIterationUpdateWorkingMemory(iteration: {
-  toolCalls: Array<{ name: string }>;
-}): boolean {
-  return iteration.toolCalls.some((tool) => tool.name === 'updateWorkingMemory');
 }

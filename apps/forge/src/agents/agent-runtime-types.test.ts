@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type {
   CreateForgeAgentConfig,
   CreateAgentOptions,
-  RuntimeWorkingMemory,
   RuntimeStepUsage,
   RuntimeGenerateStepResult,
   RuntimeIteration,
@@ -16,22 +15,6 @@ import type {
   RuntimeModelField,
   CreateForgeAgentConfigSchema,
 } from './runtime/types';
-
-// ── RuntimeWorkingMemory ──────────────────────────────────────────────────────
-
-describe('RuntimeWorkingMemory', () => {
-  it('is a structural interface with getWorkingMemory', () => {
-    // Verify the shape exists — this is a type-level test
-    const mem: RuntimeWorkingMemory = {
-      getWorkingMemory: async ({ threadId, resourceId }) => {
-        void threadId;
-        void resourceId;
-        return 'some memory content';
-      },
-    };
-    expect(typeof mem.getWorkingMemory).toBe('function');
-  });
-});
 
 // ── RuntimeStepUsage ──────────────────────────────────────────────────────────
 
@@ -221,18 +204,14 @@ describe('RuntimeAgentGenerateOptions', () => {
 // ── RuntimeAgent ──────────────────────────────────────────────────────────────
 
 describe('RuntimeAgent', () => {
-  it('defines generate and memory interface', () => {
+  it('defines generate interface', () => {
     const agent: RuntimeAgent = {
       generate: async (prompt) => {
         void prompt;
         return { text: 'response' };
       },
-      hasOwnMemory: () => true,
-      getMemory: async () => null,
     };
     expect(typeof agent.generate).toBe('function');
-    expect(typeof agent.hasOwnMemory).toBe('function');
-    expect(typeof agent.getMemory).toBe('function');
   });
 });
 

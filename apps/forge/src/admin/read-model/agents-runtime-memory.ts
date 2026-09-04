@@ -1,8 +1,7 @@
 /**
  * agents-runtime-memory.ts
  *
- * Reads runtime memory state for an agent: working memory, operational memory,
- * checkpoint summary and observability metrics.
+ * Reads operational memory, checkpoint summaries, and observability metrics.
  * Extracted from admin/read-model/agents.ts (#2264 phase 1).
  *
  * Extracted companions:
@@ -26,7 +25,6 @@ import {
 } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
-import { formatWorkingMemoryValue } from './helpers';
 import type { ConversationMessage, ConversationMessagePart } from 'agent-runtime-core/integrations';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { AGENT_CONTEXT_FILE_PATH } from '../../utils/constants';
@@ -56,7 +54,6 @@ export interface AgentRuntimeMemoryInput {
 }
 
 export interface AgentRuntimeMemoryOutput {
-  workingMemory: string | null;
   agentContext: string | null;
   executionState: 'idle' | 'running' | 'absent';
   lastExecutionError: string | null;
@@ -149,9 +146,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         agentContext = null;
       }
 
-      const workingMemory =
-        (await conversationStore.read({ threadId: mastraAgentId, resourceId: mastraAgentId }))
-          ?.workingMemory ?? null;
       const systemSettings = createSystemSettingsStore(db);
       const settings = await systemSettings.getSettings();
 
@@ -203,7 +197,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
           : null;
 
       return {
-        workingMemory: formatWorkingMemoryValue(workingMemory),
         agentContext,
         executionState: agent.executionState as 'idle' | 'running' | 'absent',
         lastExecutionError: agent.lastExecutionError ?? null,

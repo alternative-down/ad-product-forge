@@ -101,10 +101,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepNumber: iterationNumber - 1,
     });
 
-    // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
-      agentContext: iterationNumber === 1 ? input.options.system : undefined,
+      agentContext: input.options.system,
       todosText:
         iterationNumber === 1
           ? input.options.loadTodosText
@@ -207,14 +206,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
           content: message.content.trim(),
         }))
         .filter((message) => message.content),
-      ...(continuation.feedback?.trim()
-        ? [
-            {
-              role: 'user' as const,
-              content: continuation.feedback.trim(),
-            },
-          ]
-        : []),
     ];
 
     if (continuationMessages.length > 0) {
@@ -244,7 +235,6 @@ function summarizeGenerateRequest(input: {
   system?: string;
   systemSegments: {
     baseSystem: string;
-    workingMemory: string;
     agentContext: string;
     todosText: string;
     planText: string;
@@ -276,7 +266,6 @@ function summarizeGenerateRequest(input: {
     systemChars: input.system?.length ?? 0,
     systemSegmentChars: {
       baseSystem: input.systemSegments.baseSystem.length,
-      workingMemory: input.systemSegments.workingMemory.length,
       agentContext: input.systemSegments.agentContext.length,
     },
     messageCount: input.messages.length,
@@ -424,7 +413,6 @@ async function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '',
     agentContext: input.agentContext?.trim() || '',
     todosText: input.todosText?.trim() || '',
     planText: input.planText?.trim() || '',
@@ -432,7 +420,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
 
   return {
     text:
-      [segments.baseSystem, segments.workingMemory, segments.agentContext]
+      [segments.baseSystem, segments.agentContext]
         .filter((value): value is string => Boolean(value))
         .join('\n\n')
         .trim() || undefined,

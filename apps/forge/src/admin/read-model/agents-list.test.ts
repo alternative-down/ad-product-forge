@@ -29,7 +29,6 @@ vi.mock('@forge-runtime/core', () => ({
   readOperationalMemoryState: mockReadOperationalMemoryState,
   toMastraSafeIdentifier: (s: string) => s.replace(/[^a-zA-Z0-9_]/g, '_'),
   LibsqlConversationStore: vi.fn().mockImplementation(() => ({
-    read: vi.fn().mockResolvedValue({ workingMemory: null }),
   })),
 }));
 
