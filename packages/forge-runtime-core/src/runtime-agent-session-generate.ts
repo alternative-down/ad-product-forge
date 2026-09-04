@@ -196,14 +196,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
           content: message.content.trim(),
         }))
         .filter((message) => message.content),
-      ...(continuation.feedback?.trim()
-        ? [
-            {
-              role: 'user' as const,
-              content: continuation.feedback.trim(),
-            },
-          ]
-        : []),
     ];
 
     if (continuationMessages.length > 0) {
