@@ -1,17 +1,12 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions, reexport-check/no-unnecessary-reexports */
+import type { Client, Transaction } from '@libsql/client';
 import { z } from 'zod';
-import type { Client } from '@libsql/client';
 
 export type TodoItemStatus = 'pending' | 'in_progress' | 'completed';
 
 export type TodoItem = {
   id: string;
-  threadId: string;
-  resourceId: string;
   title: string;
   status: TodoItemStatus;
-  createdAt: string;
-  updatedAt: string;
 };
 
 export type TodoItemInput = {
@@ -20,37 +15,15 @@ export type TodoItemInput = {
   status?: TodoItemStatus;
 };
 
-const todoItemInputSchema = z
-  .union(
-    [
-      z.object({
-        items: z.union([
-          z.object({
-            id: z.string().optional(),
-            title: z.string().min(1),
-            status: z.enum(['pending', 'in_progress', 'completed']).optional(),
-          }),
-          z.array(
-            z.object({
-              id: z.string().optional(),
-              title: z.string().min(1),
-              status: z.enum(['pending', 'in_progress', 'completed']).optional(),
-            }),
-          ),
-        ]),
-      }),
-    ] as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
-  )
-  .transform((val: any) => {
-    if ('items' in val) {
-      const items = val.items;
-      if (Array.isArray(items)) {
-        return { items } as { items: TodoItemInput[] };
-      }
-      return { items: [items] as TodoItemInput[] };
-    }
-    return { items: [] as TodoItemInput[] };
-  });
+const todoItemSchema = z.object({
+  id: z.string().regex(/^\d+$/).optional(),
+  title: z.string().trim().min(1),
+  status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+});
+
+const updateTodosSchema = z.object({
+  items: z.union([todoItemSchema, z.array(todoItemSchema)]),
+});
 
 export type LibsqlTodoStoreOptions = {
   client: Client;
@@ -68,160 +41,133 @@ export class LibsqlTodoStore {
     this.tableName = `${prefix}_todos`;
   }
 
-  private async ensureSchema() {
-    if (this.schemaReady) return;
+  async initialize(): Promise<void> {
     await this.client.execute({
-      sql: `create table if not exists "${this.tableName.replace(/"/g, '""')}" (
-        id text not null,
-        thread_id text not null,
-        resource_id text not null,
+      sql: `create table if not exists ${this.escapedTableName} (
+        id text primary key,
         title text not null,
-        status text not null default 'pending',
-        created_at text not null,
-        updated_at text not null,
-        primary key (thread_id, resource_id, id)
+        status text not null
       )`,
     });
     this.schemaReady = true;
   }
 
-  private escapeId(value: string) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
+  async update(items: TodoItemInput[]): Promise<TodoItem[]> {
+    this.assertReady();
+    const transaction = await this.client.transaction('write');
 
-  /**
-   * Upsert one or many todo items atomically.
-   * Items with id → update existing. Items without id → create new (UUID).
-   * No status on update → preserve existing.
-   */
-  async upsertTodos(
-    threadId: string,
-    resourceId: string,
-    items: TodoItemInput[],
-  ): Promise<TodoItem[]> {
-    if (items.length === 0) {
-      return await this.getTodos(threadId, resourceId);
-    }
-
-    await this.ensureSchema();
-    const now = new Date().toISOString();
-
-    const results: TodoItem[] = [];
-
-    for (const item of items) {
-      if (item.id) {
-        // Update existing
-        const setClauses = ['updated_at = ?'];
-        const args: (string | number)[] = [now];
-
-        if (item.title !== undefined) {
-          setClauses.push('title = ?');
-          args.push(item.title);
-        }
-        if (item.status !== undefined) {
-          setClauses.push('status = ?');
-          args.push(item.status);
-        }
-
-        args.push(item.id, threadId, resourceId);
-
-        await this.client.execute({
-          sql: `update ${this.escapeId(this.tableName)} set ${setClauses.join(', ')} where id = ? and thread_id = ? and resource_id = ?`,
-          args,
-        });
-
-        const existing = await this.client.execute({
-          sql: `select * from ${this.escapeId(this.tableName)} where id = ? and thread_id = ? and resource_id = ?`,
-          args: [item.id, threadId, resourceId],
-        });
-        if (existing.rows.length > 0) {
-          results.push(this.rowToTodo(existing.rows[0]));
-        }
-      } else {
-        // Create new
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        await this.client.execute({
-          sql: `insert into ${this.escapeId(this.tableName)} (id, thread_id, resource_id, title, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?)`,
-          args: [id, threadId, resourceId, item.title, item.status ?? 'pending', now, now],
-        });
-        results.push({
-          id,
-          threadId,
-          resourceId,
-          title: item.title,
-          status: item.status ?? 'pending',
-          createdAt: now,
-          updatedAt: now,
-        });
+    try {
+      if (items.length === 0) {
+        await transaction.execute(`delete from ${this.escapedTableName}`);
+        await transaction.commit();
+        return [];
       }
+
+      const current = await this.readFrom(transaction);
+      let nextId = current.reduce((largest, item) => Math.max(largest, Number(item.id)), 0) + 1;
+
+      for (const item of items) {
+        if (item.id === undefined) {
+          const id = String(nextId);
+          nextId += 1;
+          await transaction.execute({
+            sql: `insert into ${this.escapedTableName} (id, title, status) values (?, ?, ?)`,
+            args: [id, item.title, item.status ?? 'pending'],
+          });
+          current.push({ id, title: item.title, status: item.status ?? 'pending' });
+          continue;
+        }
+
+        const existing = current.find((candidate) => candidate.id === item.id);
+
+        if (existing === undefined) {
+          throw new Error(`Todo ${item.id} does not exist.`);
+        }
+
+        await transaction.execute({
+          sql: `update ${this.escapedTableName} set title = ?, status = ? where id = ?`,
+          args: [item.title, item.status ?? existing.status, item.id],
+        });
+        existing.title = item.title;
+        existing.status = item.status ?? existing.status;
+      }
+
+      const updated = await this.readFrom(transaction);
+      await transaction.commit();
+      return updated;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async read(): Promise<TodoItem[]> {
+    this.assertReady();
+    return await this.readFrom(this.client);
+  }
+
+  async getContextText(): Promise<string> {
+    const items = await this.read();
+
+    if (items.length === 0) {
+      return '';
     }
 
-    return results;
+    return [
+      '<operational_todos>',
+      ...items.map(
+        (item) => `  <todo id="${item.id}" status="${item.status}">${escapeXml(item.title)}</todo>`,
+      ),
+      '</operational_todos>',
+    ].join('\n');
   }
 
-  /**
-   * Get all todos for a thread/resource.
-   */
-  async getTodos(threadId: string, resourceId: string): Promise<TodoItem[]> {
-    await this.ensureSchema();
-    const result = await this.client.execute({
-      sql: `select * from ${this.escapeId(this.tableName)} where thread_id = ? and resource_id = ? order by created_at asc`,
-      args: [threadId, resourceId],
-    });
-    return Array.from(result.rows).map((row) => this.rowToTodo(row));
+  private assertReady() {
+    if (!this.schemaReady) {
+      throw new Error('Initialize the todo store before using it.');
+    }
   }
 
-  /**
-   * Clear all todos for a thread/resource.
-   */
-  async clearTodos(threadId: string, resourceId: string): Promise<void> {
-    await this.ensureSchema();
-    await this.client.execute({
-      sql: `delete from ${this.escapeId(this.tableName)} where thread_id = ? and resource_id = ?`,
-      args: [threadId, resourceId],
-    });
+  private async readFrom(executor: Pick<Client | Transaction, 'execute'>): Promise<TodoItem[]> {
+    const result = await executor.execute(
+      `select id, title, status from ${this.escapedTableName} order by cast(id as integer) asc`,
+    );
+
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      title: String(row.title),
+      status: String(row.status) as TodoItemStatus,
+    }));
   }
 
-  private rowToTodo(row: Record<string, unknown>): TodoItem {
-    return {
-      id: String(row['id']),
-      threadId: String(row['thread_id']),
-      resourceId: String(row['resource_id']),
-      title: String(row['title']),
-      status: String(row['status']) as TodoItemStatus,
-      createdAt: String(row['created_at']),
-      updatedAt: String(row['updated_at']),
-    };
+  private get escapedTableName() {
+    return `"${this.tableName.replaceAll('"', '""')}"`;
   }
 }
 
-export type UpdateTodosInput = z.infer<typeof todoItemInputSchema>;
+export type UpdateTodosInput = z.infer<typeof updateTodosSchema>;
 
-/**
- * Creates the updateTodos runtime action.
- * Requires threadId and resourceId to scope todos per agent/thread/resource.
- */
-export function createUpdateTodosAction(
-  store: LibsqlTodoStore,
-  threadId: string,
-  resourceId: string,
-) {
+export function createUpdateTodosAction(store: LibsqlTodoStore) {
   return {
     name: 'updateTodos',
     description:
-      'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
-    inputSchema:
-      todoItemInputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
-    execute: async (rawInput: unknown): Promise<unknown> => {
-      const { items } = todoItemInputSchema.parse(rawInput) as { items: TodoItemInput[] };
+      'Create or update persistent operational todos. Send an empty items array only when the entire list should be cleared. Completed items remain visible until cleared.',
+    inputSchema: updateTodosSchema,
+    async execute(input: unknown) {
+      const parsed = updateTodosSchema.parse(input);
+      const items = Array.isArray(parsed.items) ? parsed.items : [parsed.items];
+      const todos = await store.update(items);
 
-      if (items.length === 0) {
-        await store.clearTodos(threadId, resourceId);
-        return { cleared: true, todos: [] };
-      }
-
-      const updated = await store.upsertTodos(threadId, resourceId, items);
-      return { todos: updated };
+      return { todos };
     },
   };
+}
+
+function escapeXml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
 }

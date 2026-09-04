@@ -3,6 +3,8 @@ import {
   type CommunicationModule,
   createRuntimeAgentSession,
   createExternalAccountTools,
+  LibsqlTodoStore,
+  RuntimePlanMode,
   type ToolsInput,
   toolsToRuntimeActions,
 } from '@forge-runtime/core';
@@ -283,6 +285,11 @@ export async function createInternalAgentRuntime<
   createForgeAgentDebug('info', 'runtime initialization: runtime session starting', {
     agentId: config.id,
   });
+  const todoStore = new LibsqlTodoStore({
+    client: platform.client,
+    tablePrefix: platform.mastraId,
+  });
+  await todoStore.initialize();
   const agent = await createRuntimeAgentSession({
     agentId: config.id,
     agentName: config.name,
@@ -292,6 +299,10 @@ export async function createInternalAgentRuntime<
     model: config.model as never,
     system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     conversationStore: platform.conversationStore,
+    todoStore,
+    planMode: new RuntimePlanMode({
+      agentMemoryPath: platform.agentMemoryPath,
+    }),
     checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt:

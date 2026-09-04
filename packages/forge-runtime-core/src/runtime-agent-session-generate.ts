@@ -105,18 +105,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
-      todosText:
-        iterationNumber === 1
-          ? input.options.loadTodosText
-            ? await input.options.loadTodosText()
-            : undefined
-          : undefined,
-      planText:
-        iterationNumber === 1
-          ? input.options.loadPlanText
-            ? await input.options.loadPlanText()
-            : undefined
-          : undefined,
+      operationalState: await input.runtime.getOperationalContextText(),
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
     });
@@ -246,8 +235,7 @@ function summarizeGenerateRequest(input: {
     baseSystem: string;
     workingMemory: string;
     agentContext: string;
-    todosText: string;
-    planText: string;
+    operationalState: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
@@ -278,6 +266,7 @@ function summarizeGenerateRequest(input: {
       baseSystem: input.systemSegments.baseSystem.length,
       workingMemory: input.systemSegments.workingMemory.length,
       agentContext: input.systemSegments.agentContext.length,
+      operationalState: input.systemSegments.operationalState.length,
     },
     messageCount: input.messages.length,
     messageChars:
@@ -417,8 +406,7 @@ function appendGenerateDiagnostics(
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;
-  todosText?: string;
-  planText?: string;
+  operationalState?: string;
   threadId: string;
   resourceId: string;
 }) {
@@ -426,17 +414,20 @@ async function buildRuntimeSessionSystemPrompt(input: {
     baseSystem: input.baseSystem?.trim() || '',
     workingMemory: '',
     agentContext: input.agentContext?.trim() || '',
-    todosText: input.todosText?.trim() || '',
-    planText: input.planText?.trim() || '',
+    operationalState: input.operationalState?.trim() || '',
   };
 
   return {
     text:
-      [segments.baseSystem, segments.workingMemory, segments.agentContext]
+      [
+        segments.baseSystem,
+        segments.workingMemory,
+        segments.agentContext,
+        segments.operationalState,
+      ]
         .filter((value): value is string => Boolean(value))
         .join('\n\n')
         .trim() || undefined,
-    todosText: input.todosText?.trim() || '',
     segments,
   };
 }
