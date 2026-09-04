@@ -145,6 +145,10 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
 
     if (contract === undefined || contract === null) {
+      agentRunnerDebug('info', 'run transitioning to idle because no runnable contract exists', {
+        runtimeId: deps.runtimeId,
+        runEpoch,
+      });
       await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
       drainWakeQueueAfterStep = true;
       return;
@@ -229,6 +233,11 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       const pendingMessageCount = messageManager.getPendingCount();
 
       if (pendingMessageCount === 0) {
+        agentRunnerDebug('info', 'run transitioning to idle after explicit control directive', {
+          runtimeId: deps.runtimeId,
+          runEpoch,
+          controlDirective,
+        });
         backoffState.nextStepAt = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (loopDetector?.reset) {
@@ -247,13 +256,14 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
 
     scheduler.resetBackoff();
-    if (messageManager.getPendingCount() > 0) {
-      continueRunning = true;
-      return;
-    }
-
-    await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
-    drainWakeQueueAfterStep = true;
+    continueRunning = true;
+    agentRunnerDebug('info', 'generation completed without stop directive; continuing run', {
+      runtimeId: deps.runtimeId,
+      runEpoch,
+      finishReason: result?.finishReason ?? 'unknown',
+      toolCallCount: result?.toolCalls?.length ?? 0,
+      pendingMessageCount: messageManager.getPendingCount(),
+    });
   } catch (error) {
     messageManager.restoreFlushedRunMessages();
 
