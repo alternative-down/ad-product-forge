@@ -65,24 +65,6 @@ export type AgentRuntimeMemorySnapshot = {
     error: string | null;
   } | null;
 
-  ltm: {
-    running: boolean;
-
-    queued: boolean;
-
-    lastRunAt: number | null;
-
-    lastRunError: string | null;
-
-    lastRunErrorAt: number | null;
-
-    lastWrittenPackageId: string | null;
-
-    lastWrittenAt: number | null;
-
-    packageCount: number;
-  } | null;
-
   metrics: {
     rawMessageCount: number;
 

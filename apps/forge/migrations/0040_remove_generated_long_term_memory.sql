@@ -1,0 +1,1 @@
+DROP TABLE `agent_long_term_memory_states`;

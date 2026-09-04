@@ -42,13 +42,12 @@ const FORGE_SRC = import.meta.dirname;
 // Format: { file: count } — count helps validate allowlist consistency.
 const ALLOWLIST: ReadonlyMap<string, number> = new Map([
   // Phase 2 P1 cleanup targets
-  ['github/manager.ts', 4],  // D63: 3→4 (5 raw 'as never', 4 after comment strip; L156 retained per #5816 Phase 2 follow-up)
+  ['github/manager.ts', 4], // D63: 3→4 (5 raw 'as never', 4 after comment strip; L156 retained per #5816 Phase 2 follow-up)
   // Phase 2 P2 cleanup targets
-  ['agents/create-forge-agent.ts', 5],
+  ['agents/create-forge-agent.ts', 2],
   // Phase 2 P3 cleanup targets (single-site files)
   ['github/ops/routing.ts', 2],
   ['admin/routes/internal-chat/events.ts', 1],
-  ['agents/agent-long-term-memory.ts', 1],
 ]);
 
 function findTsFiles(dir: string): string[] {
@@ -79,9 +78,7 @@ function findTsFiles(dir: string): string[] {
 
 function countMatches(content: string, pattern: RegExp): number {
   // L#NN-26 v3: strip comments BEFORE regex matching.
-  const codeOnly = content
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '');
+  const codeOnly = content.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   return (codeOnly.match(pattern) ?? []).length;
 }
 
@@ -113,9 +110,7 @@ describe('L#NN-50 #11 tripwire — no-as-never-pattern', () => {
       }
     }
     if (violations.length > 0) {
-      const msg = violations
-        .map((v) => `  ${v.file}: ${v.count} site(s)`)
-        .join('\n');
+      const msg = violations.map((v) => `  ${v.file}: ${v.count} site(s)`).join('\n');
       throw new Error(
         `Found \`as never\` sites in non-allowlisted files:\n${msg}\n` +
           `Either fix the casts OR add the file to ALLOWLIST in this tripwire ` +

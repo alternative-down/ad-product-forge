@@ -19,7 +19,6 @@ import { createCompanyCashOperations } from '../finance/company-cash-operations'
 import { findOrThrow } from '../database/find-or-throw';
 import { withDbErrorLogging } from '../database/error-logging';
 
-
 /**
  * Creates an agent contract store.
  *
@@ -251,7 +250,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
     contractId: string;
     llmProfileId: string;
     modelKey: string;
-    kind: 'agent-step' | 'om' | 'ltm';
+    kind: 'agent-step' | 'om';
     inputTokens: number;
     cachedInputTokens: number;
     outputTokens: number;

@@ -10,16 +10,7 @@ export async function createAgentRuntimeMemory(input: {
   agentId: string;
   mastraId: string;
   agentWorkspacePath: string;
-  agentModel: unknown;
-  omModel?: unknown;
   agentMemoryPath: string;
-  longTermMemory?: boolean;
-  memoryLastMessagesFullEnabled?: boolean;
-  memoryLastMessagesCount?: number;
-  tokenCountFilterEnabled?: boolean;
-  tokenCountFilterLimit?: number;
-  checkpointedOmEnabled?: boolean;
-  checkpointedOmRecentRawTokens?: number;
   ltmRecallScoreThreshold?: number;
   ltmRecallDocumentCount?: number;
   workspaceEmbedder?: WorkspaceEmbedderId;
@@ -40,24 +31,21 @@ export async function createAgentRuntimeMemory(input: {
   }>;
 }) {
   try {
-    const longTermMemoryRecall =
-      input.longTermMemory !== null && input.longTermMemory !== undefined
-        ? createAgentLongTermMemoryRecall({
-            agentId: input.agentId,
-            agentWorkspacePath: input.agentWorkspacePath,
-            agentMemoryPath: input.agentMemoryPath,
-            workspaceEmbedder: input.workspaceEmbedder,
-            mastraId: input.mastraId,
-            scoreThreshold: input.ltmRecallScoreThreshold,
-            documentCount: input.ltmRecallDocumentCount,
-            conversationStore: input.conversationStore,
-            recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
-            persistenceStore: input.persistenceStore,
-            readRuntimeMemorySettings: input.readRuntimeMemorySettings,
-          })
-        : null;
+    const longTermMemoryRecall = createAgentLongTermMemoryRecall({
+      agentId: input.agentId,
+      agentWorkspacePath: input.agentWorkspacePath,
+      agentMemoryPath: input.agentMemoryPath,
+      workspaceEmbedder: input.workspaceEmbedder,
+      mastraId: input.mastraId,
+      scoreThreshold: input.ltmRecallScoreThreshold,
+      documentCount: input.ltmRecallDocumentCount,
+      conversationStore: input.conversationStore,
+      recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
+      persistenceStore: input.persistenceStore,
+      readRuntimeMemorySettings: input.readRuntimeMemorySettings,
+    });
 
-    await longTermMemoryRecall?.initialize();
+    await longTermMemoryRecall.initialize();
 
     return {
       longTermMemoryRecall,

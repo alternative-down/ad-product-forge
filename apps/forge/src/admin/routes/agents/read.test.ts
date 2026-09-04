@@ -85,10 +85,10 @@ describe('registerAgentReadRoutes', () => {
     };
   }
 
-  it('registers exactly 9 GET routes', () => {
+  it('registers exactly 8 GET routes', () => {
     registerAgentReadRoutes(httpServer as any, mockReadModel);
     const getRoutes = httpServer.routes.filter((r) => r.method === 'GET');
-    expect(getRoutes).toHaveLength(9);
+    expect(getRoutes).toHaveLength(8);
   });
 
   it('registers all expected paths', () => {
@@ -99,7 +99,6 @@ describe('registerAgentReadRoutes', () => {
     expect(paths).toContain('/admin/agent/recent-conversations');
     expect(paths).toContain('/admin/agent/execution-steps');
     expect(paths).toContain('/admin/agent/thread-messages');
-    expect(paths).toContain('/admin/agent/ltm-thread-messages');
     expect(paths).toContain('/admin/agent/runtime-memory');
     expect(paths).toContain('/admin/agent/om-debug-export');
     expect(paths).toContain('/admin/agent/conversation-messages');
@@ -229,28 +228,6 @@ describe('registerAgentReadRoutes', () => {
         agentId: 'ag_006',
         page: 3,
         perPage: 25,
-      });
-    });
-  });
-
-  // GET /admin/agent/ltm-thread-messages
-  describe('GET /admin/agent/ltm-thread-messages', () => {
-    it('passes to listAgentLongTermMemoryThreadMessages', async () => {
-      registerAgentReadRoutes(httpServer as any, mockReadModel);
-      const route = httpServer.routes.find((r) => r.path === '/admin/agent/ltm-thread-messages')!;
-      await route.handler(
-        createMockRequest(
-          new Map([
-            ['agentId', 'ag_007'],
-            ['page', '1'],
-            ['perPage', '10'],
-          ]),
-        ),
-      );
-      expect(mockReadModel.listAgentLongTermMemoryThreadMessages).toHaveBeenCalledWith({
-        agentId: 'ag_007',
-        page: 1,
-        perPage: 10,
       });
     });
   });

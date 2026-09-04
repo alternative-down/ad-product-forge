@@ -1,6 +1,5 @@
 import { forgeDebug, type SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 
-import type { createAgentLongTermMemoryStore } from '../store';
 import type { InFlightRecallTracker } from './in-flight-tracker';
 import type { RecallPersistence } from './persistence';
 
@@ -12,10 +11,9 @@ import type { RecallPersistence } from './persistence';
  *
  * Concerns:
  *  - Workspace initialization (one-shot, idempotent)
- *  - Reindex on stamp change
- *  - Last-init / last-indexed stamp state
+ *  - Explicit workspace reindexing
+ *  - Last initialization timestamp
  *  - Read index stats (delegates to persistence)
- *  - Read current index stamp (delegates to persistence store)
  */
 
 /**
@@ -43,14 +41,12 @@ export interface IndexManagerDeps {
   agentId: string;
   retrievalWorkspace: SqliteWorkspaceRetrieval;
   persistence: RecallPersistence;
-  persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   inFlightTracker: InFlightRecallTracker;
   initTimeoutMs: number;
 }
 
 export class IndexManager {
   private workspaceInitialized = false;
-  private lastIndexedStamp: string | null = null;
   private lastInitAt: string | null = null;
 
   constructor(private readonly deps: IndexManagerDeps) {}
@@ -73,9 +69,7 @@ export class IndexManager {
     }
 
     const stageStartedAt = Date.now();
-    const currentStamp = await this.readCurrentIndexStamp();
-
-    ltmIndexManagerDebug('info', 'ltm recall workspace init start', { agentId: this.deps.agentId, stamp: currentStamp });
+    ltmIndexManagerDebug('info', 'ltm recall workspace init start', { agentId: this.deps.agentId });
     await this.deps.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.deps.retrievalWorkspace.refresh(),
@@ -83,39 +77,38 @@ export class IndexManager {
       'ltm recall retrieval init timed out',
     );
     this.workspaceInitialized = true;
-    this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
     this.deps.persistence.setLastInitAt(this.lastInitAt);
-    ltmIndexManagerDebug('info', 'ltm recall workspace init complete', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
+    ltmIndexManagerDebug('info', 'ltm recall workspace init complete', {
+      agentId: this.deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+    });
   }
 
   /**
    * Refresh the workspace retrieval index.
-   * Ensures init has run, then re-runs the workspace refresh if the stamp changed.
+   * Ensures init has run, then re-runs the workspace refresh so manually edited
+   * memory files are available to the next semantic/BM25/graph recall.
    */
   async refreshIndex(): Promise<void> {
     await this.initialize();
 
     const stageStartedAt = Date.now();
-    const currentStamp = await this.readCurrentIndexStamp();
-
-    if (currentStamp === this.lastIndexedStamp) {
-      ltmIndexManagerDebug('info', 'ltm recall workspace index unchanged', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
-      return;
-    }
-
-    const previousStamp = this.lastIndexedStamp;
-    ltmIndexManagerDebug('info', 'ltm recall workspace reindex start', { agentId: this.deps.agentId, previousStamp, nextStamp: currentStamp });
+    ltmIndexManagerDebug('info', 'ltm recall workspace reindex start', {
+      agentId: this.deps.agentId,
+    });
     await this.deps.inFlightTracker.runTrackedRecallOperation(
       'retrieval.refresh',
       this.deps.retrievalWorkspace.refresh(),
       this.deps.initTimeoutMs,
       'ltm recall retrieval refresh timed out',
     );
-    this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
     this.deps.persistence.setLastInitAt(this.lastInitAt);
-    ltmIndexManagerDebug('info', 'ltm recall workspace reindex complete', { agentId: this.deps.agentId, durationMs: Date.now() - stageStartedAt, stamp: currentStamp });
+    ltmIndexManagerDebug('info', 'ltm recall workspace reindex complete', {
+      agentId: this.deps.agentId,
+      durationMs: Date.now() - stageStartedAt,
+    });
   }
 
   /**
@@ -148,13 +141,6 @@ export class IndexManager {
     checkpointFileCount: number;
   }> {
     return await this.deps.persistence.getIndexStats();
-  }
-
-  /**
-   * Read the current index stamp from the persistence store.
-   */
-  async readCurrentIndexStamp(): Promise<string | null> {
-    return await this.deps.persistenceStore.readRecallIndexStamp();
   }
 }
 

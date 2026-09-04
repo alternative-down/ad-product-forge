@@ -103,14 +103,6 @@ export type AgentListItem = {
 
       checkpointTokenCount: number;
     } | null;
-
-    ltm: {
-      running: boolean;
-
-      queued: boolean;
-
-      packageCount: number;
-    };
   };
 
   createdAt: number;

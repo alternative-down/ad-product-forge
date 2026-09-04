@@ -389,7 +389,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
       op: 'forceIdle.onAgentIdle',
       promise: deps.onAgentIdle?.() ?? Promise.resolve(),
       timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
-      timeoutMessage: `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      timeoutMessage: `Agent idle hook timed out for ${deps.runtimeId}`,
       fallback: undefined,
     });
 
@@ -428,7 +428,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
       op: 'transitionToIdle.onAgentIdle',
       promise: deps.onAgentIdle?.() ?? Promise.resolve(),
       timeoutMs: RUNNER_AWAIT_TIMEOUT_MS,
-      timeoutMessage: `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      timeoutMessage: `Agent idle hook timed out for ${deps.runtimeId}`,
       fallback: undefined,
     });
 

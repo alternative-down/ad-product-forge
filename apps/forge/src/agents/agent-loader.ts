@@ -10,7 +10,6 @@ import { loadAgentToolset } from './agent-loader-tools';
 import type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 export type { AgentLoaderConfig, SingleAgentLoaderConfig };
 import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
-import { createAgentContractStore } from './agent-contract-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 /**
@@ -78,8 +77,6 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtime = await createInternalAgentRuntime(
     buildAgentRuntimeConfig(config, runtimeData, toolset),
     {
-      longTermMemory: true,
-      contractStore: createAgentContractStore(db),
       readRuntimeMemorySettings: async () => {
         const settings = await systemSettings.getSettings();
 
@@ -164,7 +161,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
 
   // #5978: collect all per-agent failures, surface them all (not just the first).
   // Loading remains sequential because each runtime initialization can hydrate
-  // conversation and long-term-memory state. Running all agents concurrently
+  // conversation and semantic-recall indexes. Running all agents concurrently
   // multiplies peak heap usage by the number of configured agents.
 
   agentLoaderDebug('info', 'Agent loading complete', {

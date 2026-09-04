@@ -3,7 +3,6 @@
  *
  * Covers: RecallPersistence class
  *  - setLastInitAt mutates the field
- *  - readCurrentIndexStamp delegates to persistenceStore
  *  - getIndexStats uses countFiles for memory + checkpoints
  *  - persistRecallSnapshot writes via persistenceStore
  *  - readRecallThreadState filters fingerprints and computes windowSize
@@ -25,14 +24,14 @@ import { RecallPersistence, createRecallPersistence } from './persistence';
 import { countFiles } from './count-files';
 import { readOperationalMemoryState } from '@forge-runtime/core';
 
-function createMockDeps(opts: {
-  history?: { recentFingerprints?: unknown[] } | null;
-  operationalMetrics?: { rawMessageCount: number } | null;
-  indexStamp?: string | null;
-} = {}) {
+function createMockDeps(
+  opts: {
+    history?: { recentFingerprints?: unknown[] } | null;
+    operationalMetrics?: { rawMessageCount: number } | null;
+  } = {},
+) {
   return {
     persistenceStore: {
-      readRecallIndexStamp: vi.fn().mockResolvedValue(opts.indexStamp === undefined ? 'stamp-1' : opts.indexStamp),
       writeRecallState: vi.fn().mockResolvedValue(undefined),
       readRecallState: vi.fn().mockResolvedValue({ history: opts.history ?? null }),
     },
@@ -66,27 +65,6 @@ describe('RecallPersistence', () => {
         snapshot: { lastInitAt?: string | null };
       };
       expect(writeCall.snapshot.lastInitAt).toBe('2026-06-02T19:00:00Z');
-    });
-  });
-
-  describe('readCurrentIndexStamp', () => {
-    it('returns the stamp from persistenceStore', async () => {
-      const deps = createMockDeps({ indexStamp: 'stamp-42' });
-      const persistence = new RecallPersistence(deps as never);
-
-      const stamp = await persistence.readCurrentIndexStamp();
-
-      expect(stamp).toBe('stamp-42');
-      expect(deps.persistenceStore.readRecallIndexStamp).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns null when no stamp exists', async () => {
-      const deps = createMockDeps({ indexStamp: null });
-      const persistence = new RecallPersistence(deps as never);
-
-      const stamp = await persistence.readCurrentIndexStamp();
-
-      expect(stamp).toBeNull();
     });
   });
 

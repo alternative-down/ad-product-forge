@@ -1,4 +1,3 @@
-import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import {} from '@forge-runtime/core';
 
 /** Shared execution state for all agent read models */
@@ -41,11 +40,6 @@ export interface AgentListItem {
       reflectionTokenLimit: number;
       checkpointTokenCount: number;
     } | null;
-    ltm: {
-      running: boolean;
-      queued: boolean;
-      packageCount: number;
-    };
   };
   createdAt: number;
   updatedAt: number;
@@ -81,21 +75,12 @@ export interface AgentReadModel {
     page: number;
     perPage: number;
   }) => Promise<unknown>;
-  listAgentLongTermMemoryThreadMessages: (params: {
-    agentId: string;
-    page: number;
-    perPage: number;
-  }) => Promise<unknown>;
   getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
   listRecentAgentHomeMetricSnapshots: (input: {
     agentId: string;
     limit: number;
   }) => Promise<unknown[]>;
   getAgentOmDebugExport: (agentId: string) => Promise<unknown>;
-  debugAgentLongTermMemoryRecallSearch: (
-    agentId: string,
-    input: AgentLongTermMemoryRecallDebugSearchInput,
-  ) => Promise<unknown>;
   listAgentConversationMessages: (params: {
     agentId: string;
     provider: string;

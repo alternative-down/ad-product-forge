@@ -82,7 +82,6 @@ function buildAgentSectionItems(input: { agentId: string; providerTypes: string[
   });
 
   items.push({ value: `/agents/${input.agentId}/log`, label: 'Log' });
-  items.push({ value: `/agents/${input.agentId}/ltm-log`, label: 'Log LTM' });
 
   return items;
 }

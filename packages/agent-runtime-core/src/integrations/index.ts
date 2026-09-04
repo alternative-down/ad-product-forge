@@ -143,10 +143,6 @@ export {
   createSkillContextPlugin,
   type SkillContextPluginOptions,
 } from './extensions/skill-context.js';
-export {
-  createLongTermRecallPlugin,
-  type LongTermRecallPluginOptions,
-} from './extensions/long-term-recall.js';
 export { createUsageMeterPlugin, type UsageMeterPluginOptions } from './extensions/usage-meter.js';
 export {
   createOperationalMemoryPlugin,
@@ -375,14 +371,6 @@ export {
   type FilesystemOperationalMemoryOptions,
 } from './memory/filesystem-operational-memory.js';
 export {
-  FilesystemLongTermMemory,
-  type FilesystemLongTermMemoryOptions,
-} from './memory/filesystem-long-term-memory.js';
-export {
-  InMemoryLongTermMemory,
-  type InMemoryLongTermMemoryOptions,
-} from './memory/in-memory-long-term-memory.js';
-export {
   OperationalMemoryConversationMemory,
   type OperationalMemoryConversationMemoryOptions,
   type OperationalMemoryConversationObserver,
@@ -390,10 +378,6 @@ export {
   type OperationalMemoryConversationObserverResponse,
 } from './memory/operational-memory-conversation-memory.js';
 export { InMemoryOperationalMemoryConversationStateStore } from './memory/operational-memory-conversation-state-store.js';
-export {
-  RefreshableLongTermMemoryRecall,
-  SourceBackedLongTermMemory,
-} from './memory/refreshable-long-term-memory.js';
 export {
   InMemoryOperationalMemory,
   type InMemoryOperationalMemoryOptions,
@@ -404,12 +388,6 @@ export type {
   OperationalMemoryConversationState,
   OperationalMemoryConversationStateStore,
 } from './memory/operational-memory-conversation-state-store.js';
-export type {
-  LongTermMemoryDocument,
-  LongTermMemoryRecall,
-  LongTermMemoryRecallRequest,
-  LongTermMemoryStore,
-} from './memory/long-term-memory.js';
 export type {
   OperationalMemory,
   OperationalMemoryObservation,
@@ -513,10 +491,6 @@ export {
   FilesystemBlobStore,
   type FilesystemBlobStoreOptions,
 } from './persistence/filesystem-blob-store.js';
-export {
-  FilesystemLongTermMemoryStore,
-  type FilesystemLongTermMemoryStoreOptions,
-} from './persistence/filesystem-long-term-memory.js';
 export {
   FilesystemRuntimeJournal,
   type FilesystemRuntimeJournalOptions,

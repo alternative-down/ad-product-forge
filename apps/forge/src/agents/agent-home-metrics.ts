@@ -12,7 +12,6 @@ import {
   agentRoles,
   llmProfiles,
 } from '../database/schema';
-import { createAgentLongTermMemoryStore } from './ltm/store';
 import type { InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 
@@ -89,11 +88,6 @@ export type AgentHomeMetricSnapshot = {
       reflectionTokenCount: number;
       checkpointTokenCount: number;
     } | null;
-    ltm: {
-      running: boolean;
-      queued: boolean;
-      packageCount: number;
-    };
   };
   createdAt: number;
   updatedAt: number;
@@ -106,25 +100,26 @@ export type AgentHomeMetricSnapshot = {
   }>;
 };
 
-
 function safeReadWithTimeout<T>(
   name: string,
   agentId: string,
   promise: Promise<T>,
   fallback: T,
 ): Promise<T> {
-  return withTimeout(promise, OBSERVABILITY_READ_TIMEOUT_MS, `${name} timed out for ${agentId}`).catch(
-    (error) => {
-      forgeDebug({
-        scope: 'agent-home-metrics',
-        level: 'error',
-        agentId,
-        message: `Failed to load ${name}`,
-        context: { error: errorMsg(error) },
-      });
-      return fallback;
-    },
-  );
+  return withTimeout(
+    promise,
+    OBSERVABILITY_READ_TIMEOUT_MS,
+    `${name} timed out for ${agentId}`,
+  ).catch((error) => {
+    forgeDebug({
+      scope: 'agent-home-metrics',
+      level: 'error',
+      agentId,
+      message: `Failed to load ${name}`,
+      context: { error: errorMsg(error) },
+    });
+    return fallback;
+  });
 }
 
 export async function readAgentHomeMetricSnapshot(input: {
@@ -151,8 +146,6 @@ export async function readAgentHomeMetricSnapshot(input: {
     recentSteps,
     runtimeMemory,
     latestThreadDetails,
-    longTermMemoryState,
-    runtimeLtmSnapshot,
   ] = await Promise.all([
     agent.roleId !== null && agent.roleId !== undefined
       ? input.db.query.agentRoles.findFirst({
@@ -199,22 +192,6 @@ export async function readAgentHomeMetricSnapshot(input: {
         toolBadge: null,
       },
     ),
-    safeReadWithTimeout(
-      'LTM state',
-      agent.id,
-      createAgentLongTermMemoryStore(input.db, {
-        agentId: agent.id,
-      }).readState(),
-      null,
-    ),
-    input.runtime?.longTermMemory
-      ? safeReadWithTimeout(
-          'runtime LTM snapshot',
-          agent.id,
-          Promise.resolve(input.runtime.longTermMemory.readSnapshot()),
-          null,
-        )
-      : Promise.resolve(null),
   ]);
 
   const lastStep = recentSteps[0] ?? null;
@@ -275,11 +252,6 @@ export async function readAgentHomeMetricSnapshot(input: {
               checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
             }
           : null,
-      ltm: {
-        running: executionState === 'idle' ? (runtimeLtmSnapshot?.running ?? false) : false,
-        queued: executionState === 'idle' ? (runtimeLtmSnapshot?.queued ?? false) : false,
-        packageCount: longTermMemoryState?.packages.length ?? 0,
-      },
     },
     createdAt: agent.createdAt,
     updatedAt: agent.updatedAt,

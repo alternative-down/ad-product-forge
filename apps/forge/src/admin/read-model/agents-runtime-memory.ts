@@ -1,8 +1,7 @@
 /**
  * agents-runtime-memory.ts
  *
- * Reads runtime memory state for an agent: operational memory,
- * long-term memory snapshots, checkpoint summary, and observability metrics.
+ * Reads operational memory, checkpoint summaries, and observability metrics.
  * Extracted from admin/read-model/agents.ts (#2264 phase 1).
  *
  * Extracted companions:
@@ -26,25 +25,25 @@ import {
 } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import type { ConversationMessage, ConversationMessagePart } from 'agent-runtime-core/integrations';
-import type { LtmSnapshot } from '../../agents/ltm/generate-helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import { withTimeout } from '../../utils/async';
 import { AGENT_CONTEXT_FILE_PATH } from '../../utils/constants';
 import { closeLibsqlClient } from './conversation-helpers';
 import { adminReadModelDebug } from './agents-detail-debug';
 import type { Database } from '../../database/index';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 
-import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 import type { WorkspaceFilesystemConfig } from '../../database/schema';
 
 // ─── Input / Output types ────────────────────────────────────────────────────
 
 type RuntimeTextPart =
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string; providerMetadata?: { anthropic?: { signature?: string; redactedData?: string } } };
+  | {
+      type: 'reasoning';
+      text: string;
+      providerMetadata?: { anthropic?: { signature?: string; redactedData?: string } };
+    };
 
 function isRuntimeTextPart(part: ConversationMessagePart): part is RuntimeTextPart {
   return part.type === 'text' || part.type === 'reasoning';
@@ -68,26 +67,6 @@ export interface AgentRuntimeMemoryOutput {
   checkpointGeneration: number | null;
   checkpointSummary: string | null;
   checkpointUpdatedAt: number | null;
-  ltmRecall: {
-    status: string;
-    query: string;
-    resultIds: string[];
-    resultCount: number;
-    resultScores: number[];
-    graphHit: boolean;
-    stepsJson: string;
-    error: string | null;
-  } | null;
-  ltm: {
-    running: boolean;
-    queued: boolean;
-    lastRunAt: number | null;
-    lastRunError: string | null;
-    lastRunErrorAt: number | null;
-    lastWrittenPackageId: string | null;
-    lastWrittenAt: number | null;
-    packageCount: number;
-  } | null;
   metrics: {
     rawMessageCount: number;
     recentRawMessageCount: number;
@@ -128,7 +107,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
-    const loadedAgent = registry.get(agentId as string);
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({ url: `file:${agentDatabasePath}` });
@@ -144,17 +122,20 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       });
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
-      const parsedWs = agent.workspaceFilesystem != null
-        ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
-        : null;
-      const agentWorkspaceDir = parsedWs?.basePath != null && parsedWs.basePath !== ''
-        ? resolve(agentWorkspaceRoot, parsedWs.basePath)
-        : resolve(agentWorkspaceRoot, 'workspace');
+      const parsedWs =
+        agent.workspaceFilesystem != null
+          ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
+          : null;
+      const agentWorkspaceDir =
+        parsedWs?.basePath != null && parsedWs.basePath !== ''
+          ? resolve(agentWorkspaceRoot, parsedWs.basePath)
+          : resolve(agentWorkspaceRoot, 'workspace');
 
       let agentContext: string | null = null;
       try {
         agentContext =
-          (await readFile(resolve(agentWorkspaceDir, AGENT_CONTEXT_FILE_PATH), 'utf8')).trim() || null;
+          (await readFile(resolve(agentWorkspaceDir, AGENT_CONTEXT_FILE_PATH), 'utf8')).trim() ||
+          null;
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
           adminReadModelDebug('error', 'Failed to read agent context', {
@@ -165,7 +146,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         agentContext = null;
       }
 
-      const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const systemSettings = createSystemSettingsStore(db);
       const settings = await systemSettings.getSettings();
 
@@ -176,13 +156,14 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       });
 
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
-      const checkpointSummaryText = checkpointSummaryMessage
-    != null ? checkpointSummaryMessage.parts
-        .filter(isRuntimeTextPart)
-        .map((part: RuntimeTextPart) => part.text.trim())
-        .filter(Boolean)
-        .join('\n')
-    : null;
+      const checkpointSummaryText =
+        checkpointSummaryMessage != null
+          ? checkpointSummaryMessage.parts
+              .filter(isRuntimeTextPart)
+              .map((part: RuntimeTextPart) => part.text.trim())
+              .filter(Boolean)
+              .join('\n')
+          : null;
       const reflection = operationalMemoryState.reflectionMessages
         .map((message: ConversationMessage) =>
           message.parts
@@ -210,63 +191,10 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         ((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string) !== ''
           ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
           : null;
-      const lastObservedAt = operationalMemoryState.observationMessages.length !== 0
-        ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
-        : null;
-
-      const runtimeLtmSnapshot: LtmSnapshot | null = loadedAgent?.runtime?.longTermMemory
-        ? await withTimeout(
-            loadedAgent.runtime.longTermMemory.readSnapshot(),
-            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-          ).catch((err) => {
-            adminReadModelDebug('error', '[safe-catch]', {
-              err: errorMsg(err),
-            });
-            return null;
-          })
-        : null;
-
-      const persistedLtmState = await withTimeout(
-        readLongTermMemoryState(db, agentId),
-        ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-        `Agent runtime memory persisted LTM state timed out for ${agentId}`,
-      ).catch((err) => {
-        adminReadModelDebug('error', '[safe-catch]', {
-          err: errorMsg(err),
-        });
-        return null;
-      });
-
-      const ltm =
-        (runtimeLtmSnapshot !== null
-          ? {
-              ...runtimeLtmSnapshot,
-              running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
-              queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
-            }
-          : null) ??
-        (persistedLtmState
-          ? {
-              running: false,
-              queued: false,
-              lastRunAt:
-                ((persistedLtmState.lastRunAt ?? '') as string) !== ''
-                  ? Date.parse((persistedLtmState.lastRunAt ?? '') as string)
-                  : null,
-              lastRunError: persistedLtmState.lastRunError,
-              lastRunErrorAt:
-                ((persistedLtmState.lastRunErrorAt ?? '') as string) !== ''
-                  ? Date.parse((persistedLtmState.lastRunErrorAt ?? '') as string)
-                  : null,
-              lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
-              lastWrittenAt:
-                ((persistedLtmState.lastWrittenAt ?? '') as string) !== ''
-                  ? Date.parse((persistedLtmState.lastWrittenAt ?? '') as string)
-                  : null,
-              packageCount: persistedLtmState.packages.length,
-            }
-          : null);
+      const lastObservedAt =
+        operationalMemoryState.observationMessages.length !== 0
+          ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
+          : null;
 
       return {
         agentContext,
@@ -287,19 +215,6 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
                 (checkpointSummaryMessage as { createdAt?: string } | null)?.createdAt ?? '',
               )
             : null,
-        ltmRecall: ltmRecall
-          ? {
-              status: ltmRecall.status,
-              query: ltmRecall.query,
-              resultIds: ltmRecall.resultIds,
-              resultCount: ltmRecall.resultCount,
-              resultScores: ltmRecall.resultScores,
-              graphHit: ltmRecall.graphHit,
-              stepsJson: ltmRecall.stepsJson,
-              error: ltmRecall.error,
-            }
-          : null,
-        ltm,
         metrics: {
           rawMessageCount: operationalMemoryState.metrics.rawMessageCount,
           recentRawMessageCount: operationalMemoryState.metrics.recentRawMessageCount,

@@ -1,5 +1,5 @@
 /**
- * Logger helpers for agent-long-term-memory.ts and other ltm/* call sites.
+ * Logger helpers for semantic recall call sites.
  *
  * Centralizes the forgeDebug({scope: 'ltm', ...}) and
  * forgeDebug({scope: 'agent-ltm', ...}) call shapes so the scope string lives
@@ -13,7 +13,7 @@
  *   - Allows log consumers to filter/scope by individual context fields directly
  *
  * Usage:
- *   ltmDebug('info', 'checkpoint package write start', {
+ *   ltmDebug('info', 'semantic recall started', {
  *     agentId: input.agentId,
  *     threadId: payload.threadId,
  *   });

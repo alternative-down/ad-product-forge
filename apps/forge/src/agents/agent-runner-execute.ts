@@ -88,7 +88,6 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     flushPendingRunMessages,
     currentGenerateAbortController,
     setCurrentGenerateAbortController,
-    pendingLongTermMemoryRecallSystemText,
   } = deps;
 
   if (isStopped() || executingRef.value || isStaleRun(runEpoch)) {
@@ -160,7 +159,6 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
 
     // ── Phase 3: build prompt and run generation ────────────────────────────
-    const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
     progressState.lastStepStage = 'flushing-pending-run-messages';
     prompt = flushPendingRunMessages({ allowOriginIdleOnly: true }) ?? '';
 
@@ -169,50 +167,43 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     });
 
     progressState.lastStepStage = 'agent-generate';
-    const result = await generateWithTimeoutRetries(
-      prompt,
-      runEpoch,
-      contractId,
-      contract,
-      stepLongTermMemoryRecallSystemText,
-      {
-        db,
-        runtime,
-        currentRuntime,
-        store,
-        usage,
-        notifications,
-        homeMetricSnapshots,
-        workspaceBasePath,
-        getRunnerSnapshot,
-        messageManager: messageManager,
-        runLastMessages,
-        flushPendingRunMessages,
-        scheduler,
-        epochState,
-        backoffState,
-        progressState,
-        loopState,
-        loopDetector,
-        currentGenerateAbortController,
-        setCurrentGenerateAbortController,
-        markGenerateProgress,
-        setBackoffMs: (ms: number) => {
-          backoffState.backoffMs = ms;
-        },
-        setInstant: (v: boolean) => {
-          backoffState.instant = v;
-        },
-        setNextStepAt: (v: number | null) => {
-          backoffState.nextStepAt = v;
-        },
-        setLoopSignature,
-        loopSignature,
-        activeRunId: epochState.activeRunId,
-        loadAgentContextInstructions,
-        isStopped,
+    const result = await generateWithTimeoutRetries(prompt, runEpoch, contractId, contract, {
+      db,
+      runtime,
+      currentRuntime,
+      store,
+      usage,
+      notifications,
+      homeMetricSnapshots,
+      workspaceBasePath,
+      getRunnerSnapshot,
+      messageManager: messageManager,
+      runLastMessages,
+      flushPendingRunMessages,
+      scheduler,
+      epochState,
+      backoffState,
+      progressState,
+      loopState,
+      loopDetector,
+      currentGenerateAbortController,
+      setCurrentGenerateAbortController,
+      markGenerateProgress,
+      setBackoffMs: (ms: number) => {
+        backoffState.backoffMs = ms;
       },
-    );
+      setInstant: (v: boolean) => {
+        backoffState.instant = v;
+      },
+      setNextStepAt: (v: number | null) => {
+        backoffState.nextStepAt = v;
+      },
+      setLoopSignature,
+      loopSignature,
+      activeRunId: epochState.activeRunId,
+      loadAgentContextInstructions,
+      isStopped,
+    });
 
     if (result === undefined) {
       messageManager.restoreFlushedRunMessages();

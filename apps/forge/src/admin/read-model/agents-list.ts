@@ -12,7 +12,6 @@ import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
   agentExecutionSteps,
-  agentLongTermMemoryStates,
   agentNotifications,
   agentMcpConfigs,
   agentProviders,
@@ -22,11 +21,6 @@ import {
 } from '../../database/schema';
 import { decryptSecret } from '../../encryption/crypto';
 import { parseProviderCredentials } from '../../communication/provider-loader';
-import {
-  longTermMemoryStateSchema,
-  createEmptyLongTermMemoryState,
-  type LongTermMemoryState,
-} from '../../agents/ltm/store';
 import { closeLibsqlClient, listThreadMessages } from './conversation-helpers';
 import {
   toScheduleSummary as toScheduleSummaryHelper,
@@ -89,11 +83,6 @@ export interface AgentListItem {
       reflectionTokenLimit: number;
       checkpointTokenCount: number;
     } | null;
-    ltm: {
-      running: boolean;
-      queued: boolean;
-      packageCount: number;
-    };
   };
   createdAt: number;
   updatedAt: number;
@@ -192,8 +181,6 @@ type RuntimeMemoryOutput = {
     reflectionBudget: number;
     checkpointTokenCount: number;
   };
-  /** LTM snapshot from loaded agent — for ltm.running/queued in #5312 */
-  ltm: { running: boolean; queued: boolean } | null;
 } | null;
 
 // Workspace skills parallel map — populated in listAgents
@@ -207,9 +194,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
-    const loadedAgent = registry.get(agentId) as
-      | { runtime?: { longTermMemory?: { readSnapshot: () => Promise<unknown> } } }
-      | undefined;
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
 
@@ -243,17 +227,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
       const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
 
-      const runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
-        ? await withTimeoutAndLog({
-            scope: 'admin-read-model-agents-list',
-            op: 'runtimeLtmSnapshot',
-            promise: loadedAgent.runtime.longTermMemory.readSnapshot(),
-            timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            timeoutMessage: `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-            fallback: null,
-          })
-        : null;
-
       const rawMetrics = operationalMemoryState.metrics;
       const recentRawLimit = settings.checkpointedOmRecentRawTokens ?? 0;
       const observationTriggerLimit = settings.checkpointedOmRawObservationBatchTokens ?? 0;
@@ -278,13 +251,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           }),
           checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
         },
-        ltm:
-          runtimeLtmSnapshot !== null
-            ? {
-                running: (runtimeLtmSnapshot as { running?: boolean }).running ?? false,
-                queued: (runtimeLtmSnapshot as { queued?: boolean }).queued ?? false,
-              }
-            : null,
       };
     } finally {
       await closeLibsqlClient(client);
@@ -427,47 +393,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     );
   }
 
-  async function loadLongTermMemoryStateByAgentId(
-    agentIds: string[],
-  ): Promise<Map<string, LongTermMemoryState | null>> {
-    const result = new Map<string, LongTermMemoryState | null>();
-    const ltmStateRows =
-      agentIds.length > 0
-        ? await withTimeoutAndLog({
-            scope: 'admin-read-model-agents-list',
-            op: 'ltmStateBatch',
-            promise: (async () => {
-              const rows = await db.query.agentLongTermMemoryStates.findMany({
-                where: inArray(agentLongTermMemoryStates.agentId, agentIds),
-              });
-              return rows ?? [];
-            })(),
-            timeoutMs: ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            timeoutMessage: 'Admin LTM state batch read timed out',
-            fallback: null,
-          })
-        : null;
-    if (ltmStateRows) {
-      for (const row of ltmStateRows) {
-        try {
-          const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
-          result.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
-        } catch (err) {
-          forgeDebug({
-            scope: 'agents-list',
-            level: 'debug',
-            message: 'parseLongTermMemoryState failed: ' + errorMsg(err),
-          });
-          result.set(row.agentId, createEmptyLongTermMemoryState());
-        }
-      }
-    }
-    for (const id of agentIds) {
-      if (!result.has(id)) result.set(id, null);
-    }
-    return result;
-  }
-
   function buildAgentListItem(
     agent: Awaited<ReturnType<typeof db.query.agents.findMany>>[number],
     ctx: {
@@ -482,7 +407,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         string,
         Awaited<ReturnType<typeof getRuntimeMemoryForAgent>> | null
       >;
-      longTermMemoryStateByAgentId: Map<string, LongTermMemoryState | null>;
       latestThreadDetailsByAgentId: Map<
         string,
         { preview: string | null; toolBadge: string | null }
@@ -496,7 +420,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
     const recentSteps = ctx.recentStepsByAgentId.get(agent.id) ?? [];
     const runtimeMemory = ctx.runtimeMemoryByAgentId.get(agent.id) ?? null;
-    const longTermMemoryState = ctx.longTermMemoryStateByAgentId.get(agent.id) ?? null;
     const latestThreadDetails = ctx.latestThreadDetailsByAgentId.get(agent.id) ?? {
       preview: null,
       toolBadge: null,
@@ -579,17 +502,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
               checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
             }
           : null,
-        ltm: {
-          running:
-            executionState === 'idle' && runtimeMemory !== null
-              ? (runtimeMemory.ltm?.running ?? false)
-              : false,
-          queued:
-            executionState === 'idle' && runtimeMemory !== null
-              ? (runtimeMemory.ltm?.queued ?? false)
-              : false,
-          packageCount: longTermMemoryState?.packages.length ?? 0,
-        },
       },
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
@@ -601,17 +513,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       await loadAgentListRowsAndMetadata();
     const agentIds = agentRows.map((a) => a.id);
 
-    const [
-      recentStepsByAgentId,
-      runtimeMemoryByAgentId,
-      latestThreadDetailsByAgentId,
-      longTermMemoryStateByAgentId,
-    ] = await Promise.all([
-      loadRecentStepsByAgentId(agentIds),
-      loadRuntimeMemoryByAgentId(agentRows),
-      loadLatestThreadDetailsByAgentId(agentRows),
-      loadLongTermMemoryStateByAgentId(agentIds),
-    ]);
+    const [recentStepsByAgentId, runtimeMemoryByAgentId, latestThreadDetailsByAgentId] =
+      await Promise.all([
+        loadRecentStepsByAgentId(agentIds),
+        loadRuntimeMemoryByAgentId(agentRows),
+        loadLatestThreadDetailsByAgentId(agentRows),
+      ]);
 
     const ctx = {
       notificationMap,
@@ -619,7 +526,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       profileMap,
       recentStepsByAgentId,
       runtimeMemoryByAgentId,
-      longTermMemoryStateByAgentId,
       latestThreadDetailsByAgentId,
     };
 
@@ -882,12 +788,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         providerType,
         JSON.parse(decryptSecret(provider.encryptedCredentials)),
       );
-      return [{
-        providerType,
-        createdAt: provider.createdAt,
-        editable: true,
-        credentials,
-      }];
+      return [
+        {
+          providerType,
+          createdAt: provider.createdAt,
+          editable: true,
+          credentials,
+        },
+      ];
     });
 
     const recentSteps_ = recentSteps.map((step) => {

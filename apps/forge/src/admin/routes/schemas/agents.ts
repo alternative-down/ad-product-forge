@@ -61,13 +61,6 @@ export const agentActionSchema = z.object({
 
 export const clearAgentHistorySchema = z.object({
   agentId: z.string().min(1),
-  includeLongTermMemoryThread: z.boolean().default(true),
-});
-
-export const agentLongTermMemoryRecallSearchSchema = z.object({
-  agentId: z.string().min(1),
-  query: z.string().min(1),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 
 // =============================================================================

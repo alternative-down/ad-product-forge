@@ -63,15 +63,17 @@ function hashLoopValue(value: unknown): string {
     return nestedValue;
   });
 
-  return createHash('sha256').update(serialized ?? String(value)).digest('hex');
+  return createHash('sha256')
+    .update(serialized ?? String(value))
+    .digest('hex');
 }
 
 // ─── LTM recall step builder ─────────────────────────────────────────────────
 
 /**
  * Converts an LLM iteration into the structured recall step format
- * expected by the long-term-memory store.
- * Normalises toolCall/toolResult shapes to match the LTM schema.
+ * expected by semantic recall.
+ * Normalises toolCall/toolResult shapes to match the recall schema.
  */
 export function buildRecallStepFromIteration(iteration: {
   text: string;

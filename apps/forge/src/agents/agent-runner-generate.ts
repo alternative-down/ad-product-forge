@@ -217,7 +217,6 @@ export async function generateWithTimeoutRetries(
     budgetUsd: number;
     endsAt: number;
   },
-  longTermMemoryRecallSystemText: string | null,
   deps: GenerateDeps,
 ): Promise<
   | {
@@ -231,19 +230,13 @@ export async function generateWithTimeoutRetries(
   | undefined
 > {
   const effectivePromptText = [
-    (longTermMemoryRecallSystemText?.trim() ?? '') !== ''
-      ? {
-          role: 'assistant' as const,
-          content: (longTermMemoryRecallSystemText ?? '').trim(),
-        }
-      : null,
     promptText.trim()
       ? {
           role: 'user' as const,
           content: promptText.trim(),
         }
       : null,
-  ].filter((value): value is { role: 'assistant' | 'user'; content: string } => Boolean(value));
+  ].filter((value): value is { role: 'user'; content: string } => value !== null);
 
   const runDelayMs = Math.max(await deps.scheduler.planNextStepDelay(), 0);
   let suppressNoToolCallReminderForRun = false;

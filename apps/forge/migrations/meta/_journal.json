@@ -281,6 +281,13 @@
       "when": 1788290126240,
       "tag": "0039_young_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1788550937415,
+      "tag": "0040_remove_generated_long_term_memory",
+      "breakpoints": true
     }
   ]
 }

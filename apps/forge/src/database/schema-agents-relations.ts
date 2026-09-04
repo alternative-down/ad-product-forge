@@ -11,26 +11,21 @@ import {
   agentExecutionSteps,
   agentHomeMetricSnapshots,
   agentLongTermMemoryRecallStates,
-  agentLongTermMemoryStates,
   agentNotifications,
   agentProviders,
   agentSchedules,
-  agents
+  agents,
 } from './schema-agents.js';
 
 import {
   internalChatAccounts,
   internalChatConversationMembers,
-  internalChatMessages
+  internalChatMessages,
 } from './schema-chat.js';
 
-import {
-  llmProfiles
-} from './schema-llm.js';
+import { llmProfiles } from './schema-llm.js';
 
-import {
-  agentRoles
-} from './schema-roles.js';
+import { agentRoles } from './schema-roles.js';
 
 export const agentsRelations = relations(agents, ({ one, many }) => ({
   role: one(agentRoles, {
@@ -61,14 +56,12 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   internalChatMessages: many(internalChatMessages),
 }));
 
-
 export const agentProvidersRelations = relations(agentProviders, ({ one }) => ({
   agent: one(agents, {
     fields: [agentProviders.agentId],
     references: [agents.id],
   }),
 }));
-
 
 export const agentExecutionContractsRelations = relations(
   agentExecutionContracts,
@@ -81,7 +74,6 @@ export const agentExecutionContractsRelations = relations(
   }),
 );
 
-
 export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ one }) => ({
   agent: one(agents, {
     fields: [agentExecutionSteps.agentId],
@@ -92,7 +84,6 @@ export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ on
     references: [agentExecutionContracts.id],
   }),
 }));
-
 
 export const agentHomeMetricSnapshotsRelations = relations(agentHomeMetricSnapshots, ({ one }) => ({
   agent: one(agents, {
@@ -105,7 +96,6 @@ export const agentHomeMetricSnapshotsRelations = relations(agentHomeMetricSnapsh
   }),
 }));
 
-
 export const agentCheckpointedOmStatesRelations = relations(
   agentCheckpointedOmStates,
   ({ one }) => ({
@@ -115,18 +105,6 @@ export const agentCheckpointedOmStatesRelations = relations(
     }),
   }),
 );
-
-
-export const agentLongTermMemoryStatesRelations = relations(
-  agentLongTermMemoryStates,
-  ({ one }) => ({
-    agent: one(agents, {
-      fields: [agentLongTermMemoryStates.agentId],
-      references: [agents.id],
-    }),
-  }),
-);
-
 
 export const agentLongTermMemoryRecallStatesRelations = relations(
   agentLongTermMemoryRecallStates,
@@ -138,7 +116,6 @@ export const agentLongTermMemoryRecallStatesRelations = relations(
   }),
 );
 
-
 export const agentNotificationsRelations = relations(agentNotifications, ({ one }) => ({
   agent: one(agents, {
     fields: [agentNotifications.agentId],
@@ -146,11 +123,9 @@ export const agentNotificationsRelations = relations(agentNotifications, ({ one 
   }),
 }));
 
-
 export const agentSchedulesRelations = relations(agentSchedules, ({ one }) => ({
   agent: one(agents, {
     fields: [agentSchedules.agentId],
     references: [agents.id],
   }),
 }));
-

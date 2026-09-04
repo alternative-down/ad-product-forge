@@ -137,11 +137,3 @@ describe('createForgeAgent — config validation', () => {
     );
   });
 });
-
-describe('createAgent — config validation', () => {
-  test('createAgent with longTermMemory=true requires contractStore', async () => {
-    const config = { ...minimalConfig };
-    const options = { longTermMemory: true };
-    await expect(createAgent(config as any, options)).rejects.toThrow();
-  });
-});

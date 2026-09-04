@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { FilesystemContextNoteStore } from '../integrations/persistence/filesystem-context-note-store.js';
-import { FilesystemLongTermMemoryStore } from '../integrations/persistence/filesystem-long-term-memory.js';
 import { FilesystemRuntimeJournal } from '../integrations/persistence/filesystem-runtime-journal.js';
 
 const createdPaths: string[] = [];
@@ -66,21 +65,6 @@ describe('filesystem persistence', () => {
 
     expect(notes).toHaveLength(1);
     expect(notes[0]?.title).toBe('Focus');
-  });
-
-  it('persists long-term memory documents on disk', async () => {
-    const basePath = await createTempPath();
-    const store = new FilesystemLongTermMemoryStore({ basePath });
-
-    await store.write({
-      id: 'doc-1',
-      text: 'The blacksmith prefers short, direct negotiations.',
-      metadata: { category: 'preference' },
-    });
-    const documents = await store.list();
-
-    expect(documents).toHaveLength(1);
-    expect(documents[0]?.metadata?.category).toBe('preference');
   });
 });
 

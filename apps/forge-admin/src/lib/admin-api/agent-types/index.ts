@@ -15,7 +15,6 @@ export type { AgentExecutionStepsResponse } from './agent-execution';
 
 // ── Agent memory ──────────────────────────────────────────────────────────────
 export type { AgentRuntimeMemorySnapshot } from './agent-memory';
-export type { AgentLongTermMemoryRecallDebugSearchResult } from './agent-ltm-search';
 
 // ── Agent conversations ────────────────────────────────────────────────────────
 export type {

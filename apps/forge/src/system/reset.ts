@@ -37,7 +37,6 @@ import {
   agentExecutionSteps,
   agentHomeMetricSnapshots,
   agentCheckpointedOmStates,
-  agentLongTermMemoryStates,
   agentLongTermMemoryRecallStates,
   agentNotifications,
   agentSchedules,
@@ -70,7 +69,6 @@ const adminSystemResetDebug = (
 ): void => {
   forgeDebug({ scope: 'admin-system-reset', level, message, context });
 };
-
 
 export interface FactoryResetResult {
   ok: true;
@@ -116,7 +114,6 @@ const WIPE_ORDER: Array<{ name: string; table: SqliteTable }> = [
   { name: 'agent_execution_steps', table: agentExecutionSteps },
   { name: 'agent_home_metric_snapshots', table: agentHomeMetricSnapshots },
   { name: 'agent_checkpointed_om_states', table: agentCheckpointedOmStates },
-  { name: 'agent_long_term_memory_states', table: agentLongTermMemoryStates },
   { name: 'agent_long_term_memory_recall_states', table: agentLongTermMemoryRecallStates },
   { name: 'agent_notifications', table: agentNotifications },
   { name: 'agent_mcp_configs', table: agentMcpConfigs },
@@ -167,7 +164,11 @@ export async function performFactoryReset(
     }
     fs.copyFileSync(dbPath, backupPath);
   } catch (err) {
-    adminSystemResetDebug('error', 'Factory reset: DB backup failed', { error: errorMsg(err), dbPath, backupPath });
+    adminSystemResetDebug('error', 'Factory reset: DB backup failed', {
+      error: errorMsg(err),
+      dbPath,
+      backupPath,
+    });
     throw new DatabaseBackupFailedError(dbPath, backupPath, errorMsg(err));
   }
 
@@ -178,7 +179,11 @@ export async function performFactoryReset(
     throw new DatabaseBackupEmptyError(backupPath);
   }
 
-  adminSystemResetDebug('info', 'Factory reset: DB backup created', { dbPath, backupPath, backupBytes: backupSize });
+  adminSystemResetDebug('info', 'Factory reset: DB backup created', {
+    dbPath,
+    backupPath,
+    backupBytes: backupSize,
+  });
 
   // Step 2: Wipe tables in order
   const db = getDatabase();
@@ -191,7 +196,11 @@ export async function performFactoryReset(
       await db.delete(table);
       wipedTables.push(name);
     } catch (err) {
-      adminSystemResetDebug('error', `Factory reset: failed to wipe table ${name}`, { error: errorMsg(err), table: name, alreadyWiped: wipedTables });
+      adminSystemResetDebug('error', `Factory reset: failed to wipe table ${name}`, {
+        error: errorMsg(err),
+        table: name,
+        alreadyWiped: wipedTables,
+      });
       throw new DatabaseWipeFailedError(name, wipedTables, errorMsg(err));
     }
   }
