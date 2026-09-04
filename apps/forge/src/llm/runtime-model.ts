@@ -85,7 +85,7 @@ export async function resolveProfileRuntimeModel(
       baseURL: baseUrl,
     })(modelId);
 
-    return wrapAnthropicPromptCacheModel(model);
+    return modelId.startsWith('MiniMax-M3') ? model : wrapAnthropicPromptCacheModel(model);
   }
 
   // #6027: validate the default case modelKey has the expected provider/model

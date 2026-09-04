@@ -840,4 +840,55 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
+  it('does not add explicit Anthropic cache control to MiniMax-M3 tools', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const model = new MockLanguageModelV3({
+      modelId: 'MiniMax-M3',
+      doGenerate: async (options: LanguageModelV3CallOptions) => {
+        expect(options.tools).toEqual([
+          expect.objectContaining({
+            name: 'inspect_state',
+            providerOptions: undefined,
+          }),
+        ]);
+
+        return {
+          content: [{ type: 'text', text: 'Done.' }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: { total: 12, noCache: 12, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 2, text: 2, reasoning: 0 },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      loadRuntimeActions: async () => [
+        {
+          name: 'inspect_state',
+          description: 'Inspect state.',
+          inputSchema: z.object({}),
+          async execute() {
+            return { ok: true };
+          },
+        },
+      ],
+    });
+
+    try {
+      await session.generate('Inspect current state.');
+    } finally {
+      await session.dispose();
+    }
+  });
+
 });
