@@ -732,7 +732,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const steps = await db.query.agentExecutionSteps.findMany({
       where: and(
         eq(agentExecutionSteps.agentId, agentId),
-        gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
+        gte(agentExecutionSteps.createdAt, currentPeriodStart.getTime()),
       ),
       columns: { costUsd: true },
     });

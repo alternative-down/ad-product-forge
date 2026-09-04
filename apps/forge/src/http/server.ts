@@ -241,7 +241,13 @@ export function createForgeHttpServer(
         'cache-control': 'no-store',
         'x-forge-version': getVersionHeader(),
       });
-      res.end(JSON.stringify({ status: 'ok' }));
+      res.end(JSON.stringify({
+        status: 'ok',
+        // L#NN-TZ-Healthcheck-Observable (P1 #6922): Observability for machine/app/DB TZ drift.
+        machineTz: process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+        nodeTzOffsetMinutes: new Date().getTimezoneOffset(),
+        dbStorage: 'sqlite-integer-ms-epoch-or-text-iso8601',
+      }));
       return;
     }
 

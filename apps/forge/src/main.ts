@@ -1,3 +1,10 @@
+// L#NN-Local-TZ-Drift-DORMANT v1 (P1 #6922): Force Node TZ to UTC before any date parsing.
+// Without this, setDate/getDay/local-TZ methods drift silently when host TZ != UTC.
+// Defaults to current TZ when explicitly configured (allows deployment overrides).
+if (!process.env.TZ) {
+  process.env.TZ = 'UTC';
+}
+
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
 import { createForgeBootstrap } from './forge-bootstrap';
