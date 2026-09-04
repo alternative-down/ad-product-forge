@@ -8,7 +8,6 @@ import type {
   OperationalMemoryConversationState,
   OperationalMemoryConversationStateStore,
 } from 'agent-runtime-core/integrations';
-import type { RuntimeWorkingMemoryStore, WorkingMemoryRecord } from './runtime-working-memory.js';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -34,13 +33,13 @@ export type LibsqlConversationStoreOptions = {
 };
 
 export class LibsqlConversationStore
-  implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWorkingMemoryStore
+  implements ConversationStore, OperationalMemoryConversationStateStore
 {
   private readonly client: Client;
   private readonly threadTableName: string;
   private readonly messageTableName: string;
   private readonly stateTableName: string;
-  private readonly workingMemoryTableName: string;
+  private readonly legacyWorkingMemoryTableName: string;
   private schemaReady = false;
 
   constructor(options: LibsqlConversationStoreOptions) {
@@ -50,7 +49,7 @@ export class LibsqlConversationStore
     this.threadTableName = `${prefix}_conversation_threads`;
     this.messageTableName = `${prefix}_conversation_messages`;
     this.stateTableName = `${prefix}_checkpointed_conversation_states`;
-    this.workingMemoryTableName = `${prefix}_working_memory`;
+    this.legacyWorkingMemoryTableName = `${prefix}_working_memory`;
   }
 
   async upsertThread(thread: ConversationThread): Promise<void> {
@@ -427,13 +426,6 @@ export class LibsqlConversationStore
         },
         {
           sql: `
-          delete from ${escapeIdentifier(this.workingMemoryTableName)}
-          where thread_id = ?
-        `,
-          args: [threadId],
-        },
-        {
-          sql: `
           delete from ${escapeIdentifier(this.threadTableName)}
           where id = ?
         `,
@@ -478,63 +470,6 @@ export class LibsqlConversationStore
           updated_at = excluded.updated_at
       `,
       args: [state.threadId, serializeJson(state), state.updatedAt],
-    });
-  }
-
-  async read(input: { threadId: string; resourceId: string }): Promise<WorkingMemoryRecord | null> {
-    await this.ensureSchema();
-    const result = await this.client.execute({
-      sql: `
-        select
-          thread_id,
-          resource_id,
-          working_memory,
-          updated_at
-        from ${escapeIdentifier(this.workingMemoryTableName)}
-        where thread_id = ? and resource_id = ?
-        limit 1
-      `,
-      args: [input.threadId, input.resourceId],
-    });
-    const row = result.rows[0];
-
-    if (row == null) {
-      return null;
-    }
-
-    return {
-      threadId: String(row.thread_id),
-      resourceId: String(row.resource_id),
-      workingMemory: String(row.working_memory),
-      updatedAt: String(row.updated_at),
-    };
-  }
-
-  async write(input: {
-    threadId: string;
-    resourceId: string;
-    workingMemory: string;
-    updatedAt?: string;
-  }): Promise<void> {
-    await this.ensureSchema();
-    await this.client.execute({
-      sql: `
-        insert into ${escapeIdentifier(this.workingMemoryTableName)} (
-          thread_id,
-          resource_id,
-          working_memory,
-          updated_at
-        ) values (?, ?, ?, ?)
-        on conflict(thread_id, resource_id) do update set
-          working_memory = excluded.working_memory,
-          updated_at = excluded.updated_at
-      `,
-      args: [
-        input.threadId,
-        input.resourceId,
-        input.workingMemory,
-        input.updatedAt ?? new Date().toISOString(),
-      ],
     });
   }
 
@@ -589,15 +524,7 @@ export class LibsqlConversationStore
         `,
         },
         {
-          sql: `
-          create table if not exists ${escapeIdentifier(this.workingMemoryTableName)} (
-            thread_id text not null,
-            resource_id text not null,
-            working_memory text not null,
-            updated_at text not null,
-            primary key (thread_id, resource_id)
-          )
-        `,
+          sql: `drop table if exists ${escapeIdentifier(this.legacyWorkingMemoryTableName)}`,
         },
       ],
       'write',

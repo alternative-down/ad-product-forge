@@ -40,7 +40,6 @@ import {
 } from './agent-runner-attempt-lifecycle';
 import { buildIterationFeedback } from './agent-runner-feedback';
 import { buildIterationLoopSignature } from './agent-runner-iteration-helpers';
-import { didIterationUpdateWorkingMemory } from './agent-runner-iteration-helpers';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { agentRunnerDebug } from './agent-runner-debug';
 import { createLoopDetector } from './agent-runner-loop-detector';
@@ -378,19 +377,6 @@ export async function generateWithTimeoutRetries(
                 repeatedSignatureCount,
                 signature: signature.slice(0, 500),
               });
-            }
-            if (didIterationUpdateWorkingMemory(iteration)) {
-              deps.messageManager.appendPendingRunMessages([
-                {
-                  type: 'runner-working-memory-update',
-                  groupKey: `runner-working-memory-update:${deps.runtime.id}`,
-                  groupMetadata: { Source: 'runner' },
-                  idempotencyKey: `runner-working-memory-update:${deps.runtime.id}:${Date.now()}`,
-                  itemMetadata: { Kind: 'working-memory-update' },
-                  text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
-                  timestamp: Date.now(),
-                },
-              ]);
             }
             deps.markGenerateProgress(timeout, controller, {
               stage: 'iteration-completed',

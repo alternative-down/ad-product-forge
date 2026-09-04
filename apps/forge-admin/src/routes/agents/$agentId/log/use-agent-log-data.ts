@@ -31,7 +31,6 @@ interface UseAgentLogDataOptions {
 }
 
 export interface AgentLogRuntimeMemoryData {
-  workingMemory: string | null;
   agentContext: string | null;
   executionState: 'idle' | 'running' | 'absent';
   lastExecutionError: string | null;

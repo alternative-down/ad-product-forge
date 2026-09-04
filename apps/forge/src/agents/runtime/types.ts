@@ -83,10 +83,6 @@ export type CreateAgentOptions = {
   }>;
 };
 
-export type RuntimeWorkingMemory = {
-  getWorkingMemory(input: { threadId: string; resourceId: string }): Promise<string | null>;
-};
-
 export type RuntimeStepUsage = {
   inputTokens?: number;
   outputTokens?: number;
@@ -175,12 +171,10 @@ export type RuntimeAgentGenerateOptions = {
   ) =>
     | Promise<{
         continue?: boolean;
-        feedback?: string;
         feedbackMessages?: Array<{ role: 'assistant' | 'user'; content: string }>;
       } | void>
     | {
         continue?: boolean;
-        feedback?: string;
         feedbackMessages?: Array<{ role: 'assistant' | 'user'; content: string }>;
       }
     | void;
@@ -191,8 +185,6 @@ export type RuntimeAgent = {
     prompt: RuntimeAgentGenerateMessage,
     options?: RuntimeAgentGenerateOptions,
   ): Promise<RuntimeGenerateResult>;
-  hasOwnMemory(): boolean;
-  getMemory(): Promise<RuntimeWorkingMemory | null>;
   stabilizeMemory?(): Promise<{
     overflowTokenCount: number;
     needsMoreOverflowWork: boolean;

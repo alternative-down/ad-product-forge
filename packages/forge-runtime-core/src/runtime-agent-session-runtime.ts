@@ -6,7 +6,6 @@ import { consolidateOperationalMemory } from './operational-memory-consolidation
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
-import { toolToRuntimeAction } from './tools.js';
 import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store.js';
 import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode.js';
 
@@ -15,7 +14,6 @@ export type RuntimeAgentSessionRuntime = {
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ForgeConversationMemory;
-  workingMemoryStore?: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   syncState(input?: {
     diagnostics?: {
@@ -89,9 +87,7 @@ export async function createRuntimeAgentSessionRuntime(
       : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
-  const staticRuntimeActions = input.workingMemoryTool
-    ? [toolToRuntimeAction(input.workingMemoryTool), ...(input.runtimeActions ?? [])]
-    : (input.runtimeActions ?? []);
+  const staticRuntimeActions = input.runtimeActions ?? [];
   let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
   if (input.todoStore) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
