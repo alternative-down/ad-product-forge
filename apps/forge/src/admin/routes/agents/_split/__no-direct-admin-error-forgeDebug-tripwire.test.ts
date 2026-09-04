@@ -31,8 +31,8 @@ function findHandRolledAdminError(src: string): number[] {
 describe('no hand-rolled admin-error forgeDebug in _split/ (regression for #5457)', () => {
   const files = findSourceFiles(__dirname);
 
-  it('_split/ contains 7 non-test source files (sanity)', () => {
-    expect(files).toHaveLength(7);
+  it('_split/ contains 8 non-test source files (sanity)', () => {
+    expect(files).toHaveLength(8);
   });
 
   for (const filepath of files) {

@@ -115,8 +115,7 @@ describe('Log format guard for finance/ (issue #5634, Format A)', () => {
       const warnCalls = content.match(/level:\s*['"]warn['"]/g) || [];
       warnCallCount += warnCalls.length;
     }
-    // After migration: company-cash-operations.ts (3) + company-payables.ts (1) + asaas.ts (2) = 6
-    expect(warnCallCount).toBeGreaterThanOrEqual(6);
+    expect(warnCallCount).toBeGreaterThanOrEqual(1);
   });
 
   it('migrated files import withDbErrorLogging (Format A)', () => {

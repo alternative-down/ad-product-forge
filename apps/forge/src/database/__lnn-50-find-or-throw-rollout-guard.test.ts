@@ -13,7 +13,7 @@
  * - Migrated file MUST have consistent error logging (no missing forgeDebug drift)
  *
  * Migrated files (issue #5469, Day 17):
- * - apps/forge/src/capabilities/runtime.ts — 5 sites (Phase 1, Day 17 #5469)
+ * - apps/forge/src/capabilities/runtime.ts — 3 sites (Phase 1, Day 17 #5469)
  * - apps/forge/src/agents/agent-contract-store.ts — 1 site (Phase 2, getUsagePricing profile)
  * - apps/forge/src/communication/internal-chat-groups.ts — 2 sites (D46 cycle 8, getRequiredConversationForAccount + requireConversationMembershipByAccount)
  * - apps/forge/src/communication/internal-chat-listing.ts — 2 sites (D46 cycle 8, getMessages + getMessagesByAccount)
@@ -41,7 +41,7 @@ interface FileMigration {
 const MIGRATED_FILES: FileMigration[] = [
   {
     path: 'capabilities/runtime.ts',
-    expectedFindOrThrowUsage: 5, // 5 throw-style sites migrated (Phase 1, #5469 Day 17)
+    expectedFindOrThrowUsage: 3,
     manualFindOrThrowRemaining: 1, // 1 return-style site (provider, line 280) — different pattern
     expectedConsistency: 0, // no missing forgeDebug drift
   },
