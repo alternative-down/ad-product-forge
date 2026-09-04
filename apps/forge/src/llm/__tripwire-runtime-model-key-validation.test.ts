@@ -29,7 +29,7 @@ describe('L#NN-32 v8 tripwire: llm/runtime-model.ts validates modelKey before ca
     const beforeCast = source.slice(Math.max(0, castIdx - 800), castIdx);
     expect(beforeCast).toMatch(/indexOf\(['"]\/['"]\)/);
     // Must throw on invalid input
-    expect(beforeCast).toMatch(/throw new Error\(/);
+    expect(beforeCast).toMatch(/throw new InvalidAccountModelKeyFormatError\(/);
   });
 
   it('the validation throws for modelKeys without a slash', () => {
