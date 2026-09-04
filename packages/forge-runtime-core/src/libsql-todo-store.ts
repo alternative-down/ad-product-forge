@@ -22,7 +22,7 @@ const todoItemSchema = z.object({
 });
 
 const updateTodosSchema = z.object({
-  items: z.union([todoItemSchema, z.array(todoItemSchema)]),
+  items: z.array(todoItemSchema),
 });
 
 export type LibsqlTodoStoreOptions = {
@@ -155,8 +155,7 @@ export function createUpdateTodosAction(store: LibsqlTodoStore) {
     inputSchema: updateTodosSchema,
     async execute(input: unknown) {
       const parsed = updateTodosSchema.parse(input);
-      const items = Array.isArray(parsed.items) ? parsed.items : [parsed.items];
-      const todos = await store.update(items);
+      const todos = await store.update(parsed.items);
 
       return { todos };
     },
