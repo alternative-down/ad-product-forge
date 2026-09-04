@@ -271,6 +271,40 @@ describe('formatWorkingMemoryValue', () => {
     expect(result).toContain('- **Key2**: value2');
   });
 
+  test('formats structured working memory as nested markdown instead of object coercion', () => {
+    const result = formatWorkingMemoryValue(
+      JSON.stringify({
+        identity: {
+          roleCore: 'Maintain runtime reliability.',
+          nonNegotiables: 'Do not lose inbound messages.',
+        },
+        domain: {
+          scope: 'Agent orchestration.',
+        },
+        direction: {
+          currentMission: 'Eliminate silent idle transitions.',
+        },
+      }),
+    );
+
+    expect(result).toBe(
+      [
+        '- **Identity**:',
+        '  - **Role Core**: Maintain runtime reliability.',
+        '  - **Non Negotiables**: Do not lose inbound messages.',
+        '- **Domain**:',
+        '  - **Scope**: Agent orchestration.',
+        '- **Direction**:',
+        '  - **Current Mission**: Eliminate silent idle transitions.',
+      ].join('\n'),
+    );
+    expect(result).not.toContain('[object Object]');
+  });
+
+  test('omits empty nested working-memory sections', () => {
+    expect(formatWorkingMemoryValue('{"identity":{},"direction":{"currentMission":""}}')).toBeNull();
+  });
+
   test('filters out null and undefined values', () => {
     // Entries with null/undefined values are excluded from output
     const result = formatWorkingMemoryValue('{"active":"yes","deleted":null}');
