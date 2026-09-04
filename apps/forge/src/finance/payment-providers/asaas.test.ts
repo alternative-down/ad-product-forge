@@ -88,6 +88,48 @@ describe('asaas adapter', () => {
       expect(result!.subscriptionId).toBe('sub_1');
       expect(result!.rawEventJson).toBeDefined();
     });
+
+    // D66 #6877: handleReceived has unique currency branching — only handler
+    // that uses billingType to decide currency. CREDIT_CARD → USD, others → BRL.
+    // These tests exercise both branches of the conditional.
+    it('uses USD currency when billingType is CREDIT_CARD', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 100,
+        billingType: 'CREDIT_CARD',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('usd');
+      expect(result!.status).toBe('completed');
+    });
+
+    it('uses BRL (ASAAS_DEFAULT_CURRENCY) for non-credit-card billingType', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 100,
+        billingType: 'BOLETO',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
+
+    // Optional but recommended: covers PIX path and backward-compat (no billingType).
+    it('uses BRL currency for PIX billingType', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', {
+        value: 250.0,
+        billingType: 'PIX',
+      });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
+
+    it('uses BRL currency when billingType is undefined (backward compat)', () => {
+      const payload = makePayload('PAYMENT_RECEIVED', { value: 50.0 });
+      const result = normalizeAsaasPaymentReceived(payload);
+      expect(result).not.toBeNull();
+      expect(result!.currency).toBe('brl');
+    });
   });
 
   describe('normalizeAsaasPaymentConfirmed', () => {
