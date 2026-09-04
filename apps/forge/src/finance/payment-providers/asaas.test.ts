@@ -167,6 +167,15 @@ describe('asaas adapter', () => {
       expect(result).not.toBeNull();
       expect(result!.status).toBe('failed');
     });
+
+    // L#NN-50 #23 N=5 (#6876): every failed Asaas payment MUST carry currency.
+    it('PAYMENT_AWAITING_RISK_ANALYSIS co-tags amountUsd value with currency="brl"', () => {
+      const payload = makePayload('PAYMENT_AWAITING_RISK_ANALYSIS', { value: 75.0 });
+      const result = normalizeAsaasPaymentFailed(payload);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('failed');
+      expect(result!.currency).toBe('brl');
+    });
   });
 
   describe('normalizeAsaasEvent', () => {

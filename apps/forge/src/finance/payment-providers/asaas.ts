@@ -7,6 +7,13 @@
  * Each normalizeAsaasXxx export is now a thin wrapper that checks the
  * event name and delegates to dispatchAsaasEvent.
  * currency is now centralized as the default constant.
+ *
+ * Currency semantics (#6876, L#NN-50 #23 N=5): the legacy `amountUsd` field
+ * holds the value in the row's `currency` unit — BRL by default, USD when
+ * billingType === 'CREDIT_CARD'. Aggregation queries that treat `amountUsd`
+ * as USD-denominated will mis-report BRL/EUR/GBP payments by an FX factor.
+ * The rename to a currency-neutral field name is gated on a DB migration;
+ * see `__lnn-50-23-asaas-and-stripe-currency-co-occurrence-tripwire.test.ts`.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
@@ -43,6 +50,23 @@ type NormalizedAsaasPayment = {
   providerPaymentId: string;
   subscriptionId?: string;
   customerId: string;
+  /**
+   * Monetary amount in the row's `currency` unit (NOT necessarily USD).
+   *
+   * For Asaas (Brazilian payment provider), this value defaults to BRL except
+   * when `billingType === 'CREDIT_CARD'`, where Asaas settles USD.
+   *
+   * L#NN-50 #23 N=5 (#6876): the legacy field name `amountUsd` is a misnomer
+   * — it is the amount in the row's `currency`, NOT USD. Renaming the field to
+   * a currency-neutral name (e.g. `amount`) is gated on a DB migration that
+   * updates the `amount_usd` column. Until that migration lands, downstream
+   * aggregation queries MUST read `currency` alongside this value and apply FX
+   * conversion at query time.
+   *
+   * Tripwire: `__lnn-50-23-asaas-and-stripe-currency-co-occurrence-tripwire.test.ts`
+   * (P0 #5993.2) asserts every `amountUsd:` write in this file has a co-located
+   * `currency:` field in the same return literal.
+   */
   amountUsd: number;
   currency: string;
   status: 'completed' | 'failed' | 'refunded';
@@ -149,7 +173,8 @@ function handleConfirmed(payload: AsaasWebhookPayload): NormalizedAsaasPayment |
 }
 
 function handleFailed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
-  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED') return null;
+  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED')
+    return null;
   const p = payload.payment;
   return {
     provider: 'asaas',
@@ -178,16 +203,18 @@ function handleRefunded(payload: AsaasWebhookPayload): NormalizedAsaasPayment | 
   };
 }
 
-const ASAAS_EVENT_HANDLERS: Record<string, (payload: AsaasWebhookPayload) => NormalizedAsaasPayment | null> = {
-  'PAYMENT_RECEIVED': handleReceived,
-  'PAYMENT_CONFIRMED': handleConfirmed,
-  'PAYMENT_AWAITING_RISK_ANALYSIS': handleFailed,
-  'PAYMENT_DENIED': handleFailed,
-  'PAYMENT_REFUNDED': handleRefunded,
+const ASAAS_EVENT_HANDLERS: Record<
+  string,
+  (payload: AsaasWebhookPayload) => NormalizedAsaasPayment | null
+> = {
+  PAYMENT_RECEIVED: handleReceived,
+  PAYMENT_CONFIRMED: handleConfirmed,
+  PAYMENT_AWAITING_RISK_ANALYSIS: handleFailed,
+  PAYMENT_DENIED: handleFailed,
+  PAYMENT_REFUNDED: handleRefunded,
 };
 
 function dispatchAsaasEvent(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
-
   return ASAAS_EVENT_HANDLERS[payload.event]?.(payload) ?? null;
 }
 
@@ -206,23 +233,31 @@ export function normalizeAsaasEvent(payload: AsaasWebhookPayload): {
 }
 
 /** Normalize an Asaas PAYMENT_RECEIVED event. */
-export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+export function normalizeAsaasPaymentReceived(
+  payload: AsaasWebhookPayload,
+): NormalizedAsaasPayment | null {
   return payload.event === 'PAYMENT_RECEIVED' ? dispatchAsaasEvent(payload) : null;
 }
 
 /** Normalize an Asaas PAYMENT_CONFIRMED event. */
-export function normalizeAsaasPaymentConfirmed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+export function normalizeAsaasPaymentConfirmed(
+  payload: AsaasWebhookPayload,
+): NormalizedAsaasPayment | null {
   return payload.event === 'PAYMENT_CONFIRMED' ? dispatchAsaasEvent(payload) : null;
 }
 
 /** Normalize an Asaas PAYMENT_AWAITING_RISK_ANALYSIS or PAYMENT_DENIED event. */
-export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+export function normalizeAsaasPaymentFailed(
+  payload: AsaasWebhookPayload,
+): NormalizedAsaasPayment | null {
   return payload.event === 'PAYMENT_AWAITING_RISK_ANALYSIS' || payload.event === 'PAYMENT_DENIED'
     ? dispatchAsaasEvent(payload)
     : null;
 }
 
 /** Normalize an Asaas PAYMENT_REFUNDED event. */
-export function normalizeAsaasPaymentRefunded(payload: AsaasWebhookPayload): NormalizedAsaasPayment | null {
+export function normalizeAsaasPaymentRefunded(
+  payload: AsaasWebhookPayload,
+): NormalizedAsaasPayment | null {
   return payload.event === 'PAYMENT_REFUNDED' ? dispatchAsaasEvent(payload) : null;
 }
