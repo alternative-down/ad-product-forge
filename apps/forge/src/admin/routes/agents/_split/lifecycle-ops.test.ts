@@ -4,16 +4,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
-  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+  errorMsg: vi.fn((err) =>
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : String(err).replace(/^Error: /, ''),
+  ),
   withToolErrorLogging: vi.fn(async (params) => {
     try {
       return { valid: true, data: await params.fn() };
     } catch (error) {
       // Mirror the real impl: use errorMsg-style formatting
-      const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error).replace(/^Error: /, '');
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : String(error).replace(/^Error: /, '');
       return { valid: false, error: msg, hint: params.hint || '' };
     }
-  })
+  }),
 }));
 
 interface MockRoute {
@@ -64,7 +75,11 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/reload', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, ops as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        ops as any,
+      );
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/reload' }),
       );
@@ -72,7 +87,11 @@ describe('registerLifecycleOps', () => {
 
     it('reloads agent and adds to registry', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, ops as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        ops as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -91,7 +110,11 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn(), get: vi.fn() },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, errorOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        errorOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -103,7 +126,11 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/force-idle', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, ops as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        ops as any,
+      );
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/force-idle' }),
       );
@@ -122,7 +149,11 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, getOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        getOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -133,10 +164,32 @@ describe('registerLifecycleOps', () => {
 
     it('succeeds even when agent not in registry', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, ops as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        ops as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
       const response = await handler(makeRequest({ agentId: 'agent-456' }));
+
+      expect(response.status).toBe(200);
+    });
+
+    it('succeeds even when registry returns null entry (not just undefined)', async () => {
+      const nullOps = {
+        loadAgent: vi.fn(),
+        registry: { add: vi.fn(), get: vi.fn().mockReturnValue(null) },
+      };
+      const { registerLifecycleOps } = await import('./lifecycle-ops');
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        nullOps as any,
+      );
+      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
+
+      const response = await handler(makeRequest({ agentId: 'agent-null' }));
 
       expect(response.status).toBe(200);
     });
@@ -145,7 +198,11 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/rewakeup', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, ops as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        ops as any,
+      );
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/rewakeup' }),
       );
@@ -164,7 +221,11 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, getOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        getOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-789' }));
@@ -194,7 +255,11 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, testOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        testOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-new' }));
@@ -210,7 +275,11 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn(), get: vi.fn() },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, errorOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        errorOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -232,7 +301,11 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, errorOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        errorOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
       await handler(makeRequest({ agentId: 'agent-1' }));
@@ -258,14 +331,19 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, getOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        getOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
       await handler(makeRequest({ agentId: 'agent-2' }));
 
       const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
       const matchingCall = calls.find(
-        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/force-idle route handler failed',
+        (c: any) =>
+          c.scope === 'admin' && c.message === '/admin/agent/force-idle route handler failed',
       );
       expect(matchingCall).toBeDefined();
       expect(matchingCall?.context?.error).toContain('idle-fail');
@@ -277,14 +355,19 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig }, errorOps as any);
+      registerLifecycleOps(
+        httpServer as any,
+        { db: {} as unknown as Database, loaderConfig: {} as unknown as AgentLoaderConfig },
+        errorOps as any,
+      );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       await handler(makeRequest({ agentId: 'agent-3' }));
 
       const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
       const matchingCall = calls.find(
-        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/rewakeup route handler failed',
+        (c: any) =>
+          c.scope === 'admin' && c.message === '/admin/agent/rewakeup route handler failed',
       );
       expect(matchingCall).toBeDefined();
       expect(matchingCall?.context?.error).toContain('rewakeup-fail');
