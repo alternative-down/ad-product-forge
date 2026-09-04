@@ -67,6 +67,7 @@ describe('adminRouteError', () => {
 
   it('calls forgeDebug with scope and error message', async () => {
     const { forgeDebug } = await import('@forge-runtime/core');
+    (forgeDebug as ReturnType<typeof vi.fn>).mockClear();
     adminRouteError(new Error('debug test'));
     expect(forgeDebug).toHaveBeenCalledTimes(1);
     expect(forgeDebug).toHaveBeenCalledWith(
