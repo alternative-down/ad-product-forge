@@ -61,7 +61,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
         },
         {
           role: 'user',
-          content: [{ type: 'text', text: 'Continue.' }],
+          content: [{ type: 'text', text: 'Inspect current state.' }],
         },
         {
           role: 'assistant',

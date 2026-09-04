@@ -9,12 +9,10 @@ import {
   createRuntimeAgentSession,
   type RuntimeAgentSessionIteration,
 } from './runtime-agent-session.js';
-import type { RuntimeWorkingMemoryStore, WorkingMemoryRecord } from './runtime-working-memory.js';
 
 describe('createRuntimeAgentSession', () => {
   it('persists continued iteration feedback into the conversation thread before the next step', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         expect(options.providerOptions).toEqual({
@@ -67,7 +65,7 @@ describe('createRuntimeAgentSession', () => {
           content: [
             {
               type: 'text',
-              text: 'Continue from the previous step.',
+              text: 'Use the previous result to finish the task.',
             },
           ],
         });
@@ -101,7 +99,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
     const iterations: RuntimeAgentSessionIteration[] = [];
 
@@ -121,7 +118,9 @@ describe('createRuntimeAgentSession', () => {
           if (iteration.iteration === 1) {
             return {
               continue: true,
-              feedback: 'Continue from the previous step.',
+              feedbackMessages: [
+                { role: 'user', content: 'Use the previous result to finish the task.' },
+              ],
             };
           }
 
@@ -156,7 +155,7 @@ describe('createRuntimeAgentSession', () => {
         },
         {
           role: 'user',
-          text: 'Continue from the previous step.',
+          text: 'Use the previous result to finish the task.',
         },
         {
           role: 'assistant',
@@ -170,7 +169,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('adds the autonomous bootstrap user message before active raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const assistantMessageId = 'assistant-tool-call';
     const toolMessageId = 'tool-result';
     const userMessageId = 'user-follow-up';
@@ -197,7 +195,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'Continue.',
+                text: 'Inspect current state.',
                 providerOptions: undefined,
               },
             ],
@@ -234,7 +232,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
 
     await conversationStore.upsertThread({
@@ -286,7 +283,7 @@ describe('createRuntimeAgentSession', () => {
       parts: [
         {
           type: 'text',
-          text: 'Continue.',
+          text: 'Inspect current state.',
         },
       ],
       createdAt: '2026-04-22T20:00:03.000Z',
@@ -302,7 +299,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('keeps the autonomous bootstrap user message ahead of regular user raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const toolCallId = 'call_function_orphan_1';
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
@@ -327,7 +323,7 @@ describe('createRuntimeAgentSession', () => {
             content: [
               {
                 type: 'text',
-                text: 'Continue.',
+                text: 'Inspect current state.',
               },
             ],
           },
@@ -362,7 +358,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
 
     await conversationStore.upsertThread({
@@ -396,7 +391,7 @@ describe('createRuntimeAgentSession', () => {
       parts: [
         {
           type: 'text',
-          text: 'Continue.',
+          text: 'Inspect current state.',
         },
       ],
       createdAt: '2026-04-23T00:00:02.000Z',
@@ -412,7 +407,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('renders checkpoint summary, reflections, and observations as individual model messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     await conversationStore.appendMessage({
       id: 'checkpoint-summary-1',
       threadId: 'thread-1',
@@ -510,17 +504,6 @@ describe('createRuntimeAgentSession', () => {
             ],
             providerOptions: undefined,
           },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Continue.',
-                providerOptions: undefined,
-              },
-            ],
-            providerOptions: undefined,
-          },
         ]);
 
         return {
@@ -552,7 +535,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
 
     await conversationStore.upsertThread({
@@ -561,19 +543,6 @@ describe('createRuntimeAgentSession', () => {
       createdAt: '2026-04-24T00:00:00.000Z',
       updatedAt: '2026-04-24T00:00:01.000Z',
     });
-    await conversationStore.appendMessage({
-      id: 'user-follow-up',
-      threadId: 'thread-1',
-      role: 'user',
-      parts: [
-        {
-          type: 'text',
-          text: 'Continue.',
-        },
-      ],
-      createdAt: '2026-04-24T00:00:01.000Z',
-    });
-
     try {
       const result = await session.generate([], {
         system: 'Step system.',
@@ -587,7 +556,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('starts a run with the last configured history messages and keeps new run messages afterward', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         const visibleUserTexts = options.prompt
@@ -641,7 +609,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
 
     for (let index = 1; index <= 5; index += 1) {
@@ -678,7 +645,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('persists and replays anthropic reasoning metadata across iterations', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     let callCount = 0;
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
@@ -767,7 +733,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
     });
 
     try {
@@ -776,7 +741,6 @@ describe('createRuntimeAgentSession', () => {
           if (iteration.iteration === 1) {
             return {
               continue: true,
-              feedback: 'Continue.',
             };
           }
 
@@ -794,7 +758,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('loads dynamic runtime actions on each iteration without rebuilding the session', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const loadedActionNames: string[][] = [];
     let loadCount = 0;
     const model = new MockLanguageModelV3({
@@ -835,7 +798,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      workingMemoryStore,
       loadRuntimeActions: async () => {
         const actions =
           loadCount === 0
@@ -862,7 +824,6 @@ describe('createRuntimeAgentSession', () => {
           if (iteration.iteration === 1) {
             return {
               continue: true,
-              feedback: 'Continue.',
             };
           }
 
@@ -879,70 +840,4 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
-  it('returns no-op memory when workingMemoryStore is not provided (issue #5368)', async () => {
-    const conversationStore = new InMemoryConversationStore();
-    const model = new MockLanguageModelV3({
-      doGenerate: async () => ({
-        finishReason: 'stop' as const,
-        text: 'unused',
-        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-        response: { id: 'unused', modelId: 'mock' },
-        warnings: [],
-      }),
-    });
-
-    // workingMemoryStore is intentionally omitted. The field has been optional
-    // since #5329, but pre-fix runtime-agent-session.ts used a non-null
-    // assertion in getMemory(). The fix (issue #5368) makes getMemory()
-    // return a no-op object when no store is wired up.
-    const session = await createRuntimeAgentSession({
-      agentId: 'agent-1',
-      agentName: 'Forge Agent',
-      threadId: 'thread-1',
-      resourceId: 'resource-1',
-      assistantAuthorId: 'agent-1',
-      model,
-      system: 'Base system.',
-      conversationStore,
-      // workingMemoryStore omitted on purpose
-    });
-
-    try {
-      const memory = await session.getMemory();
-      const readResult = await memory.getWorkingMemory({
-        threadId: 'thread-1',
-        resourceId: 'resource-1',
-      });
-      expect(readResult).toBeNull();
-
-      await expect(
-        memory.updateWorkingMemory({
-          threadId: 'thread-1',
-          resourceId: 'resource-1',
-          workingMemory: '{"version":1}',
-          updatedAt: '2026-06-03T00:00:00.000Z',
-        }),
-      ).resolves.toBeUndefined();
-    } finally {
-      await session.dispose();
-    }
-  });
 });
-
-function createInMemoryWorkingMemoryStore(): RuntimeWorkingMemoryStore {
-  const records = new Map<string, WorkingMemoryRecord>();
-
-  return {
-    async read(input) {
-      return records.get(`${input.threadId}:${input.resourceId}`) ?? null;
-    },
-    async write(input) {
-      records.set(`${input.threadId}:${input.resourceId}`, {
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-        workingMemory: input.workingMemory,
-        updatedAt: input.updatedAt ?? new Date().toISOString(),
-      });
-    },
-  };
-}

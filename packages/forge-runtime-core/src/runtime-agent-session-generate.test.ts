@@ -62,7 +62,6 @@ function summarizeGenerateRequest(input: {
   system?: string;
   systemSegments: {
     baseSystem: string;
-    workingMemory: string;
     agentContext: string;
   };
   messages: ModelMessage[];
@@ -92,7 +91,6 @@ function summarizeGenerateRequest(input: {
     systemChars: input.system?.length ?? 0,
     systemSegmentChars: {
       baseSystem: input.systemSegments.baseSystem.length,
-      workingMemory: input.systemSegments.workingMemory.length,
       agentContext: input.systemSegments.agentContext.length,
     },
     messageCount: input.messages.length,
@@ -225,7 +223,7 @@ describe('summarizeGenerateRequest', () => {
   it('counts system chars when system is provided', () => {
     const result = summarizeGenerateRequest({
       system: 'system prompt here',
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [],
       actions: [],
     });
@@ -234,7 +232,7 @@ describe('summarizeGenerateRequest', () => {
 
   it('uses 0 for system chars when system is undefined', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [],
       actions: [],
     });
@@ -243,18 +241,17 @@ describe('summarizeGenerateRequest', () => {
 
   it('counts system segment chars correctly', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: 'base', workingMemory: 'wmem', agentContext: 'ctx' },
+      systemSegments: { baseSystem: 'base', agentContext: 'ctx' },
       messages: [],
       actions: [],
     });
     expect(result.systemSegmentChars.baseSystem).toBe(4);
-    expect(result.systemSegmentChars.workingMemory).toBe(4);
     expect(result.systemSegmentChars.agentContext).toBe(3);
   });
 
   it('counts message count and chars', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [
         { role: 'user', content: 'hello' },
         { role: 'assistant', content: 'world' },
@@ -268,7 +265,7 @@ describe('summarizeGenerateRequest', () => {
 
   it('sums tool call and result chars from message content', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [
         {
           role: 'assistant',
@@ -290,7 +287,7 @@ describe('summarizeGenerateRequest', () => {
 
   it('counts role frequencies', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [
         { role: 'user', content: 'a' },
         { role: 'user', content: 'b' },
@@ -310,7 +307,7 @@ describe('summarizeGenerateRequest', () => {
       { name: 'tool-b', description: 'desc', inputSchema: {} },
     ];
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [],
       actions,
     });
@@ -323,7 +320,7 @@ describe('summarizeGenerateRequest', () => {
       { name: 'tool-b', description: 'desc', inputSchema: { type: 'string' } },
     ];
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [],
       actions,
     });
@@ -333,7 +330,7 @@ describe('summarizeGenerateRequest', () => {
 
   it('handles empty messages and actions', () => {
     const result = summarizeGenerateRequest({
-      systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
+      systemSegments: { baseSystem: '', agentContext: '' },
       messages: [],
       actions: [],
     });
@@ -466,13 +463,12 @@ function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '' as string,
     agentContext: input.agentContext?.trim() || '',
   };
 
   return {
     text:
-      [segments.baseSystem, segments.workingMemory, segments.agentContext]
+      [segments.baseSystem, segments.agentContext]
         .filter((value): value is string => Boolean(value))
         .join('\n\n')
         .trim() || undefined,
@@ -488,7 +484,6 @@ describe('buildRuntimeSessionSystemPrompt', () => {
     });
     expect(result.text).toBeUndefined();
     expect(result.segments.baseSystem).toBe('');
-    expect(result.segments.workingMemory).toBe('');
     expect(result.segments.agentContext).toBe('');
   });
 
@@ -531,15 +526,6 @@ describe('buildRuntimeSessionSystemPrompt', () => {
       resourceId: 'resource-1',
     });
     expect(result.text).toBe('sys\n\nctx');
-  });
-
-  it('always has workingMemory as empty string (refactor/1092 removes it)', () => {
-    const result = buildRuntimeSessionSystemPrompt({
-      baseSystem: 'system',
-      threadId: 'thread-1',
-      resourceId: 'resource-1',
-    });
-    expect(result.segments.workingMemory).toBe('');
   });
 
   it('filters out empty segment and does not add extra newlines', () => {

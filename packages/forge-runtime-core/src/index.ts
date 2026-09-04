@@ -169,19 +169,5 @@ export {
   type ForgeAgentRuntimeConfig,
   type ForgeMcpServerConfig,
 } from './contracts.js';
-export {
-  appendWorkingMemoryInstructions,
-  sanitizeWorkingMemory,
-  WORKING_MEMORY_INSTRUCTIONS,
-  WORKING_MEMORY_SCHEMA,
-  type WorkingMemoryAccess,
-} from './working-memory.js';
-export {
-  createUpdateWorkingMemoryTool,
-  createWorkingMemoryContextEntry,
-  createWorkingMemoryPlugin,
-  type RuntimeWorkingMemoryStore,
-  type WorkingMemoryRecord,
-} from './runtime-working-memory.js';
 export { logger } from './logger.js';
 export type { LogContext } from './logger.js';

@@ -4,7 +4,6 @@ import type { AgentLogRuntimeMemoryData } from './use-agent-log-data';
 import { AgentLogMetrics } from './-agent-log-metrics';
 
 interface AgentRuntimeMemorySectionProps {
-  workingMemory: string | null;
   agentContext: string | null;
   executionState: 'idle' | 'running' | 'absent';
   lastExecutionError: string | null;
@@ -51,7 +50,6 @@ function formatDateTime(value: number) {
 }
 
 export function AgentRuntimeMemorySection({
-  workingMemory,
   agentContext,
   executionState,
   lastExecutionError,
@@ -77,7 +75,7 @@ export function AgentRuntimeMemorySection({
     return <div className="text-sm text-destructive">{error}</div>;
   }
 
-  if (!workingMemory && !agentContext && !observations && !reflection) {
+  if (!agentContext && !observations && !reflection) {
     if (!checkpointSummary) {
       return null;
     }
@@ -122,7 +120,6 @@ export function AgentRuntimeMemorySection({
         }
       />
 
-      <MemoryDisclosure title="Working Memory" value={workingMemory} />
       <MemoryDisclosure title="AGENT_CONTEXT.md" value={agentContext} />
       <MemoryDisclosure title="Checkpoint Summary" value={checkpointSummary} />
       <MemoryDisclosure title="Observations" value={observations} />

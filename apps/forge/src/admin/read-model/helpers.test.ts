@@ -27,9 +27,6 @@ import {
   splitMemoryRecallSegments,
   truncatePreview,
   toToolBadge,
-  humanizeMemoryKey,
-  formatWorkingMemoryValue,
-  renderWorkingMemoryMarkdown,
   toScheduleSummary,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
@@ -231,103 +228,6 @@ describe('toToolBadge', () => {
   test('badge extraction is case-insensitive', () => {
     expect(toToolBadge('WORKSPACE_EXECUTE_COMMAND')).toEqual({ icon: '💻', label: 'Terminal' });
     expect(toToolBadge('Workspace_Execute_Command')).toEqual({ icon: '💻', label: 'Terminal' });
-  });
-});
-
-describe('humanizeMemoryKey', () => {
-  test('replaces underscores with spaces', () => {
-    expect(humanizeMemoryKey('hello_world')).toBe('Hello World');
-  });
-
-  test('splits camelCase words', () => {
-    expect(humanizeMemoryKey('helloWorld')).toBe('Hello World');
-  });
-
-  test('trims leading/trailing whitespace', () => {
-    expect(humanizeMemoryKey('  hello  ')).toBe('Hello');
-  });
-});
-
-describe('formatWorkingMemoryValue', () => {
-  test('returns null for null input', () => {
-    expect(formatWorkingMemoryValue(null)).toBeNull();
-  });
-
-  test('returns null for undefined input', () => {
-    expect(formatWorkingMemoryValue(undefined)).toBeNull();
-  });
-
-  test('returns null for empty string', () => {
-    expect(formatWorkingMemoryValue('')).toBeNull();
-  });
-
-  test('returns null for invalid JSON', () => {
-    expect(formatWorkingMemoryValue('not json')).toBeNull();
-  });
-
-  test('formats valid JSON object as markdown bullet points', () => {
-    const result = formatWorkingMemoryValue('{"key1":"value1","key2":"value2"}');
-    expect(result).toContain('- **Key1**: value1');
-    expect(result).toContain('- **Key2**: value2');
-  });
-
-  test('formats structured working memory as nested markdown instead of object coercion', () => {
-    const result = formatWorkingMemoryValue(
-      JSON.stringify({
-        identity: {
-          roleCore: 'Maintain runtime reliability.',
-          nonNegotiables: 'Do not lose inbound messages.',
-        },
-        domain: {
-          scope: 'Agent orchestration.',
-        },
-        direction: {
-          currentMission: 'Eliminate silent idle transitions.',
-        },
-      }),
-    );
-
-    expect(result).toBe(
-      [
-        '- **Identity**:',
-        '  - **Role Core**: Maintain runtime reliability.',
-        '  - **Non Negotiables**: Do not lose inbound messages.',
-        '- **Domain**:',
-        '  - **Scope**: Agent orchestration.',
-        '- **Direction**:',
-        '  - **Current Mission**: Eliminate silent idle transitions.',
-      ].join('\n'),
-    );
-    expect(result).not.toContain('[object Object]');
-  });
-
-  test('omits empty nested working-memory sections', () => {
-    expect(formatWorkingMemoryValue('{"identity":{},"direction":{"currentMission":""}}')).toBeNull();
-  });
-
-  test('filters out null and undefined values', () => {
-    // Entries with null/undefined values are excluded from output
-    const result = formatWorkingMemoryValue('{"active":"yes","deleted":null}');
-    expect(result).toContain('- **Active**: yes');
-    expect(result).not.toContain('deleted');
-  });
-
-  test('returns null when all values are null/undefined', () => {
-    expect(formatWorkingMemoryValue('{"a":null,"b":null}')).toBeNull();
-  });
-});
-
-describe('renderWorkingMemoryMarkdown', () => {
-  test('returns null for null input', () => {
-    expect(renderWorkingMemoryMarkdown(null)).toBeNull();
-  });
-
-  test('returns null for empty string', () => {
-    expect(renderWorkingMemoryMarkdown('')).toBeNull();
-  });
-
-  test('returns null for invalid JSON', () => {
-    expect(renderWorkingMemoryMarkdown('not-json')).toBeNull();
   });
 });
 
