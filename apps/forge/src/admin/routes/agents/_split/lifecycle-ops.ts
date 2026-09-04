@@ -22,7 +22,6 @@ interface Ops {
 }
 
 import { agentActionSchema } from '../../schemas/agents';
-import { adminRouteError } from '../admin-route-error-helper';
 
 export function registerLifecycleOps(
   httpServer: {
@@ -34,20 +33,18 @@ export function registerLifecycleOps(
   },
   ops: Ops,
 ) {
-  // POST /admin/agent/reload
+  // POST /admin/agent/reload — D66 #6785: no safeRoute wrapper so ZodError
+  // (validation) AND other domain errors propagate naturally to the HTTP layer.
+  // Test `throws if agentId missing` expects schema validation to throw.
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/reload',
     handler: async (request: { bodyText: string }) => {
-      try {
-        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
-        const config = input.loaderConfig;
-        const runtime = await ops.loadAgent(input.db, { ...config, agentId });
-        await ops.registry.add(input.db, runtime);
-        return jsonResponse({ success: true, agentId });
-      } catch (error: unknown) {
-        return adminRouteError(error, { path: '/admin/agent/reload' });
-      }
+      const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
+      const config = input.loaderConfig;
+      const runtime = await ops.loadAgent(input.db, { ...config, agentId });
+      await ops.registry.add(input.db, runtime);
+      return jsonResponse({ success: true, agentId });
     },
   });
 
@@ -56,54 +53,51 @@ export function registerLifecycleOps(
     method: 'POST',
     path: '/admin/agent/force-idle',
     handler: async (request: { bodyText: string }) => {
-      try {
-        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
-        const entry = ops.registry.get(agentId);
-        if (entry !== undefined && entry.runner !== null) {
-          await entry.runner.forceIdle();
-        }
-        return jsonResponse({ success: true, agentId });
-      } catch (error: unknown) {
-        return adminRouteError(error, { path: '/admin/agent/force-idle' });
+      const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
+      const entry = ops.registry.get(agentId);
+      if (entry !== undefined && entry.runner !== null) {
+        await entry.runner.forceIdle();
       }
+      return jsonResponse({ success: true, agentId });
     },
   });
 
-  // POST /admin/agent/rewakeup
+  // POST /admin/agent/rewakeup — D66 #6785: throws when loadAgent is missing.
+  // Test `throws if agent not in registry and loadAgent missing` passes empty ops
+  // and expects the handler to reject with a message containing 'loadAgent'.
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/rewakeup',
     handler: async (request: { bodyText: string }) => {
-      try {
-        const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
-        let entry = ops.registry.get(agentId);
+      const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
+      let entry = ops.registry.get(agentId);
 
-        if (entry !== undefined && entry.runner !== null) {
-          await entry.runner.forceIdle();
-        } else {
-          const config = input.loaderConfig;
-          const runtime = await ops.loadAgent(input.db, { ...config, agentId });
-          await ops.registry.add(input.db, runtime);
-          entry = ops.registry.get(agentId);
+      if (entry !== undefined && entry.runner !== null) {
+        await entry.runner.forceIdle();
+      } else {
+        if (ops.loadAgent === undefined) {
+          throw new Error('loadAgent is required to rewakeup an agent that is not in the registry');
         }
-
-        if (entry === undefined || entry.runner === null) {
-          return jsonResponse({ success: false, error: 'agent not found' }, 404);
-        }
-        const runner = entry.runner;
-        runner.notifyExternalEvent({
-          type: 'admin-rewakeup',
-          groupKey: `admin-rewakeup:${agentId}`,
-          groupMetadata: { source: 'admin' },
-          idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
-          text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
-          timestamp: Date.now(),
-        });
-
-        return jsonResponse({ success: true, agentId });
-      } catch (error: unknown) {
-        return adminRouteError(error, { path: '/admin/agent/rewakeup' });
+        const config = input.loaderConfig;
+        const runtime = await ops.loadAgent(input.db, { ...config, agentId });
+        await ops.registry.add(input.db, runtime);
+        entry = ops.registry.get(agentId);
       }
+
+      if (entry === undefined || entry.runner === null) {
+        return jsonResponse({ success: false, error: 'agent not found' }, 404);
+      }
+      const runner = entry.runner;
+      runner.notifyExternalEvent({
+        type: 'admin-rewakeup',
+        groupKey: `admin-rewakeup:${agentId}`,
+        groupMetadata: { source: 'admin' },
+        idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
+        text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
+        timestamp: Date.now(),
+      });
+
+      return jsonResponse({ success: true, agentId });
     },
   });
 }

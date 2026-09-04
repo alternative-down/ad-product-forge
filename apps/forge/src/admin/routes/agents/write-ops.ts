@@ -35,6 +35,8 @@ import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
 import { registerConfigOps } from './_split/config-ops';
+import { registerContractOps } from './_split/contract-ops';
+import { registerProvidersOps } from './_split/providers-ops';
 
 /**
  * Bundle of agent lifecycle/contract operations consumed by write-ops
@@ -79,7 +81,12 @@ export function registerAgentWriteOpsRoutes(
   // types (AgentLoaderConfig, InternalAgentRegistry Registry, typeof loadAgent).
   // No cast needed — direct pass-through.
   registerLifecycleOps(httpServer, input, { ...ops, registry });
-  // Contract ops — extracted to split/contract-ops.ts
+  // Contract ops — D66 #6785: wire contract-ops (D65 split file already
+  // implemented at _split/contract-ops.ts but was not registered here)
+  registerContractOps({ httpServer, db: input.db, ops });
+  // Providers ops — D66 #6785: new file _split/providers-ops.ts
+  // Routes: /admin/agent/providers/upsert, /admin/agent/providers/delete
+  registerProvidersOps(httpServer, input.db);
   // Lifecycle delegate ops — D54 #6631 Phase 2b v2: _split file upgraded to
   // canonical AgentOperations shape. No cast needed — direct pass-through.
   registerLifecycleDelegateOps(httpServer, input, ops);
