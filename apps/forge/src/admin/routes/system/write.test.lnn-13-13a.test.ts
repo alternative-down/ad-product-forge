@@ -16,8 +16,7 @@
  *   - `integration/delete` test body includes both `providerType` and
  *     `integrationId` (schema requires both).
  *   - `settings/upsert` test expects untrimmed values (production doesn't trim).
- *   - `settings/upsert` loop test does NOT expect `loadAgent` to be called
- *     (production does not call loadAgent in this loop, only registry.add).
+ *   - `settings/upsert` loads a fresh runtime before registry replacement.
  *
  * ── L#NN-13 source-level regex pattern (Kaelen #5701 gold standard reference) ──
  *   - readFileSync (not mocks)
@@ -113,8 +112,9 @@ describe('L#NN-13 13a tripwire: write.test.ts mock-vs-production alignment', () 
   });
 
   describe('loop test expectations (write.test.ts)', () => {
-    it('settings/upsert loop test does NOT expect loadAgent (production does not call it)', () => {
-      expect(testSrc).not.toContain('expect(mockLoader).toHaveBeenCalledTimes(2)');
+    it('settings/upsert loop test verifies fresh runtimes are loaded', () => {
+      expect(testSrc).toContain('expect(mockLoader).toHaveBeenNthCalledWith(1');
+      expect(testSrc).toContain('expect(mockLoader).toHaveBeenNthCalledWith(2');
     });
   });
 
@@ -127,8 +127,8 @@ describe('L#NN-13 13a tripwire: write.test.ts mock-vs-production alignment', () 
       expect(prodSrc).toContain('integrations.deleteIntegration(body.providerType)');
     });
 
-    it('production calls registry.get(entry.id)', () => {
-      expect(prodSrc).toContain('registry.get(entry.id)');
+    it('production loads a fresh runtime before registry replacement', () => {
+      expect(prodSrc).toContain('loadAgentFn(db, { ...loaderConfig, agentId: entry.id })');
     });
 
     it('production reads body.provider for oauth/sync (schema field)', () => {

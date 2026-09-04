@@ -351,14 +351,14 @@ describe('registerSystemWriteRoutes', () => {
       );
     });
 
-    it('calls registry.add for each active agent', async () => {
+    it('replaces each active agent with a newly loaded runtime', async () => {
       mockRegistry.list.mockReturnValue([
         { id: 'agent-1' },
         { id: 'agent-2' },
       ]);
-      mockRegistry.get.mockImplementation((id) => ({
-        runtime: { id, name: 'mock-agent-' + id },
-      }));
+      const firstRuntime = { id: 'agent-1', name: 'new-agent-1' };
+      const secondRuntime = { id: 'agent-2', name: 'new-agent-2' };
+      mockLoader.mockResolvedValueOnce(firstRuntime).mockResolvedValueOnce(secondRuntime);
 
       registerSystemWriteRoutes(buildInput());
 
@@ -370,7 +370,15 @@ describe('registerSystemWriteRoutes', () => {
         ),
       );
 
+      expect(mockLoader).toHaveBeenNthCalledWith(1, mockDb, {
+        agentId: 'agent-1',
+      });
+      expect(mockLoader).toHaveBeenNthCalledWith(2, mockDb, {
+        agentId: 'agent-2',
+      });
       expect(mockRegistry.add).toHaveBeenCalledTimes(2);
+      expect(mockRegistry.add).toHaveBeenNthCalledWith(1, mockDb, firstRuntime);
+      expect(mockRegistry.add).toHaveBeenNthCalledWith(2, mockDb, secondRuntime);
     });
 
     it('handles empty body gracefully', async () => {
