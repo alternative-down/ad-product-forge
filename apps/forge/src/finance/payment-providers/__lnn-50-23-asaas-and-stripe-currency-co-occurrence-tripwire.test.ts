@@ -29,14 +29,16 @@
  * Scope: asaas.ts and stripe.ts in apps/forge/src/finance/payment-providers/.
  * Implementation: parse `return { ... }` blocks containing `amountUsd:` and
  * assert that each such block also contains `currency:` in the same literal.
+ *
+ * Tripwire adoption: uses readSource/relativeToHere from tripwire-helpers for
+ * path resolution and file reading (L#NN-32 v8 / #6210 meta-tripwire compliance).
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { readSource, relativeToHere } from '../../tripwire-helpers';
 
 const TARGET_FILES = [
-  join(import.meta.dirname, 'asaas.ts'),
-  join(import.meta.dirname, 'stripe.ts'),
+  relativeToHere('finance', 'payment-providers', 'asaas.ts'),
+  relativeToHere('finance', 'payment-providers', 'stripe.ts'),
 ];
 
 /** Strip comments to prevent commented-out violations from satisfying the regex. */
@@ -114,7 +116,7 @@ describe('payment-providers/asaas.ts + stripe.ts L#NN-50 #23 tripwire', () => {
   for (const file of TARGET_FILES) {
     const name = file.split('/').pop();
     describe(`${name}: every \`amountUsd:\` write pairs with \`currency:\` in the same return literal`, () => {
-      const raw = readFileSync(file, 'utf8');
+      const raw = readSource(file);
       const stripped = stripComments(raw);
 
       it('file exists and is readable', () => {
