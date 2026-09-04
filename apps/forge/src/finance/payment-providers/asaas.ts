@@ -14,6 +14,15 @@
  * as USD-denominated will mis-report BRL/EUR/GBP payments by an FX factor.
  * The rename to a currency-neutral field name is gated on a DB migration;
  * see `__lnn-50-23-asaas-and-stripe-currency-co-occurrence-tripwire.test.ts`.
+ *
+ * Dropped fields (D66 #6878, intentional): the Asaas payload may include
+ * `netValue`, `invoiceUrl`, `invoiceId`, `lastRetryDate`, `paymentDate`,
+ * `dueDate`, and other informational fields. These are INTENTIONALLY NOT
+ * mapped to `NormalizedAsaasPayment` and are lost at this adapter boundary.
+ * They survive in `rawEventJson` for forensics. To change this contract,
+ * update BOTH the `NormalizedAsaasPayment` type AND the EXPECTED_KEYS list
+ * in `__no-asaas-payload-fields-dropped-tripwire.test.ts`; the tripwire will
+ * fail otherwise.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
