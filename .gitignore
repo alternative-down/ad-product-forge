@@ -8,7 +8,6 @@ coverage
 apps/forge-admin/.tanstack/
 
 artifacts
-.agent_codex
 .last-message.txt
 packages/mastra-engine/.forge-state/
 packages/mastra-engine/discord-bot.log
