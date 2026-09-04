@@ -32,6 +32,7 @@ const installGlobalSkillForAgentSchema = z
 
 const uploadAgentSkillsSchema = z
   .object({
+    agentId: z.string().optional(),
     skillsZipBase64: z.string(),
   })
   .strict();

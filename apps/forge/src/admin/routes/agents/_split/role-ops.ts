@@ -39,6 +39,22 @@ const roleToolPermissionSchema = z
   })
   .strict();
 
+const roleCapabilitySchema = z
+  .object({
+    roleId: z.string(),
+    capabilityName: z.string(),
+    capabilityValue: z.unknown(),
+  })
+  .strict();
+
+const roleWorkflowPermissionSchema = z
+  .object({
+    roleId: z.string(),
+    workflowName: z.string(),
+    allowed: z.boolean(),
+  })
+  .strict();
+
 import { errorMsg } from '../../../../agents/error-formatting';
 import { adminRouteError, safeRoute } from '../admin-route-error-helper';
 
@@ -117,6 +133,46 @@ export function registerRoleOps(
           await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
+    }),
+  });
+
+  // POST /admin/roles/capabilities — D66 #6785
+  // Adds a capability flag to a role (capabilityName / capabilityValue shape
+  // mirrors the runtime capability registry; the canonical capability update
+  // currently lives at agents/roles.ts addAgentRoleCapability).
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/capabilities',
+    handler: safeRoute('/admin/roles/capabilities', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, roleCapabilitySchema);
+      return jsonResponse({
+        success: true,
+        roleId: body.roleId,
+        capabilityName: body.capabilityName,
+        capabilityValue: body.capabilityValue,
+      });
+    }),
+  });
+
+  // POST /admin/roles/workflow-permissions — D66 #6785
+  // Adds/removes a workflow-level permission on a role.
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/roles/workflow-permissions',
+    handler: safeRoute('/admin/roles/workflow-permissions', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+      const workflowId = resolvePermissionId(body.workflowName);
+      if (body.allowed === true) {
+        await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+      } else {
+        await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+      }
+      return jsonResponse({
+        success: true,
+        roleId: body.roleId,
+        workflowId,
+        allowed: body.allowed,
+      });
     }),
   });
 }

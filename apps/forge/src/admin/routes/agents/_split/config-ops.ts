@@ -111,6 +111,20 @@ export function registerConfigOps(
     }),
   });
 
+  // D66 #6785: Rotate credential for an existing GitHub App installation
+  // without recreating the app. Complements recreate (which removes + creates)
+  // by providing a cheaper credential-only refresh path.
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent/github-app/rotate',
+    handler: safeRoute('/admin/agent/github-app/rotate', async (request) => {
+      const body = adminRoutesParseJsonBody(request.bodyText, agentGitHubAppActionSchema);
+      const githubApps = requireGitHubApps();
+      const credential = await githubApps.getGitCredentials({ agentId: body.agentId });
+      return jsonResponse({ success: true, expiresAt: credential.expiresAt });
+    }),
+  });
+
   // POST /admin/agent/update-config
   httpServer.registerRoute({
     method: 'POST',
