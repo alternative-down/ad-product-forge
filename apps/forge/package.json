@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/ && mkdir -p dist/migrations && cp -R migrations/. dist/migrations/",
+    "build": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/ && mkdir -p dist/migrations && cp -R migrations/. dist/migrations/",
     "pretypecheck": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && test -f ../../packages/forge-runtime-core/dist/index.d.ts",
     "typecheck": "npx tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
@@ -18,7 +18,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@forge-runtime/core": "file:../../packages/forge-runtime-core",
     "@ai-sdk/anthropic": "^3.0.68",
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.15.15",
