@@ -5,6 +5,7 @@ import {
   normalizeAsaasPaymentReceived,
   normalizeAsaasPaymentConfirmed,
   normalizeAsaasPaymentFailed,
+  normalizeAsaasPaymentRefunded,
   normalizeAsaasEvent,
 } from './asaas';
 
@@ -137,6 +138,28 @@ describe('asaas adapter', () => {
       const result = normalizeAsaasEvent(payload);
       expect(result).not.toBeNull();
       expect(result!.status).toBe('completed');
+    });
+  });
+
+  // D66 #6875: PAYMENT_REFUNDED path was previously untested (issue parent: #5993).
+  // Refund flow regression risk: handler was unverified. Tests cover the two
+  // contract paths: wrong-event null + happy-path normalized refunded payment.
+  describe('normalizeAsaasPaymentRefunded (#6875)', () => {
+    it('returns null for wrong event', () => {
+      const payload = makePayload('PAYMENT_RECEIVED');
+      expect(normalizeAsaasPaymentRefunded(payload)).toBeNull();
+    });
+
+    it('normalizes PAYMENT_REFUNDED event', () => {
+      const payload = makePayload('PAYMENT_REFUNDED', { value: 199.99, subscription: 'sub_2' });
+      const result = normalizeAsaasPaymentRefunded(payload);
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('refunded');
+      expect(result!.provider).toBe('asaas');
+      expect(result!.amountUsd).toBe(199.99);
+      expect(result!.currency).toBe('brl');
+      expect(result!.subscriptionId).toBe('sub_2');
+      expect(result!.rawEventJson).toBeDefined();
     });
   });
 });
