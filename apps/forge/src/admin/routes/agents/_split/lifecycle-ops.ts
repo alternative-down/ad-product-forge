@@ -55,7 +55,7 @@ export function registerLifecycleOps(
     handler: async (request: { bodyText: string }) => {
       const { agentId } = adminRoutesParseJsonBody(request.bodyText ?? '', agentActionSchema);
       const entry = ops.registry.get(agentId);
-      if (entry !== undefined && entry.runner !== null) {
+      if (entry != null && entry.runner !== null) {
         await entry.runner.forceIdle();
       }
       return jsonResponse({ success: true, agentId });
@@ -84,7 +84,7 @@ export function registerLifecycleOps(
         entry = ops.registry.get(agentId);
       }
 
-      if (entry === undefined || entry.runner === null) {
+      if (entry == null || entry.runner === null) {
         return jsonResponse({ success: false, error: 'agent not found' }, 404);
       }
       const runner = entry.runner;
