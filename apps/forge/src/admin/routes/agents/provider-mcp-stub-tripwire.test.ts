@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readSource, relativeToHere } from '../../../tripwire-helpers';
 
 import { registerAgentProviderMcpRoutes } from './provider-mcp';
 
@@ -24,7 +23,7 @@ describe('agent provider route registration tripwire (regression for #5583)', ()
   });
 
   it('detail-read.ts does NOT re-introduce the no-op stub', () => {
-    const src = readFileSync(join(__dirname, 'detail-read.ts'), 'utf8');
+    const src = readSource(relativeToHere('admin', 'routes', 'agents', 'detail-read.ts'));
     expect(src).not.toMatch(STUB_PATTERN);
   });
 });

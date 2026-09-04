@@ -12,14 +12,13 @@
  *
  * This tripwire asserts the function body uses the members table for filtering.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { readSource, relativeToHere } from '../tripwire-helpers';
 
-const ADMIN_FILE = join(__dirname, 'internal-chat-admin.ts');
+const ADMIN_FILE = relativeToHere('communication', 'internal-chat-admin.ts');
 
 describe('L#NN-50 tripwire — ensureDirectConversation MUST filter by membership (issue #6036 P1)', () => {
-  const source = readFileSync(ADMIN_FILE, 'utf8');
+  const source = readSource(ADMIN_FILE);
 
   // Extract the function body using brace counting
   function getFnBody(name: string): string {
@@ -33,7 +32,10 @@ describe('L#NN-50 tripwire — ensureDirectConversation MUST filter by membershi
       if (source[i] === '{') depth++;
       else if (source[i] === '}') {
         depth--;
-        if (depth === 0) { braceEnd = i; break; }
+        if (depth === 0) {
+          braceEnd = i;
+          break;
+        }
       }
     }
     expect(braceEnd, `${name} must have a closing brace`).toBeGreaterThan(braceStart);
