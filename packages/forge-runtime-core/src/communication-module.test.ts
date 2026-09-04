@@ -4,6 +4,60 @@ import type { CommunicationInboundMessage, CommunicationProvider } from './commu
 import { createCommunicationModule } from './communication-module.js';
 
 describe('createCommunicationModule', () => {
+  it('keeps conversations from available providers when another provider denies access', async () => {
+    const unavailableProvider: CommunicationProvider = {
+      id: 'discord',
+      async listConversations() {
+        throw new Error('Missing Access');
+      },
+      async sendMessage() {
+        return { targetKey: 'discord-channel' };
+      },
+    };
+    const availableProvider: CommunicationProvider = {
+      id: 'internal-chat',
+      async listConversations() {
+        return [
+          {
+            targetKey: 'conversation-1',
+            provider: 'internal-chat',
+            latestMessageAt: '2026-09-04T20:00:00.000Z',
+            unreadCount: 0,
+            messages: [],
+          },
+        ];
+      },
+      async sendMessage() {
+        return { targetKey: 'conversation-1' };
+      },
+    };
+    const module = await createCommunicationModule({
+      providers: [unavailableProvider, availableProvider],
+      workspace: {
+        filesystem: {
+          async readFile() {
+            return '';
+          },
+          async writeFile() {},
+        },
+      },
+      workspaceRoot: '/workspace',
+      contactsStore: {
+        async listContacts() {
+          return [];
+        },
+        async saveContacts() {},
+      },
+    });
+
+    await expect(module.listConversations({})).resolves.toEqual([
+      expect.objectContaining({ provider: 'internal-chat', targetKey: 'conversation-1' }),
+    ]);
+    await expect(module.listConversations({ provider: 'discord' })).rejects.toThrow(
+      'Missing Access',
+    );
+  });
+
   it('dispatches the same provider message id only once', async () => {
     let inboundHandler: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
     const provider: CommunicationProvider = {
