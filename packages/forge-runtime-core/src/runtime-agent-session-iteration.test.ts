@@ -276,17 +276,6 @@ describe('runtime-agent-session-iteration', () => {
       expect(result.continue).toBe(false);
     });
 
-    it('passes through feedback from callback', async () => {
-      const opts: RuntimeAgentSessionGenerateOptions = {
-        onIterationComplete: vi.fn().mockResolvedValue({ continue: true, feedback: 'Be faster' }),
-      };
-      const result = await resolveRuntimeAgentSessionContinuation({
-        options: opts,
-        iteration: makeIteration(),
-      });
-      expect(result.feedback).toBe('Be faster');
-    });
-
     it('passes through feedbackMessages from callback', async () => {
       const msgs = [{ role: 'user' as const, content: 'Use fewer steps' }];
       const opts: RuntimeAgentSessionGenerateOptions = {

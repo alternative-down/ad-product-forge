@@ -104,7 +104,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
     // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
-      agentContext: iterationNumber === 1 ? input.options.system : undefined,
+      agentContext: input.options.system,
       operationalState: await input.runtime.getOperationalContextText(),
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
@@ -233,7 +233,6 @@ function summarizeGenerateRequest(input: {
   system?: string;
   systemSegments: {
     baseSystem: string;
-    workingMemory: string;
     agentContext: string;
     operationalState: string;
   };
@@ -264,7 +263,6 @@ function summarizeGenerateRequest(input: {
     systemChars: input.system?.length ?? 0,
     systemSegmentChars: {
       baseSystem: input.systemSegments.baseSystem.length,
-      workingMemory: input.systemSegments.workingMemory.length,
       agentContext: input.systemSegments.agentContext.length,
       operationalState: input.systemSegments.operationalState.length,
     },
@@ -412,19 +410,13 @@ async function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '',
     agentContext: input.agentContext?.trim() || '',
     operationalState: input.operationalState?.trim() || '',
   };
 
   return {
     text:
-      [
-        segments.baseSystem,
-        segments.workingMemory,
-        segments.agentContext,
-        segments.operationalState,
-      ]
+      [segments.baseSystem, segments.agentContext, segments.operationalState]
         .filter((value): value is string => Boolean(value))
         .join('\n\n')
         .trim() || undefined,

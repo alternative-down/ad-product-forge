@@ -68,7 +68,6 @@ export async function resolveRuntimeAgentSessionContinuation(input: {
   iteration: RuntimeAgentSessionIteration;
 }): Promise<{
   continue: boolean;
-  feedback?: string;
   feedbackMessages?: Array<{
     role: 'assistant' | 'user';
     content: string;
@@ -79,14 +78,12 @@ export async function resolveRuntimeAgentSessionContinuation(input: {
   if (result?.continue !== undefined) {
     return {
       continue: result.continue,
-      feedback: result.feedback,
       feedbackMessages: result.feedbackMessages,
     };
   }
 
   return {
     continue: input.iteration.toolCalls.length > 0 || input.iteration.toolResults.length > 0,
-    feedback: result?.feedback,
     feedbackMessages: result?.feedbackMessages,
   };
 }

@@ -27,7 +27,6 @@ vi.mock('@forge-runtime/core', () => ({
   forgeDebug: mockForgeDebug,
   toMastraSafeIdentifier: (s: string) => s.replace(/[^a-zA-Z0-9_]/g, '_'),
   LibsqlConversationStore: vi.fn().mockImplementation(() => ({
-    read: vi.fn().mockResolvedValue({ workingMemory: null }),
   })),
   readOperationalMemoryState: mockReadOperationalMemoryState,
 }));
@@ -591,7 +590,7 @@ describe('createAgentReadModel', () => {
       const { LibsqlConversationStore } = await import('@forge-runtime/core');
       const realCtor = (LibsqlConversationStore as any).getMockImplementation();
       (LibsqlConversationStore as any).mockImplementation(function () {
-        return { read: vi.fn().mockResolvedValue({ workingMemory: null }) };
+        return {};
       });
 
       const agentRow = {

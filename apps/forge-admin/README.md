@@ -1,27 +1,18 @@
-# forge-admin
+# Forge Admin
 
-Human admin UI for the Forge runtime.
+Forge Admin is the human interface for inspecting and operating an AD Product Forge installation.
 
-This app is intentionally limited to maintenance and visibility.
+## Responsibilities
 
-Current scope:
+The application provides views and controls for agents, conversations, execution logs, memory, schedules, roles, providers, integrations, contracts, and system settings. It communicates with the Forge administrative API and does not own backend state.
 
-- dashboard overview
-- agent runtime visibility
-- agent hiring and termination
-- selected agent function reassignment
-- agent runtime config updates
-- external provider credential updates
-- read-only prompt inspection
-- read-only notification inspection
-- read-only communication previews
-- agent wake and reload actions
-- agent schedule management
-- role custom tool grant management
+## Development
 
-Current non-goals:
+```bash
+npm run -w forge-admin dev
+npm run -w forge-admin typecheck
+npm run -w forge-admin test
+npm run -w forge-admin build
+```
 
-- editing agent messages or notifications
-- operating GitHub or Coolify directly
-- editing functions or roles themselves
-- changing prompts or other internal agent cognition fields
+Route modules live under `src/routes`. Shared UI primitives live under `src/components`; generated primitives should remain unchanged and variations should be implemented as wrappers.

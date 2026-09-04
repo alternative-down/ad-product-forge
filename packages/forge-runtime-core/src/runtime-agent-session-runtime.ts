@@ -6,7 +6,6 @@ import { consolidateOperationalMemory } from './operational-memory-consolidation
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
-import { toolToRuntimeAction } from './tools.js';
 import { createUpdateTodosAction } from './libsql-todo-store.js';
 import { createPlanModeActions } from './runtime-plan-mode.js';
 
@@ -15,7 +14,6 @@ export type RuntimeAgentSessionRuntime = {
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ForgeConversationMemory;
-  workingMemoryStore?: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   getOperationalContextText(): Promise<string>;
   syncState(input?: {
@@ -90,9 +88,7 @@ export async function createRuntimeAgentSessionRuntime(
       : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
-  const staticRuntimeActions = input.workingMemoryTool
-    ? [toolToRuntimeAction(input.workingMemoryTool), ...(input.runtimeActions ?? [])]
-    : (input.runtimeActions ?? []);
+  const staticRuntimeActions = input.runtimeActions ?? [];
   const todoAction = input.todoStore ? createUpdateTodosAction(input.todoStore) : undefined;
   const planActions = input.planMode ? createPlanModeActions(input.planMode) : undefined;
 

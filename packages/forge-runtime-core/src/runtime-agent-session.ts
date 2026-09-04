@@ -6,12 +6,10 @@ import type {
 } from 'agent-runtime-core/integrations';
 
 import type { CreateForgeAgentRuntimeOptions as _CreateForgeAgentRuntimeOptions } from './runtime.js';
-import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
 import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
 import type { LibsqlTodoStore } from './libsql-todo-store.js';
 import type { RuntimePlanMode } from './runtime-plan-mode.js';
-import { type Tool } from './tools.js';
 
 export type RuntimeAgentSessionGenerateMessage =
   | string
@@ -78,11 +76,12 @@ export type RuntimeAgentSessionGenerateOptions = {
     };
   };
   providerOptions?: Record<string, unknown>;
+  loadTodosText?: () => Promise<string | undefined>;
+  loadPlanText?: () => Promise<string | undefined>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (iteration: RuntimeAgentSessionIteration) =>
     | Promise<{
         continue?: boolean;
-        feedback?: string;
         feedbackMessages?: Array<{
           role: 'assistant' | 'user';
           content: string;
@@ -90,7 +89,6 @@ export type RuntimeAgentSessionGenerateOptions = {
       } | void>
     | {
         continue?: boolean;
-        feedback?: string;
         feedbackMessages?: Array<{
           role: 'assistant' | 'user';
           content: string;
@@ -106,16 +104,6 @@ export type RuntimeAgentSession = {
   ): Promise<{
     text: string;
     usage?: RuntimeAgentSessionStepResult['usage'];
-  }>;
-  hasOwnMemory(): boolean;
-  // eslint-disable-next-line @typescript-eslint/require-await
-  getMemory(): Promise<{
-    getWorkingMemory(input: { threadId: string; resourceId: string }): Promise<string | null>;
-    updateWorkingMemory(input: {
-      threadId: string;
-      resourceId: string;
-      workingMemory: string;
-    }): Promise<void>;
   }>;
   stabilizeMemory(): Promise<{
     overflowTokenCount: number;
@@ -134,7 +122,6 @@ export type CreateRuntimeAgentSessionOptions = {
   system?: string;
   conversationStore: ConversationStore;
   checkpointedStateStore?: unknown;
-  workingMemoryStore?: RuntimeWorkingMemoryStore;
   checkpointedOmLimits?: {
     totalContextTokens: number;
     recentRawTokens: number;
@@ -177,7 +164,6 @@ export type CreateRuntimeAgentSessionOptions = {
     Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>
   >;
   runtimeObservers?: RuntimeObserver[];
-  workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
   todoStore?: LibsqlTodoStore;
   planMode?: RuntimePlanMode;
   consolidateConversationOverflow?: boolean;
@@ -196,32 +182,6 @@ export async function createRuntimeAgentSession(
         prompt,
         options,
       });
-    },
-    hasOwnMemory() {
-      return true;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async getMemory() {
-      const store = input.workingMemoryStore;
-      return {
-        async getWorkingMemory(value) {
-          if (!store) {
-            return null;
-          }
-          return (
-            (await store.read({
-              threadId: value.threadId,
-              resourceId: value.resourceId,
-            }))?.workingMemory ?? null
-          );
-        },
-        async updateWorkingMemory(value) {
-          if (!store) {
-            return;
-          }
-          await store.write(value);
-        },
-      };
     },
     async stabilizeMemory() {
       return await runtime.syncState();
