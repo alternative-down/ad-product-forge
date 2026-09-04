@@ -1,6 +1,17 @@
 /**
  * L#NN-50 #18 v10 tripwire test — helper-extraction rollout guard.
  *
+ * D66 SCOUT VERIFICATION (cd40dfbb): cat 3 GREEN — 40/40 tests pass.
+ * Migration registry snapshot locked in 'D66 scout snapshot' test below.
+ * See #6766 cat 3, follow-up to #6909 (cat 6) and #6911 (cat final).
+ *
+ * L#NN-PM-Dispatch-Must-API-Verify-First: PM cat 3 dispatch was based on
+ * stale Veritas comment 3 assumption ("all 8 tripwires passed"). Reality on
+ * develop HEAD shows ALL 8 cats are green since #6911 (this PR is
+ * documentation-only, no functional change). The scout PR adds a
+ * sentinel test that pins the current MIGRATED+CANDIDATE counts so any
+ * future regression in the registry triggers an immediate visible fail.
+ *
  * Purpose: Enforce the L#NN-50 #18 v10 pattern: helper extractions (functions
  * with "Debug" in name like capabilitiesStoreDebug, hiringDebug, migaduManagerDebug)
  * MUST use 3-positional-arg form internally: forgeDebug(scope, message, context).
@@ -354,6 +365,21 @@ describe('L#NN-50 #18 v10 helper-extraction rollout guard', () => {
   // Sanity check: ensure migration registry is non-empty
   it('has at least one migrated file in registry', () => {
     expect(MIGRATED_FILES.length).toBeGreaterThan(0);
+  });
+
+  // D66 scout snapshot — pins the MIGRATED/CANDIDATE registry sizes and
+  // asserts overall GREEN state on develop HEAD cd40dfbb. Update these
+  // numbers in a follow-up PR when the registry grows (or shrinks via
+  // candidate → migrated promotion). A drop in MIGRATED_FILES count is
+  // a regression (someone reverted a migration); a drop in CANDIDATE_FILES
+  // count means a candidate was silently removed.
+  // 39 MIGRATED + 0 CANDIDATE = 39 tracked as of D66 scout verification.
+  // (Header docstring still lists 4 historical candidates, but they were
+  // all promoted out of CANDIDATE_FILES; the array is empty.)
+  it('D66 scout snapshot: 39 MIGRATED + 0 CANDIDATE = 39 tracked (#6766 cat 3 GREEN)', () => {
+    expect(MIGRATED_FILES.length, 'MIGRATED_FILES count drifted from D66 baseline — investigate').toBe(39);
+    expect(CANDIDATE_FILES.length, 'CANDIDATE_FILES count drifted from D66 baseline — investigate').toBe(0);
+    expect(MIGRATED_FILES.length + CANDIDATE_FILES.length).toBe(39);
   });
 
   // Verify MIGRATED files have ZERO 1-object-arg calls (regression guard)
