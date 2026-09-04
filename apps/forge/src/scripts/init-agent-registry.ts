@@ -1,8 +1,5 @@
 import 'dotenv/config';
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import { eq, and } from 'drizzle-orm';
 
 import * as schema from '../database/schema';
@@ -35,11 +32,6 @@ const AGENTS_CONFIG = {
 
 async function initAgentRegistry() {
   try {
-    const systemPrompt = await readFile(
-      path.resolve(import.meta.dirname, '../forge-system.md'),
-      'utf8',
-    );
-
     // Get database connection
     const db = getDatabase();
 
@@ -69,7 +61,7 @@ async function initAgentRegistry() {
         description: AGENTS_CONFIG.forge.description,
         modelProfileId: defaults.primaryProfile.profileId,
         omModelProfileId: defaults.omProfile.profileId,
-        instructions: systemPrompt,
+        instructions: '',
         workspaceAutoSync: 1,
         workspaceBm25: 1,
         workspaceEmbedder: DEFAULT_WORKSPACE_EMBEDDER,
@@ -83,7 +75,6 @@ async function initAgentRegistry() {
         modelProfileId: defaults.primaryProfile.profileId,
         omModelProfileId: defaults.omProfile.profileId,
         instructions: [
-          systemPrompt,
           'You are the helper agent for the main Forge agent.',
           'You do not have direct external channels of your own except internal-chat.',
           'When the main agent contacts you through internal-chat, help with analysis, planning, review, and focused execution support.',
