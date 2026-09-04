@@ -1,320 +1,305 @@
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { z } from 'zod';
-import { readFile, writeFile, mkdir, readdir, rm as _rm } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
-export type PlanModeStatus = 'open' | 'completed';
+export type PlanStatus = 'draft' | 'active' | 'completed';
 
 export type PlanEntry = {
-  createdAt: string;
-  stepNumber: number;
+  id: number;
   intent: string;
   plan: string;
-  status: PlanModeStatus;
+  status: PlanStatus;
+  completionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const enterPlanModeSchema = z.object({
-  intent: z
-    .string()
-    .min(1)
-    .refine((s) => s.trim().length >= 1, {
-      message: 'Intent cannot be empty or whitespace only',
-    }),
+  intent: z.string().trim().min(1),
 });
 
 const exitPlanModeSchema = z.object({
-  // exitAction uses same pattern
-  plan: z
-    .string()
-    .min(1)
-    .refine((s) => s.trim().length >= 1, {
-      message: 'Plan cannot be empty or whitespace only',
-    }),
+  plan: z.string().trim().min(1),
 });
 
-const PLANS_SUBDIR = 'plans';
+const completePlanSchema = z.object({
+  completionNote: z.string().trim().min(1),
+});
+
+const writeActionMarkers = [
+  'write',
+  'create',
+  'update',
+  'delete',
+  'remove',
+  'execute',
+  'send',
+  'post',
+  'upload',
+  'commit',
+  'push',
+  'merge',
+  'deploy',
+  'restart',
+];
 
 function isReadOnlyAction(
   action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
 ): boolean {
-  const name = action.name.toLowerCase();
-  const desc = action.description.toLowerCase();
-
-  // Actions that are always write/mutation
-  const writeMarkers = [
-    'write',
-    'delete',
-    'remove',
-    'kill',
-    'stop',
-    'terminate',
-    'create',
-    'add',
-    'send',
-    'post',
-    'put',
-    'update',
-    'run',
-    'execute',
-    'bash',
-    'shell',
-    'command',
-    'patch',
-    'merge',
-    'push',
-    'deploy',
-  ];
-
-  const hasWriteMarker = writeMarkers.some((m) => name.includes(m) || desc.includes(m));
-
-  // Actions that are read-only
-  const readMarkers = [
-    'read',
-    'list',
-    'get',
-    'search',
-    'grep',
-    'find',
-    'query',
-    'fetch',
-    'load',
-    'check',
-    'inspect',
-    'stat',
-    'diff',
-    'log',
-    'show',
-    'view',
-  ];
-
-  const hasReadMarker = readMarkers.some((m) => name.includes(m) || desc.includes(m));
-
-  // If has write marker and no read marker, it's a write action
-  if (hasWriteMarker && !hasReadMarker) return false;
-
-  // If has read marker and no write marker, it's read-only
-  if (hasReadMarker && !hasWriteMarker) return true;
-
-  // Default: treat as non-read-only (fallback to full mode)
-  return false;
+  const description = `${action.name} ${action.description}`.toLowerCase();
+  return !writeActionMarkers.some((marker) => description.includes(marker));
 }
 
 export class RuntimePlanMode {
-  private activePlan: PlanEntry | null = null;
-  private inPlanMode = false;
-  private readonly plansDir: string;
+  private readonly plansDirectory: string;
+  private planning = false;
+  private draft: PlanEntry | null = null;
 
   constructor(options: { agentMemoryPath: string }) {
-    this.plansDir = join(options.agentMemoryPath, 'memory', PLANS_SUBDIR);
+    this.plansDirectory = join(options.agentMemoryPath, 'plans');
   }
 
-  get isInPlanMode(): boolean {
-    return this.inPlanMode;
+  get isPlanning(): boolean {
+    return this.planning;
   }
 
-  get currentPlan(): PlanEntry | null {
-    return this.activePlan;
-  }
-
-  private async ensurePlansDir(): Promise<void> {
-    await mkdir(this.plansDir, { recursive: true });
-  }
-
-  private planFilePath(plan: PlanEntry): string {
-    const fileName = `${plan.createdAt}-step-${plan.stepNumber}-plan.md`;
-    return resolve(this.plansDir, fileName);
-  }
-
-  private formatPlanFile(plan: PlanEntry): string {
-    return [
-      `createdAt: ${plan.createdAt}`,
-      `stepNumber: ${plan.stepNumber}`,
-      '',
-      '## Intent',
-      plan.intent,
-      '',
-      '## Plan',
-      plan.plan,
-      '',
-      `status: ${plan.status}`,
-    ].join('\n');
-  }
-
-  private parsePlanFile(content: string, _filePath: string): PlanEntry {
-    const lines = content.split('\n');
-    let createdAt = '';
-    let stepNumber = 0;
-    let intent = '';
-    let plan = '';
-    let status: PlanModeStatus = 'open';
-
-    let section = '';
-    for (const line of lines) {
-      if (line.startsWith('createdAt:')) {
-        createdAt = line.replace('createdAt:', '').trim();
-      } else if (line.startsWith('stepNumber:')) {
-        stepNumber = parseInt(line.replace('stepNumber:', '').trim(), 10);
-      } else if (line.startsWith('## Intent')) {
-        section = 'intent';
-      } else if (line.startsWith('## Plan')) {
-        section = 'plan';
-      } else if (line.startsWith('status:')) {
-        status = (line.replace('status:', '').trim() as PlanModeStatus) ?? 'open';
-      } else if (section === 'intent') {
-        intent += (intent ? '\n' : '') + line;
-      } else if (section === 'plan') {
-        plan += (plan ? '\n' : '') + line;
-      }
-    }
-
-    return { createdAt, stepNumber, intent, plan, status };
-  }
-
-  async enterPlanMode(intent: string, stepNumber: number): Promise<PlanEntry> {
-    if (!intent || intent.trim().length === 0) {
-      throw new Error('Intent cannot be empty or whitespace only');
-    }
-    await this.ensurePlansDir();
-
-    const plan: PlanEntry = {
-      createdAt: new Date().toISOString(),
-      stepNumber,
+  async enter(intent: string): Promise<PlanEntry> {
+    const plans = await this.readPlans();
+    const now = new Date().toISOString();
+    const draft: PlanEntry = {
+      id: plans.reduce((largest, plan) => Math.max(largest, plan.id), 0) + 1,
       intent,
       plan: '',
-      status: 'open',
+      status: 'draft',
+      completionNote: null,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    await writeFile(this.planFilePath(plan), this.formatPlanFile(plan), 'utf8');
-    this.activePlan = plan;
-    this.inPlanMode = true;
-    return plan;
+    await this.writePlan(draft);
+    this.draft = draft;
+    this.planning = true;
+    return draft;
   }
 
-  async exitPlanMode(planText: string): Promise<PlanEntry> {
-    if (!planText || planText.trim().length === 0) {
-      throw new Error('Plan text cannot be empty or whitespace only');
+  async activate(planText: string): Promise<PlanEntry> {
+    if (this.draft === null) {
+      throw new Error('Enter plan mode before activating a plan.');
     }
-    if (!this.activePlan) {
-      throw new Error('Not in Plan Mode. Call enterPlanMode first.');
+
+    const plans = await this.readPlans();
+    const activePlan = plans.find((plan) => plan.status === 'active');
+
+    if (activePlan !== undefined) {
+      await this.writePlan({
+        ...activePlan,
+        status: 'completed',
+        completionNote: `Superseded by plan ${this.draft.id}.`,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    const activated: PlanEntry = {
+      ...this.draft,
+      plan: planText,
+      status: 'active',
+      updatedAt: new Date().toISOString(),
+    };
+    await this.writePlan(activated);
+    this.draft = null;
+    this.planning = false;
+    return activated;
+  }
+
+  async complete(completionNote: string): Promise<PlanEntry> {
+    const activePlan = (await this.readPlans()).find((plan) => plan.status === 'active');
+
+    if (activePlan === undefined) {
+      throw new Error('There is no active plan to complete.');
     }
 
     const completed: PlanEntry = {
-      ...this.activePlan,
-      plan: planText,
+      ...activePlan,
       status: 'completed',
+      completionNote,
+      updatedAt: new Date().toISOString(),
     };
-
-    await writeFile(this.planFilePath(completed), this.formatPlanFile(completed), 'utf8');
-    this.activePlan = null;
-    this.inPlanMode = false;
+    await this.writePlan(completed);
     return completed;
   }
 
-  /**
-   * Get the most relevant plan entry for context injection.
-   * Priority: active open plan > last completed plan > null
-   */
-  async getActivePlanAnchor(): Promise<PlanEntry | null> {
-    if (this.activePlan) return this.activePlan;
+  async getContextText(): Promise<string> {
+    const plans = await this.readPlans();
+    const activePlan = plans.find((plan) => plan.status === 'active');
+    const recentPlans = plans
+      .filter((plan) => plan.status === 'completed')
+      .sort((left, right) => right.id - left.id)
+      .slice(0, 5);
+    const blocks: string[] = [];
 
-    try {
-      await this.ensurePlansDir();
-      const files = await readdir(this.plansDir);
-
-      const planFiles = files
-        .filter((f) => f.endsWith('-plan.md'))
-        .sort()
-        .reverse(); // newest first
-
-      for (const file of planFiles) {
-        const content = await readFile(join(this.plansDir, file), 'utf8');
-        const plan = this.parsePlanFile(content, file);
-        return plan; // most recent completed plan
-      }
-    } catch {
-      // dir doesn't exist yet
+    if (activePlan !== undefined) {
+      blocks.push(
+        [
+          `<active_plan id="${activePlan.id}" path="${this.relativePlanPath(activePlan.id)}">`,
+          `  <intent>${escapeXml(activePlan.intent)}</intent>`,
+          `  <plan>${escapeXml(activePlan.plan)}</plan>`,
+          '</active_plan>',
+        ].join('\n'),
+      );
     }
 
-    return null;
+    if (recentPlans.length > 0) {
+      blocks.push(
+        [
+          '<recent_plans>',
+          ...recentPlans.map(
+            (plan) =>
+              `  <plan id="${plan.id}" path="${this.relativePlanPath(plan.id)}">${escapeXml(plan.completionNote ?? plan.intent)}</plan>`,
+          ),
+          '</recent_plans>',
+        ].join('\n'),
+      );
+    }
+
+    return blocks.join('\n\n');
   }
 
-  /**
-   * Returns the plan context text for injection into the system prompt.
-   */
-  async getPlanContextText(): Promise<string> {
-    const anchor = await this.getActivePlanAnchor();
-    if (!anchor) return '';
-
-    const statusLabel = anchor.status === 'open' ? '[PLANNING]' : '[PLANNED]';
-    return [
-      `## Plan Mode ${statusLabel}`,
-      `Intent: ${anchor.intent}`,
-      anchor.plan ? `Plan: ${anchor.plan}` : '(in progress — plan not yet defined)',
-    ].join('\n');
-  }
-
-  /**
-   * Filters a list of runtime actions to read-only subset.
-   * Only call this when in Plan Mode.
-   */
   filterReadOnlyActions(
     actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>,
   ): Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> {
-    return actions.filter(isReadOnlyAction);
+    return actions.filter((action) => {
+      if (action.name === 'exitPlanMode') {
+        return true;
+      }
+      if (action.name === 'enterPlanMode' || action.name === 'completePlan') {
+        return false;
+      }
+      return isReadOnlyAction(action);
+    });
   }
 
-  /**
-   * Reset plan mode state. Useful for testing or recovery.
-   */
-  reset(): void {
-    this.activePlan = null;
+  private async readPlans(): Promise<PlanEntry[]> {
+    await mkdir(this.plansDirectory, { recursive: true });
+    const fileNames = (await readdir(this.plansDirectory)).filter((name) =>
+      /^\d+-plan\.md$/.test(name),
+    );
+    const plans = await Promise.all(
+      fileNames.map(async (fileName) =>
+        this.parsePlan(await readFile(join(this.plansDirectory, fileName), 'utf8')),
+      ),
+    );
+    return plans.sort((left, right) => left.id - right.id);
+  }
+
+  private async writePlan(plan: PlanEntry): Promise<void> {
+    await mkdir(this.plansDirectory, { recursive: true });
+    await writeFile(
+      join(this.plansDirectory, `${plan.id}-plan.md`),
+      [
+        `id: ${plan.id}`,
+        `status: ${plan.status}`,
+        `createdAt: ${plan.createdAt}`,
+        `updatedAt: ${plan.updatedAt}`,
+        '',
+        '## Intent',
+        plan.intent,
+        '',
+        '## Plan',
+        plan.plan,
+        '',
+        '## Completion note',
+        plan.completionNote ?? '',
+      ].join('\n'),
+      'utf8',
+    );
+  }
+
+  private parsePlan(content: string): PlanEntry {
+    const metadata = Object.fromEntries(
+      content
+        .split('\n')
+        .slice(0, 4)
+        .map((line) => {
+          const separator = line.indexOf(':');
+          return [line.slice(0, separator), line.slice(separator + 1).trim()];
+        }),
+    );
+    const intent = content.match(/## Intent\n([\s\S]*?)\n\n## Plan/)?.[1]?.trim() ?? '';
+    const plan = content.match(/## Plan\n([\s\S]*?)\n\n## Completion note/)?.[1]?.trim() ?? '';
+    const parsedCompletionNote = content.match(/## Completion note\n([\s\S]*)$/)?.[1]?.trim();
+    const completionNote =
+      parsedCompletionNote === undefined || parsedCompletionNote === ''
+        ? null
+        : parsedCompletionNote;
+
+    return {
+      id: Number(metadata.id),
+      status: metadata.status as PlanStatus,
+      createdAt: metadata.createdAt,
+      updatedAt: metadata.updatedAt,
+      intent,
+      plan,
+      completionNote,
+    };
+  }
+
+  private relativePlanPath(id: number) {
+    return `memory/plans/${id}-plan.md`;
   }
 }
 
-/**
- * Creates the two Plan Mode runtime actions.
- * Both require access to the RuntimePlanMode instance and stepNumber provider.
- */
-export function createPlanModeActions(input: {
-  planMode: RuntimePlanMode;
-  getCurrentStepNumber: () => number;
-}) {
-  const enterAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
+export function createPlanModeActions(planMode: RuntimePlanMode) {
+  const enterPlanMode: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'enterPlanMode',
-    description:
-      'Enter Plan Mode. After this, the agent operates in analysis/planning mode with a reduced tool set (read-only actions only — no write, execute, or mutation tools). Use this to analyze a situation, form an intent, and prepare a plan before taking irreversible actions.',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    inputSchema: enterPlanModeSchema as any,
-    execute: async (parsedInput) => {
-      const { intent } = parsedInput as z.infer<typeof enterPlanModeSchema>;
-      const stepNumber = input.getCurrentStepNumber();
-      const plan = await input.planMode.enterPlanMode(intent, stepNumber);
-      return {
-        entered: true,
-        planFile: `${plan.createdAt}-step-${plan.stepNumber}-plan.md`,
-        status: plan.status,
-      };
+    description: 'Enter read-only planning mode to investigate and prepare a new persistent plan.',
+    inputSchema: enterPlanModeSchema,
+    async execute(input) {
+      const { intent } = enterPlanModeSchema.parse(input);
+      const plan = await planMode.enter(intent);
+      return { id: plan.id, status: plan.status };
     },
   };
-
-  const exitAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
+  const exitPlanMode: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'exitPlanMode',
     description:
-      'Exit Plan Mode and return to normal execution (exit plan mode). Provide the final plan text summarizing what was decided during the planning phase. After this, full tool access is restored.',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    inputSchema: exitPlanModeSchema as any,
-    execute: async (parsedInput) => {
-      const { plan } = parsedInput as z.infer<typeof exitPlanModeSchema>;
-      const completed = await input.planMode.exitPlanMode(plan);
+      'Save the future execution plan, leave read-only planning mode, and begin execution.',
+    inputSchema: exitPlanModeSchema,
+    async execute(input) {
+      const { plan } = exitPlanModeSchema.parse(input);
+      const activePlan = await planMode.activate(plan);
       return {
-        exited: true,
-        planFile: `${completed.createdAt}-step-${completed.stepNumber}-plan.md`,
+        id: activePlan.id,
+        status: activePlan.status,
+        path: `memory/plans/${activePlan.id}-plan.md`,
+      };
+    },
+  };
+  const completePlan: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
+    name: 'completePlan',
+    description:
+      'Complete the active plan and add a retrospective note without rewriting its original future-oriented text.',
+    inputSchema: completePlanSchema,
+    async execute(input) {
+      const { completionNote } = completePlanSchema.parse(input);
+      const completed = await planMode.complete(completionNote);
+      return {
+        id: completed.id,
         status: completed.status,
-        intent: completed.intent,
-        plan: completed.plan,
+        path: `memory/plans/${completed.id}-plan.md`,
       };
     },
   };
 
-  return { enterPlanMode: enterAction, exitPlanMode: exitAction };
+  return { enterPlanMode, exitPlanMode, completePlan };
+}
+
+function escapeXml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
 }

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -9,276 +9,117 @@ import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode';
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const d = tempDirs.pop();
-    if (d) await rm(d, { recursive: true, force: true });
-  }
+  await Promise.all(tempDirs.splice(0).map((directory) => rm(directory, { recursive: true })));
 });
 
-async function makePlanMode(): Promise<{ planMode: RuntimePlanMode; memoryPath: string }> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'plan-test-'));
-  tempDirs.push(dir);
-  const memoryPath = path.join(dir, 'memory');
-  return { planMode: new RuntimePlanMode({ agentMemoryPath: memoryPath }), memoryPath };
+async function createPlanMode() {
+  const agentMemoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-plans-'));
+  tempDirs.push(agentMemoryPath);
+  return { agentMemoryPath, planMode: new RuntimePlanMode({ agentMemoryPath }) };
 }
 
 describe('RuntimePlanMode', () => {
-  describe('enterPlanMode', () => {
-    it('creates plan entry and sets active plan', async () => {
-      const { planMode } = await makePlanMode();
-      const plan = await planMode.enterPlanMode('Analyze the codebase structure', 1);
-      expect(plan.intent).toBe('Analyze the codebase structure');
-      expect(plan.stepNumber).toBe(1);
-      expect(plan.status).toBe('open');
-      expect(plan.plan).toBe('');
-      expect(plan.createdAt).toBeTruthy();
-      expect(planMode.isInPlanMode).toBe(true);
-      expect(planMode.currentPlan).toEqual(plan);
-    });
+  it('persists an active future-oriented plan across runtime instances', async () => {
+    const { agentMemoryPath, planMode } = await createPlanMode();
+    const draft = await planMode.enter('Prepare the release');
+    const active = await planMode.activate('1. Validate the build\n2. Publish the release');
 
-    it('persists plan file to memory/plans/', async () => {
-      const { planMode, memoryPath } = await makePlanMode();
-      const _plan = await planMode.enterPlanMode('Review auth implementation', 5);
-      const planDir = path.join(memoryPath, 'memory', 'plans');
-      const files = await import('node:fs/promises').then((fs) => fs.readdir(planDir));
-      expect(files).toHaveLength(1);
-      expect(files[0]).toContain(`step-5-plan.md`);
-    });
+    expect(draft.id).toBe(1);
+    expect(active.status).toBe('active');
+    expect(planMode.isPlanning).toBe(false);
 
-    it('rejects empty string intent at method level', async () => {
-      const { planMode } = await makePlanMode();
-      // enterPlanMode validates that intent is not empty/whitespace
-      await expect(planMode.enterPlanMode('', 1)).rejects.toThrow('Intent cannot be empty');
-    });
+    const restarted = new RuntimePlanMode({ agentMemoryPath });
+    const context = await restarted.getContextText();
+    expect(context).toContain('<active_plan id="1" path="memory/plans/1-plan.md">');
+    expect(context).toContain('1. Validate the build');
   });
 
-  describe('exitPlanMode', () => {
-    it('updates plan with plan text and marks completed', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('Plan refactoring', 1);
-      const completed = await planMode.exitPlanMode(
-        'Step 1: extract interfaces\nStep 2: rename modules',
-      );
-      expect(completed.plan).toBe('Step 1: extract interfaces\nStep 2: rename modules');
-      expect(completed.status).toBe('completed');
-      expect(planMode.isInPlanMode).toBe(false);
-    });
+  it('records completion separately without rewriting the plan', async () => {
+    const { agentMemoryPath, planMode } = await createPlanMode();
+    await planMode.enter('Fix startup');
+    await planMode.activate('1. Reproduce\n2. Correct the migration');
+    await planMode.complete('Migration verified against a fresh database.');
 
-    it('updates the plan file on disk', async () => {
-      const { planMode, memoryPath } = await makePlanMode();
-      await planMode.enterPlanMode('Test plan', 2);
-      await planMode.exitPlanMode('Final plan text');
-      const planDir = path.join(memoryPath, 'memory', 'plans');
-      const files = await import('node:fs/promises').then((fs) => fs.readdir(planDir));
-      const content = await import('node:fs/promises').then((fs) =>
-        fs.readFile(path.join(planDir, files[0]), 'utf8'),
-      );
-      expect(content).toContain('status: completed');
-      expect(content).toContain('Final plan text');
-    });
-
-    it('throws if not in plan mode', async () => {
-      const { planMode } = await makePlanMode();
-      await expect(planMode.exitPlanMode('Some plan')).rejects.toThrow('Not in Plan Mode');
-    });
-
-    it('requires enterPlanMode before exitPlanMode', async () => {
-      const { planMode } = await makePlanMode();
-      await expect(planMode.exitPlanMode('some plan')).rejects.toThrow('Not in Plan Mode');
-    });
+    const content = await readFile(path.join(agentMemoryPath, 'plans', '1-plan.md'), 'utf8');
+    expect(content).toContain('1. Reproduce\n2. Correct the migration');
+    expect(content).toContain('## Completion note\nMigration verified against a fresh database.');
+    expect(await planMode.getContextText()).toContain(
+      'Migration verified against a fresh database.',
+    );
   });
 
-  describe('getActivePlanAnchor', () => {
-    it('returns active open plan when in plan mode', async () => {
-      const { planMode } = await makePlanMode();
-      const created = await planMode.enterPlanMode('Active intent', 1);
-      const anchor = await planMode.getActivePlanAnchor();
-      expect(anchor).toEqual(created);
-    });
+  it('keeps only the five most recent completed plan references in context', async () => {
+    const { planMode } = await createPlanMode();
 
-    it('returns last completed plan when not in plan mode', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('First plan', 1);
-      await planMode.exitPlanMode('First plan result');
-      await planMode.enterPlanMode('Second plan', 2);
-      await planMode.exitPlanMode('Second plan result');
-      const anchor = await planMode.getActivePlanAnchor();
-      expect(anchor?.stepNumber).toBe(2);
-      expect(anchor?.status).toBe('completed');
-    });
+    for (let id = 1; id <= 6; id += 1) {
+      await planMode.enter(`Intent ${id}`);
+      await planMode.activate(`Plan ${id}`);
+      await planMode.complete(`Completed ${id}`);
+    }
 
-    it('returns null when no plans exist', async () => {
-      const { planMode } = await makePlanMode();
-      expect(await planMode.getActivePlanAnchor()).toBeNull();
-    });
+    const context = await planMode.getContextText();
+    expect(context).not.toContain('memory/plans/1-plan.md');
+    expect(context).toContain('memory/plans/2-plan.md');
+    expect(context).toContain('memory/plans/6-plan.md');
   });
 
-  describe('getPlanContextText', () => {
-    it('returns empty string when no plan', async () => {
-      const { planMode } = await makePlanMode();
-      expect(await planMode.getPlanContextText()).toBe('');
-    });
+  it('supersedes the previous active plan only when a new plan is activated', async () => {
+    const { planMode } = await createPlanMode();
+    await planMode.enter('First intent');
+    await planMode.activate('First plan');
+    await planMode.enter('Second intent');
+    await planMode.activate('Second plan');
 
-    it('returns [PLANNING] format for open plan', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('Investigate auth bug', 1);
-      const text = await planMode.getPlanContextText();
-      expect(text).toContain('[PLANNING]');
-      expect(text).toContain('Investigate auth bug');
-    });
-
-    it('returns [PLANNED] format for completed plan', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('Fix auth', 1);
-      await planMode.exitPlanMode('Check token validation and session expiry logic');
-      const text = await planMode.getPlanContextText();
-      expect(text).toContain('[PLANNED]');
-      expect(text).toContain('Check token validation');
-    });
+    const context = await planMode.getContextText();
+    expect(context).toContain('<active_plan id="2"');
+    expect(context).toContain('Superseded by plan 2.');
   });
 
-  describe('filterReadOnlyActions', () => {
-    it('filters out write actions when in plan mode', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('Analyze', 1);
-      const actions = [
-        { name: 'readFile', description: 'Read a file' } as unknown,
-        { name: 'writeFile', description: 'Write a file' } as unknown,
-        { name: 'grep', description: 'Search in files' } as unknown,
-        { name: 'execute', description: 'Run a command' } as unknown,
-        { name: 'listDirectory', description: 'List directory contents' } as unknown,
-        { name: 'deleteFile', description: 'Delete a file' } as unknown,
-      ];
-      const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered.map((a) => a.name)).toEqual(['readFile', 'grep', 'listDirectory']);
-    });
+  it('allows inspection and exiting while planning but filters mutation actions', async () => {
+    const { planMode } = await createPlanMode();
+    await planMode.enter('Investigate safely');
 
-    it('returns only read-only actions regardless of inPlanMode state', async () => {
-      const { planMode } = await makePlanMode();
-      // filterReadOnlyActions always returns read-only subset
-      const actions = [
-        { name: 'readFile', description: 'Read a file' } as unknown,
-        { name: 'writeFile', description: 'Write a file' } as unknown,
-        { name: 'grep', description: 'Search in files' } as unknown,
-      ];
-      const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered.map((a: unknown) => (a as { name?: string }).name ?? '')).toEqual([
-        'readFile',
-        'grep',
-      ]);
-    });
+    const actions = [
+      { name: 'readFile', description: 'Read a file' },
+      { name: 'searchFiles', description: 'Search files' },
+      { name: 'writeFile', description: 'Write a file' },
+      { name: 'enterPlanMode', description: 'Enter planning' },
+      { name: 'completePlan', description: 'Complete active plan' },
+      { name: 'exitPlanMode', description: 'Save plan and exit' },
+    ];
 
-    it('treats mixed-name actions as non-read-only', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('Test', 1);
-      const actions = [
-        { name: 'readAndWrite', description: 'Read and write' } as unknown,
-        { name: 'fileWrite', description: 'Write file' } as unknown,
-      ];
-      const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered).toHaveLength(0);
-    });
-  });
-
-  describe('reset', () => {
-    it('reset() clears activePlan but not inPlanMode flag', async () => {
-      const { planMode } = await makePlanMode();
-      await planMode.enterPlanMode('To reset', 1);
-      planMode.reset();
-      // reset() clears activePlan but not the inPlanMode boolean flag
-      expect(planMode.currentPlan).toBeNull();
-      expect(planMode.currentPlan).toBeNull();
-      // anchor still finds the file
-      const anchor = await planMode.getActivePlanAnchor();
-      expect(anchor?.status).toBe('open');
-    });
+    expect(planMode.filterReadOnlyActions(actions).map((action) => action.name)).toEqual([
+      'readFile',
+      'searchFiles',
+      'exitPlanMode',
+    ]);
   });
 });
 
 describe('createPlanModeActions', () => {
-  it('enterPlanMode has correct name and description', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 3,
+  it('enters planning, activates a plan, and completes it', async () => {
+    const { planMode } = await createPlanMode();
+    const actions = createPlanModeActions(planMode);
+
+    expect(await actions.enterPlanMode.execute({ intent: 'Prepare work' })).toEqual({
+      id: 1,
+      status: 'draft',
     });
-    expect(actions.enterPlanMode.name).toBe('enterPlanMode');
-    expect(actions.enterPlanMode.description).toContain('read-only');
-    expect(actions.enterPlanMode.description).toContain('Plan Mode');
+    expect(await actions.exitPlanMode.execute({ plan: '1. Inspect\n2. Implement' })).toMatchObject({
+      id: 1,
+      status: 'active',
+      path: 'memory/plans/1-plan.md',
+    });
+    expect(
+      await actions.completePlan.execute({ completionNote: 'Delivered and verified.' }),
+    ).toMatchObject({ id: 1, status: 'completed' });
   });
 
-  it('exitPlanMode has correct name and description', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 3,
-    });
-    expect(actions.exitPlanMode.name).toBe('exitPlanMode');
-    expect(actions.exitPlanMode.description).toContain('exit');
-    expect(actions.exitPlanMode.description).toContain('full tool access');
-  });
+  it('validates action input at the boundary', async () => {
+    const actions = createPlanModeActions((await createPlanMode()).planMode);
 
-  it('enterPlanMode execute creates plan and returns result', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 7,
-    });
-    const result = await actions.enterPlanMode.execute({ intent: 'Investigate memory leak' });
-    expect(result).toHaveProperty('entered', true);
-    expect(result).toHaveProperty('status', 'open');
-    expect(planMode.isInPlanMode).toBe(true);
-  });
-
-  it('exitPlanMode execute completes plan and returns result', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 2,
-    });
-    await actions.enterPlanMode.execute({ intent: 'Plan something' });
-    const result = await actions.exitPlanMode.execute({ plan: 'Step 1, Step 2, Step 3' });
-    expect(result).toHaveProperty('exited', true);
-    expect(result).toHaveProperty('status', 'completed');
-    expect(result).toHaveProperty('plan', 'Step 1, Step 2, Step 3');
-    expect(planMode.isInPlanMode).toBe(false);
-  });
-
-  it('enterPlanMode action execute accepts empty intent (validation at method level)', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 1,
-    });
     await expect(actions.enterPlanMode.execute({ intent: '' })).rejects.toThrow();
-  });
-
-  it('exitPlanMode action execute requires enterPlanMode first', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 1,
-    });
-    await actions.enterPlanMode.execute({ intent: 'Intent' });
     await expect(actions.exitPlanMode.execute({ plan: '' })).rejects.toThrow();
-  });
-
-  it('enterPlanMode action execute accepts empty string intent', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 1,
-    });
-    await expect(actions.enterPlanMode.execute({})).rejects.toThrow();
-  });
-
-  it('exitPlanMode action execute requires enterPlanMode first', async () => {
-    const { planMode } = await makePlanMode();
-    const actions = createPlanModeActions({
-      planMode,
-      getCurrentStepNumber: () => 1,
-    });
-    await actions.enterPlanMode.execute({ intent: 'Test' });
-    await expect(actions.exitPlanMode.execute({})).rejects.toThrow();
+    await expect(actions.completePlan.execute({ completionNote: '' })).rejects.toThrow();
   });
 });

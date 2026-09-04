@@ -170,12 +170,11 @@ describe('createRuntimeAgentSessionRuntime', () => {
 });
 
 describe('getRuntimeActions', () => {
-  it('returns static actions when loadRuntimeActions is absent', async () => {
+  it('does not expose todo or plan actions unless the agent configures them', async () => {
     const runtime = await createRuntimeAgentSessionRuntime(makeMinimalOptions());
     const actions = await runtime.getRuntimeActions();
 
-    expect(actions).toHaveLength(2);
-    expect(actions.map((a) => a.name).sort()).toEqual(['enterPlanMode', 'exitPlanMode']);
+    expect(actions).toEqual([]);
   });
 
   it('appends dynamic actions when loadRuntimeActions succeeds', async () => {
@@ -194,13 +193,9 @@ describe('getRuntimeActions', () => {
     );
     const actions = await runtime.getRuntimeActions();
 
-    expect(actions).toHaveLength(3);
+    expect(actions).toHaveLength(1);
     expect(actions[0].name).toBe('custom-action');
-    expect(actions.map((a) => a.name).sort()).toEqual([
-      'custom-action',
-      'enterPlanMode',
-      'exitPlanMode',
-    ]);
+    expect(actions.map((a) => a.name)).toEqual(['custom-action']);
   });
 
   it('logs a warning and omits dynamic actions when loadRuntimeActions throws', async () => {
@@ -213,7 +208,7 @@ describe('getRuntimeActions', () => {
     );
     const actions = await runtime.getRuntimeActions();
 
-    expect(actions).toHaveLength(2); // plan-mode actions always present
+    expect(actions).toEqual([]);
     expect(sharedMocks.warnMock).toHaveBeenCalledTimes(1);
     const [scope, message] = sharedMocks.warnMock.mock.calls[0];
     expect(scope).toBe('runtime');

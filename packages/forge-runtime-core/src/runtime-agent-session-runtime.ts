@@ -6,8 +6,8 @@ import { consolidateOperationalMemory } from './operational-memory-consolidation
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
-import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store.js';
-import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode.js';
+import { createUpdateTodosAction } from './libsql-todo-store.js';
+import { createPlanModeActions } from './runtime-plan-mode.js';
 
 export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
@@ -15,6 +15,7 @@ export type RuntimeAgentSessionRuntime = {
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ForgeConversationMemory;
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
+  getOperationalContextText(): Promise<string>;
   syncState(input?: {
     diagnostics?: {
       record(event: {
@@ -88,30 +89,22 @@ export async function createRuntimeAgentSessionRuntime(
     consolidateOverflow: checkpointedOmEnabled,
   });
   const staticRuntimeActions = input.runtimeActions ?? [];
-  let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
-  if (input.todoStore) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const todoLib = new LibsqlTodoStore({
-      client: input.todoStore.client as any,
-      tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime',
-    });
-    todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
-  }
-
-  const planMode = input.planMode ?? new RuntimePlanMode({ agentMemoryPath: input.threadId });
-  let stepCounter = 0;
-  const planModeActions = createPlanModeActions({
-    planMode,
-    getCurrentStepNumber: () => stepCounter,
-  });
+  const todoAction = input.todoStore ? createUpdateTodosAction(input.todoStore) : undefined;
+  const planActions = input.planMode ? createPlanModeActions(input.planMode) : undefined;
 
   return {
     model: input.model,
     assistantAuthorId: input.assistantAuthorId,
     conversationStore: input.conversationStore,
     conversationMemory,
+    async getOperationalContextText() {
+      const segments = await Promise.all([
+        input.todoStore?.getContextText() ?? '',
+        input.planMode?.getContextText() ?? '',
+      ]);
+      return segments.filter((segment) => segment !== '').join('\n\n');
+    },
     async getRuntimeActions() {
-      stepCounter++;
       let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> =
         [];
 
@@ -125,13 +118,13 @@ export async function createRuntimeAgentSessionRuntime(
 
       const allActions = [
         ...staticRuntimeActions,
-        ...(todoUpdateTodosAction ? [todoUpdateTodosAction] : []),
+        ...(todoAction ? [todoAction] : []),
         ...dynamicRuntimeActions,
-        planModeActions.enterPlanMode,
-        planModeActions.exitPlanMode,
+        ...(planActions ? Object.values(planActions) : []),
       ];
-      const isReadOnly = planMode.isInPlanMode;
-      return isReadOnly ? planMode.filterReadOnlyActions(allActions) : allActions;
+      return input.planMode?.isPlanning === true
+        ? input.planMode.filterReadOnlyActions(allActions)
+        : allActions;
     },
     async syncState(options) {
       options?.diagnostics?.record({
