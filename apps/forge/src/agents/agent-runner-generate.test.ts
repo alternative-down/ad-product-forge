@@ -544,7 +544,6 @@ describe('generateWithTimeoutRetries runtime integration', () => {
       1,
       'contract-1',
       { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 60_000 },
-      null,
       {
         db: {} as never,
         runtime: { id: MOCK_RUNTIME_ID } as never,
