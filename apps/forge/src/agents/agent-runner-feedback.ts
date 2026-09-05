@@ -184,10 +184,7 @@ export async function buildIterationFeedback(
     feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
   }
 
-  const recallFeedback =
-    iteration.iteration.iteration === 1
-      ? await recallLongTermMemory(iteration, currentRuntime)
-      : null;
+  const recallFeedback = await recallLongTermMemory(iteration, currentRuntime);
   if (recallFeedback !== null && recallFeedback !== undefined && recallFeedback.trim()) {
     feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
   }
