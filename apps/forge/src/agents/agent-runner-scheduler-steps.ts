@@ -12,6 +12,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from './error-formatting';
 import { withTimeout } from '../utils/async';
 import type { FlushManager } from './agent-runner-flush-manager';
+import type { RunnableContract } from './agent-runner-scheduler';
 import { ONE_MINUTE_MS } from './time-constants';
 
 export interface BeginRunInput {
@@ -27,7 +28,7 @@ export interface BeginRunInput {
 
 export interface StepsDeps {
   runtimeId: string;
-  getRunnableContract: (runtimeId: string) => Promise<unknown>;
+  getRunnableContract: (runtimeId: string) => Promise<RunnableContract>;
   onAgentIdle?: () => void;
   isStaleRun: (runEpoch: number) => boolean;
   startNewRunEpoch: () => number;

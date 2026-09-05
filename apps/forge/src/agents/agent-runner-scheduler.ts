@@ -107,6 +107,16 @@ export type Scheduler = {
   isStopped(): boolean;
 };
 
+// Canonical shape of a "runnable" execution contract returned by
+// getRunnableContract. Centralized here so all 3 delegate signatures
+// (StepsDeps.getRunnableContract, SchedulerDependencies.getRunnableContract,
+// PlanNextAttemptDeps.store.getRunnableContract) agree. Closes #6127-reopen.
+export type RunnableContract = {
+  id: string;
+  budgetUsd: number;
+  endsAt: number;
+} | null;
+
 export type SchedulerState = {
   nextStepAt: number | null;
   backoffMs: number;
@@ -125,11 +135,7 @@ export type SchedulerDependencies = {
     communicationDmFlushingEnabled: boolean;
     communicationGroupFlushingEnabled: boolean;
   }>;
-  getRunnableContract(runtimeId: string): Promise<{
-    id: string;
-    budgetUsd: number;
-    endsAt: number;
-  } | null>;
+  getRunnableContract(runtimeId: string): Promise<RunnableContract>;
   getContractSpend(contractId: string): Promise<number>;
   estimateStepCostUsd(): Promise<number | null>;
   runtimeId: string;

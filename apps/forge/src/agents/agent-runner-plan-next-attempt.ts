@@ -12,6 +12,7 @@
 import { withTimeout } from '../utils/async';
 import { calculateBudgetDelayMs } from './agent-runner-delay';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
+import type { RunnableContract } from './agent-runner-scheduler';
 
 export type PlanNextAttemptResult =
   | { execute: 'idle' }
@@ -21,11 +22,7 @@ export type PlanNextAttemptResult =
 export interface PlanNextAttemptDeps {
   runtimeId: string;
   store: {
-    getRunnableContract: (id: string) => Promise<{
-      id: string;
-      budgetUsd: number;
-      endsAt: number;
-    } | null>;
+    getRunnableContract: (id: string) => Promise<RunnableContract>;
     getContractSpend: (contractId: string) => Promise<number>;
   };
   usage: {
