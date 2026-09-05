@@ -60,7 +60,11 @@ const llmDefaultsSchema = z
 const DEFAULTS_ROW_ID = 'default';
 
 export type LlmSettingsStore = Awaited<ReturnType<typeof createLlmSettingsStore>>;
-// Note: resolveProfileRuntimeModel accepts this via 'as RuntimeProfile' cast in agent-loader-data.ts
+// Closes #6125: RuntimeProfile is now Pick<LlmProfileRecord, 'modelKey' | 'baseUrl' | 'apiKey'>
+// (see apps/forge/src/llm/runtime-model.ts) so direct assignment is structural-subtype.
+// The 4 `as RuntimeProfile` casts at agent-loader-data.ts and hiring-requests-handler.ts
+// were eliminated in PR #6201 (Closes #6194). This comment supersedes the stale note that
+// referenced the now-removed cast at agent-loader-data.ts:108.
 export type LlmProfileRecord = {
   profileId: string;
   name: string;
