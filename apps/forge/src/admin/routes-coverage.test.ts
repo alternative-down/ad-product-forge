@@ -112,6 +112,8 @@ const stores = vi.hoisted(() => ({
     getAgent: vi.fn(),
     getApplicationMigrations: vi.fn(),
     listAgentRecentConversations: vi.fn(),
+    getFinance: vi.fn(),
+    getFinanceContracts: vi.fn(),
     getAgentRuntimeMemory: vi.fn(),
   },
   systemRM: { some: 'systemRM' },
@@ -371,7 +373,7 @@ describe('registerAdminRoutes wiring (#5320 coverage)', () => {
     expect(mocks.registerFinanceReadRoutes).toHaveBeenCalledWith(
       ctx.httpServer,
       ctx.db,
-      { companyCash: stores.companyCash },
+      { getFinance: stores.readModel.getFinance, getFinanceContracts: stores.readModel.getFinanceContracts },
     );
   });
 
