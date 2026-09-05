@@ -104,7 +104,7 @@ function clearEnv(): void {
 }
 
 const fakeDb = { client: 'fake-db' };
-const fakeRegistry = { get: vi.fn(), loadAll: vi.fn(), size: 0 };
+const fakeRegistry = { get: vi.fn(), loadAll: vi.fn().mockResolvedValue([]), size: 0 };
 const fakeHttpServer = { start: vi.fn().mockResolvedValue(undefined), listen: vi.fn() };
 const fakeGithubApps = { provision: vi.fn() };
 const fakeCoolify = { createApp: vi.fn() };
@@ -112,7 +112,11 @@ const fakeMinimax = { getInfo: vi.fn() };
 const fakeIntegrations = { get: vi.fn() };
 const fakeInternalChat = { send: vi.fn() };
 const fakeAgentContracts = { list: vi.fn() };
-const fakeSchedules = { add: vi.fn(), loadAll: vi.fn().mockResolvedValue(undefined) };
+const fakeSchedules = {
+  add: vi.fn(),
+  ensureHeartbeatSchedules: vi.fn().mockResolvedValue(undefined),
+  loadAll: vi.fn().mockResolvedValue(undefined),
+};
 const fakeReadModel = { query: vi.fn() };
 
 beforeEach(() => {
@@ -131,6 +135,7 @@ beforeEach(() => {
   mockCreateSystemIntegrationStore.mockReturnValue(fakeIntegrations);
   mockCreateInternalChatService.mockReturnValue(fakeInternalChat);
   mockCreateAgentContractStore.mockReturnValue(fakeAgentContracts);
+  fakeRegistry.loadAll.mockResolvedValue([]);
 });
 
 // ─── envSchema Zod validation (pure, no mocking needed) ────────────────────────
@@ -249,6 +254,24 @@ describe('createForgeBootstrap() — happy path', () => {
       schedules: fakeSchedules,
       internalChat: fakeInternalChat,
     }));
+  });
+
+  it('backfills missing heartbeats before active schedules are loaded', async () => {
+    setEnv();
+    fakeRegistry.loadAll.mockResolvedValue([
+      { id: 'agent-active', status: 'running' },
+      { id: 'agent-inactive', status: 'stopped' },
+    ]);
+
+    await createForgeBootstrap();
+
+    expect(fakeSchedules.ensureHeartbeatSchedules).toHaveBeenCalledWith([
+      'agent-active',
+      'agent-inactive',
+    ]);
+    expect(fakeSchedules.ensureHeartbeatSchedules.mock.invocationCallOrder[0]).toBeLessThan(
+      fakeSchedules.loadAll.mock.invocationCallOrder[0],
+    );
   });
 
   it('passes the complete loader configuration to admin reload routes', async () => {

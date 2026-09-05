@@ -260,12 +260,13 @@ export async function createForgeBootstrap() {
   });
 
   consoleStartupLog('admin routes ready; loading agents from database');
-  await registry.loadAll(db, {
+  const loadedAgents = await registry.loadAll(db, {
     ...loaderConfig,
     publicBaseUrl,
     httpServer,
     integrations,
   });
+  await schedules.ensureHeartbeatSchedules(loadedAgents.map(({ id }) => id));
   await schedules.loadAll();
   bootstrapDebug('info', 'bootstrap: active schedules loaded');
   consoleStartupLog('agents loaded', { agentCount: registry.size });
