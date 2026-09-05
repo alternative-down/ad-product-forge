@@ -213,6 +213,40 @@ describe('stripe adapter', () => {
     });
   });
 
+  describe('parseStripePaymentRefunded partial-refund amount priority (#5994)', () => {
+    it('uses amount_refunded for partial refund (charge.refunded)', () => {
+      const event = makeStripeEvent('charge.refunded', {
+        customer: 'cus_123',
+        currency: 'usd',
+        amount: 10000,
+        amount_refunded: 3000,
+      });
+      const result = parseStripePaymentRefunded(event);
+      expect(result?.amountUsd).toBe(30);
+    });
+
+    it('uses amount_refunded for full refund (charge.refunded)', () => {
+      const event = makeStripeEvent('charge.refunded', {
+        customer: 'cus_123',
+        currency: 'usd',
+        amount: 10000,
+        amount_refunded: 10000,
+      });
+      const result = parseStripePaymentRefunded(event);
+      expect(result?.amountUsd).toBe(100);
+    });
+
+    it('uses amount_refunded when only it is present (payment_intent.refunded)', () => {
+      const event = makeStripeEvent('payment_intent.refunded', {
+        customer: 'cus_123',
+        currency: 'usd',
+        amount_refunded: 3000,
+      });
+      const result = parseStripePaymentRefunded(event);
+      expect(result?.amountUsd).toBe(30);
+    });
+  });
+
   describe('normalizeStripeEvent null propagation (#5635)', () => {
     it('returns null when customer is missing from a parseable event', () => {
       const event = makeStripeEvent('payment_intent.succeeded', {
