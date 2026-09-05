@@ -13,7 +13,7 @@ describe('AGENT_CONTEXT_FILE_PATH', () => {
   });
 
   it('is AGENT_CONTEXT.md', () => {
-    expect(AGENT_CONTEXT_FILE_PATH).toBe('AGENT_CONTEXT.md');
+    expect(AGENT_CONTEXT_FILE_PATH).toBe('AGENTS.md');
   });
 
   it('has .md extension', () => {
