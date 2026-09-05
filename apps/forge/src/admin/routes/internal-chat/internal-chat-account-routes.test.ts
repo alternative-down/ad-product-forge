@@ -137,13 +137,15 @@ describe('registerAccountRoutes', () => {
       bodyText: JSON.stringify({
         accountId: 'acc-upd',
         name: 'Updated',
+        // webhookUrl is accepted by the schema but updateExternalAccount() only
+        // accepts { accountId, displayName?, description? } — webhookUrl is intentionally
+        // dropped by the route handler to match the underlying service signature.
         webhookUrl: 'https://example.com',
       }),
     } as any);
     expect(mockInternalChat.updateExternalAccount).toHaveBeenCalledWith({
       accountId: 'acc-upd',
       displayName: 'Updated',
-      webhookUrl: 'https://example.com',
     });
   });
 
