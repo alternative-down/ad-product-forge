@@ -53,14 +53,6 @@ import { forgeDebug } from '@forge-runtime/core';
 import { FindOrThrowEntityNotFoundError } from './find-or-throw.errors';
 
 /**
- * A Drizzle query builder that supports findFirst. Pass `db.query.<table>`
- * (the typed query builder from drizzle-orm's relational query API).
- */
-export interface FindFirstQueryable {
-  findFirst: (args?: { where?: unknown }) => Promise<unknown>;
-}
-
-/**
  * Logger context for the "not found" event.
  */
 export interface FindOrThrowLogger {
