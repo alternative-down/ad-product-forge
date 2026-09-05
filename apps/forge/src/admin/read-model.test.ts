@@ -137,11 +137,12 @@ describe('createAdminReadModel', () => {
       expect(result.applied).toEqual([]);
     });
 
-    it('re-throws when journal file read fails', async () => {
+    it('returns empty with parseError flag when journal read fails (#5925)', async () => {
       mockReadFile.mockRejectedValueOnce(new Error('ENOENT: no such file'));
 
       const readModel = createAdminReadModel(makeInput(makeMockDb([])));
-      await expect(readModel.getApplicationMigrations()).rejects.toThrow('ENOENT');
+      const result = await readModel.getApplicationMigrations();
+      expect(result).toEqual({ applied: [], entries: [], parseError: true });
     });
 
     it('re-throws when db query fails', async () => {
