@@ -208,10 +208,9 @@ describe('registerLifecycleDelegateOps', () => {
       expect(response.status).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(mockRole).toHaveBeenCalledWith(expect.anything(), {
-        agentId: 'agent-456',
-        roleId: 'role-admin',
-      });
+      expect(mockRole).toHaveBeenCalledWith(
+        expect.objectContaining({ targetAgentId: 'agent-456', roleId: 'role-admin' }),
+      );
     });
 
     it('returns 500 on role change error', async () => {

@@ -33,13 +33,13 @@ describe('registerAgentWriteRoutes', () => {
     vi.clearAllMocks();
   });
 
-  it('registers 2 agent write routes', () => {
+  it('registers 1 agent write route (clear-history; ltm-recall-search was extracted to _split in #2468)', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {} as any,
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes).toHaveLength(2);
+    expect(routes).toHaveLength(1);
   });
 
   it('registers POST /admin/agent/clear-history', () => {
@@ -75,7 +75,6 @@ describe('registerAgentWriteRoutes', () => {
       db,
       workspaceBasePath: '/tmp/workspaces',
       agentId: 'agent-1',
-      includeLongTermMemoryThread: true,
     });
     expect(routeMocks.reloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
     expect(routeMocks.clearAgentHistory.mock.invocationCallOrder[0]).toBeLessThan(
@@ -83,18 +82,7 @@ describe('registerAgentWriteRoutes', () => {
     );
   });
 
-  it('registers POST /admin/agent/ltm-recall-search', () => {
-    registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
-      db: {} as any,
-      workspaceBasePath: '/tmp',
-      loaderConfig: {} as any,
-    });
-    expect(
-      routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST'),
-    ).toBeDefined();
-  });
-
-  it('both routes are POST method', () => {
+  it('route is POST method', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {} as any,
       workspaceBasePath: '/tmp',

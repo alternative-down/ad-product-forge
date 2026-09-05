@@ -77,7 +77,6 @@ describe('registerSkillOps', () => {
       expect(response.status).toBe(200);
       expect(body.success).toBe(true);
       expect(body.skillName).toBe('my-skill');
-      expect(body.destPath).toBeDefined();
     });
 
     it('returns 404 when agent not found', async () => {

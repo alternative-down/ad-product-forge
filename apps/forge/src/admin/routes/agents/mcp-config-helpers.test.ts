@@ -60,63 +60,59 @@ describe('assignAgentMcpServer', () => {
 
 describe('setMcpServerActive', () => {
   it('updates agentMcpConfigs with isActive=1', async () => {
-    const updateMock = (vi.fn() as any).mockReturnThis();
-    updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const db = { update: updateMock } as any;
+    const db: any = {};
+    const mockSet = vi.fn().mockReturnThis();
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const updateMock = vi.fn().mockReturnValue({ set: mockSet, where: mockWhere });
+    db.update = updateMock;
 
     await setMcpServerActive(db, 'config-1', 'agent-1', true);
 
     expect(updateMock).toHaveBeenCalledWith(agentMcpConfigs);
-    expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        set: expect.objectContaining({ isActive: 1 }),
-      }),
-    );
+    expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ isActive: 1 }));
+    expect(mockWhere).toHaveBeenCalled();
   });
 
   it('updates agentMcpConfigs with isActive=0', async () => {
-    const updateMock = (vi.fn() as any).mockReturnThis();
-    updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const db = { update: updateMock } as any;
+    const db: any = {};
+    const mockSet = vi.fn().mockReturnThis();
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const updateMock = vi.fn().mockReturnValue({ set: mockSet, where: mockWhere });
+    db.update = updateMock;
 
     await setMcpServerActive(db, 'config-1', 'agent-1', false);
 
-    expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        set: expect.objectContaining({ isActive: 0 }),
-      }),
-    );
+    expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ isActive: 0 }));
   });
 });
 
 describe('detachMcpServer', () => {
   it('deletes config and returns true when config exists', async () => {
-    const deleteMock = (vi.fn() as any).mockReturnThis();
-    deleteMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue({
+    const db: any = {};
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const deleteMock = vi.fn().mockReturnValue({ where: mockWhere });
+    const findFirstMock = vi.fn().mockResolvedValue({
       id: 'config-1',
       agentId: 'agent-1',
     });
-    const db = {
-      query: { agentMcpConfigs: { findFirst: findFirstMock } },
-      delete: deleteMock,
-    } as any;
+    db.query = { agentMcpConfigs: { findFirst: findFirstMock } };
+    db.delete = deleteMock;
 
     const result = await detachMcpServer(db, 'config-1', 'agent-1');
 
     expect(findFirstMock).toHaveBeenCalled();
     expect(deleteMock).toHaveBeenCalled();
+    expect(mockWhere).toHaveBeenCalled();
     expect(result).toBe(true);
   });
 
   it('returns false without deleting when config not found', async () => {
-    const deleteMock = (vi.fn() as any).mockReturnThis();
-    deleteMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue(null);
-    const db = {
-      query: { agentMcpConfigs: { findFirst: findFirstMock } },
-      delete: deleteMock,
-    } as any;
+    const db: any = {};
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const deleteMock = vi.fn().mockReturnValue({ where: mockWhere });
+    const findFirstMock = vi.fn().mockResolvedValue(null);
+    db.query = { agentMcpConfigs: { findFirst: findFirstMock } };
+    db.delete = deleteMock;
 
     const result = await detachMcpServer(db, 'config-1', 'agent-1');
 
