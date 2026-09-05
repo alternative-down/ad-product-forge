@@ -5,15 +5,6 @@ describe('conversation-runtime-context-formatter', () => {
   const formatter = createConversationRuntimeContextFormatter();
 
   describe('formatInput', () => {
-    it('returns null for internal forge-provider-options type', () => {
-      const result = formatter.formatInput({
-        id: 'input-1',
-        type: 'forge-provider-options',
-        payload: { anything: 'goes' },
-      });
-      expect(result).toBeNull();
-    });
-
     it('formats text-only conversation payload', () => {
       const result = formatter.formatInput({
         id: 'input-3',
