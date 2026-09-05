@@ -481,7 +481,11 @@ describe('createRoutingOps — handleWebhook', () => {
     const sig = signWebhookBody(body);
     const result = await routing.handleWebhook(
       'agent-1',
-      { 'x-github-event': 'pull_request', 'x-github-delivery': 'def456', 'x-hub-signature-256': sig },
+      {
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'def456',
+        'x-hub-signature-256': sig,
+      },
       body,
     );
     expect(result.status).toBe(202);
@@ -635,9 +639,11 @@ describe('createRoutingOps — handleWebhook', () => {
     };
 
     // First delivery: claim-winner. createNotification rejects.
-    await expect(routing.handleWebhook('agent-1', headers, body)).rejects.toThrow(
-      'persistence failed',
-    );
+    // Per #6774: return 503 (transient failure) so GitHub retries with backoff
+    // instead of propagating as 500 (unhandled error).
+    const first = await routing.handleWebhook('agent-1', headers, body);
+    expect(first.status).toBe(503);
+    expect(first.body).toBe('Service Unavailable');
     expect(notifyMock).toHaveBeenCalledTimes(1);
 
     // Retry with the same delivery ID. The claim was released on failure,
@@ -683,9 +689,9 @@ describe('createRoutingOps — handleWebhook', () => {
     const statuses = results.map((r) => (r.status === 'fulfilled' ? r.value.status : 'rejected'));
     // The blocker: at no point may any peer confirm 200 ok.
     expect(statuses.filter((s) => s === 200)).toHaveLength(0);
-    // The claim-winner must have rejected.
-    const rejectedCount = results.filter((r) => r.status === 'rejected').length;
-    expect(rejectedCount).toBe(1);
+    // The claim-winner returned 503 (transient failure) instead of throwing.
+    const serviceUnavailable = statuses.filter((s) => s === 503).length;
+    expect(serviceUnavailable).toBe(1);
     // The remaining peers return 425 Too Early (in-flight).
     const inFlight = statuses.filter((s) => s === 425).length;
     expect(inFlight).toBeGreaterThanOrEqual(1);
@@ -847,6 +853,52 @@ describe('createRoutingOps — handleWebhook', () => {
     expect(result.status).toBe(202);
     expect(result.body).toBe('Accepted');
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'review-wake' });
+  });
+
+  // Closes #6774: handleWebhook try/catch around createNotification returns 503
+  // (transient failure) instead of throwing (which becomes 500). Also asserts
+  // the error is logged via routingOpsDebug so operators can diagnose.
+  it('returns 503 and logs createNotification failure (rejected createNotification)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const forgeDebugMock = vi.fn();
+    const notifyMock = vi.fn().mockRejectedValue(new Error('persistence down'));
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    ctx.forgeDebug = forgeDebugMock as unknown as OpsContext['forgeDebug'];
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"opened","issue":{"id":1}}';
+    const sig = signWebhookBody(body);
+    const result = await routing.handleWebhook(
+      'agent-1',
+      {
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'transient-fail-id',
+        'x-hub-signature-256': sig,
+      },
+      body,
+    );
+    expect(result.status).toBe(503);
+    expect(result.body).toBe('Service Unavailable');
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(forgeDebugMock).toHaveBeenCalledWith({
+      scope: 'github-ops',
+      level: 'error',
+      message: 'createNotification failed for webhook',
+      context: expect.objectContaining({
+        agentId: 'agent-1',
+        delivery: 'transient-fail-id',
+        event: 'pull_request',
+        error: expect.stringContaining('persistence down'),
+      }),
+    });
   });
 });
 
