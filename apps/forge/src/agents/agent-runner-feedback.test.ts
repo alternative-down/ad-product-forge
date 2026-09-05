@@ -365,7 +365,7 @@ describe('LTM recall', () => {
     expect(result).toBeUndefined();
   });
 
-  it('recalls only on the first iteration of a run', async () => {
+  it('recalls on every iteration of a run', async () => {
     const recallFromStep = vi.fn().mockResolvedValue(null);
     const deps = makeDeps({
       suppressNoToolCallReminderForRun: true,
@@ -379,7 +379,7 @@ describe('LTM recall', () => {
     await buildIterationFeedback(makeArg({ innerIteration: 2 }) as any, deps);
     await buildIterationFeedback(makeArg({ innerIteration: 3 }) as any, deps);
 
-    expect(recallFromStep).toHaveBeenCalledTimes(1);
+    expect(recallFromStep).toHaveBeenCalledTimes(3);
   });
 });
 
