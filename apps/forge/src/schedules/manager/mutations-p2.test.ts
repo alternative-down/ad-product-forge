@@ -73,6 +73,7 @@ const makeScheduleRecord = (overrides: Record<string, unknown> = {}) => ({
 const makeStore = (overrides: Record<string, ReturnType<typeof vi.fn>> = {}) => ({
   createSchedule: vi.fn().mockResolvedValue(makeScheduleRecord({ id: 'sched-1' })),
   getAgentSchedule: vi.fn().mockResolvedValue(makeScheduleRecord()),
+  getScheduleByKind: vi.fn().mockResolvedValue(null),
   updateAgentSchedule: vi.fn().mockResolvedValue(makeScheduleRecord()),
   deleteAgentSchedule: vi.fn().mockResolvedValue(true),
   setNextTriggerAt: vi.fn().mockResolvedValue(undefined),
@@ -147,6 +148,30 @@ describe('createHeartbeatSchedule', () => {
         level: 'error',
         message: 'createHeartbeatSchedule DB write failed',
       }),
+    );
+  });
+});
+
+describe('ensureHeartbeatSchedules', () => {
+  it('creates only missing heartbeats', async () => {
+    const inactiveHeartbeat = makeScheduleRecord({
+      scheduleId: 'heartbeat-disabled',
+      kind: 'heartbeat',
+      isActive: 0,
+    });
+    const store = makeStore({
+      getScheduleByKind: vi
+        .fn()
+        .mockResolvedValueOnce(inactiveHeartbeat)
+        .mockResolvedValueOnce(null),
+    });
+    const mutations = createManagerMutations(makeInput({ store }));
+
+    await mutations.ensureHeartbeatSchedules(['disabled-agent', 'missing-agent']);
+
+    expect(store.createSchedule).toHaveBeenCalledTimes(1);
+    expect(store.createSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'missing-agent', kind: 'heartbeat' }),
     );
   });
 });

@@ -379,6 +379,42 @@ describe('getMessagesByAccount -- limit enforcement', () => {
   });
 });
 
+describe('internal chat message ordering', () => {
+  const newestFirstRows = [
+    msgRow({ messageId: 'newest', content: 'Newest', createdAt: MOCK_NOW }),
+    msgRow({ messageId: 'middle', content: 'Middle', createdAt: MOCK_NOW - 1000 }),
+    msgRow({ messageId: 'oldest', content: 'Oldest', createdAt: MOCK_NOW - 2000 }),
+  ];
+
+  it('returns agent-scoped messages oldest first within a newest-first page', async () => {
+    const { db, listing } = makeGetMessagesEnv();
+    db.select.mockReturnValueOnce(makeMsgChain(newestFirstRows));
+
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(result.map(({ messageId }) => messageId)).toEqual(['oldest', 'middle', 'newest']);
+  });
+
+  it('returns account-scoped messages oldest first within a newest-first page', async () => {
+    const { db, listing } = makeGetByAccountEnv();
+    db.select.mockReturnValueOnce(makeMsgChain(newestFirstRows));
+
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(result.map(({ messageId }) => messageId)).toEqual(['oldest', 'middle', 'newest']);
+  });
+});
+
 describe('getMessagesByAccount -- offset correctness', () => {
   it('correctly paginates through multiple pages', async () => {
     const { db, listing } = makeGetByAccountEnv();
@@ -432,7 +468,7 @@ describe('getMessagesByAccount -- boundary conditions', () => {
     expect(result).toHaveLength(0);
     expect(Array.isArray(result)).toBe(true);
   });
-  it('first page (offset=0) returns newest messages first', async () => {
+  it('first page (offset=0) returns the newest slice in chronological order', async () => {
     const { db, listing } = makeGetByAccountEnv();
     db.select.mockReturnValueOnce(
       makeMsgChain([
@@ -446,7 +482,7 @@ describe('getMessagesByAccount -- boundary conditions', () => {
       limit: 2,
       offset: 0,
     });
-    expect(result[0].content).toBe('Newest');
+    expect(result.map(({ content }) => content)).toEqual(['Older', 'Newest']);
     expect(result).toHaveLength(2);
   });
 });

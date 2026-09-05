@@ -43,6 +43,7 @@ type ScheduleStore = Pick<
   Store,
   | 'createSchedule'
   | 'getAgentSchedule'
+  | 'getScheduleByKind'
   | 'getScheduleById'
   | 'listAgentSchedules'
   | 'updateAgentSchedule'
@@ -62,6 +63,7 @@ export type CreateManagerMutationsInput = {
 
 export type ManagerMutations = {
   createHeartbeatSchedule(agentId: string): Promise<{ scheduleId: string }>;
+  ensureHeartbeatSchedules(agentIds: string[]): Promise<void>;
   createSchedule(
     agentId: string,
     rawInput: z.input<typeof createScheduleSchema>,
@@ -114,6 +116,17 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
     return {
       scheduleId: (record).scheduleId,
     };
+  }
+
+  async function ensureHeartbeatSchedules(agentIds: string[]) {
+    for (const agentId of agentIds) {
+      const existing = await store.getScheduleByKind(agentId, 'heartbeat');
+      if (existing !== null) {
+        // In particular, preserve an explicitly disabled heartbeat as disabled.
+        continue;
+      }
+      await makeHeartbeatSchedule({ agentId, store });
+    }
   }
 
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
@@ -471,6 +484,7 @@ export function createManagerMutations(input: CreateManagerMutationsInput): Mana
 
   return {
     createHeartbeatSchedule,
+    ensureHeartbeatSchedules,
     createSchedule,
     updateSchedule,
     updateOwnedSchedule,

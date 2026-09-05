@@ -191,7 +191,9 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
           );
       }
 
-      return result;
+      // The query is descending so pagination starts with the newest messages.
+      // Consumers render each page chronologically, matching the Discord provider.
+      return result.reverse();
     });
   }
 
@@ -320,7 +322,8 @@ export function createInternalChatListing(db: Database, deps: InternalChatConver
         });
       }
 
-      return result;
+      // Keep the account-scoped API contract identical to the agent-scoped one.
+      return result.reverse();
     });
   }
 
