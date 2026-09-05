@@ -481,7 +481,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const sig = signWebhookBody(body);
     const result = await routing.handleWebhook(
       'agent-1',
-      { 'x-github-event': 'issues', 'x-github-delivery': 'def456', 'x-hub-signature-256': sig },
+      { 'x-github-event': 'pull_request', 'x-github-delivery': 'def456', 'x-hub-signature-256': sig },
       body,
     );
     expect(result.status).toBe(202);
@@ -507,7 +507,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const body = '{"action":"opened","issue":{"id":1}}';
     const sig = signWebhookBody(body);
     const headers = {
-      'x-github-event': 'issues',
+      'x-github-event': 'pull_request',
       'x-github-delivery': 'dup-id-1',
       'x-hub-signature-256': sig,
     };
@@ -544,7 +544,7 @@ describe('createRoutingOps — handleWebhook', () => {
       const body = '{"action":"opened","issue":{"id":1}}';
       const sig = signWebhookBody(body);
       const headers = {
-        'x-github-event': 'issues',
+        'x-github-event': 'pull_request',
         'x-github-delivery': 'ttl-expiry-id',
         'x-hub-signature-256': sig,
       };
@@ -580,7 +580,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const body = '{"action":"opened","issue":{"id":1}}';
     const sig = signWebhookBody(body);
     const headers = {
-      'x-github-event': 'issues',
+      'x-github-event': 'pull_request',
       'x-github-delivery': 'parallel-id',
       'x-hub-signature-256': sig,
     };
@@ -629,7 +629,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const body = '{"action":"opened","issue":{"id":1}}';
     const sig = signWebhookBody(body);
     const headers = {
-      'x-github-event': 'issues',
+      'x-github-event': 'pull_request',
       'x-github-delivery': 'retry-after-fail-id',
       'x-hub-signature-256': sig,
     };
@@ -668,7 +668,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const body = '{"action":"opened","issue":{"id":1}}';
     const sig = signWebhookBody(body);
     const headers = {
-      'x-github-event': 'issues',
+      'x-github-event': 'pull_request',
       'x-github-delivery': 'parallel-fail-id',
       'x-hub-signature-256': sig,
     };
@@ -718,7 +718,7 @@ describe('createRoutingOps — handleWebhook', () => {
     const body = '{"action":"opened","issue":{"id":1}}';
     const sig = signWebhookBody(body);
     const headers = {
-      'x-github-event': 'issues',
+      'x-github-event': 'pull_request',
       'x-github-delivery': 'log-test-id',
       'x-hub-signature-256': sig,
     };
@@ -733,7 +733,7 @@ describe('createRoutingOps — handleWebhook', () => {
       context: expect.objectContaining({
         agentId: 'agent-1',
         delivery: 'log-test-id',
-        event: 'issues',
+        event: 'pull_request',
       }),
     });
     // The dedup log should appear exactly once for this single retry.
@@ -744,6 +744,109 @@ describe('createRoutingOps — handleWebhook', () => {
         (call[0] as { message?: unknown }).message === 'webhook_deduped',
     );
     expect(dedupCalls).toHaveLength(1);
+  });
+
+  // Closes #6772: webhook event type whitelist.
+  // Events outside the whitelist (PR lifecycle + reviews + comments + check_run)
+  // must be acked with 200 OK and NOT create a notification. A webhook_filtered
+  // debug log is emitted so operators can audit dropped events.
+  const FILTERED_EVENTS = ['star', 'fork', 'push', 'delete', 'create', 'member'];
+  for (const filteredEvent of FILTERED_EVENTS) {
+    it(`returns 200 OK with no notification for filtered event '${filteredEvent}'`, async () => {
+      const { createRoutingOps } = await import('./routing.js');
+      const notifyMock = vi.fn().mockResolvedValue(undefined);
+      const ctx = makeCtx();
+      ctx.getHeader = vi
+        .fn()
+        .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+      ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+      ctx.notifications = {
+        createNotification: notifyMock,
+      } as unknown as OpsContext['notifications'];
+      ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
+      ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+      const routing = createRoutingOps(ctx);
+      const body = '{"some":"payload"}';
+      const sig = signWebhookBody(body);
+      const result = await routing.handleWebhook(
+        'agent-1',
+        {
+          'x-github-event': filteredEvent,
+          'x-github-delivery': `deliv-${filteredEvent}`,
+          'x-hub-signature-256': sig,
+        },
+        body,
+      );
+      expect(result.status).toBe(200);
+      expect(result.body).toBe('ok');
+      expect(notifyMock).not.toHaveBeenCalled();
+    });
+  }
+
+  it('emits webhook_filtered debug log when a non-whitelisted event is acked', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const ctx = makeCtx();
+    const forgeDebugMock = (ctx.forgeDebug = vi.fn());
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = { createNotification: vi.fn() } as unknown as OpsContext['notifications'];
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"created"}';
+    const sig = signWebhookBody(body);
+    await routing.handleWebhook(
+      'agent-1',
+      {
+        'x-github-event': 'star',
+        'x-github-delivery': 'star-log-test',
+        'x-hub-signature-256': sig,
+      },
+      body,
+    );
+    expect(forgeDebugMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'github-ops',
+        level: 'info',
+        message: 'webhook_filtered',
+        context: expect.objectContaining({
+          agentId: 'agent-1',
+          event: 'star',
+          delivery: 'star-log-test',
+        }),
+      }),
+    );
+  });
+
+  it('creates a notification for pull_request_review (whitelisted event)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('review-wake');
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = '{"action":"submitted","review":{"state":"approved"}}';
+    const sig = signWebhookBody(body);
+    const result = await routing.handleWebhook(
+      'agent-1',
+      {
+        'x-github-event': 'pull_request_review',
+        'x-github-delivery': 'review-1',
+        'x-hub-signature-256': sig,
+      },
+      body,
+    );
+    expect(result.status).toBe(202);
+    expect(result.body).toBe('Accepted');
+    expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'review-wake' });
   });
 });
 
