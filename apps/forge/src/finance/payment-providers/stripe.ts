@@ -104,11 +104,17 @@ function parseCheckoutCompleted(event: StripeWebhookPayload): NormalizedStripePa
 function parseRefunded(event: StripeWebhookPayload): NormalizedStripePayment | null {
   const obj = event.data.object as Record<string, unknown>;
   if (typeof obj.customer !== 'string') return null;
+  // For refund events, prefer amount_refunded (the actual refund amount) over
+  // amount (the original charge amount). For partial refunds, charge.refunded
+  // events report both fields, and amount is the FULL charge — picking it
+  // would over-report the refund by reporting the full charge as the refund.
+  // See: https://stripe.com/docs/api/charges/object#charge_object-amount_refunded
+  // Closes #5994
   const amount =
-    typeof obj.amount === 'number'
-      ? obj.amount
-      : typeof obj.amount_refunded === 'number'
-        ? obj.amount_refunded
+    typeof obj.amount_refunded === 'number'
+      ? obj.amount_refunded
+      : typeof obj.amount === 'number'
+        ? obj.amount
         : null;
   if (amount === null) return null;
   return {
