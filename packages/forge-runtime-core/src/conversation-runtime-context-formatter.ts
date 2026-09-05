@@ -7,7 +7,7 @@ import {
   type ConversationRuntimeInputPayload,
 } from 'agent-runtime-core/integrations';
 
-const INTERNAL_RUNTIME_INPUT_TYPES = new Set(['forge-provider-options']);
+const INTERNAL_RUNTIME_INPUT_TYPES = new Set<string>();
 
 type TextPart = { type: 'text'; text: string };
 type ImagePart = { type: 'image'; mimeType: string; bytes: Uint8Array };
