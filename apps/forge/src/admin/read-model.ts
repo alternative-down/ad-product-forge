@@ -5,6 +5,8 @@ import { findMigrationsFolder } from '../database/find-migrations-folder';
 
 import { sql } from 'drizzle-orm';
 
+import { forgeDebug, errorMsg } from '@forge-runtime/core';
+
 import type { Database } from '../database/client';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
@@ -56,13 +58,17 @@ export function createAdminReadModel(input: {
 
   async function getApplicationMigrations() {
     const journalPath = join(findMigrationsFolder(import.meta.dirname), 'meta/_journal.json');
-    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
-      entries: Array<{
-        idx: number;
-        when: number;
-        tag: string;
-      }>;
-    };
+    let journal: { entries: Array<{ idx: number; when: number; tag: string }> };
+    try {
+      journal = JSON.parse(await readFile(journalPath, 'utf8'));
+    } catch (err) {
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'failed to parse migration journal at ' + journalPath + ': ' + errorMsg(err instanceof Error ? err : new Error(String(err))),
+      });
+      return { applied: [], entries: [], parseError: true };
+    }
     const appliedRows = await db.all<{
       id: number;
       hash: string | null;
