@@ -51,6 +51,18 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
   // On any processing failure path the entry is RELEASED so a legitimate
   // GitHub retry can claim it fresh. Without that release, a failed first
   // request would silently swallow all retries for the rest of the TTL.
+  // Whitelist of relevant event types (Closes #6772 MEDIUM sub-item of #6760):
+  // only PR lifecycle and review events trigger agent wake notifications.
+  // Other events (push, star, fork, member, delete, create, etc.) are
+  // acknowledged with 200 OK and a 'webhook_filtered' debug log to keep
+  // notifications focused on actionable items.
+  const RELEVANT_WEBHOOK_EVENTS: ReadonlySet<string> = new Set([
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'issue_comment',
+    'check_run',
+  ]);
   const WEBHOOK_DEDUP_TTL_MS = 60 * 60 * 1000; // 1h — matches the spec minimum.
   const DELIVERING = Symbol('webhook-delivering');
   type WebhookClaimValue = number | typeof DELIVERING;
@@ -344,6 +356,16 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     }
     if (ctx.isGitHubSelfEvent(payload)) {
       routingOpsDebug('info', 'Ignoring self event', { agentId, event });
+      commitWebhookDelivery(agentId, delivery);
+      return html(200, 'ok');
+    }
+    // Event type whitelist (Closes #6772): only PR/review/comment/check_run
+    // events trigger wake notifications. Other events (push, star, fork, etc.)
+    // are acked with 200 OK + webhook_filtered log so the agent is not
+    // woken by noise. Re-deliveries of filtered events are still dedup'd by
+    // the delivery cache above.
+    if (event !== null && event !== undefined && !RELEVANT_WEBHOOK_EVENTS.has(event)) {
+      routingOpsDebug('info', 'webhook_filtered', { agentId, event, delivery });
       commitWebhookDelivery(agentId, delivery);
       return html(200, 'ok');
     }
