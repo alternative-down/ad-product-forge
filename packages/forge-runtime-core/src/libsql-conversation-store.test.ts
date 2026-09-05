@@ -161,6 +161,46 @@ describe('LibsqlConversationStore', () => {
     }
   });
 
+
+  it('returns metadata as undefined when metadata_json is malformed JSON (#5918)', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: `file:${databasePath}`,
+    });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_malformed',
+    });
+
+    try {
+      // Insert valid thread first
+      await store.upsertThread({
+        id: 'thread-malformed',
+        title: 'Malformed Test',
+        participantIds: ['agent-a'],
+        metadata: { source: 'test' },
+        createdAt: '2026-04-21T00:00:00.000Z',
+        updatedAt: '2026-04-21T00:00:00.000Z',
+      });
+
+      // Corrupt metadata_json directly in the DB
+      await client.execute({
+        sql: "update test_runtime_malformed_conversation_threads set metadata_json = ? where id = ?",
+        args: ['{this is not valid JSON', 'thread-malformed'],
+      });
+
+      // Should NOT throw — should return metadata as undefined (graceful fallback)
+      const result = await store.getThread('thread-malformed');
+      expect(result).toBeTruthy();
+      expect(result?.id).toBe('thread-malformed');
+      expect(result?.metadata).toBeUndefined();
+    } finally {
+      await client.close();
+    }
+  });
+
   it('keeps message ordering stable when multiple messages share the same timestamp', async () => {
     const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
     const databasePath = path.join(directoryPath, 'conversation.db');
