@@ -4,6 +4,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from "zod";
 import { ADMIN_API_KEY_HEADER, verifyAdminApiKey } from './admin-auth';
 import { parseEnv } from '../config/env';
+import { errorMsg } from '../agents/error-formatting';
 
 const MAX_BODY_BYTES = parseEnv().FORGE_HTTP_MAX_BODY_BYTES;
 
@@ -71,7 +72,6 @@ function buildCorsHeaders(
     'access-control-allow-headers': CORS_ALLOWED_HEADERS,
   };
 }
-import { errorMsg } from '../agents/error-formatting';
 type ErrorResponseBody = { error: string; details?: unknown };
 
 /**
