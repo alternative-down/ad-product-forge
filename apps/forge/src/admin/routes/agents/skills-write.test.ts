@@ -59,7 +59,6 @@ const { mockJsonResponse, mockParseJsonBody } = vi.hoisted(() => ({
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: mockForgeDebug,
-  reloadAgentIfLoaded: mockReloadAgentIfLoaded,
   errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
   withToolErrorLogging: vi.fn(async (params) => {
     try {
@@ -72,9 +71,16 @@ vi.mock('@forge-runtime/core', () => ({
   })
 }));
 
-vi.mock('../../../agents/global-skills', () => ({
+vi.mock('../../../capabilities/runtime', () => ({
+  reloadAgentIfLoaded: mockReloadAgentIfLoaded,
+}));
+
+vi.mock('../../../agents/workspace-skills', () => ({
   installAgentWorkspaceSkillsFromZip: mockInstallZip,
   deleteAgentWorkspaceSkill: mockDeleteSkill,
+}));
+
+vi.mock('../../../agents/global-skills', () => ({
   installGlobalSkillToAgentWorkspace: mockInstallGlobal,
   publishAgentWorkspaceSkillToGlobalCatalog: mockPublishGlobal,
 }));

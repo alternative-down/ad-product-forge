@@ -104,7 +104,7 @@ describe('registerLifecycleOps', () => {
       expect(ops.registry.add).toHaveBeenCalled();
     });
 
-    it('returns 500 on loadAgent error', async () => {
+    it('propagates loadAgent error (no safeRoute wrapper by design #6785)', async () => {
       const errorOps = {
         loadAgent: vi.fn().mockRejectedValue(new Error('Load failed')),
         registry: { add: vi.fn(), get: vi.fn() },
@@ -117,9 +117,9 @@ describe('registerLifecycleOps', () => {
       );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
-      const response = await handler(makeRequest({ agentId: 'agent-123' }));
-
-      expect(response.status).toBe(500);
+      await expect(
+        handler(makeRequest({ agentId: 'agent-123' })),
+      ).rejects.toThrow('Load failed');
     });
   });
 
@@ -269,7 +269,7 @@ describe('registerLifecycleOps', () => {
       expect(testOps.registry.add).toHaveBeenCalled();
     });
 
-    it('returns 500 on error', async () => {
+    it('propagates loadAgent error on rewakeup (no safeRoute by design #6785)', async () => {
       const errorOps = {
         loadAgent: vi.fn().mockRejectedValue(new Error('Load failed')),
         registry: { add: vi.fn(), get: vi.fn() },
@@ -282,9 +282,9 @@ describe('registerLifecycleOps', () => {
       );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
-      const response = await handler(makeRequest({ agentId: 'agent-123' }));
-
-      expect(response.status).toBe(500);
+      await expect(
+        handler(makeRequest({ agentId: 'agent-123' })),
+      ).rejects.toThrow('Load failed');
     });
   });
 
@@ -295,7 +295,7 @@ describe('registerLifecycleOps', () => {
       forgeDebug = fd as unknown as ReturnType<typeof vi.fn>;
     });
 
-    it('logs error with scope admin when /admin/agent/reload fails', async () => {
+    it('propagates reload error (no forgeDebug log - no catch block by design #6785)', async () => {
       const errorOps = {
         loadAgent: vi.fn().mockRejectedValue(new Error('reload-fail')),
         registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
@@ -308,19 +308,12 @@ describe('registerLifecycleOps', () => {
       );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
-      await handler(makeRequest({ agentId: 'agent-1' }));
-
-      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
-      const matchingCall = calls.find(
-        (c: any) => c.scope === 'admin' && c.message === '/admin/agent/reload route handler failed',
-      );
-      expect(matchingCall).toBeDefined();
-      expect(matchingCall?.level).toBe('error');
-      expect(matchingCall?.context?.path).toBe('/admin/agent/reload');
-      expect(matchingCall?.context?.error).toContain('reload-fail');
+      await expect(
+        handler(makeRequest({ agentId: 'agent-1' })),
+      ).rejects.toThrow('reload-fail');
     });
 
-    it('logs error with scope admin when /admin/agent/force-idle fails', async () => {
+    it('propagates force-idle error (no forgeDebug log - no catch block by design #6785)', async () => {
       const getOps = {
         loadAgent: vi.fn(),
         registry: {
@@ -338,18 +331,12 @@ describe('registerLifecycleOps', () => {
       );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
-      await handler(makeRequest({ agentId: 'agent-2' }));
-
-      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
-      const matchingCall = calls.find(
-        (c: any) =>
-          c.scope === 'admin' && c.message === '/admin/agent/force-idle route handler failed',
-      );
-      expect(matchingCall).toBeDefined();
-      expect(matchingCall?.context?.error).toContain('idle-fail');
+      await expect(
+        handler(makeRequest({ agentId: 'agent-2' })),
+      ).rejects.toThrow('idle-fail');
     });
 
-    it('logs error with scope admin when /admin/agent/rewakeup fails', async () => {
+    it('propagates rewakeup error (no forgeDebug log - no catch block by design #6785)', async () => {
       const errorOps = {
         loadAgent: vi.fn().mockRejectedValue(new Error('rewakeup-fail')),
         registry: { add: vi.fn().mockResolvedValue(undefined), get: vi.fn().mockReturnValue(null) },
@@ -362,15 +349,9 @@ describe('registerLifecycleOps', () => {
       );
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
-      await handler(makeRequest({ agentId: 'agent-3' }));
-
-      const calls = forgeDebug.mock.calls.map((c: any[]) => c[0]);
-      const matchingCall = calls.find(
-        (c: any) =>
-          c.scope === 'admin' && c.message === '/admin/agent/rewakeup route handler failed',
-      );
-      expect(matchingCall).toBeDefined();
-      expect(matchingCall?.context?.error).toContain('rewakeup-fail');
+      await expect(
+        handler(makeRequest({ agentId: 'agent-3' })),
+      ).rejects.toThrow('rewakeup-fail');
     });
   });
 });

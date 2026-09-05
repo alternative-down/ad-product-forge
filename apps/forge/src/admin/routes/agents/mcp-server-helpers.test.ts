@@ -64,11 +64,11 @@ describe('normalizeMcpServerRecord', () => {
 
 describe('createAgentMcpServer', () => {
   it('inserts mcpServerConfigs and agentMcpConfigs records', async () => {
-    const insertMock = vi.fn().mockResolvedValue(undefined);
-    const db = {
-      insert: insertMock,
-      query: { agentMcpConfigs: { findMany: vi.fn().mockResolvedValue([]) } },
-    } as any;
+    const db: any = {};
+    const valuesMock = vi.fn().mockResolvedValue(undefined);
+    const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
+    db.insert = insertMock;
+    db.query = { agentMcpConfigs: { findMany: vi.fn().mockResolvedValue([]) } };
 
     await createAgentMcpServer(db, 'agent-1', 'server-1', 'config-1', {
       name: 'Test Server',
@@ -80,11 +80,11 @@ describe('createAgentMcpServer', () => {
 
   it('uses Date.now() for createdAt/updatedAt', async () => {
     const before = Date.now();
-    const insertMock = vi.fn().mockResolvedValue(undefined);
-    const db = {
-      insert: insertMock,
-      query: { agentMcpConfigs: { findMany: vi.fn().mockResolvedValue([]) } },
-    } as any;
+    const db: any = {};
+    const valuesMock = vi.fn().mockResolvedValue(undefined);
+    const insertMock = vi.fn().mockReturnValue({ values: valuesMock });
+    db.insert = insertMock;
+    db.query = { agentMcpConfigs: { findMany: vi.fn().mockResolvedValue([]) } };
 
     await createAgentMcpServer(db, 'agent-1', 'server-1', 'config-1', {
       name: 'Test Server',
@@ -99,9 +99,11 @@ describe('createAgentMcpServer', () => {
 
 describe('updateAgentMcpServer', () => {
   it('updates mcpServerConfigs and agentMcpConfigs', async () => {
-    const updateMock = vi.fn().mockReturnThis() as any;
-    (updateMock as any).where = vi.fn().mockResolvedValue(undefined);
-    const db = { update: updateMock } as any;
+    const db: any = {};
+    const mockSet = vi.fn().mockReturnThis();
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const updateMock = vi.fn().mockReturnValue({ set: mockSet, where: mockWhere });
+    db.update = updateMock;
 
     await updateAgentMcpServer(db, {
       configId: 'config-1',
@@ -126,7 +128,9 @@ describe('deleteAgentMcpServer', () => {
 
     await deleteAgentMcpServer(db, 'config-1', 'agent-1', 'server-1');
 
-    expect(deleteMock).toHaveBeenCalledTimes(1);
+    // Production deletes agentMcpConfigs first, then mcpServerConfigs if no remaining links.
+    // queryMock returns [] (empty), so both deletions happen = 2 calls total.
+    expect(deleteMock).toHaveBeenCalledTimes(2);
     expect(queryMock).toHaveBeenCalled();
   });
 
