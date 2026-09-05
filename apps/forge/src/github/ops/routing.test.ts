@@ -883,6 +883,63 @@ describe('createRoutingOps — handleWebhook', () => {
     });
   });
 
+  describe('extractPullRequestReviewSummary', () => {
+    it('extracts action + state + user for action=submitted state=approved', async () => {
+      const { extractPullRequestReviewSummary } = await import('./routing.js');
+      const result = extractPullRequestReviewSummary({
+        action: 'submitted',
+        review: { state: 'approved', user: { login: 'alice' } },
+      });
+      expect(result.action).toBe('submitted');
+      expect(result.summary).toBe('PR review submitted (approved) by alice');
+    });
+
+    it('handles missing review/user with placeholders', async () => {
+      const { extractPullRequestReviewSummary } = await import('./routing.js');
+      expect(extractPullRequestReviewSummary({ action: 'dismissed' }).summary).toBe(
+        'PR review dismissed (?) by ?',
+      );
+    });
+  });
+
+  describe('extractPullRequestReviewCommentSummary', () => {
+    it('extracts action + user for action=created', async () => {
+      const { extractPullRequestReviewCommentSummary } = await import('./routing.js');
+      const result = extractPullRequestReviewCommentSummary({
+        action: 'created',
+        comment: { user: { login: 'bob' } },
+      });
+      expect(result.action).toBe('created');
+      expect(result.summary).toBe('PR review comment created by bob');
+    });
+
+    it('handles missing comment/user with placeholders', async () => {
+      const { extractPullRequestReviewCommentSummary } = await import('./routing.js');
+      expect(extractPullRequestReviewCommentSummary({ action: 'edited' }).summary).toBe(
+        'PR review comment edited by ?',
+      );
+    });
+  });
+
+  describe('extractIssueCommentSummary', () => {
+    it('extracts action + user for action=created', async () => {
+      const { extractIssueCommentSummary } = await import('./routing.js');
+      const result = extractIssueCommentSummary({
+        action: 'created',
+        comment: { user: { login: 'carol' } },
+      });
+      expect(result.action).toBe('created');
+      expect(result.summary).toBe('Issue comment created by carol');
+    });
+
+    it('handles missing comment/user with placeholders', async () => {
+      const { extractIssueCommentSummary } = await import('./routing.js');
+      expect(extractIssueCommentSummary({ action: 'deleted' }).summary).toBe(
+        'Issue comment deleted by ?',
+      );
+    });
+  });
+
   it('passes extracted pull_request fields through to createGitHubWebhookWakeContent (action=closed + merged=true)', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const notifyMock = vi.fn().mockResolvedValue(undefined);
@@ -921,6 +978,47 @@ describe('createRoutingOps — handleWebhook', () => {
       }),
     );
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'enriched-wake' });
+  });
+
+  // Closes #6773 PR #2: per-event-type extractors dispatch to correct helper.
+  it('passes extracted pull_request_review fields through to createGitHubWebhookWakeContent', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const wakeMock = vi.fn().mockReturnValue('review-wake');
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = wakeMock;
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = JSON.stringify({
+      action: 'submitted',
+      review: { state: 'changes_requested', user: { login: 'reviewer' } },
+      pull_request: { number: 9 },
+    });
+    const sig = signWebhookBody(body);
+    await routing.handleWebhook(
+      'agent-1',
+      {
+        'x-github-event': 'pull_request_review',
+        'x-github-delivery': 'ext-prr-1',
+        'x-hub-signature-256': sig,
+      },
+      body,
+    );
+    expect(wakeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'pull_request_review',
+        action: 'submitted',
+        summary: 'PR review submitted (changes_requested) by reviewer',
+      }),
+    );
+    expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'review-wake' });
   });
 
   // Closes #6774: handleWebhook try/catch around createNotification returns 503

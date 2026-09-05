@@ -35,6 +35,32 @@ export function extractPullRequestSummary(payload: Record<string, unknown>) {
   return { action, summary: `PR #${n} ${action}${m} — ${b} ← ${h}` };
 }
 
+// Closes #6773 (PR #2 of 2): review + comment event extractors (parallel pattern).
+export function extractPullRequestReviewSummary(payload: Record<string, unknown>) {
+  const action = typeof payload.action === 'string' ? payload.action : 'unknown';
+  const review = isRecord(payload.review) ? payload.review : {};
+  const state = typeof review.state === 'string' ? review.state : '?';
+  const user =
+    isRecord(review.user) && typeof review.user.login === 'string' ? review.user.login : '?';
+  return { action, summary: `PR review ${action} (${state}) by ${user}` };
+}
+
+export function extractPullRequestReviewCommentSummary(payload: Record<string, unknown>) {
+  const action = typeof payload.action === 'string' ? payload.action : 'unknown';
+  const comment = isRecord(payload.comment) ? payload.comment : {};
+  const user =
+    isRecord(comment.user) && typeof comment.user.login === 'string' ? comment.user.login : '?';
+  return { action, summary: `PR review comment ${action} by ${user}` };
+}
+
+export function extractIssueCommentSummary(payload: Record<string, unknown>) {
+  const action = typeof payload.action === 'string' ? payload.action : 'unknown';
+  const comment = isRecord(payload.comment) ? payload.comment : {};
+  const user =
+    isRecord(comment.user) && typeof comment.user.login === 'string' ? comment.user.login : '?';
+  return { action, summary: `Issue comment ${action} by ${user}` };
+}
+
 export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
   const routingOpsDebug = (
     level: LogLevel,
@@ -382,17 +408,26 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       return html(200, 'ok');
     }
     routingOpsDebug('info', `Webhook ${event}`, { agentId, delivery });
-    // Closes #6773 PR #1: pull_request field extraction → structured wake content.
+    // Closes #6773 PR #1 + PR #2: per-event-type field extraction → structured wake content.
     const pr = event === 'pull_request' ? extractPullRequestSummary(payload) : null;
+    const prr = event === 'pull_request_review' ? extractPullRequestReviewSummary(payload) : null;
+    const prc =
+      event === 'pull_request_review_comment'
+        ? extractPullRequestReviewCommentSummary(payload)
+        : null;
+    const ic = event === 'issue_comment' ? extractIssueCommentSummary(payload) : null;
+    const extracted = pr ?? prr ?? prc ?? ic;
     const a = typeof payload.action === 'string' ? payload.action : null;
     try {
       await ctx.notifications.createNotification({
         agentId,
         content: String(
           ctx.createGitHubWebhookWakeContent({
-            agentId, deliveryId: delivery, event,
-            action: pr?.action ?? a ?? 'unknown',
-            summary: pr?.summary ?? `${event}${a === null ? '' : ` ${a}`}`,
+            agentId,
+            deliveryId: delivery,
+            event,
+            action: extracted?.action ?? a ?? 'unknown',
+            summary: extracted?.summary ?? `${event}${a === null ? '' : ` ${a}`}`,
             timestamp: Date.now(),
           }),
         ),
