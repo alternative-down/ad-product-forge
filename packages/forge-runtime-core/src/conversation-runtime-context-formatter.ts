@@ -9,10 +9,6 @@ import {
 
 type TextPart = { type: 'text'; text: string };
 type ImagePart = { type: 'image'; mimeType: string; bytes: Uint8Array };
-// FilePart used for type documentation; kept for future extensibility
-type _FilePart = { type: 'file'; mimeType: string; name: string; bytes: Uint8Array };
-// ReasoningPart used for type documentation
-type _ReasoningPart = { type: 'reasoning'; text: string };
 
 export function createConversationRuntimeContextFormatter() {
   return {
