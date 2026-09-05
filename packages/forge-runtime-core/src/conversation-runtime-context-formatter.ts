@@ -7,8 +7,6 @@ import {
   type ConversationRuntimeInputPayload,
 } from 'agent-runtime-core/integrations';
 
-const INTERNAL_RUNTIME_INPUT_TYPES = new Set<string>();
-
 type TextPart = { type: 'text'; text: string };
 type ImagePart = { type: 'image'; mimeType: string; bytes: Uint8Array };
 // FilePart used for type documentation; kept for future extensibility
@@ -19,10 +17,6 @@ type _ReasoningPart = { type: 'reasoning'; text: string };
 export function createConversationRuntimeContextFormatter() {
   return {
     formatInput(runtimeInput: RuntimeInput): StepContextEntry | null {
-      if (INTERNAL_RUNTIME_INPUT_TYPES.has(runtimeInput.type)) {
-        return null;
-      }
-
       if (isConversationRuntimeInputPayload(runtimeInput.payload)) {
         const payload = runtimeInput.payload as ConversationRuntimeInputPayload;
         const parts = payload.parts as unknown[];
