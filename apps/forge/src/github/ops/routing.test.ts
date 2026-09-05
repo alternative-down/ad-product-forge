@@ -855,6 +855,74 @@ describe('createRoutingOps — handleWebhook', () => {
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'review-wake' });
   });
 
+  // Closes #6773 (PR #1 of 2): pull_request field extraction.
+  describe('extractPullRequestSummary', () => {
+    it('extracts action + summary for action=closed merged=true', async () => {
+      const { extractPullRequestSummary } = await import('./routing.js');
+      const result = extractPullRequestSummary({
+        action: 'closed',
+        pull_request: { number: 42, merged: true, base: { ref: 'main' }, head: { ref: 'feat' } },
+      });
+      expect(result.action).toBe('closed');
+      expect(result.summary).toBe('PR #42 closed (merged) — main ← feat');
+    });
+
+    it('marks merged=false distinctly (closed, not merged)', async () => {
+      const { extractPullRequestSummary } = await import('./routing.js');
+      expect(
+        extractPullRequestSummary({
+          action: 'closed',
+          pull_request: { number: 7, merged: false, base: { ref: 'main' }, head: { ref: 'feat' } },
+        }).summary,
+      ).toBe('PR #7 closed (closed, not merged) — main ← feat');
+    });
+
+    it('handles missing pull_request / fields with placeholders (no throw)', async () => {
+      const { extractPullRequestSummary } = await import('./routing.js');
+      expect(extractPullRequestSummary({ action: 'opened' }).summary).toBe('PR #? opened — ? ← ?');
+    });
+  });
+
+  it('passes extracted pull_request fields through to createGitHubWebhookWakeContent (action=closed + merged=true)', async () => {
+    const { createRoutingOps } = await import('./routing.js');
+    const notifyMock = vi.fn().mockResolvedValue(undefined);
+    const wakeMock = vi.fn().mockReturnValue('enriched-wake');
+    const ctx = makeCtx();
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
+    ctx.createGitHubWebhookWakeContent = wakeMock;
+    ctx.getCredentials = vi.fn().mockResolvedValue({ webhookSecret: TEST_WEBHOOK_SECRET });
+    const routing = createRoutingOps(ctx);
+    const body = JSON.stringify({
+      action: 'closed',
+      pull_request: { number: 42, merged: true, base: { ref: 'main' }, head: { ref: 'feat' } },
+    });
+    const sig = signWebhookBody(body);
+    await routing.handleWebhook(
+      'agent-1',
+      {
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'ext-pr-1',
+        'x-hub-signature-256': sig,
+      },
+      body,
+    );
+    expect(wakeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'pull_request',
+        deliveryId: 'ext-pr-1',
+        action: 'closed',
+        summary: 'PR #42 closed (merged) — main ← feat',
+      }),
+    );
+    expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'enriched-wake' });
+  });
+
   // Closes #6774: handleWebhook try/catch around createNotification returns 503
   // (transient failure) instead of throwing (which becomes 500). Also asserts
   // the error is logged via routingOpsDebug so operators can diagnose.
