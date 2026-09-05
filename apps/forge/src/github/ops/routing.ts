@@ -3,6 +3,7 @@
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
 import { errorMsg } from '../../agents/error-formatting';
+import { isRecord } from '../helpers';
 import { verifyWebhookSignature } from '../../webhooks/handler-helpers';
 
 import type { HttpRequest } from '../../http/server';
@@ -22,6 +23,17 @@ type RoutingOpsDeps = {
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
   buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
 };
+
+// Closes #6773 (PR #1 of 2): pull_request field extraction → human-readable summary.
+export function extractPullRequestSummary(payload: Record<string, unknown>) {
+  const action = typeof payload.action === 'string' ? payload.action : 'unknown';
+  const pr = isRecord(payload.pull_request) ? payload.pull_request : {};
+  const n = typeof pr.number === 'number' ? String(pr.number) : '?';
+  const m = pr.merged === true ? ' (merged)' : pr.merged === false ? ' (closed, not merged)' : '';
+  const b = isRecord(pr.base) && typeof pr.base.ref === 'string' ? pr.base.ref : '?';
+  const h = isRecord(pr.head) && typeof pr.head.ref === 'string' ? pr.head.ref : '?';
+  return { action, summary: `PR #${n} ${action}${m} — ${b} ← ${h}` };
+}
 
 export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
   const routingOpsDebug = (
@@ -370,10 +382,20 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       return html(200, 'ok');
     }
     routingOpsDebug('info', `Webhook ${event}`, { agentId, delivery });
+    // Closes #6773 PR #1: pull_request field extraction → structured wake content.
+    const pr = event === 'pull_request' ? extractPullRequestSummary(payload) : null;
+    const a = typeof payload.action === 'string' ? payload.action : null;
     try {
       await ctx.notifications.createNotification({
         agentId,
-        content: String(ctx.createGitHubWebhookWakeContent({ event, delivery, payload })),
+        content: String(
+          ctx.createGitHubWebhookWakeContent({
+            agentId, deliveryId: delivery, event,
+            action: pr?.action ?? a ?? 'unknown',
+            summary: pr?.summary ?? `${event}${a === null ? '' : ` ${a}`}`,
+            timestamp: Date.now(),
+          }),
+        ),
       });
       commitWebhookDelivery(agentId, delivery);
       return html(202, 'Accepted');
