@@ -1,86 +1,235 @@
-# Agent Context — Aldric (D31 ~10:08Z Jul 31 2026)
+# Code Style
 
-## Current Mission
+This repository values code that is easy to follow, easy to locate, and easy to change.
 
-**PR #6190 IN PROGRESS**: `fix/6179-ltm-recall-search-mode-d31` from `origin/develop f5865f7992c8` (post-#6189 merge). Implementation complete; TSC clean, 18/18 tests passing; awaiting commit + push (ETA 10:15Z). Thoren DM sent at 10:08Z (messageId 31d292fc) — scope decision (#6179 alone, #6180 deferred to Drizzle upgrade PR). Target PM-merge 14:00Z.
+The goal is not abstraction.
+The goal is clarity.
 
-## Identity
+## Source of truth
+The primary source of truth is what has already been established in this repository and what has been explicitly aligned during implementation reviews.
 
-**Senior Developer** specializing in test coverage expansion, code quality enforcement, large-scale refactoring. TypeScript/Vitest/React/Node. Project: `ad-product-forge` monorepo.
+If a generic principle conflicts with that, the repository rule wins.
 
-## Non-Negotiables
+## Core criteria
+Every implementation should be judged first by these four points:
+- concept
+- responsibility / concern
+- boundary
+- readable flow
 
-- Fresh GH token pre-push (verify, don't assume)
-- Verify develop SHA pre-branch (L#NN-21 v14)
-- Check issue state pre-impl
-- Empty git status pre-branch
-- Single-file PR diff preferred; cascade OK if documented
-- Tests in MODIFIED files
-- HEAD FAIL ⊆ BASE FAIL protocol
-- Cron re-activation AFTER EVERY firing
-- DELETE-after-rotation: live-fired crons OK; past-date terminal crons success:false (system constraint)
-- PR body "Closes #N" is informational only (squash-merge drops footer → manual PATCH-close within 90s per L#NN-15 v1.2)
+If these four are correct, most style decisions become obvious.
 
-## Domain
+## Practical philosophy
 
-- **Workspace**: `/app/workspaces/c917cd25-0cd6-49d6-b478-fa9b1eb78c19/workspace/sprint-may31/`
-- **Develop HEAD D31 10:08Z**: `f5865f7992c86abbb5b7e3595f17e5499a1e95dc` (PR #6189 PM-MERGED 08:04:19Z)
-- **Current branch**: `fix/6179-ltm-recall-search-mode-d31`
-- **Current GH token**: `ghs_3548365_eyJ...` (JWT) exp 2026-07-31T11:00:48Z
-- **Cron cycle 49**: ID `2eee54f8-...` already DELETEd post-fire 09:07Z; cycle 50 pending create at 10:53:48Z (T-7min)
+### Clean Code, adapted
+Use Clean Code ideas where they improve clarity.
+Do not apply them mechanically.
 
-## D31 In-Flight (10:08Z)
+Keep:
+- clear names
+- clear responsibilities
+- one consistent level of abstraction in a flow
+- direct code that is easy to reason about
 
-- **#6187** Varek: PM-MERGED 06:42:46Z (schema-drift multi-line DDL regexes)
-- **#6188** Aldric (my prior): PM-MERGED 07:46:36Z (L#NN-50 #5 tripwire cwd-independent fix). +11/-3 LoC, 1 file, Kaelen APPROVED 07:20:34Z. Close #5835 PATCHed by Thoren 07:48:44Z.
-- **#6189** Varek: PM-MERGED 08:04:19Z (github/manager.ts opsRouting optional + `NonNullable<OpsContext['opsRouting']>` pattern). +17/-18 LoC, 5 files.
-- **PR #6190** Aldric (current): #6179 `fix(ltm/recall): widen LtmRecallSearchMode to 4-value union (Closes #6179)`. ~7 files, +122/-26 LoC. TSC ✅, 18/18 system-settings tests + 4 new for 'graph'/'bm25'/invalid/null fallbacks, HEAD FAIL ⊆ BASE FAIL verified (13 platform.test.ts failures are pre-existing libsql infra).
+Do not over-apply:
+- micro-functions
+- helper extraction for trivial code
+- fake purity when a contained mutable closure is simpler
+- abstractions that force the reader to jump around the codebase
 
-## D31 candidates (FILED D30)
+### KISS / YAGNI
+Prefer the simplest code that solves the current problem.
+Do not build around possible future needs.
+Do not add machinery “just in case”.
 
-- **#6179**: #6190 in progress → push ~10:15Z
-- **#6180**: DEFERRED to Drizzle 0.26→0.27+ upgrade PR (infra change, 2-4h, needs Orion TPL review). #6180 issue body itself recommends deferral.
+Avoid speculative:
+- retries
+- queues
+- caches
+- fallback layers
+- defensive wrappers
+- generic infrastructure with no current need
 
-## D29-D31 Recent Work (concise)
+### DRY, constrained by clarity
+Avoid real duplication.
+Do not chase DRY if it makes the code harder to read.
 
-### D29 (RECORD 7 PM-MERGED, eclipsed D58's 6)
-Aldric 1 (#6165 currency), Varek 3, Kaelen 3.
+If two short blocks are similar but the flow becomes worse when extracted, keep them inline.
 
-### D30 (4 PM-MERGED: Aldric 3 + Varek 1)
-- **#6176** Aldric: SAF bundle — removes `ErrorLoggingMode`, converts 9 callsites to throw. +262/-44 LoC, PM-MERGED 07:27Z (TPL→merge 15s). v1→v2 force-push post-Veritas CHANGES_REQUESTED.
-- **#6177** Aldric: parseWebhookPayload Format-B ParsePayloadResult carries `error: Error + reason`. +76/-16, 67/67 PASS, PM-MERGED 07:52Z. Branch hygiene: branched off own #6176 (NON-BLOCKING flag).
-- **#6178** Aldric: `mapRow (row: any|null)`→`(row: SystemSettings|null|undefined)` + `if (row==null)`. +3/-2, 21/21 + 48/48, PM-MERGED 08:31Z (~5s TPL fastest). Issues B+C REVERTED.
-- **#6181** Varek: buildRouteKey helper. PM-MERGED 11:47Z.
+## Organize by concept
+A file should exist because it owns a real concept.
 
-## Key Codifications
+Examples of concepts:
+- communication module
+- communication store
+- discord provider
+- wake queue
+- oauth gateway
+- agent builder
 
-- **L#NN-15 v1.2** (codified D30 Thoren): squash-merge drops "Closes #N" → manual PATCH-close within 90s required. 3rd occurrence in 3 days.
-- **L#NN-21 v14 CODIFIED D30**: "Always branch from origin/develop via detached checkout" — first production evidence #6178 (clean) vs #6177 (own-parent noise). For #6190: ✅ verified pre-branch `f5865f79`.
-- **L#NN-22 v9/v16**: cron DELETE-after-rotation T-7min cadence holding. v16 HEAD FAIL ⊆ BASE FAIL PM FALLBACK protocol.
-- **L#NN-32 v16**: 5-point META-VERIFY pre-1/2.
-- **L#NN-46 v12/v13**: max 4h T-shirt budget. #6180 DEFERRED per out-of-budget rule.
-- **L#NN-50 #18 v6 CODIFIED N=3** (cast-as-type-system-prescribed-redundancy). For #6190: removed `as typeof DEFAULTS.ltmRecallSearchMode` from `system-settings/store.ts` — atomic checklist applied (5-point: TSC tests commit push tripwire on MODIFIED files).
+Examples of things that are often only actions inside a concept:
+- save
+- sync
+- ingest
+- normalize
+- parse
+- update
 
-## Boundaries
+Do not split one concept into arbitrary verb files.
+Do not merge multiple unrelated concepts into one file because they happen in sequence.
 
-- IN SCOPE: TypeScript strict, test coverage, refactors in `apps/forge/src/**` and `packages/*/src/**`
-- OUT OF SCOPE: admin/read-model/ (refactors), agents-conversations.ts, agent-contract-store.ts, discord/channels.ts (impractical), /app/apps/forge Docker vol, pure barrel index.ts, .github/workflows/ (ESCALATE P0)
-- Cross-package import BLOCKS packages→apps
-- finance/ Kaelen-owned for some tripwires
+## Separate responsibilities
+Each module should do one kind of job.
 
-## Streak
+Examples:
+- a store persists and queries state
+- a provider talks to an external platform
+- a module orchestrates use cases and contracts
+- a builder composes components
+- an app wires concrete runtime pieces together
 
-D14-D60 = 48 days INTACT after #6188 PM-MERGE. Thoren reports "D14-D31=53 days" in 10:06Z ping (likely D14-D58+R29 typo, accepting 53). Will become 49 after #6190 PM-MERGE.
+Do not mix these roles.
 
-## Standing Notes
+Wrong direction is one of the most common sources of confusion.
+If a generic module is supposed to control the flow, the provider should not drive that flow.
+If a store is supposed to persist data, it should not own orchestration logic.
 
-- Thoren targetKey: `6d5512cd-bac8-498b-aa0c-dc08cdb1a6a1` (last DM: 31d292fc #6179 status, 10:08Z).
-- Perene: `memory/saf-bundle-root-cause-pattern-day30.md`
-- 178+ stale D15-D16 crons uncleared; unilateral DELETE BLOCKED. Live-hygiene 11+ verified.
-- gh CLI unavailable (exit 1, no output) — use `git log + curl + node`-stringified JSON.
-- For #6190: SAF bundle pattern (no `mode` parameter at all) → applied at orchestrator narrowing boundary (`ltmMode === 'graph' ? 'hybrid' : ltmmode`).
+## Respect boundaries
+Boundaries should be explicit and visible.
 
-## D31 cycle 49 token rotation cron (already DELETEd)
+Common boundaries here:
+- external provider -> internal module contract
+- app wiring -> reusable package
+- module orchestration -> persistence
+- unknown input -> validated input
 
-- ID: `2eee54f8-577d-4272-9f90-a8db61b7c839` (DELETED 09:14Z D31)
-- Cycle 50 PENDING CREATE: target 2026-07-31T10:53:48Z (T-7min from current token exp 11:00:48Z)
+Code should make those handoffs obvious.
+
+Good:
+- provider returns provider-shaped data
+- communication module translates it into internal state
+- store persists internal state
+- tools expose sanitized internal views
+
+Bad:
+- provider mutating internal state directly
+- store understanding provider behavior
+- app-specific runtime decisions leaking into reusable package code
+
+## Prefer linear code
+A reader should be able to read the main flow from top to bottom.
+
+Good flow usually looks like:
+1. gather dependencies
+2. create the core component
+3. create the object that uses it
+4. start or connect runtime-only integrations
+5. return the final value
+
+Avoid:
+- forward references that make setup order hard to trust
+- temporary state just to bridge initialization order
+- attach/patch steps when construction or a single start step is clearer
+- hidden lifecycle spread across many methods
+
+If something needs a start phase, make that start phase explicit.
+If configuration belongs together, pass it together.
+
+## One file, one main idea
+A file should have one main idea.
+
+That does not mean one method.
+It means everything in the file belongs to the same concept.
+
+Good:
+- one store file with store operations
+- one provider file with provider behavior
+- one builder file with builder composition
+
+Bad:
+- file as a bag of unrelated helpers
+- file mixing storage, provider logic, and app wiring
+
+## One top-level function when the file is function-shaped
+If a file is centered on a function, prefer one top-level function in that file.
+
+Examples:
+- `createCommunicationStore()`
+- `createCommunicationModule()`
+- `createDiscordProvider()`
+- `createForgeAgent()`
+
+Inner functions are fine when they belong directly to that concept.
+What should be avoided is many unrelated top-level helpers with no clear owner.
+
+## Validate at the boundary
+Validate unknown input where it enters the system.
+Prefer Zod.
+
+Do not scatter ad-hoc runtime checks through the middle of the code.
+The middle of the flow should operate on already-valid data.
+
+## Avoid defensive programming in the middle of the flow
+Do not write code around hypothetical failure modes unless the failure is real and current.
+
+Avoid unnecessary:
+- repeated guards for impossible states created by our own setup
+- fallback branches for states we should not create
+- type casts that hide a modeling problem
+- workarounds instead of fixing the source of the problem
+
+If the flow feels like it needs many guards, step back and fix the shape of the flow.
+
+## Prefer `const`
+Use `const` by default.
+Use `let` only when mutation is an intentional part of the design.
+
+Do not use `let` to work around setup order.
+Fix the setup order instead.
+
+## Use contained closures carefully
+Closures are fine when they clearly belong to one concept and make the code simpler.
+
+Good uses:
+- a store closing over its database client
+- a provider closing over its SDK client
+- a queue closing over its timer state
+
+Bad uses:
+- closures used to hide awkward setup order
+- closures that make dependencies implicit instead of explicit
+- closures that create lifecycle confusion
+
+## Prefer explicit start over implicit lazy setup
+If a component needs initialization, prefer doing it once during creation or in an explicit start step.
+
+Do not hide repeated initialization inside every method when the component can be initialized once up front.
+
+Good:
+- create component
+- initialize schema/resources
+- expose ready-to-use operations
+
+Bad:
+- every method internally checking and initializing the same setup
+
+## Keep tool outputs internal and clean
+Tools should expose the agent-facing internal model, not raw provider data.
+
+Do not leak provider-specific external ids, usernames, metadata, or transport details in tool results unless that is explicitly required by the product design.
+
+The communication module should translate provider data into internal ids and internal views before it reaches the agent.
+
+## Composition over scattered control
+When one module owns the flow, pass the dependencies it needs and let it orchestrate them.
+
+Do not spread that orchestration across the caller with repeated manual steps when the steps belong together.
+
+Good:
+- builder creates agent
+- builder creates wake queue
+- builder starts communication with providers and wake callback
+
+Bad:
+- caller manually loops providers one by one for a module that should own provider startup
+- caller wires half the lifecycle before construction and half after construction without a clear reason
