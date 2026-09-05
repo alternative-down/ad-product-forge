@@ -378,11 +378,16 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
       commitWebhookDelivery(agentId, delivery);
       return html(202, 'Accepted');
     } catch (err) {
-      // Release the claim so the next GitHub retry (or a parallel follow-up)
-      // can re-process this delivery instead of being silently ack'd as a
-      // duplicate.
+      // Transient failure: log + release claim + return 503 so GitHub retries
+      // with exponential backoff (ND-required retry semantics, not a hard 500).
+      routingOpsDebug('error', 'createNotification failed for webhook', {
+        agentId,
+        delivery,
+        event,
+        error: errorMsg(err),
+      });
       releaseWebhookDelivery(agentId, delivery);
-      throw err;
+      return html(503, 'Service Unavailable');
     }
   }
 
