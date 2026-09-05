@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getAgentConversationMessages, getAgentRecentConversations } from '@/lib/admin-api/index';
+import { flattenConversationMessagePages } from '@/lib/conversation-time';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/$conversationId/')({
   component: AgentConversationDetailIndexRoute,
@@ -53,10 +54,7 @@ function AgentConversationDetailIndexRoute() {
     enabled: Boolean(selectedConversation),
   });
   const messages = useMemo(
-    () =>
-      [...(messagesQuery.data?.pages ?? [])]
-        .reverse()
-        .flatMap((page) => [...page.items].reverse()),
+    () => flattenConversationMessagePages(messagesQuery.data?.pages ?? []),
     [messagesQuery.data?.pages],
   );
   const hasNextPage = messagesQuery.hasNextPage;

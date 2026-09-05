@@ -17,3 +17,7 @@ export function getConversationActivityAt(conversation: {
     conversation.updatedAt,
   );
 }
+
+export function flattenConversationMessagePages<T>(pages: Array<{ items: T[] }>) {
+  return [...pages].reverse().flatMap((page) => page.items);
+}

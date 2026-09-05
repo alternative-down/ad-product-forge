@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { getConversationActivityAt, getLatestConversationMessage } from './conversation-time';
+import {
+  flattenConversationMessagePages,
+  getConversationActivityAt,
+  getLatestConversationMessage,
+} from './conversation-time';
 
 describe('conversation time', () => {
   it('finds the newest message without relying on array order', () => {
@@ -17,5 +21,23 @@ describe('conversation time', () => {
         messages: [{ createdAt: 100 }, { createdAt: 300 }, { createdAt: 200 }],
       }),
     ).toBe(300);
+  });
+
+  it('places older pages first while preserving chronological order inside each page', () => {
+    const pages = [
+      { items: ['recent-1', 'recent-2'] },
+      { items: ['old-1', 'old-2'] },
+    ];
+
+    expect(flattenConversationMessagePages(pages)).toEqual([
+      'old-1',
+      'old-2',
+      'recent-1',
+      'recent-2',
+    ]);
+    expect(pages).toEqual([
+      { items: ['recent-1', 'recent-2'] },
+      { items: ['old-1', 'old-2'] },
+    ]);
   });
 });
