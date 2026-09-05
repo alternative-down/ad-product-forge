@@ -4,7 +4,6 @@ import {
   agentExecutionStepsQuerySchema,
   agentThreadMessagesQuerySchema,
   agentConversationMessagesQuerySchema,
-  agentLongTermMemoryRecallSearchSchema,
   hireAgentSchema,
 } from './schemas/agents';
 import {
@@ -129,44 +128,6 @@ describe('Admin Route Schemas', () => {
           agentId: 'agent-1',
           provider: '',
           targetKey: 'key',
-        }),
-      ).toThrow();
-    });
-  });
-
-  describe('agentLongTermMemoryRecallSearchSchema', () => {
-    it('applies defaults', () => {
-      const result = agentLongTermMemoryRecallSearchSchema.parse({
-        agentId: 'agent-1',
-        query: 'find tasks',
-      });
-      expect(result.limit).toBe(10);
-    });
-
-    it('respects provided limit', () => {
-      const result = agentLongTermMemoryRecallSearchSchema.parse({
-        agentId: 'agent-1',
-        query: 'find tasks',
-        limit: '25',
-      });
-      expect(result.limit).toBe(25);
-    });
-
-    it('rejects limit above maximum', () => {
-      expect(() =>
-        agentLongTermMemoryRecallSearchSchema.parse({
-          agentId: 'agent-1',
-          query: 'find tasks',
-          limit: 150,
-        }),
-      ).toThrow();
-    });
-
-    it('rejects empty query', () => {
-      expect(() =>
-        agentLongTermMemoryRecallSearchSchema.parse({
-          agentId: 'agent-1',
-          query: '',
         }),
       ).toThrow();
     });

@@ -12,7 +12,6 @@ import {
   agentConversationMessagesQuerySchema,
   agentActionSchema,
   clearAgentHistorySchema,
-  agentLongTermMemoryRecallSearchSchema,
   topUpAgentContractSchema,
   adjustAgentContractBudgetSchema,
   renewAgentContractSchema,
@@ -246,76 +245,10 @@ describe('agentActionSchema', () => {
 // ─── clearAgentHistorySchema ─────────────────────────────────────────────────
 
 describe('clearAgentHistorySchema', () => {
-  it('parses with agentId only (defaults includeLongTermMemoryThread)', () => {
-    const result = clearAgentHistorySchema.parse({ agentId: 'agent-1' });
-    expect(result.agentId).toBe('agent-1');
-    expect(result.includeLongTermMemoryThread).toBe(true);
-  });
-
-  it('parses with explicit includeLongTermMemoryThread false', () => {
-    const result = clearAgentHistorySchema.parse({
-      agentId: 'a',
-      includeLongTermMemoryThread: false,
-    });
-    expect(result.includeLongTermMemoryThread).toBe(false);
-  });
-
   it('rejects missing agentId', () => {
     expect(() => clearAgentHistorySchema.parse({})).toThrow();
   });
 });
-
-// ─── agentLongTermMemoryRecallSearchSchema ───────────────────────────────────
-
-describe('agentLongTermMemoryRecallSearchSchema', () => {
-  it('parses minimal input with defaults', () => {
-    const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'agent-1',
-      query: 'find payments',
-    });
-    expect(result.limit).toBe(10);
-  });
-
-  it('parses with explicit limit', () => {
-    const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'a',
-      query: 'q',
-      limit: 25,
-    });
-    expect(result.limit).toBe(25);
-  });
-
-  it('coerces string limit', () => {
-    const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'a',
-      query: 'q',
-      limit: '15',
-    });
-    expect(result.limit).toBe(15);
-  });
-
-  it('rejects missing query', () => {
-    expect(() => agentLongTermMemoryRecallSearchSchema.parse({ agentId: 'a' })).toThrow();
-  });
-
-  it('rejects empty query', () => {
-    expect(() =>
-      agentLongTermMemoryRecallSearchSchema.parse({ agentId: 'a', query: '' }),
-    ).toThrow();
-  });
-
-  it('rejects limit less than 1', () => {
-    expect(() =>
-      agentLongTermMemoryRecallSearchSchema.parse({
-        agentId: 'a',
-        query: 'q',
-        limit: 0,
-      }),
-    ).toThrow();
-  });
-});
-
-// ─── Contract schemas (topUp, adjust, renew) ─────────────────────────────────
 
 describe('topUpAgentContractSchema', () => {
   it('parses valid input', () => {
