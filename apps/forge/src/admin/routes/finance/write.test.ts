@@ -3,7 +3,10 @@ import { registerFinanceWriteRoutes } from './write';
 
 // --- Mocks for file-level imports ---
 
-vi.mock('@forge-runtime/core', () => ({ forgeDebug: () => {} }));
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: () => {},
+  errorMsg: vi.fn((err) => err instanceof Error ? err.message : typeof err === "string" ? err : String(err).replace(/^Error: /, "")),
+}));
 vi.mock('../../../http/server', () => ({
   jsonResponse: vi.fn((body: unknown, status = 200) => ({
     status,
@@ -347,19 +350,21 @@ describe('POST /admin/finance/payable/create — handler', () => {
     expect(body.kind).toBe('recurring');
   });
 
-  it('throws on invalid dueAt date', async () => {
-    await expect(
-      handler(
-        makeMockRequest(
-          JSON.stringify({
-            name: 'Rent',
-            amountUsd: 1500,
-            dueAt: 'not-a-date',
-            kind: 'single',
-          }),
-        ),
+  it('returns 500 with error message on invalid dueAt date', async () => {
+    const response = await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Rent',
+          amountUsd: 1500,
+          dueAt: 'not-a-date',
+          kind: 'single',
+        }),
       ),
-    ).rejects.toThrow('Invalid payable dueAt');
+    );
+
+    expect(response).toMatchObject({ status: 500 });
+    const body = JSON.parse((response as { body: string }).body);
+    expect(body.error).toBe('Invalid payable dueAt');
   });
 });
 
