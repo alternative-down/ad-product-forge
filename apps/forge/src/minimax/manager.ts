@@ -88,16 +88,14 @@ export class MiniMaxClient {
         },
       });
       const rawBody = await response.text();
-      const body = rawBody.trim()
-        ? (() => {
-            try {
-              return this.parseJsonResponse(rawBody);
-            } catch (error) {
-              minimaxDebug('warn', 'Failed to parse MiniMax response', { error: errorMsg(error) });
-              return null;
-            }
-          })()
-        : null;
+      let body = null;
+      if (rawBody.trim()) {
+        try {
+          body = this.parseJsonResponse(rawBody);
+        } catch (error) {
+          minimaxDebug('warn', 'Failed to parse MiniMax response', { error: errorMsg(error) });
+        }
+      }
 
       if (!response.ok) {
         minimaxDebug('error', 'MiniMax HTTP request failed');
