@@ -28,7 +28,8 @@ import { parseFilterDate } from './communication/filter-helpers';
 import { forgeDebug } from '@forge-runtime/core';
 
 // L#NN-YYY v4 helper: scope-injection for email-account forgeDebug calls (10 sites)
-export function emailAccountDebug(
+// Unexported in E7 — used only within email-account.ts (10 call sites).
+function emailAccountDebug(
   level: 'debug' | 'info' | 'warn' | 'error',
   message: string,
   context?: Record<string, unknown>,
