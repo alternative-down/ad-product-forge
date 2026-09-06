@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
-export type PlanStatus = 'draft' | 'active' | 'completed';
+type PlanStatus = 'draft' | 'active' | 'completed';
 
 export type PlanEntry = {
   id: number;

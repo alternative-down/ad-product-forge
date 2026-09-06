@@ -37,7 +37,7 @@ const minimaxConfigSchema = z.object({
   apiKey: z.string().min(1),
 });
 
-export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
+type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
 
 export type SystemIntegrationSummary = {
   id: string;
@@ -50,12 +50,15 @@ export type SystemIntegrationSummary = {
 
 // L#NN-50 #35 helper: provider to typed config mapping for generic getConfigByProvider<T>
 // (DRY: previously 4 callsites cast to specific config type via as <Type> | null).
-type ConfigFor<T extends SystemIntegrationProviderType> =
-  T extends 'migadu' ? MigaduSystemIntegrationConfig :
-  T extends 'coolify' ? CoolifySystemIntegrationConfig :
-  T extends 'github' ? GitHubSystemIntegrationConfig :
-  T extends 'minimax' ? MinimaxSystemIntegrationConfig :
-  never;
+type ConfigFor<T extends SystemIntegrationProviderType> = T extends 'migadu'
+  ? MigaduSystemIntegrationConfig
+  : T extends 'coolify'
+    ? CoolifySystemIntegrationConfig
+    : T extends 'github'
+      ? GitHubSystemIntegrationConfig
+      : T extends 'minimax'
+        ? MinimaxSystemIntegrationConfig
+        : never;
 
 /** Fields that must not appear in list/summary API responses */
 export type SystemIntegrationStore = Awaited<ReturnType<typeof createSystemIntegrationStore>>;
@@ -131,7 +134,9 @@ export function createSystemIntegrationStore(db: Database) {
       verb: 'read',
       fn: async () => {
         const row = await getEnabledIntegration(providerType);
-        return row != null ? (parseConfigByProvider(providerType, row.encryptedConfig) as ConfigFor<T>) : null;
+        return row != null
+          ? (parseConfigByProvider(providerType, row.encryptedConfig) as ConfigFor<T>)
+          : null;
       },
     });
   }
@@ -238,7 +243,9 @@ export function createSystemIntegrationStore(db: Database) {
       verb: 'write',
       context: { providerType },
       fn: async () => {
-        await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
+        await db
+          .delete(systemIntegrations)
+          .where(eq(systemIntegrations.providerType, providerType));
       },
     });
   }

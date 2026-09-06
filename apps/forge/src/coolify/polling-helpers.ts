@@ -30,7 +30,7 @@ function pollUntilLog(
   forgeDebug({ scope: POLLING_HELPERS_SCOPE, level, message, context });
 }
 
-export interface PollUntilOptions {
+interface PollUntilOptions {
   /** Maximum number of attempts before giving up. */
   maxAttempts: number;
   /** Initial interval between attempts (ms). */
@@ -54,13 +54,7 @@ export async function pollUntil<T>(
   fn: () => Promise<T | null | undefined | false>,
   options: PollUntilOptions,
 ): Promise<T> {
-  const {
-    maxAttempts,
-    intervalMs,
-    backoffMultiplier = 1.5,
-    abortSignal,
-    onAttempt,
-  } = options;
+  const { maxAttempts, intervalMs, backoffMultiplier = 1.5, abortSignal, onAttempt } = options;
 
   if (maxAttempts <= 0) {
     throw new PollUntilInvalidMaxAttemptsError(maxAttempts);

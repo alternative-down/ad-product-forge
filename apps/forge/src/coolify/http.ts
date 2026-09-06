@@ -10,7 +10,7 @@ import { CoolifyHttpRequestError } from './errors';
 import { getProviderConfig } from './provider-config';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 
-export interface HttpTransportConfig {
+interface HttpTransportConfig {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }
 
@@ -20,7 +20,11 @@ export function createHttpTransport(config: HttpTransportConfig) {
     try {
       providerConfig = await getProviderConfig(config.integrations);
     } catch (err) {
-      coolifyHttpDebug('error', 'requestJson: getProviderConfig failed', { method, path, error: errorMsg(err) });
+      coolifyHttpDebug('error', 'requestJson: getProviderConfig failed', {
+        method,
+        path,
+        error: errorMsg(err),
+      });
       throw err;
     }
     let response;
@@ -35,7 +39,11 @@ export function createHttpTransport(config: HttpTransportConfig) {
         body: body ? JSON.stringify(removeUndefined(body)) : undefined,
       });
     } catch (err) {
-      coolifyHttpDebug('error', 'requestJson: fetch failed', { method, path, error: errorMsg(err) });
+      coolifyHttpDebug('error', 'requestJson: fetch failed', {
+        method,
+        path,
+        error: errorMsg(err),
+      });
       throw err;
     }
 
@@ -43,13 +51,21 @@ export function createHttpTransport(config: HttpTransportConfig) {
     try {
       text = await response.text();
     } catch (err) {
-      coolifyHttpDebug('error', 'requestJson: response.text() failed', { method, path, error: errorMsg(err) });
+      coolifyHttpDebug('error', 'requestJson: response.text() failed', {
+        method,
+        path,
+        error: errorMsg(err),
+      });
       throw err;
     }
     const data = text.length > 0 ? coolifySafeJsonParse(text) : null;
 
     if (!response.ok) {
-      coolifyHttpDebug('error', 'requestJson: HTTP error', { method, path, status: response.status });
+      coolifyHttpDebug('error', 'requestJson: HTTP error', {
+        method,
+        path,
+        status: response.status,
+      });
       throw new CoolifyHttpRequestError(method, path, response.status, data ?? text);
     }
 
