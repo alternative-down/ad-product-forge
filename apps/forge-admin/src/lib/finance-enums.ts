@@ -13,3 +13,5 @@ export {
   type CompanyCashDirection,
   type CompanyCashStatus,
 } from '../../../forge/src/finance/company-cash-enums';
+
+export type { PayableKind, RecurrencePeriod } from '../../../forge/src/finance/company-payables';
