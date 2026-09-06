@@ -47,6 +47,7 @@ export function normalizeManifestConfig(value: unknown): GitHubAppManifestConfig
 
 /**
  * Normalizes GitHub App credentials, ensuring manifestConfig is a valid parsed object.
+ * Outer cast is a known limitation; full schema validation is #7001 follow-up.
  */
 export function normalizeGitHubAppCredentials(
   credentials: unknown,
@@ -55,9 +56,15 @@ export function normalizeGitHubAppCredentials(
     throw new TypeError('GitHub App credentials must be an object');
   }
 
+  const manifestConfigParsed = githubAppManifestConfigSchema.safeParse(
+    credentials.manifestConfig,
+  );
+
   return {
     ...credentials,
-    manifestConfig: normalizeManifestConfig(credentials.manifestConfig),
+    manifestConfig: manifestConfigParsed.success
+      ? manifestConfigParsed.data
+      : DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
   } as GitHubAppCredentials;
 }
 
