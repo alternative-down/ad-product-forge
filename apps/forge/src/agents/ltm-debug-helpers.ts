@@ -20,7 +20,8 @@
  */
 import { forgeDebug } from '@forge-runtime/core';
 
-export type LtmDebugLevel = 'debug' | 'info' | 'warn' | 'error';
+// Unexported in E7 — type used only internally by ltmDebug() signature.
+type LtmDebugLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export function ltmDebug(
   level: LtmDebugLevel,
@@ -30,6 +31,7 @@ export function ltmDebug(
   forgeDebug({ scope: 'ltm', level, message, ...context });
 }
 
-export function ltmAgentWarn(message: string): void {
+// Unexported in E7 — used only within ltm-debug-helpers.ts (no external callers).
+function ltmAgentWarn(message: string): void {
   forgeDebug({ scope: 'agent-ltm', level: 'warn', message });
 }

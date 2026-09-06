@@ -84,7 +84,8 @@ export function verifyWebhookSignature(
  *   parseWebhookPayload('{"foo":"bar"}') // {ok: true, payload: {foo: 'bar'}}
  *   parseWebhookPayload('not-json') // {ok: false}
  */
-export type ParsePayloadResult =
+// Unexported in E7 — return type used only by parseWebhookPayload signature in same file.
+type ParsePayloadResult =
   | { ok: true; payload: Record<string, unknown> }
   | { ok: false; error: Error; reason: ParsePayloadFailureReason };
 
@@ -92,7 +93,8 @@ export type ParsePayloadResult =
  * Categorizes why parseWebhookPayload rejected the input.
  * Useful for differential diagnosis in logs/forgeDebug.
  */
-export type ParsePayloadFailureReason =
+// Unexported in E7 — used only by ParsePayloadResult in same file.
+type ParsePayloadFailureReason =
   /** bodyText was non-empty but failed JSON.parse (e.g. truncated, wrong encoding) */
   | 'invalid-json'
   /** parsed JSON but the top-level value was not a non-null, non-array object */
