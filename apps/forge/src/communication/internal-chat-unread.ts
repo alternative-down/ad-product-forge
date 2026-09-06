@@ -8,11 +8,22 @@ import { forgeDebug } from '@forge-runtime/core';
 // Unread summary
 // =============================================================================
 
+/**
+ * Aggregate unread counts returned by `getUnreadSummary`.
+ * Canonical shape: declared at the implementation site so the delegate
+ * signature in `internal-chat-reads.ts` can mirror it without leaking
+ * `unknown` to consumers.
+ */
+export type UnreadSummary = {
+  unreadMessageCount: number;
+  unreadConversationCount: number;
+};
+
 export function createInternalChatUnread(db: Database) {
   /**
    * Returns aggregate unread counts for an agent.
    */
-  async function getUnreadSummary(agentId: string) {
+  async function getUnreadSummary(agentId: string): Promise<UnreadSummary> {
     try {
       const rows = await db
         .select({
