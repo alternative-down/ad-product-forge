@@ -24,18 +24,13 @@ export class LlmSystemDefaultsNotConfiguredError extends Error {
   }
 }
 
-export type LlmDefaultRole = 'primary' | 'om' | 'hiringRh';
+type LlmDefaultRole = 'primary' | 'om' | 'hiringRh';
 
 export class LlmDefaultProfileMissingOrDisabledError extends Error {
   readonly code = 'LLM_DEFAULT_PROFILE_MISSING_OR_DISABLED' as const;
   readonly role: LlmDefaultRole;
   constructor(role: LlmDefaultRole) {
-    const roleLabel =
-      role === 'primary'
-        ? 'primary'
-        : role === 'om'
-          ? 'OM'
-          : 'hiring RH';
+    const roleLabel = role === 'primary' ? 'primary' : role === 'om' ? 'OM' : 'hiring RH';
     super(`Default ${roleLabel} LLM profile is missing or disabled`);
     this.name = 'LlmDefaultProfileMissingOrDisabledError';
     this.role = role;
@@ -56,9 +51,7 @@ export class LlmCannotDeleteSystemDefaultError extends Error {
   readonly code = 'LLM_CANNOT_DELETE_SYSTEM_DEFAULT' as const;
   readonly profileId: string;
   constructor(profileId: string) {
-    super(
-      'Cannot delete an LLM profile that is currently selected as a system default',
-    );
+    super('Cannot delete an LLM profile that is currently selected as a system default');
     this.name = 'LlmCannotDeleteSystemDefaultError';
     this.profileId = profileId;
   }
@@ -125,9 +118,7 @@ export class InvalidAccountModelKeyFormatError extends Error {
   readonly code = 'INVALID_ACCOUNT_MODEL_KEY_FORMAT' as const;
   readonly modelKey: string;
   constructor(modelKey: string) {
-    super(
-      `Invalid account model key (expected provider/model format): ${modelKey}`,
-    );
+    super(`Invalid account model key (expected provider/model format): ${modelKey}`);
     this.name = 'InvalidAccountModelKeyFormatError';
     this.modelKey = modelKey;
   }

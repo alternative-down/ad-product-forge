@@ -7,7 +7,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../agents/error-formatting';
 import { buildRequestError } from './helpers';
 
-export interface CoolifyErrorContext {
+interface CoolifyErrorContext {
   scope?: string;
   operation: string;
   method?: string;
@@ -32,12 +32,7 @@ export function mapCoolifyError(context: CoolifyErrorContext): Error {
   return new Error(`${operation} failed: ${errorMsg(error)}`);
 }
 
-export function mapHttpError(
-  method: string,
-  path: string,
-  status: number,
-  data: unknown,
-): Error {
+export function mapHttpError(method: string, path: string, status: number, data: unknown): Error {
   return new Error(buildRequestError(method, path, status, data));
 }
 
