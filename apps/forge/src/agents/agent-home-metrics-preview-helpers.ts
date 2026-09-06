@@ -1,4 +1,5 @@
-export type ToolBadge = {
+// Unexported in E8 — return type of extractLatestMessageToolBadge in this file only (TS callers rely on inference).
+type ToolBadge = {
   icon: string;
   label: string;
 } | null;
