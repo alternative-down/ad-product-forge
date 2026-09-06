@@ -4,6 +4,9 @@ import { createRequire } from 'node:module';
 
 import { load as loadSqliteVec } from 'sqlite-vec';
 
+import { errorMsg } from './error-formatting.js';
+import { forgeDebug } from './debug.js';
+
 import type {
   RetrievalDocumentSource,
   RetrievalSourceDocument,
@@ -796,9 +799,13 @@ function parseMetadata(value: string | null) {
   }
 
   try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return parsed;
-  } catch {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch (err) {
+    forgeDebug(
+      'sqlite-workspace-retrieval',
+      'failed to parse metadata_json: ' + errorMsg(err instanceof Error ? err : new Error(String(err))),
+      { valueLength: value.length, valuePreview: value.substring(0, 200) },
+    );
     return undefined;
   }
 }
