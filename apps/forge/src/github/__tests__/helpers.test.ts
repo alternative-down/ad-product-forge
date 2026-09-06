@@ -77,10 +77,20 @@ describe('normalizeManifestConfig', () => {
 // ─── normalizeGitHubAppCredentials ───────────────────────────────────────────
 
 describe('normalizeGitHubAppCredentials', () => {
+  const baseCredentials = () => ({
+    status: 'active' as const,
+    appId: 123,
+    appSlug: 'my-app',
+    appName: 'My App',
+    installationId: 12345,
+    privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
+    webhookSecret: 'webhook-secret',
+    createdAt: 1700000000000,
+  });
+
   it('parses valid manifestConfig in credentials', () => {
     const credentials = {
-      appId: '123',
-      privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
+      ...baseCredentials(),
       manifestConfig: {
         permissions: {
           administration: true,
@@ -109,18 +119,14 @@ describe('normalizeGitHubAppCredentials', () => {
   });
 
   it('falls back to default manifestConfig when undefined', () => {
-    const credentials = {
-      appId: '123',
-      privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
-    };
+    const credentials = baseCredentials();
     const result = normalizeGitHubAppCredentials(credentials as unknown as any);
     expect(result.manifestConfig.permissions.administration).toBe(true);
   });
 
   it('falls back to default manifestConfig when invalid', () => {
     const credentials = {
-      appId: '123',
-      privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
+      ...baseCredentials(),
       manifestConfig: 'not valid',
     };
     const result = normalizeGitHubAppCredentials(credentials as unknown as any);

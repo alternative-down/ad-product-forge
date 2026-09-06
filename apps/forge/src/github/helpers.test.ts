@@ -62,17 +62,25 @@ describe('normalizeGitHubAppCredentials', () => {
       status: 'active' as const,
       appId: 1,
       appSlug: 'my-app',
+      appName: 'My App',
+      installationId: 12345,
       clientId: 'client',
       clientSecret: 'secret',
       privateKey: 'key',
       webhookSecret: 'webhook',
       manifestConfig: { permissions: { issues: true }, events: { push: false } },
+      createdAt: 1700000000000,
     };
     const result = normalizeGitHubAppCredentials(raw as any);
     expect(result.manifestConfig.permissions.issues).toBe(true);
     expect(result.manifestConfig.permissions.contents).toBe(
       DEFAULT_GITHUB_APP_MANIFEST_CONFIG.permissions.contents,
     );
+  });
+
+  it('throws TypeError when credentials are invalid', () => {
+    const raw = { appId: 1, privateKey: 'key' };
+    expect(() => normalizeGitHubAppCredentials(raw as any)).toThrow(TypeError);
   });
 });
 

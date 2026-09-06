@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 
 import {
   githubAppManifestConfigSchema,
+  githubAppCredentialsSchema,
   type GitHubAppManifestConfig,
   type GitHubAppCredentials,
 } from './types';
@@ -47,7 +48,9 @@ export function normalizeManifestConfig(value: unknown): GitHubAppManifestConfig
 
 /**
  * Normalizes GitHub App credentials, ensuring manifestConfig is a valid parsed object.
- * Outer cast is a known limitation; full schema validation is #7001 follow-up.
+ * Uses githubAppCredentialsSchema.safeParse to enforce the discriminated union shape
+ * (pending | created | active) - throw on parse failure surfaces latent invalid input
+ * that the prior cast was silently accepting.
  */
 export function normalizeGitHubAppCredentials(
   credentials: unknown,
@@ -56,16 +59,12 @@ export function normalizeGitHubAppCredentials(
     throw new TypeError('GitHub App credentials must be an object');
   }
 
-  const manifestConfigParsed = githubAppManifestConfigSchema.safeParse(
-    credentials.manifestConfig,
-  );
-
-  return {
+  const parsed = githubAppCredentialsSchema.safeParse({
     ...credentials,
-    manifestConfig: manifestConfigParsed.success
-      ? manifestConfigParsed.data
-      : DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
-  } as GitHubAppCredentials;
+    manifestConfig: normalizeManifestConfig(credentials.manifestConfig),
+  });
+  if (parsed.success) return parsed.data;
+  throw new TypeError('Invalid GitHubAppCredentials after normalization');
 }
 
 /**
