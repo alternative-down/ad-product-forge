@@ -21,7 +21,8 @@ import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helper
 import type { Database } from '../database/client';
 import { agents } from '../database/schema';
 
-export type ThreadDetails = {
+// Unexported in E8 — return type of readLatestThreadDetails in this file only (TS callers rely on inference).
+type ThreadDetails = {
   preview: string | null;
   toolBadge: { icon: string; label: string } | null;
 };
@@ -98,7 +99,8 @@ export async function readLatestThreadDetails(
   }
 }
 
-export type RuntimeMemoryMetrics = {
+// Unexported in E8 — used only by RuntimeMemory and getRuntimeMemoryForAgent in this file (TS callers rely on inference).
+type RuntimeMemoryMetrics = {
   recentRawMessageCount: number;
   recentRawTokenCount: number;
   recentRawTokenLimit: number;
@@ -112,7 +114,8 @@ export type RuntimeMemoryMetrics = {
   checkpointTokenCount: number;
 };
 
-export type RuntimeMemory = {
+// Unexported in E8 — return type of getRuntimeMemoryForAgent in this file only (TS callers rely on inference).
+type RuntimeMemory = {
   generationCount: number;
   checkpointGeneration: number | null;
   metrics: RuntimeMemoryMetrics;
