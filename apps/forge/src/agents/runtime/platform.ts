@@ -150,6 +150,12 @@ export async function createAgentRuntimePlatform(input: {
     async readFile(targetPath: string) {
       return await workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
     },
+    async writeFile(targetPath: string, content: Uint8Array | Buffer | string) {
+      await workspaceFs.writeFile(
+        normalizeWorkspaceFilesystemPath(targetPath),
+        content,
+      );
+    },
   };
   const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
     async readFile(targetPath: string) {
