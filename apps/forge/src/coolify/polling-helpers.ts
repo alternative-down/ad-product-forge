@@ -95,7 +95,7 @@ export async function pollUntil<T>(
   throw new PollUntilMaxAttemptsReachedError(maxAttempts, elapsedMs);
 }
 
-export interface RetryWithBackoffOptions {
+interface RetryWithBackoffOptions {
   /** Maximum number of retries (count of attempts = maxRetries + 1). */
   maxRetries: number;
   /** Initial delay before first retry (ms). */

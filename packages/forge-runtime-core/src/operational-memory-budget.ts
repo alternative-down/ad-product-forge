@@ -1,4 +1,4 @@
-export type OperationalMemoryBudgetLimits = {
+type OperationalMemoryBudgetLimits = {
   totalContextTokens: number;
   recentRawTokens: number;
   rawObservationBatchTokens: number;
