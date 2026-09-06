@@ -76,7 +76,8 @@ export class MiniMaxVoiceListError extends Error {
   }
 }
 
-export type MiniMaxApiOperation =
+// Unexported in E9 — used only as the property type of MiniMaxApiCallError in this file (TS callers rely on inference).
+type MiniMaxApiOperation =
   | 'textToSpeech'
   | 'generateImage'
   | 'createVideoGenerationTask'

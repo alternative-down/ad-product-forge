@@ -10,7 +10,8 @@
  */
 export type ScheduleType = 'cron' | 'date';
 
-export function isScheduleType(s: string): s is ScheduleType {
+// Unexported in E9 — defined but never called (zero internal + zero external usages). Schedule type narrowing done inline at call sites.
+function isScheduleType(s: string): s is ScheduleType {
   return s === 'cron' || s === 'date';
 }
 

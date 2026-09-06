@@ -87,10 +87,11 @@ export const githubAppInfoResponseSchema = z.object({
 
 export type GitHubAppCredentials = z.infer<typeof githubAppCredentialsSchema>;
 export type GitHubAppManifestConfig = z.infer<typeof githubAppManifestConfigSchema>;
-export type GitHubAppManifestConversionResponse = z.infer<
+// Unexported in E9 — inferred types from LIVE schemas (githubAppManifestConversionResponseSchema, githubAppInfoResponseSchema) but zero consumers of the inferred types; consumers parse the schema directly (see github/ops/routing.ts).
+type GitHubAppManifestConversionResponse = z.infer<
   typeof githubAppManifestConversionResponseSchema
 >;
-export type GitHubAppInfoResponse = z.infer<typeof githubAppInfoResponseSchema>;
+type GitHubAppInfoResponse = z.infer<typeof githubAppInfoResponseSchema>;
 
 export type GitHubAppProvisioning = {
   agentId: string;
