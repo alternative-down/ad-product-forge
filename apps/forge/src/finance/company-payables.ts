@@ -8,7 +8,7 @@ import { companyCashLedger, companyRecurringPayables } from '../database/schema'
 import { forgeDebug } from '@forge-runtime/core';
 import { RecurringPayableNotFoundError, UnknownRecurrencePeriodError } from './company-payables.errors';
 
-type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
+export type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
 const RECURRENCE_PERIODS = ['weekly', 'monthly', 'yearly'] as const;
 

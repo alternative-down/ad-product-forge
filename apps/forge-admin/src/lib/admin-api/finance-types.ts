@@ -1,3 +1,5 @@
+import type { RecurrencePeriod } from '../../../forge/src/finance/company-payables';
+
 export type AdminFinance = {
   balanceUsd: number;
   summary: {
@@ -29,7 +31,7 @@ export type AdminFinance = {
     name: string;
     description?: string;
     amountUsd: number;
-    recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    recurrencePeriod: RecurrencePeriod;
     nextDueAt: number;
     isActive: boolean;
     createdAt: number;
@@ -57,7 +59,7 @@ export type CreatePayableInput =
       description?: string;
       amountUsd: number;
       dueAt: string;
-      recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+      recurrencePeriod: RecurrencePeriod;
     };
 
 export type FinanceContractsResponse = {
