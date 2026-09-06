@@ -1,13 +1,18 @@
 import type { CreatePayableInput } from '@/lib/admin-api/index';
+import type {
+  CompanyCashDirection,
+  PayableKind,
+  RecurrencePeriod,
+} from '@/lib/finance-enums';
 
 export type MovementForm = {
-  kind: 'single' | 'recurring';
-  direction: 'in' | 'out';
+  kind: PayableKind;
+  direction: CompanyCashDirection;
   name: string;
   description: string;
   amountUsd: number;
   date: string;
-  recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+  recurrencePeriod: RecurrencePeriod;
 };
 
 export function createEmptyMovementForm(): MovementForm {

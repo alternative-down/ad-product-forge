@@ -10,6 +10,8 @@ import { RecurringPayableNotFoundError, UnknownRecurrencePeriodError } from './c
 
 export type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
+export type PayableKind = 'single' | 'recurring';
+
 const RECURRENCE_PERIODS = ['weekly', 'monthly', 'yearly'] as const;
 
 function isRecurrencePeriod(value: unknown): value is RecurrencePeriod {

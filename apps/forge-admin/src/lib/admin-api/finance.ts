@@ -1,5 +1,6 @@
 import { request } from './core';
 import { COMPANY_CASH_STATUSES } from '../finance-enums';
+import type { PayableKind } from '../finance-enums';
 import type {
   AdminFinance,
   CreateInvestmentInput,
@@ -23,7 +24,7 @@ export function createInvestment(input: CreateInvestmentInput) {
 }
 
 export function createPayable(input: CreatePayableInput) {
-  return request<{ kind: 'single' | 'recurring'; entryId: string; payableId?: string }>(
+  return request<{ kind: PayableKind; entryId: string; payableId?: string }>(
     '/admin/finance/payable/create',
     {
       method: 'POST',
