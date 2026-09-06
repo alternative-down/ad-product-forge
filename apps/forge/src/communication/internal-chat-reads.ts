@@ -7,6 +7,7 @@
  */
 
 import { createInternalChatUnread } from './internal-chat-unread';
+import type { UnreadSummary } from './internal-chat-unread';
 import { createInternalChatParticipants } from './internal-chat-participants';
 import type { ConversationListingOutput } from './internal-chat-conversations-listing';
 
@@ -21,7 +22,7 @@ export interface InternalChatReadsDeps {
 }
 
 export interface InternalChatReadsStore {
-  getUnreadSummary: (agentId: string) => Promise<unknown>;
+  getUnreadSummary: (agentId: string) => Promise<UnreadSummary>;
   listRecentConversations: (agentId: string, limit: number) => Promise<ConversationListingOutput[]>;
   listGroupMembersOrDmPeersByAccount: (
     accountId: string,
