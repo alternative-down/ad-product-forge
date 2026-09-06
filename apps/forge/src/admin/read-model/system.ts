@@ -48,6 +48,7 @@ export interface SystemReadModel {
       hash: string | null;
       rowId: number | null;
     }[];
+    parseError?: boolean;
   }>;
 }
 
@@ -130,13 +131,17 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   async function getApplicationMigrations() {
     return await withErrorScope('getApplicationMigrations', async () => {
       const journalPath = join(findMigrationsFolder(import.meta.dirname), 'meta/_journal.json');
-      const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
-        entries: Array<{
-          idx: number;
-          when: number;
-          tag: string;
-        }>;
-      };
+      let journal: { entries: Array<{ idx: number; when: number; tag: string }> };
+      try {
+        journal = JSON.parse(await readFile(journalPath, 'utf8'));
+      } catch (err) {
+        forgeDebug({
+          scope: 'admin-read-model-system',
+          level: 'error',
+          message: 'failed to parse migration journal at ' + journalPath + ': ' + errorMsg(err instanceof Error ? err : new Error(String(err))),
+        });
+        return { applied: [], entries: [], parseError: true };
+      }
       const appliedRows = await db.all<{
         id: number;
         hash: string;

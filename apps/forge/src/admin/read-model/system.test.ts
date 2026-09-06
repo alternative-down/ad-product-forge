@@ -209,6 +209,19 @@ describe('createSystemReadModel', () => {
       expect(result.applied).toEqual([]);
       expect(result.entries).toEqual([]);
     });
+
+    test('returns empty with parseError flag when journal read fails (#system-migrations)', async () => {
+      const { readFile } = await import('node:fs/promises');
+      vi.mocked(readFile).mockResolvedValue('{this is not valid JSON');
+      mockDb.all.mockResolvedValue([]);
+
+      const store = createSystemReadModel({ db: mockDb });
+      const result = await store.getApplicationMigrations();
+
+      expect(result.applied).toEqual([]);
+      expect(result.entries).toEqual([]);
+      expect(result.parseError).toBe(true);
+    });
   });
   describe('listRoles', () => {
     const mockRoles = [
