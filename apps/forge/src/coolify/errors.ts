@@ -32,7 +32,7 @@ export function mapCoolifyError(context: CoolifyErrorContext): Error {
   return new Error(`${operation} failed: ${errorMsg(error)}`);
 }
 
-export function mapHttpError(method: string, path: string, status: number, data: unknown): Error {
+function mapHttpError(method: string, path: string, status: number, data: unknown): Error {
   return new Error(buildRequestError(method, path, status, data));
 }
 
