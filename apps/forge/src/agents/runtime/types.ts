@@ -189,6 +189,7 @@ export type RuntimeAgent = {
 export type RuntimeWorkspaceFilesystem = {
   exists(path: string): Promise<boolean>;
   readFile(path: string): Promise<string | Uint8Array | Buffer>;
+  writeFile(path: string, content: Uint8Array | Buffer | string): Promise<unknown>;
 };
 
 export type RuntimeWorkspace = {
