@@ -10,6 +10,12 @@ import { RecurringPayableNotFoundError, UnknownRecurrencePeriodError } from './c
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
+const RECURRENCE_PERIODS = ['weekly', 'monthly', 'yearly'] as const;
+
+function isRecurrencePeriod(value: unknown): value is RecurrencePeriod {
+  return typeof value === 'string' && (RECURRENCE_PERIODS as readonly string[]).includes(value);
+}
+
 type PayableRow = InferModel<typeof companyRecurringPayables>;
 
 export type CompanyPayablesStore = ReturnType<typeof createCompanyPayables>;
@@ -29,11 +35,15 @@ export function createCompanyPayables(db: Database) {
         return rows.map((row: PayableRow) => {
           const { id, recurrencePeriod, isActive, ...rest } = row;
 
+          if (!isRecurrencePeriod(recurrencePeriod)) {
+            throw new UnknownRecurrencePeriodError(String(recurrencePeriod));
+          }
+
           return {
             ...rest,
             payableId: id,
             description: rest.description ?? undefined,
-            recurrencePeriod: recurrencePeriod as RecurrencePeriod,
+            recurrencePeriod,
             isActive: isActive === 1,
           };
         });
@@ -186,7 +196,10 @@ export function createCompanyPayables(db: Database) {
     }
 
     const currentDueAt = entry.dueAt ?? payable.nextDueAt;
-    const nextDueAt = advanceDueAt(currentDueAt, payable.recurrencePeriod as RecurrencePeriod);
+    if (!isRecurrencePeriod(payable.recurrencePeriod)) {
+      throw new UnknownRecurrencePeriodError(String(payable.recurrencePeriod));
+    }
+    const nextDueAt = advanceDueAt(currentDueAt, payable.recurrencePeriod);
 
     return await withDbErrorLogging({
       scope: 'company-payables',
