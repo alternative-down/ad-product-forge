@@ -11,6 +11,8 @@ import {
   type AgentNotification,
 } from '../database/schema';
 
+export type { AgentNotification };
+
 /** Maximum allowed length of a notification content string (16KB).
  * Exceeding this limit returns null and logs an error via forgeDebug.
  * Prevents DB bloat and protects listNotifications performance.
@@ -24,14 +26,7 @@ export function createAgentNotificationStore(db: Database) {
     agentId: string;
     content: string;
     createdAt?: number;
-  }): Promise<{
-    id: string;
-    agentId: string;
-    content: string;
-    createdAt: number;
-    updatedAt: number;
-    readAt: null;
-  } | null> {
+  }): Promise<AgentNotification | null> {
     if (input.content.length > MAX_NOTIFICATION_CONTENT_LENGTH) {
       forgeDebug({
         scope: 'notifications-store',

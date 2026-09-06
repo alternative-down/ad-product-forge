@@ -18,6 +18,7 @@
 
 import { withTimeout } from '../utils/async';
 import { extractRunnerControlDirectiveFromIteration } from './agent-runner-control-directives';
+import type { AgentNotification } from '../notifications/store';
 import {
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
@@ -38,7 +39,7 @@ export interface BuildIterationFeedbackDeps {
   loopSignature: string;
   runtime: { id: string };
   notifications: {
-    createNotification: (n: { agentId: string; content: string }) => Promise<unknown>;
+    createNotification: (n: { agentId: string; content: string }) => Promise<AgentNotification | null>;
   };
   currentRuntime: {
     mastraId: string;
