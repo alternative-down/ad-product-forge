@@ -28,7 +28,8 @@ export const HttpStatus = {
   InternalServerError: 500,
 } as const;
 
-export type HttpStatusCode = (typeof HttpStatus)[keyof typeof HttpStatus];
+// Unexported in E9 — used only as the inferred union of the HttpStatus const tuple; consumers use HttpStatus directly.
+type HttpStatusCode = (typeof HttpStatus)[keyof typeof HttpStatus];
 
 /**
  * Webhook-specific body message constants. Used by handler.ts to ensure
@@ -47,4 +48,5 @@ export const WebhookBody = {
   InvalidJsonPayload: 'Invalid JSON payload',
 } as const;
 
-export type WebhookBodyKey = keyof typeof WebhookBody;
+// Unexported in E9 — used only as the inferred keyof union of the WebhookBody const tuple; consumers use WebhookBody directly.
+type WebhookBodyKey = keyof typeof WebhookBody;

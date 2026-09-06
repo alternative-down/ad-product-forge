@@ -36,7 +36,8 @@ function mapHttpError(method: string, path: string, status: number, data: unknow
   return new Error(buildRequestError(method, path, status, data));
 }
 
-export function mapProviderConfigError(operation: string, error: unknown): Error {
+// Unexported in E9 — defined but never called (zero internal + zero external usages). Kept for future use; remove if no callers within D70.
+function mapProviderConfigError(operation: string, error: unknown): Error {
   forgeDebug({
     scope: 'coolify',
     level: 'error',

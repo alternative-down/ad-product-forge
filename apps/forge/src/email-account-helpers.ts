@@ -44,7 +44,8 @@ export function parseAddressDisplayName(address?: Email['from']): string | null 
   );
 }
 
-export interface ParsedRecipient {
+// Unexported in E9 — return type of parseFirstRecipient in this file only (TS callers rely on inference).
+interface ParsedRecipient {
   address: string;
   displayName: string;
 }
