@@ -11,8 +11,7 @@ const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
 const GITHUB_APP_NAME_MAX_LENGTH = 32;
 
 // Default config (duplicated here so helpers.ts is self-contained)
-// eslint-disable-next-line prefer-const
-export let DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig = {
+export const DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig = {
   permissions: {
     administration: true,
     contents: true,
