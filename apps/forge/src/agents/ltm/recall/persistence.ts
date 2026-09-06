@@ -175,7 +175,7 @@ export class RecallPersistence {
         : null;
     const rawWindowMessageCount =
       operationalMemoryState !== null && operationalMemoryState !== undefined
-        ? (operationalMemoryState.metrics?.rawMessageCount ?? 0)
+        ? operationalMemoryState.metrics.rawMessageCount
         : 0;
     const windowSize =
       rawWindowMessageCount > 0 ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25)) : 20;
