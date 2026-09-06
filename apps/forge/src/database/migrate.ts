@@ -120,8 +120,12 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
       await fixupWebhookSecretColumns(db, webhookSecretColumnsMigration.hash);
     }
 
-    const dbMigrations = await queryAppliedMigrations(db, 1);
-    const lastDbMigration = Array.isArray(dbMigrations) ? dbMigrations[0] : undefined;
+    // Skip check is hash-based (#6733): query all applied rows, key on hash.
+    // The previous `lastDbMigration.createdAt` design is fragile because
+    // createdAt = folderMillis which can be spoofed by hardcoded INSERTs
+    // (see PR #6723 / P0 #6722).
+    const dbMigrations = await queryAppliedMigrations(db, 10000);
+    const appliedHashesSet = new Set(dbMigrations.map((m) => m.hash));
 
     migrationsDebug('info', 'Applied rows before migrate', {
       appliedRows: Array.isArray(dbMigrations) ? dbMigrations : { error: 'query failed' },
@@ -147,7 +151,8 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     let appliedCount = 0;
     const appliedHashes: string[] = [];
     for (const migration of allMigrations) {
-      if (lastDbMigration && Number(lastDbMigration.createdAt) >= migration.folderMillis) {
+      // Hash is the canonical applied-migration identifier (#6733).
+      if (appliedHashesSet.has(migration.hash)) {
         continue;
       }
       if (migration.folderMillis === SYSTEM_SETTINGS_CREATED_AT_MIGRATION_TIMESTAMP) {

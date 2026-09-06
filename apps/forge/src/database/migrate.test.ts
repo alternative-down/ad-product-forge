@@ -205,6 +205,32 @@ describe('runMigrations', () => {
     expect(runCalls).toContain('CREATE TABLE bar (id text);');
   });
 
+  // #6733: regression test for PR #6723 / P0 #6722. The previous
+  // createdAt-based skip check would re-apply migrations when an applied
+  // row had a spoofed createdAt (Jan 2026 hardcoded value 1775481600000)
+  // that was less than the real folderMillis. Hash-based skip correctly
+  // identifies the migration as applied via content-derived identifier.
+  test('skips applied migrations by hash even when createdAt is below folderMillis (#6733)', async () => {
+    (mockDb.all as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, hash: 'aaa', createdAt: 1775481600000 },
+    ]);
+    readMigrationFilesMock.mockReturnValue([
+      { sql: ['CREATE TABLE foo (id text);'], bps: true, folderMillis: 1781902527000, hash: 'aaa' },
+      { sql: ['CREATE TABLE bar (id text);'], bps: true, folderMillis: 1781902528000, hash: 'bbb' },
+    ]);
+
+    await runMigrations(mockDb);
+
+    const runCalls = (mockDb.run as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
+      extractSqlText(c[0]),
+    );
+    // 'aaa' must NOT be re-applied (its hash is in appliedHashesSet).
+    // This is the regression assertion for PR #6723 / P0 #6722.
+    expect(runCalls).not.toContain('CREATE TABLE foo (id text);');
+    // 'bbb' is applied normally (not in appliedHashesSet).
+    expect(runCalls).toContain('CREATE TABLE bar (id text);');
+  });
+
   test('skips empty statements between statement-breakpoints', async () => {
     readMigrationFilesMock.mockReturnValue([
       {

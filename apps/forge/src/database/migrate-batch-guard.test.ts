@@ -100,15 +100,18 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
       expect(/from\s+['"]drizzle-orm\/libsql\/migrator['"]/.test(source)).toBe(false);
     });
 
-    test('migrate.ts folderMillis skip check uses createdAt comparison (L#19 tripwire)', () => {
-      // L#19 tripwire: the source uses `Number(lastDbMigration.createdAt) >= migration.folderMillis`
-      // (DB-side createdAt vs file-side folderMillis). Regressing to a direct `folderMillis vs
-      // folderMillis` comparison would silently re-apply already-applied migrations when the
-      // journal createdAt drifts from folderMillis (e.g., clock skew, manual edits). If you
-      // need to change the skip check, also update the doc-comment in `runMigrations` and
-      // Tripwire PROVEN via sanity mutation 1/5 -> 5/5 at 2026-06-08T08:51Z. See PR #5621 body for L#19 lesson reference (by name, no workspace-relative file path).
+    test('migrate.ts skip check uses hash-based comparison (#6733 L#19-NN tripwire)', () => {
+      // L#19-NN tripwire: the source uses hash-based skip (`appliedHashesSet.has(migration.hash)`)
+      // instead of the legacy `createdAt >= folderMillis` comparison. Hash is the canonical
+      // content-derived identifier (SHA-256 of SQL file including comments). The old
+      // createdAt-based check was vulnerable to spoofed journal entries (PR #6723 hardcoded
+      // `created_at=1775481600000` which was less than real folderMillis, causing re-application
+      // of migration 0031 → P0 #6722 system_settings created_at time-bomb). Regressing to
+      // createdAt comparison would re-introduce this bug. If you change the skip check, also
+      // update the doc-comment in `runMigrations` and the migration tests in `migrate.test.ts`.
       const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-      expect(source).toMatch(
+      expect(source).toMatch(/appliedHashesSet\.has\(migration\.hash\)/);
+      expect(source).not.toMatch(
         /Number\(lastDbMigration\.createdAt\)\s*>=\s*migration\.folderMillis/,
       );
     });
@@ -182,9 +185,7 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
         console.log(
           `[migrate-batch-guard] Found ${partialIndexes.length} partial unique index(es);\n` +
             `  the #5438 sequential runner handles these safely:\n` +
-            partialIndexes
-              .map((p) => `    ${p.file}:${p.line}  ${p.snippet}`)
-              .join('\n'),
+            partialIndexes.map((p) => `    ${p.file}:${p.line}  ${p.snippet}`).join('\n'),
         );
       }
       expect(partialIndexes.length).toBeGreaterThanOrEqual(0);
@@ -197,13 +198,17 @@ describe('migrate-batch-guard (libsql batch transaction bug detection)', () => {
 describe('L#19 tripwire: forgeDebug consolidation (#5641)', () => {
   test('source has exactly one combined "Starting migration run" call (replaces 4 startup calls)', () => {
     const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-    const matches = source.match(/(?:forgeDebug\(\{[\s\S]*?message:\s*['"]Starting migration run['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Starting migration run['"])/g);
+    const matches = source.match(
+      /(?:forgeDebug\(\{[\s\S]*?message:\s*['"]Starting migration run['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Starting migration run['"])/g,
+    );
     expect(matches).toHaveLength(1);
   });
 
   test('source does NOT use the old "Running pending migrations" or "Application database path" or "Working directory" or "Migrations folder" messages', () => {
     const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-    expect(source).not.toMatch(/message:\s*['"]Running pending migrations for application database['"]/);
+    expect(source).not.toMatch(
+      /message:\s*['"]Running pending migrations for application database['"]/,
+    );
     expect(source).not.toMatch(/message:\s*['"]Application database path['"]/);
     expect(source).not.toMatch(/message:\s*['"]Working directory['"]/);
     expect(source).not.toMatch(/message:\s*['"]Migrations folder['"]/);
@@ -216,7 +221,9 @@ describe('L#19 tripwire: forgeDebug consolidation (#5641)', () => {
 
   test('source emits one "Migrations completed" summary with appliedHashes context', () => {
     const source = readFileSync(MIGRATE_SOURCE_PATH, 'utf8');
-    expect(source).toMatch(/(?:message:\s*['"]Migrations completed['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Migrations completed['"])/);
+    expect(source).toMatch(
+      /(?:message:\s*['"]Migrations completed['"]|migrationsDebug\(\s*['"][^'"]*['"],\s*['"]Migrations completed['"])/,
+    );
     expect(source).toMatch(/appliedHashes/);
   });
 
