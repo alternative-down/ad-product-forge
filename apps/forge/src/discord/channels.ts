@@ -33,7 +33,7 @@ function discordAccountDebug(
 
 const MEMBER_FETCH_LIMIT = 100;
 
-export type ChannelFetchResult = {
+type ChannelFetchResult = {
   channels: DiscordSendableChannel[];
   failed: Array<{ channelId: string; error: string }>;
 };
