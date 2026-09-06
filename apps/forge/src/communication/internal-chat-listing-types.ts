@@ -11,7 +11,7 @@ import { buildConversationParticipantNames as _buildConversationParticipantNames
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 // Named types to avoid complex inline generics exceeding TS parser limits
-export type MessageRowBase = {
+type MessageRowBase = {
   messageId: string;
   unread: number;
   replyToMessageId: string | null;
@@ -20,8 +20,8 @@ export type MessageRowBase = {
   content: string;
   createdAt: number;
 };
-export type MessageRowFull = MessageRowBase & { conversationId: string };
-export interface MessageListItem {
+type MessageRowFull = MessageRowBase & { conversationId: string };
+interface MessageListItem {
   messageId: string;
   provider: string;
   authorId: string;
@@ -42,7 +42,7 @@ export type ConversationParticipant = {
   agentId: string | null;
   slug: string;
 };
-export interface ConversationListingDeps {
+interface ConversationListingDeps {
   getRequiredAgentAccount(agentId: string): Promise<{
     id: string;
     agentId: string | null;
@@ -66,7 +66,7 @@ export interface ConversationListingDeps {
 }
 
 // Conversation result type (listConversations return)
-export interface ConversationListItem {
+interface ConversationListItem {
   targetKey: string;
   provider: string;
   latestMessageAt: string;
