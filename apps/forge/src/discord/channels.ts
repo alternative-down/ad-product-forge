@@ -211,7 +211,7 @@ export async function listChannelMessages(input: {
       provider: 'discord',
       authorId: message.author.id,
       targetKey: input.channel.id,
-      content: extractDiscordMessageContent(message) ?? '[attachment only]',
+      content: extractDiscordMessageContent(message) || '[attachment only]',
       attachments: await downloadDiscordAttachments(message),
       unread: false,
       createdAt: new Date(message.createdTimestamp).toISOString(),

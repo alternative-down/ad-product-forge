@@ -354,11 +354,10 @@ describe('listChannelMessages', () => {
       ]);
       const result = await listChannelMessages({ channel, limit: 5, offset: 0 });
       expect(result).toHaveLength(1);
-      // NOTE: extractDiscordMessageContent returns '' (not null) when content
-      // is empty AND there are no embeds, so the ?? '[attachment only]'
-      // fallback in channels.ts:220 does NOT trigger. The message is returned
-      // with content=''. Tracked as a separate finding — out of #6112 scope.
-      expect(result[0]?.content).toBe('');
+      // Fix #6983: ?? -> || so empty string triggers the [attachment only]
+      // fallback. extractDiscordMessageContent returns "" (never null) for
+      // attachment-only messages, so ?? never triggered the fallback before.
+      expect(result[0]?.content).toBe('[attachment only]');
       expect(result[0]?.attachments).toHaveLength(1);
       expect(result[0]?.attachments[0]?.name).toBe('image.png');
     } finally {
