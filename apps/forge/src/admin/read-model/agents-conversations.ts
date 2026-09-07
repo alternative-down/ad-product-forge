@@ -17,7 +17,8 @@ import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 export type AgentConversationListItem = Awaited<ReturnType<typeof listRecentConversations>>[number];
 
-export interface AgentConversationListInput {
+// Unexported in E10 — zero internal + zero external usages (audit D69).
+interface AgentConversationListInput {
   agentId: string;
   limit?: number;
 }

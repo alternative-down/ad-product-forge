@@ -24,4 +24,5 @@ export const factoryResetSchema = z.object({
   confirm: z.literal('FACTORY_RESET'),
 });
 
-export type FactoryResetBody = z.infer<typeof factoryResetSchema>;
+// Unexported in E10 — inferred from LIVE schema (factoryResetSchema) but zero consumers of the inferred type; consumers parse the schema directly (see admin/routes/system/write.ts:365).
+type FactoryResetBody = z.infer<typeof factoryResetSchema>;

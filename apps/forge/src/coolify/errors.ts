@@ -15,7 +15,8 @@ interface CoolifyErrorContext {
   error?: unknown;
 }
 
-export function mapCoolifyError(context: CoolifyErrorContext): Error {
+// Unexported in E10 — defined but never called (zero internal + zero external usages). Kept for future use; remove if no callers within D71.
+function mapCoolifyError(context: CoolifyErrorContext): Error {
   const { scope = 'coolify', operation, method, path, error } = context;
 
   forgeDebug({
