@@ -73,15 +73,14 @@ export function createGitHubTools(
                 message: 'GitHub integration is not configured at the platform level.',
               };
             }
-            const prov = provisioning as GitHubAppProvisioning;
             return {
-              status: prov.status,
+              status: provisioning.status,
               registrationUrl: provisioning.registrationUrl,
-              installUrl: prov.installUrl ?? null,
+              installUrl: provisioning.installUrl ?? null,
               message:
-                prov.status === 'active'
+                provisioning.status === 'active'
                   ? 'GitHub App is fully provisioned and installed.'
-                  : prov.status === 'created'
+                  : provisioning.status === 'created'
                     ? 'GitHub App created but not yet installed. Use installUrl to complete installation.'
                     : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
             };
@@ -105,7 +104,7 @@ export function createGitHubTools(
           fn: async () => {
             const provisioning = await githubApps.getAgentProvisioning(agentId);
 
-            if (provisioning && (provisioning as GitHubAppProvisioning).status === 'active') {
+            if (provisioning && provisioning.status === 'active') {
               return {
                 status: 'active',
                 message: 'GitHub App is already fully provisioned.',
