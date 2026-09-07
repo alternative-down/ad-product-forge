@@ -40,6 +40,7 @@ export function makeDbMock(overrides?: Partial<Database>): Database {
  * Replaces the pattern `vi.fn().mockResolvedValue(defaultValue)` with a
  * one-liner that carries the generic type.
  */
-export function makeQueryMock<T>(defaultValue: T) {
+// Unexported in E12 — zero internal + zero external usages. Test-only utility, no callers anywhere.
+function makeQueryMock<T>(defaultValue: T) {
   return vi.fn().mockResolvedValue(defaultValue);
 }
