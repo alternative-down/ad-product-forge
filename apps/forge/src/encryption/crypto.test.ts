@@ -116,10 +116,10 @@ describe('crypto', () => {
       expect(dec(enc('日本語テスト 🔐'))).toBe('日本語テスト 🔐');
     });
 
-    it('round-trip works for long strings', async () => {
+    it('round-trip works for long strings (under #5957 8192 cap)', async () => {
       process.env.ENCRYPTION_KEY = validKey;
       const { encryptSecret: enc, decryptSecret: dec } = await import('./crypto');
-      const long = 'a'.repeat(10_000);
+      const long = 'a'.repeat(8000);
       expect(dec(enc(long))).toBe(long);
     });
   });
@@ -381,6 +381,19 @@ describe('crypto', () => {
       // For N=256, the probability of a 128-bit IV collision is
       // ~256^2 / 2^129 ≈ 10^-33. The Set should have N unique entries.
       expect(ivs.size).toBe(N);
+    });
+
+    // #5957 P3: encryptSecret rejects plaintext longer than 8192 chars to
+    // bound encrypted blob size and prevent DoS via huge inputs (e.g.
+    // agent_providers.encrypted_credentials).
+    it('throws when plaintext exceeds 8192 chars (DoS guard, #5957)', async () => {
+      process.env.ENCRYPTION_KEY = validKey;
+      const { encryptSecret: fn } = await import('./crypto');
+      const tooLong = 'x'.repeat(8193);
+      expect(() => fn(tooLong)).toThrow(/exceeds maximum length of 8192/);
+      // 8192 (exactly at limit) still succeeds
+      const atLimit = 'x'.repeat(8192);
+      expect(() => fn(atLimit)).not.toThrow();
     });
   });
 });

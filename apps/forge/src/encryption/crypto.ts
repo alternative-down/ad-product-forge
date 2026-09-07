@@ -40,10 +40,24 @@ function requireEncryptionKey(): Buffer {
 }
 
 /**
+ * Maximum plaintext length accepted by encryptSecret.
+ * Sized to bound encrypted blob to ≤~12KB (base64 of 8KB plaintext + IV + authTag),
+ * which fits well under the 64KB SQLite text row limit while preventing DoS via
+ * huge inputs (e.g. agent_providers.encrypted_credentials — P3 #5957).
+ */
+const MAX_PLAINTEXT_LENGTH = 8192;
+
+/**
  * Encrypt a plaintext string using AES-256-GCM.
  * Returns base64-encoded result containing: IV + ciphertext + authTag.
  */
 export function encryptSecret(plaintext: string): string {
+  if (plaintext.length > MAX_PLAINTEXT_LENGTH) {
+    throw new Error(
+      `Plaintext exceeds maximum length of ${MAX_PLAINTEXT_LENGTH} chars (got ${plaintext.length})`,
+    );
+  }
+
   const key = requireEncryptionKey();
 
   const iv = crypto.randomBytes(16);
