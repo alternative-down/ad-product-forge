@@ -43,6 +43,7 @@ import {
 import { type AgentExecutionState } from './agents-types';
 import { errorMsg } from '../../agents/error-formatting';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
+import { type GitHubAppProvisioning } from '../../github/manager';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
@@ -136,7 +137,7 @@ export interface AgentDetail {
     timestamp: number;
     read: boolean;
   }>;
-  githubProvisioning: unknown;
+  githubProvisioning: GitHubAppProvisioning | null;
   skills: unknown[];
   activeContract: {
     contractId: string;
