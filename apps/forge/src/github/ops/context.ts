@@ -28,7 +28,8 @@ import type {
 // ── Sub-interfaces ─────────────────────────────────────────────────────────────
 
 /** Database ORM utilities. */
-export interface GithubOpsDb {
+// Unexported in E11 — zero external references; OpsContext has flat properties for these (and/eq/agentProviders/agents), not the named interface.
+interface GithubOpsDb {
   and: typeof import('drizzle-orm').and;
   eq: typeof import('drizzle-orm').eq;
   agentProviders: typeof import('../../database/schema.js').agentProviders;
@@ -36,12 +37,14 @@ export interface GithubOpsDb {
 }
 
 /** Logging. */
-export interface GithubOpsDebug {
+// Unexported in E11 — zero external references; OpsContext has flat property `forgeDebug`, not this named interface.
+interface GithubOpsDebug {
   forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) => void;
 }
 
 /** GitHub API token and credential management. */
-export interface GithubOpsAuth {
+// Unexported in E11 — zero external references; OpsContext has flat methods (getInstallationOctokit etc.), not this named interface.
+interface GithubOpsAuth {
   getInstallationOctokit: (agentId: string) => Promise<Octokit>;
   getInstallationToken: (
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
@@ -63,7 +66,8 @@ export interface GithubOpsAuth {
 }
 
 /** HTTP routing path helpers and header utilities. */
-export interface GithubOpsRouting {
+// Unexported in E11 — zero external references; OpsContext has flat methods (getHeader etc.), not this named interface.
+interface GithubOpsRouting {
   getHeader: (
     headers: Record<string, string | string[] | undefined>,
     key: string,
@@ -76,14 +80,16 @@ export interface GithubOpsRouting {
 }
 
 /** Issue and assignee formatting helpers. */
-export interface GithubOpsHelpers {
+// Unexported in E11 — zero external references; OpsContext has flat methods (normalizeAssignees etc.), not this named interface.
+interface GithubOpsHelpers {
   normalizeAssignees: (assignees?: string[] | undefined) => string[] | undefined;
   toIssueSummary: (payload: unknown) => unknown;
   toIssueDetails: (payload: unknown) => unknown;
 }
 
 /** GitHub App manifest creation helpers. */
-export interface GithubOpsManifest {
+// Unexported in E11 — zero external references; OpsContext has flat methods (DEFAULT_GITHUB_APP_MANIFEST_CONFIG etc.), not this named interface.
+interface GithubOpsManifest {
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig;
   buildManifestEvents: (manifestConfig: GitHubAppManifestConfig) => string[];
   buildManifestPermissions: (manifestConfig: GitHubAppManifestConfig) => Record<string, string>;
@@ -98,7 +104,8 @@ export interface GithubOpsManifest {
 }
 
 /** Global config and owner resolution. */
-export interface GithubOpsConfig {
+// Unexported in E11 — zero external references; OpsContext has flat methods (getGlobalConfig/getDefaultOwner), not this named interface.
+interface GithubOpsConfig {
   getGlobalConfig: () => Promise<{ organization: string; appHomeUrl: string }>;
   getDefaultOwner: (owner?: string) => Promise<string>;
 }

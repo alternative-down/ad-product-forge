@@ -85,7 +85,8 @@ export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
  * Creates a per-agent GitHubAppManager instance.
  * Each agent gets its own isolated manager.
  */
-export function createPerAgentGitHubManager(config: {
+// Unexported in E11 — defined but never called (zero internal + zero external usages).
+function createPerAgentGitHubManager(config: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
