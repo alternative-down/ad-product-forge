@@ -8,7 +8,6 @@
 
 import { listRecentConversations, listThreadMessages } from './conversation-helpers';
 import type { Database } from '../../database/index';
-import { toMastraSafeIdentifier } from '@forge-runtime/core';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import type { CommunicationMessageView } from '@forge-runtime/core';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
