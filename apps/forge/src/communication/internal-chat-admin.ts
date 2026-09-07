@@ -26,7 +26,8 @@ import {
   ConversationMembershipError,
 } from './internal-chat-errors';
 
-export interface AdminAccountView {
+// Unexported in E10 — zero internal + zero external usages (audit D69).
+interface AdminAccountView {
   accountId: string;
   agentId: string | null;
   slug: string;

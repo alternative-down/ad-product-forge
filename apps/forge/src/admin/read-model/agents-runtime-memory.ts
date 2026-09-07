@@ -49,7 +49,8 @@ function isRuntimeTextPart(part: ConversationMessagePart): part is RuntimeTextPa
   return part.type === 'text' || part.type === 'reasoning';
 }
 
-export interface AgentRuntimeMemoryInput {
+// Unexported in E10 — zero internal + zero external usages (audit D69).
+interface AgentRuntimeMemoryInput {
   agentId: string;
 }
 

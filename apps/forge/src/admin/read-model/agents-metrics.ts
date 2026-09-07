@@ -9,7 +9,8 @@ import { desc, eq } from 'drizzle-orm';
 import { agentHomeMetricSnapshots } from '../../database/schema';
 import type { Database } from '../../database/index';
 
-export interface AgentMetricSnapshot {
+// Unexported in E10 — zero internal + zero external usages (audit D69).
+interface AgentMetricSnapshot {
   id: number;
   agentId: string;
   snapshotType: string;

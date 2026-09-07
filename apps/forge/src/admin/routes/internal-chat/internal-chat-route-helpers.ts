@@ -130,7 +130,8 @@ export function parseBody<T extends z.ZodTypeAny>(
 
 // ─── Route builder helpers ────────────────────────────────────────────────────
 
-export type RouteOptions = {
+// Unexported in E10 — zero internal + zero external usages (audit D69).
+type RouteOptions = {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
   handler: HttpHandler;
