@@ -59,7 +59,8 @@ export function formatStructuredValue(value: unknown, indentLevel = 0): string {
  * Extract the `relevantContext` field from a graph search result.
  * Accepts string or string[]; returns null for anything else.
  */
-export function readGraphRelevantContext(result: unknown): string | null {
+// Unexported in E12 — zero internal + zero external usages. Defined but never called (no test coverage either).
+function readGraphRelevantContext(result: unknown): string | null {
   if (result == null || typeof result !== 'object') {
     return null;
   }

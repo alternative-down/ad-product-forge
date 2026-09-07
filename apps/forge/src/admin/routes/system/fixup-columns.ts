@@ -45,7 +45,8 @@ import {
 const PATH = '/admin/system/fixup-columns';
 
 
-export const FIXUP_COLUMNS_PATH = PATH;
+// Unexported in E12 — zero internal + zero external usages. The `PATH` constant is used internally at line 138; FIXUP_COLUMNS_PATH was a re-export with no consumers.
+const FIXUP_COLUMNS_PATH = PATH;
 
 /**
  * Handler body for /admin/system/fixup-columns.
