@@ -1,7 +1,6 @@
 import z from 'zod';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
-import { forgeDebug } from '@forge-runtime/core'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import { generatedAgentProfileSchema } from './hiring-schemas';
 
 // ─── normalizeAgentName ───────────────────────────────────────────────────────
