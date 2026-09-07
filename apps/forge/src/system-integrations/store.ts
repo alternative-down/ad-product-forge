@@ -12,7 +12,7 @@ import type {
 } from '../database/schema';
 import { systemIntegrations } from '../database/schema';
 import type { SystemIntegration } from '../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg, forgeDebug } from '@forge-runtime/core';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 const migaduConfigSchema = z.object({
@@ -89,12 +89,26 @@ export function createSystemIntegrationStore(db: Database) {
   /**
    * Single dispatcher for parsing encrypted configs by provider type.
    * Replaces the 4 parseXConfig wrappers (Closes #5982 DRY violation).
+   *
+   * L#NN-50 #18 v3 silent-failure pattern: returns null on malformed JSON or
+   * schema validation failure instead of throwing. Caller treats null as
+   * "unparseable config" rather than crashing the admin page.
    */
   function parseConfigByProvider(
     providerType: SystemIntegrationProviderType,
     encryptedConfig: string,
-  ): unknown {
-    return parseConfigSchemaMap[providerType].parse(JSON.parse(decryptSecret(encryptedConfig)));
+  ): unknown | null {
+    try {
+      return parseConfigSchemaMap[providerType].parse(JSON.parse(decryptSecret(encryptedConfig)));
+    } catch (err) {
+      forgeDebug({
+        scope: 'system-integrations-store',
+        level: 'warn',
+        message: 'parseConfigByProvider: ' + errorMsg(err),
+        context: { providerType },
+      });
+      return null;
+    }
   }
 
   /**
@@ -134,9 +148,9 @@ export function createSystemIntegrationStore(db: Database) {
       verb: 'read',
       fn: async () => {
         const row = await getEnabledIntegration(providerType);
-        return row != null
-          ? (parseConfigByProvider(providerType, row.encryptedConfig) as ConfigFor<T>)
-          : null;
+        if (row == null) return null;
+        const parsed = parseConfigByProvider(providerType, row.encryptedConfig);
+        return parsed != null ? (parsed as ConfigFor<T>) : null;
       },
     });
   }

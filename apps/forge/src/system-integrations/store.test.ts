@@ -272,6 +272,23 @@ describe('system-integrations/store', () => {
       const result = await store.getMigaduConfig();
       expect(result).toBeNull();
     });
+
+    // L#NN-50 #18 v3 silent-failure pattern: getMigaduConfig returns null
+    // (does NOT throw) when the stored encrypted config is malformed JSON.
+    // Admin pages calling getMigaduConfig must remain responsive even when
+    // the encrypted blob is corrupted.
+    it('returns null when encrypted config has malformed JSON (silent-failure, L#NN-50 #18 v3)', async () => {
+      const { decryptSecret } = await import('../encryption/crypto');
+      (decryptSecret as ReturnType<typeof vi.fn>).mockResolvedValueOnce('not-json');
+
+      const row = createMockRow('migadu', { encryptedConfig: 'encrypted:not-json' });
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(row);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.getMigaduConfig();
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('getCoolifyConfig', () => {
