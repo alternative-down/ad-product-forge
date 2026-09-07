@@ -3,10 +3,17 @@ import {} from '@forge-runtime/core';
 import { type AgentListItem, type AgentDetail } from './agents-list';
 import { type AgentConversationListItem } from './agents-conversations';
 import { type AgentRuntimeMemoryOutput } from './agents-runtime-memory';
+import { type AgentExecutionStep } from '../../database/schema-agents';
 
 /** Shared execution state for all agent read models */
 export const AGENT_EXECUTION_STATES = ['idle', 'running', 'absent'] as const;
 export type AgentExecutionState = (typeof AGENT_EXECUTION_STATES)[number];
+
+/** Paginated result for listAgentExecutionSteps — derived from AgentExecutionStep schema */
+export interface ListAgentExecutionStepsResult {
+  items: Array<Omit<AgentExecutionStep, 'id'> & { stepId: string }>;
+  hasMore: boolean;
+}
 
 export interface AgentReadModel {
   getDashboard: () => Promise<{
@@ -32,7 +39,7 @@ export interface AgentReadModel {
     agentId: string;
     limit: number;
     offset: number;
-  }) => Promise<unknown>;
+  }) => Promise<ListAgentExecutionStepsResult>;
   listAgentThreadMessages: (params: {
     agentId: string;
     page: number;
