@@ -2,6 +2,7 @@ import {} from '@forge-runtime/core';
 
 import { type AgentListItem, type AgentDetail } from './agents-list';
 import { type AgentConversationListItem } from './agents-conversations';
+import { type AgentRuntimeMemoryOutput } from './agents-runtime-memory';
 
 /** Shared execution state for all agent read models */
 export const AGENT_EXECUTION_STATES = ['idle', 'running', 'absent'] as const;
@@ -37,7 +38,7 @@ export interface AgentReadModel {
     page: number;
     perPage: number;
   }) => Promise<unknown>;
-  getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
+  getAgentRuntimeMemory: (agentId: string) => Promise<AgentRuntimeMemoryOutput | null>;
   listRecentAgentHomeMetricSnapshots: (input: {
     agentId: string;
     limit: number;
