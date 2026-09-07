@@ -1,5 +1,7 @@
 import {} from '@forge-runtime/core';
 
+import { type AgentDetail } from './agents-list';
+
 /** Shared execution state for all agent read models */
 export const AGENT_EXECUTION_STATES = ['idle', 'running', 'absent'] as const;
 export type AgentExecutionState = (typeof AGENT_EXECUTION_STATES)[number];
@@ -63,7 +65,7 @@ export interface AgentReadModel {
     };
   }>;
   listAgents: () => Promise<unknown[]>;
-  getAgent: (agentId: string) => Promise<unknown>;
+  getAgent: (agentId: string) => Promise<AgentDetail | null>;
   listAgentRecentConversations: (agentId: string) => Promise<unknown>;
   listAgentExecutionSteps: (input: {
     agentId: string;
