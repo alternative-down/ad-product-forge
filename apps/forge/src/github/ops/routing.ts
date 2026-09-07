@@ -194,7 +194,7 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
           const bodyText = request.bodyText;
           return await handleWebhook(
             agentId,
-            headers as Record<string, string | undefined>,
+            headers,
             bodyText ?? '',
           );
         },
@@ -342,7 +342,7 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
 
   async function handleWebhook(
     agentId: string,
-    headers: Record<string, string | undefined>,
+    headers: Record<string, string | string[] | undefined>,
     bodyText: string,
   ) {
     // SECURITY (Closes #6760 P0): verify x-hub-signature-256 BEFORE any processing.
